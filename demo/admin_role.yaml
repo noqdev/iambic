@@ -1,0 +1,48 @@
+enabled: true
+description: Noq Admin Role
+role_name: Noqform_{{account_name}}_admin
+owner: noq_admins@noq.dev
+role_access:
+- excluded_accounts:
+  - prod*
+  groups:
+  - engineering@noq.dev
+- included_accounts:
+  - prod*
+  users:
+  - curtis@noq.dev
+  - matt@noq.dev
+  - will@noq.dev
+assume_role_policy_document:
+  version: '2012-10-17'
+  statement:
+  - effect: Allow
+    principal:
+      AWS: arn:aws:iam::940552945933:role/NoqCentralRoleCorpNoqDev
+    action:
+    - sts:AssumeRole
+    - sts:TagSession
+  - effect: Allow
+    principal:
+      AWS: arn:aws:iam::759357822767:role/NoqCentralRoleLocalDev
+    action:
+    - sts:AssumeRole
+    - sts:TagSession
+  - effect: Allow
+    principal:
+      AWS: arn:aws:iam::940552945933:role/prod_admin
+    action:
+    - sts:TagSession
+    - sts:AssumeRole
+  - effect: Allow
+    principal:
+      AWS: arn:aws:iam::259868150464:role/NoqCentralRoleStaging
+    action:
+    - sts:AssumeRole
+    - sts:TagSession
+tags:
+- key: owner
+  value: '{{ owner }}'
+managed_policies:
+- policy_arn: arn:aws:iam::aws:policy/AdministratorAccess
+template_type: NOQ::IAM::MultiAccountRole
