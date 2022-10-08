@@ -1,7 +1,10 @@
+import base64
+from enum import Enum
 from typing import List, Optional
 
 import boto3
 from pydantic import BaseModel
+from slack_bolt import App as SlackBoltApp
 
 from noq_form.core.logger import log
 from noq_form.core.utils import yaml
@@ -69,10 +72,27 @@ class AccountConfig(BaseModel):
         return f"{self.account_name} - ({self.account_id})"
 
 
+class ExtendsConfigKey(Enum):
+    AWS_SECRETS_MANAGER = "AWS_SECRETS_MANAGER"
+
+
+class ExtendsConfig(BaseModel):
+    key: ExtendsConfigKey
+    value: str
+
+
 class Config(BaseModel):
     accounts: List[AccountConfig]
+    extends: List[ExtendsConfig] = []
+    secrets: Optional[dict] = None
     role_access_tag: Optional[str] = "noq-authorized"
     variables: Optional[List[Variable]] = []
+    slack_app: Optional[SlackBoltApp] = None
+    sqs: Optional[dict] = {}
+    slack: Optional[dict] = {}
+
+    class Config:
+        arbitrary_types_allowed = True
 
     def set_account_defaults(self):
         for elem, account in enumerate(self.accounts):
@@ -84,5 +104,37 @@ class Config(BaseModel):
                     self.accounts[elem].variables.append(variable)
 
     @classmethod
+    def get_aws_secret(cls, secret_arn):
+        region = secret_arn.split(":")[3]
+        session = boto3.session.Session()
+        client = session.client(
+            service_name="secretsmanager",
+            region_name=region,
+        )
+        get_secret_value_response = client.get_secret_value(SecretId=secret_arn)
+        if "SecretString" in get_secret_value_response:
+            return get_secret_value_response["SecretString"]
+        else:
+            return base64.b64decode(get_secret_value_response["SecretBinary"])
+
+    @classmethod
+    def configure_slack(cls, c):
+        if not (slack_bot_token := c.secrets.get("slack", {}).get("bot_token")):
+            return
+        c.slack_app = SlackBoltApp(token=slack_bot_token)
+        return c
+
+    @classmethod
+    def combine_extended_configs(cls, c):
+        for extend in c.extends:
+            if extend.key == ExtendsConfigKey.AWS_SECRETS_MANAGER:
+                extend_yaml = c.get_aws_secret(extend.value)
+                c = cls(**c.dict(exclude_unset=True), **yaml.load(extend_yaml))
+        return c
+
+    @classmethod
     def load(cls, file_path: str):
-        return cls(file_path=file_path, **yaml.load(open(file_path)))
+        c = cls(file_path=file_path, **yaml.load(open(file_path)))
+        c = cls.combine_extended_configs(c)
+        c = cls.configure_slack(c)
+        return c

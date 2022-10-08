@@ -8,10 +8,7 @@ from noq_form.core.parser import load_templates
 from noq_form.core.utils import remove_expired_resources, yaml
 
 
-async def apply_changes(config_path: str, template_paths: list[str]) -> bool:
-    config = Config.load(config_path)
-    config.set_account_defaults()
-
+async def apply_changes(config: Config, template_paths: list[str]) -> bool:
     changes_made = await asyncio.gather(
         *[template.apply_all(config) for template in load_templates(template_paths)]
     )
