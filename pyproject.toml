@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "noqform"
+name = "noq_form"
 version = "0.1.0"
 description = "The python package used to generate, parse, and execute noqform yaml templates."
-authors = ["engineering@noq.dev"]
+authors = ["Handsome Engineer <engineering@noq.dev>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -25,7 +25,10 @@ slack-bolt = "^1.15.1"
 google-api-python-client = "^2.64.0"
 google-auth = "^2.12.0"
 
+[tool.poetry.scripts]
+noqform = "noq_form.main:cli"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
