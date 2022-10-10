@@ -18,32 +18,25 @@ async def send_iam_mutation_message(
         },
         {
             "type": "section",
-            "text": 
-                {
-                    "type": "mrkdwn",
-                    "text": f"*Identity:*\t<fakeLink.toNoqRole.com|{identity}>",
-                }
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*Identity:*\t<fakeLink.toNoqRole.com|{identity}>",
+            },
+        },
+        {"type": "section", "text": {"type": "mrkdwn", "text": f"*Action:*\t{event}"}},
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*Actor:*\t<fakeLink.toNoqRole.com|{actor}>",
+            },
         },
         {
             "type": "section",
-            "text": 
-                {"type": "mrkdwn", "text": f"*Action:*\t{event}"}
-        },
-        {
-            "type": "section",
-            "text": 
-                {
-                    "type": "mrkdwn",
-                    "text": f"*Actor:*\t<fakeLink.toNoqRole.com|{actor}>",
-                }
-        },
-        {
-            "type": "section",
-            "text": 
-                {
-                    "type": "mrkdwn",
-                    "text": f"*Session Name:*\t{session_name}",
-                }
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*Session Name:*\t{session_name}",
+            },
         },
         {
             "type": "actions",
@@ -69,7 +62,10 @@ async def send_iam_mutation_message(
     ]
 
     await send_slack_notification_to_channel(
-        config, config.slack["alert_channel_id"], "An unauthorized Cloud Identity Modification was detected and automatically remediated.", blocks
+        config,
+        config.slack["alert_channel_id"],
+        "An unauthorized Cloud Identity Modification was detected and automatically remediated.",
+        blocks,
     )
 
 
