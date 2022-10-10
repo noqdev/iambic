@@ -2,15 +2,7 @@ from typing import List, Optional
 
 from pydantic import Field
 
-from typing import List, Optional
-
-from pydantic import Field
-
 from noq_form.core.models import AccessModel, ExpiryModel
-
-from typing import List, Optional
-
-
 
 
 class ManagedPolicy(AccessModel, ExpiryModel):
@@ -61,7 +53,6 @@ class PolicyDocument(AccessModel, ExpiryModel):
     @property
     def resource_name(self):
         return self.name
-
 
 
 # class MultiAccountPolicyTemplate(NoqTemplate, AccessModel):

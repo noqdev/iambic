@@ -1,4 +1,5 @@
 import asyncio
+import warnings
 
 import click
 
@@ -7,8 +8,9 @@ from noq_form.core.context import ctx
 from noq_form.google.models import generate_group_templates
 from noq_form.request_handler.apply import apply_changes, flag_expired_resources
 from noq_form.request_handler.detect import detect_changes
-import warnings
-warnings.filterwarnings('ignore', category=FutureWarning, module='botocore.client')
+
+warnings.filterwarnings("ignore", category=FutureWarning, module="botocore.client")
+
 
 @click.group()
 def cli():

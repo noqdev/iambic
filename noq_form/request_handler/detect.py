@@ -76,7 +76,7 @@ async def detect_changes(config) -> bool:
                     )
             except:
                 continue
-            
+
         sqs.delete_message_batch(QueueUrl=queue_url, Entries=processed_messages)
         messages = sqs.receive_message(QueueUrl=queue_url, MaxNumberOfMessages=10).get(
             "Messages", []
