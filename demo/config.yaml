@@ -14,7 +14,7 @@ accounts:
   aws_profile: noq_prod
 
 slack:
-  alert_channel_id: 'C045MFZ2A10'
+  alert_channel_id: 'C046KESSMQ8'
 
 sqs:
   queues:
