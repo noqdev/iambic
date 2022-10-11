@@ -1,0 +1,69 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "NoqForm Plan",
+            "type": "python",
+            "request": "launch",
+            "module": "noq_form.main",
+            "console": "integratedTerminal",
+            "args": ["plan"],
+            "env": {
+                "AWS_PROFILE": "noq_dev"
+            },
+            "justMyCode": true
+        },
+        {
+            "name": "NoqForm Apply",
+            "type": "python",
+            "request": "launch",
+            "module": "noq_form.main",
+            "console": "integratedTerminal",
+            "env": {
+                "AWS_PROFILE": "noq_dev"
+            },
+            "args": [
+                "apply",
+            "--template",
+            "../noq-templates/aws_iam_roles/admin.yaml",
+            "--config",
+            "demo/config.yaml"],
+            "justMyCode": true
+        },
+        {
+            "name": "NoqForm Import",
+            "type": "python",
+            "request": "launch",
+            "module": "noq_form.main",
+            "console": "integratedTerminal",
+            "env": {
+                "AWS_PROFILE": "noq_dev"
+            },
+            "args": [
+                "import",
+            "--config",
+            "demo/config.yaml",
+            "--output-dir",
+            "../noq-templates"],
+            "justMyCode": true
+        },
+        {
+            "name": "NoqForm Detect",
+            "type": "python",
+            "request": "launch",
+            "module": "noq_form.main",
+            "console": "integratedTerminal",
+            "env": {
+                "AWS_PROFILE": "noq_dev"
+            },
+            "args": [
+                "detect",
+            "--config",
+            "demo/config.yaml",],
+            "justMyCode": true
+        }
+    ]
+}
