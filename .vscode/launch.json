@@ -28,7 +28,7 @@
             "args": [
                 "apply",
             "--template",
-            "demo/admin_role.yaml",
+            "../noq-templates/aws_iam_roles/admin.yaml",
             "--config",
             "demo/config.yaml"],
             "justMyCode": true
@@ -47,7 +47,7 @@
             "--config",
             "demo/config.yaml",
             "--output-dir",
-            "~/localrepos/noq-templates"],
+            "../noq-templates"],
             "justMyCode": true
         },
         {

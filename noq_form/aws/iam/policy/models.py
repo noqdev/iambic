@@ -42,7 +42,7 @@ class AssumeRolePolicyDocument(AccessModel):
 
 
 class PolicyDocument(AccessModel, ExpiryModel):
-    name: str
+    policy_name: str
     version: Optional[str] = None
     statements: Optional[List[PolicyStatement]] = None
 
