@@ -69,9 +69,10 @@ Creating the template has been done* but haven't verified the templates are vali
 General clean up for the currently messy nature of `group_str_attributes`
 Extracting `role_access` from `tags` in the response
 The following attributes aren't really functional:
-* path
-* managed_policy
-* tags
-* permissions_boundary
-* role_access
+* path - Only works if value is the same for all accounts
+* description - Only works if value is the same for all accounts
+* managed_policy - Not fully hooked up
+* tags - Not fully hooked up
+* role_access - Not started
+* permissions_boundary - Not started
 
