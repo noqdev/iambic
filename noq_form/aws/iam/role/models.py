@@ -39,7 +39,7 @@ class PermissionBoundary(ExpiryModel, AccessModel):
 
 
 class Path(AccessModel):
-    path: str
+    file_path: str
 
 
 class MaxSessionDuration(AccessModel):
@@ -48,9 +48,9 @@ class MaxSessionDuration(AccessModel):
 
 class MultiAccountRoleTemplate(NoqTemplate, AccessModel):
     template_type = "NOQ::IAM::MultiAccountRole"
-    description: str
     role_name: str
-    owner: str
+    description: Optional[str] = None
+    owner: Optional[str] = None
     max_session_duration: Optional[Union[int | List[MaxSessionDuration]]] = 3600
     path: Optional[Union[str | List[Path]]] = "/"
     permissions_boundary: Optional[str | None | List[PermissionBoundary]] = None
@@ -116,9 +116,9 @@ class MultiAccountRoleTemplate(NoqTemplate, AccessModel):
         except client.exceptions.NoSuchEntityException:
             current_role = {}
 
-        if not self.get_attribute_val_for_account(account_config, "enabled"):
+        if not self.get_attribute_val_for_account(account_config, "deleted"):
             if current_role:
-                log_str = "Active resource found with enabled=false."
+                log_str = "Active resource found with deleted=false."
                 if ctx.execute:
                     log_str = f"{log_str} Deleting resource..."
                 log.info(log_str, **log_params)
