@@ -62,7 +62,7 @@ It can be broken down into several steps
 
 #### Design Decisions
 Why write to disk?
-So we don't have to hold everything in memory which could get rough for tenants with hundreds of accounts. Instead, we keep a small ref to the role instead.
+So we don't have to hold everything in memory which could get rough for tenants with hundreds of accounts. Instead, we keep a small ref to the role.
 
 #### TODO
 Creating the template has been done* but haven't verified the templates are valid
