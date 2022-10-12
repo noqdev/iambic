@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from pydantic import Field
 
@@ -21,10 +21,10 @@ class PolicyStatement(AccessModel, ExpiryModel):
     effect: str = Field(..., description="Allow | Deny")
     principal: Optional[dict] = None
     not_principal: Optional[dict] = None
-    action: Optional[List[str]] = None
-    not_action: Optional[List[str]] = None
-    resource: Optional[List[str]] = None
-    not_resource: Optional[List[str]] = None
+    action: Optional[Union[List[str] | str]] = None
+    not_action: Optional[Union[List[str] | str]] = None
+    resource: Optional[Union[List[str] | str]] = None
+    not_resource: Optional[Union[List[str] | str]] = None
     sid: Optional[str] = None  # Fix constr(regex=r"^[a-zA-Z0-9]*")
 
     @property
@@ -42,9 +42,9 @@ class AssumeRolePolicyDocument(AccessModel):
 
 
 class PolicyDocument(AccessModel, ExpiryModel):
-    name: str
+    policy_name: str
     version: Optional[str] = None
-    statements: Optional[List[PolicyStatement]] = None
+    statement: Optional[List[PolicyStatement]] = None
 
     @property
     def resource_type(self):
@@ -52,4 +52,4 @@ class PolicyDocument(AccessModel, ExpiryModel):
 
     @property
     def resource_name(self):
-        return self.name
+        return self.policy_name

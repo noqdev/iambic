@@ -46,7 +46,7 @@ class BaseModel(PydanticBaseModel):
 
     def _apply_resource_dict(self, account_config: AccountConfig = None) -> dict:
         exclude_keys = {
-            "enabled",
+            "deleted",
             "expires_at",
             "included_accounts",
             "excluded_accounts",
@@ -99,13 +99,13 @@ class AccessModel(BaseModel):
     excluded_orgs: Optional[List] = []
 
 
-class Enabled(AccessModel):
-    enabled: bool
+class Deleted(AccessModel):
+    deleted: bool
 
 
 class ExpiryModel(BaseModel):
     expires_at: Optional[datetime] = None
-    enabled: Optional[Union[bool | List[Enabled]]] = True
+    deleted: Optional[Union[bool | List[Deleted]]] = True
 
     @property
     def resource_type(self):
@@ -132,7 +132,7 @@ class Tag(ExpiryModel, AccessModel):
 class NoqTemplate(ExpiryModel):
     template_type: str
     file_path: str
-    dry_run_only: Optional[bool] = False
+    read_only: Optional[bool] = False
 
     def dict(
         self,

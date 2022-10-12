@@ -3,41 +3,30 @@ import json
 
 from deepdiff import DeepDiff
 
+from noq_form.aws.utils import paginated_search
 from noq_form.core.context import ctx
 from noq_form.core.logger import log
 from noq_form.core.utils import aio_wrapper
 
 
 async def get_role_inline_policy_names(role_name: str, iam_client):
-    marker: dict[str, str] = {}
-    inline_policies = []
-
-    while True:
-        response = await aio_wrapper(
-            iam_client.list_role_policies, RoleName=role_name, **marker
-        )
-        inline_policies.extend(response["PolicyNames"])
-
-        if response["IsTruncated"]:
-            marker["Marker"] = response["Marker"]
-        else:
-            return inline_policies
+    return await paginated_search(
+        iam_client.list_role_policies,
+        "PolicyNames",
+        RoleName=role_name
+    )
 
 
 async def get_role_instance_profiles(role_name: str, iam_client):
-    marker: dict[str, str] = {}
-    instance_profiles = []
+    return await paginated_search(
+        iam_client.list_instance_profiles_for_role,
+        "InstanceProfiles",
+        RoleName=role_name
+    )
 
-    while True:
-        response = await aio_wrapper(
-            iam_client.list_instance_profiles_for_role, RoleName=role_name, **marker
-        )
-        instance_profiles.extend(response["InstanceProfiles"])
 
-        if response["IsTruncated"]:
-            marker["Marker"] = response["Marker"]
-        else:
-            return instance_profiles
+async def list_roles(iam_client):
+    return await paginated_search(iam_client.list_roles, "Roles")
 
 
 async def get_role_policy(role_name: str, policy_name: str, iam_client):

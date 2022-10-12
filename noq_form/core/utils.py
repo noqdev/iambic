@@ -28,6 +28,22 @@ def snake_to_camelcap(str_obj: str) -> str:
     return str_obj.replace("_", "")  # Remove underscores
 
 
+def normalize_boto3_resp(obj):
+    if isinstance(obj, dict):
+        new_obj = dict()
+        for k, v in obj.items():
+            k = camel_to_snake(k)
+            if isinstance(v, list):
+                new_obj[k] = [normalize_boto3_resp(x) for x in v]
+            else:
+                new_obj[k] = normalize_boto3_resp(v)
+        return new_obj
+    elif isinstance(obj, list):
+        return [normalize_boto3_resp(x) for x in obj]
+    else:
+        return obj
+
+
 def get_closest_value(matching_values: list, account_config):
     if len(matching_values) == 1:
         return matching_values[0]
@@ -97,13 +113,13 @@ def evaluate_on_account(resource, account_config) -> bool:
 
 def apply_to_account(resource, account_config) -> bool:
 
-    if hasattr(resource, "enabled"):
-        if isinstance(resource.enabled, bool):
-            if not resource.enabled:
+    if hasattr(resource, "deleted"):
+        if isinstance(resource.deleted, bool):
+            if not resource.deleted:
                 return False
         else:
             enabled_obj = resource.get_attribute_val_for_account(
-                account_config, "enabled"
+                account_config, "deleted"
             )
             enabled_obj = get_closest_value(enabled_obj, account_config)
             if not enabled_obj.enabled:
@@ -120,7 +136,7 @@ async def remove_expired_resources(
     if (
         not issubclass(type(resource), BaseModel)
         or not hasattr(resource, "expires_at")
-        or getattr(resource, "enabled", None) is False
+        or getattr(resource, "deleted", None) is False
     ):
         return resource
 
@@ -136,7 +152,7 @@ async def remove_expired_resources(
 
     if hasattr(resource, "expires_at") and resource.expires_at:
         if resource.expires_at < datetime.utcnow():
-            resource.enabled = False
+            resource.deleted = False
             log.info("Expired resource found, marking for deletion", **log_params)
             return resource
 
@@ -182,6 +198,40 @@ class NoqYaml(YAML):
         YAML.dump(self, data, stream, **kw)
         if inefficient:
             return stream.getvalue()
+
+
+class NoqSemaphore:
+    def __init__(
+        self, callback_function: any, batch_size: int, callback_is_async: bool = True
+    ):
+        """Makes a reusable semaphore that wraps a provided function.
+        Useful for batch processing things that could be rate limited.
+
+        Example prints hello there 3 times in quick succession, waits 3 seconds then processes another 3:
+            from datetime import datetime
+
+            async def hello_there():
+                print(f"Hello there - {datetime.utcnow()}")
+                await asyncio.sleep(3)
+
+            hello_there_semaphore = NoqSemaphore(hello_there, 3)
+            asyncio.run(hello_there_semaphore.process([{} for _ in range(10)]))
+        """
+        self.limit = asyncio.Semaphore(batch_size)
+        self.callback_function = callback_function
+        self.callback_is_async = callback_is_async
+
+    async def handle_message(self, **kwargs):
+        async with self.limit:
+            if self.callback_is_async:
+                return await self.callback_function(**kwargs)
+
+            return await aio_wrapper(self.callback_function, **kwargs)
+
+    async def process(self, messages: list[dict]):
+        return await asyncio.gather(
+            *[asyncio.create_task(self.handle_message(**msg)) for msg in messages]
+        )
 
 
 typ = "rt"

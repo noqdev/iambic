@@ -4,11 +4,27 @@ import click
 
 from noq_form.core.context import ctx
 from noq_form.request_handler.apply import apply_changes, flag_expired_resources
+from noq_form.request_handler.generate import generate_templates
 
 
 @click.group()
 def cli():
     ...
+
+
+@cli.command()
+@click.option(
+    "--config",
+    "-c",
+    "configs",
+    required=False,
+    multiple=True,
+    type=click.Path(exists=True),
+    help="The config.yaml file paths. Example: ./prod/config.yaml",
+)
+def generate(configs: list[str]):
+    # We should auto-detect in the long-term
+    asyncio.run(generate_templates(configs))
 
 
 @cli.command()
