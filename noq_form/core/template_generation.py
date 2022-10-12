@@ -178,10 +178,9 @@ async def group_dict_attribute(
     """
     Create map with different representations of a resource value for each account
 
-    The purpose is to add the 2 ways look-ups are done and maintain o(1) performance.
-    The resource_hash to the corresponding list element in account_resources[elem]["resources"]
+    Create a resource_hash to the corresponding list element in account_resources[elem]["resources"]
         Under resource_hash_map
-    The reverse of resource_hash_map which is an int representing the elem with a list of all resource_hash reprs
+    Create a reverse of resource_hash_map which is an int representing the elem with a list of all resource_hash reprs
         Under elem_resource_hash_map
     """
     account_id_map = {
