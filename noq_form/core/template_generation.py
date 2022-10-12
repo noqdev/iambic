@@ -45,14 +45,14 @@ def group_int_attribute(account_vals: dict) -> Union[dict[int, list] | int]:
 
 
 async def group_str_attribute(
-    account_configs: list[AccountConfig], account_resources: list[dict]
+    account_config_map: dict[str, AccountConfig], account_resources: list[dict]
 ) -> Union[str | dict[str, list]]:
     """Groups a string attribute by a shared name across of accounts
 
     The ability to pass in and maintain arbitrary keys is necessary for
         parsing resource names related to a boto3 response
 
-    :param account_configs: list[AccountConfig]
+    :param account_config_map: dict[str, AccountConfig]
     :param account_resources: list[dict(account_id:str, resources=list[dict(resource_val: str, **)])]
     :return: dict(attribute_val: str = list[dict(resource_val: str, account_id: str, **)])
     """
@@ -66,14 +66,10 @@ async def group_str_attribute(
     The reverse of resource_val_map which is an int representing the elem with a list of all resource_val reprs
         Under elem_resource_val_map
     """
-    account_id_map = {
-        account_config.account_id: account_config for account_config in account_configs
-    }
-
     for account_resource_elem, account_resource in enumerate(account_resources):
         account_resources[account_resource_elem]["resource_val_map"] = dict()
         account_resources[account_resource_elem]["elem_resource_val_map"] = dict()
-        account_config = account_id_map[account_resource["account_id"]]
+        account_config = account_config_map[account_resource["account_id"]]
         for resource_elem, resource in enumerate(account_resource["resources"]):
             account_resource["resources"][resource_elem][
                 "account_id"
@@ -167,11 +163,11 @@ async def group_str_attribute(
 
 
 async def group_dict_attribute(
-    account_configs: list[AccountConfig], account_resources: list[dict]
+    account_config_map: dict[str, AccountConfig], account_resources: list[dict]
 ):
     """Groups an attribute that is a dict or list of dicts with matching accounts
 
-    :param account_configs: list[AccountConfig]
+    :param account_config_map: dict[str, AccountConfig]
     :param account_resources: list[dict(account_id:str, resources=list[dict])]
     :return: list[dict(included_accounts: str, resource_val=list[dict]|dict)]
     """
@@ -183,15 +179,12 @@ async def group_dict_attribute(
     Create a reverse of resource_hash_map which is an int representing the elem with a list of all resource_hash reprs
         Under elem_resource_hash_map
     """
-    account_id_map = {
-        account_config.account_id: account_config for account_config in account_configs
-    }
     hash_map = dict()
 
     for account_resource_elem, account_resource in enumerate(account_resources):
         account_resources[account_resource_elem]["resource_hash_map"] = dict()
         account_resources[account_resource_elem]["elem_resource_hash_map"] = dict()
-        account_config = account_id_map[account_resource["account_id"]]
+        account_config = account_config_map[account_resource["account_id"]]
         for resource_elem, resource in enumerate(account_resource["resources"]):
             account_resource["resources"][resource_elem][
                 "account_id"
@@ -295,18 +288,15 @@ async def group_dict_attribute(
 
 
 async def set_included_accounts_for_grouped_attribute(
-    account_configs: list[AccountConfig],
+    account_config_map: dict[str, AccountConfig],
     number_of_accounts_resource_on: int,
     grouped_attribute,
 ):
-    account_id_map = {
-        account_config.account_id: account_config for account_config in account_configs
-    }
-
     if isinstance(grouped_attribute, dict):  # via group_str_attribute
         for k, resource_vals in grouped_attribute.items():
             included_accounts = [
-                account_id_map[rv["account_id"]].account_name for rv in resource_vals
+                account_config_map[rv["account_id"]].account_name
+                for rv in resource_vals
             ]
             if len(included_accounts) == number_of_accounts_resource_on:
                 included_accounts = ["*"]
@@ -323,7 +313,7 @@ async def set_included_accounts_for_grouped_attribute(
                 grouped_attribute[elem]["included_accounts"] = ["*"]
             else:
                 included_accounts = [
-                    account_id_map[rv].account_name
+                    account_config_map[rv].account_name
                     for rv in grouped_attribute[elem]["included_accounts"]
                 ]
                 grouped_attribute[elem]["included_accounts"] = included_accounts

@@ -132,11 +132,8 @@ async def set_role_resource_managed_policies(
 
 
 async def set_templated_role_attributes(
-    account_configs: list[AccountConfig], role_name: str, role_refs: list[dict]
+    account_config_map: dict[str, AccountConfig], role_name: str, role_refs: list[dict]
 ):
-    account_id_map = {
-        account_config.account_id: account_config for account_config in account_configs
-    }
     account_id_to_role_map = {}
     num_of_accounts = len(role_refs)
     for role_ref in role_refs:
@@ -201,15 +198,15 @@ async def set_templated_role_attributes(
     inline_policies = []
     tags = []
     assume_role_policy_documents = await group_dict_attribute(
-        account_configs, assume_role_policy_document_resources
+        account_config_map, assume_role_policy_document_resources
     )
     assume_role_policy_documents = await set_included_accounts_for_grouped_attribute(
-        account_configs, num_of_accounts, assume_role_policy_documents
+        account_config_map, num_of_accounts, assume_role_policy_documents
     )
     if len(assume_role_policy_documents) == 1:
         assume_role_policy_documents = assume_role_policy_documents[0]
 
-    paths = await group_str_attribute(account_configs, account_resources)
+    paths = await group_str_attribute(account_config_map, account_resources)
     max_session_duration = group_int_attribute(max_session_duration_resources)
     if not isinstance(max_session_duration, int):
         max_session_duration_dicts = []
@@ -220,28 +217,30 @@ async def set_templated_role_attributes(
         max_session_duration = max_session_duration_dicts
 
     # managed_policies = await group_str_attribute(
-    #     account_configs, managed_policy_resources
+    #     account_config_map, managed_policy_resources
     # )
-    # managed_policies = await set_included_accounts_for_grouped_attribute(account_configs, num_of_accounts, managed_policies)
+    # managed_policies = await set_included_accounts_for_grouped_attribute(account_config_map, num_of_accounts, managed_policies)
 
     if description_resources:
-        description = await group_str_attribute(account_configs, description_resources)
+        description = await group_str_attribute(
+            account_config_map, description_resources
+        )
         # if not isinstance(description, str):
-        #     description_keys = await set_included_accounts_for_grouped_attribute(account_configs, num_of_accounts, description)
+        #     description_keys = await set_included_accounts_for_grouped_attribute(account_config_map, num_of_accounts, description)
 
     if tag_resources:
-        tags = await group_dict_attribute(account_configs, tag_resources)
+        tags = await group_dict_attribute(account_config_map, tag_resources)
         tags = await set_included_accounts_for_grouped_attribute(
-            account_configs, num_of_accounts, tags
+            account_config_map, num_of_accounts, tags
         )
 
     if inline_policy_document_resources:
         inline_policies = []
         inline_policy_vals = await group_dict_attribute(
-            account_configs, inline_policy_document_resources
+            account_config_map, inline_policy_document_resources
         )
         inline_policy_vals = await set_included_accounts_for_grouped_attribute(
-            account_configs, num_of_accounts, inline_policy_vals
+            account_config_map, num_of_accounts, inline_policy_vals
         )
         for inline_policy_val in inline_policy_vals:
             for policy_statement in inline_policy_val["resource_val"]:
@@ -251,11 +250,11 @@ async def set_templated_role_attributes(
                         **policy_statement,
                     }
                 )
-    if len(role_refs) == len(account_configs):
+    if len(role_refs) == len(account_config_map):
         included_accounts = ["*"]
     else:
         included_accounts = [
-            account_id_map[role_ref["account_id"]].account_name
+            account_config_map[role_ref["account_id"]].account_name
             for role_ref in role_refs
         ]
 
@@ -289,7 +288,7 @@ async def generate_aws_role_templates(configs: list[Config]):
             [account_config.account_id for account_config in account_configs]
         )
 
-    account_id_map = {
+    account_config_map = {
         account_config.account_id: account_config for account_config in account_configs
     }
     generate_account_role_resource_files_semaphore = NoqSemaphore(
@@ -302,16 +301,16 @@ async def generate_aws_role_templates(configs: list[Config]):
         set_role_resource_managed_policies, 30
     )
     log.info(
-        "Beginning to retrieve AWS IAM Roles.", accounts=list(account_id_map.keys())
+        "Beginning to retrieve AWS IAM Roles.", accounts=list(account_config_map.keys())
     )
 
     account_roles = await generate_account_role_resource_files_semaphore.process(
-        [{"account_config": account_config} for account_config in config.accounts]
+        [{"account_config": account_config} for account_config in account_configs]
     )
 
     messages = []
     for account_role in account_roles:
-        account_config = account_id_map[account_role["account_id"]]
+        account_config = account_config_map[account_role["account_id"]]
         for role in account_role["roles"]:
             messages.append(
                 {
@@ -349,8 +348,8 @@ async def generate_aws_role_templates(configs: list[Config]):
             account_role_elem
         ].pop("roles", [])
 
-    grouped_role_map = await group_str_attribute(account_configs, account_roles)
+    grouped_role_map = await group_str_attribute(account_config_map, account_roles)
 
     log.info("Writing templated roles")
     for role_name, role_refs in grouped_role_map.items():
-        await set_templated_role_attributes(account_configs, role_name, role_refs)
+        await set_templated_role_attributes(account_config_map, role_name, role_refs)
