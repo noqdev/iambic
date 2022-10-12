@@ -11,9 +11,7 @@ from noq_form.core.utils import aio_wrapper
 
 async def get_role_inline_policy_names(role_name: str, iam_client):
     return await paginated_search(
-        iam_client.list_role_policies,
-        "PolicyNames",
-        RoleName=role_name
+        iam_client.list_role_policies, "PolicyNames", RoleName=role_name
     )
 
 
@@ -21,7 +19,7 @@ async def get_role_instance_profiles(role_name: str, iam_client):
     return await paginated_search(
         iam_client.list_instance_profiles_for_role,
         "InstanceProfiles",
-        RoleName=role_name
+        RoleName=role_name,
     )
 
 

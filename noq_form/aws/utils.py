@@ -1,7 +1,9 @@
 from noq_form.core.utils import aio_wrapper
 
 
-async def paginated_search(search_fnc, response_key: str, max_results: int = None, **search_kwargs) -> list:
+async def paginated_search(
+    search_fnc, response_key: str, max_results: int = None, **search_kwargs
+) -> list:
     """Retrieve and aggregate each paged response, returning a single list of each response object
     :param search_fnc:
     :param response_key:
