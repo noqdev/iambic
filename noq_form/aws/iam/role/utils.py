@@ -27,6 +27,10 @@ async def list_roles(iam_client):
     return await paginated_search(iam_client.list_roles, "Roles")
 
 
+async def list_role_tags(role_name: str, iam_client):
+    return await paginated_search(iam_client.list_role_tags, "Tags", RoleName=role_name)
+
+
 async def get_role_policy(role_name: str, policy_name: str, iam_client):
     return await aio_wrapper(
         iam_client.get_role_policy, RoleName=role_name, PolicyName=policy_name
