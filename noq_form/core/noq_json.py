@@ -6,8 +6,6 @@ from uuid import UUID
 import ujson
 from deepdiff.model import PrettyOrderedSet
 
-from noq_form.core.logger import log
-
 
 class SetEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -46,8 +44,7 @@ def dumps(
             indent,
             **kwargs
         )
-    except TypeError as err:
-        log.info("Falling back to slower json library", error=str(err))
+    except TypeError:
         result = json.dumps(
             obj,
             cls=SetEncoder,

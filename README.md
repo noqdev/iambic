@@ -4,7 +4,7 @@ The python package used to generate, parse, and execute noqform yaml templates.
 # Template Generation
 
 ## How to run
-`python -m noq_form.main generate -c demo/config.yaml`
+`python -m noq_form.main import -c demo/config.yaml`
 
 ## Design Decisions
 ### Why write to disk?
