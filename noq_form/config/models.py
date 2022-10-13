@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 import boto3
+import botocore
 from pydantic import BaseModel
 
 from noq_form.core.logger import log
@@ -64,6 +65,11 @@ class AccountConfig(BaseModel):
 
         self.boto3_session_map[region_name] = session
         return self.boto3_session_map[region_name]
+
+    def get_boto3_client(self, service: str, region_name: str = None):
+        return self.get_boto3_session(region_name).client(
+            service, config=botocore.client.Config(max_pool_connections=50)
+        )
 
     def __str__(self):
         return f"{self.account_name} - ({self.account_id})"

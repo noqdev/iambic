@@ -175,6 +175,28 @@ async def remove_expired_resources(
     return resource
 
 
+def get_account_config_map(configs: list) -> dict:
+    """Returns a map containing all account configs across all provided config instances
+
+    :param configs:
+    :return: dict(account_id:str = AccountConfig)
+    """
+    account_config_map = dict()
+    for config in configs:
+        config.set_account_defaults()
+        for account_config in config.accounts:
+            if account_config_map.get(account_config.account_id):
+                log.critical(
+                    "Account definition found in multiple configs",
+                    account_id=account_config.account_id,
+                    account_name=account_config.account_name,
+                )
+                raise ValueError
+            account_config_map[account_config.account_id] = account_config
+
+    return account_config_map
+
+
 def gather_templates() -> list[str]:
     """
     Get pwd

@@ -27,32 +27,34 @@ def templatize_resource(account_config: AccountConfig, resource):
     )
 
 
-def group_int_attribute(account_vals: dict) -> Union[dict[int, list] | int]:
-    """Groups a string attribute by a shared name across of accounts
+def base_group_int_attribute(account_vals: dict) -> dict[int, list[dict[str, str]]]:
+    """Groups an int attribute by a shared name across of accounts
 
-    :return: dict(attribute_val: int = list[dict(resource_val: int, account_id: str)])
+    Just call group_int_or_str_attribute
+
     :param account_vals: dict(resource_val: int = list[str])
+    :return: dict(attribute_val: int = list[dict(account_id: str)])
     """
     response: dict[int, list[dict]] = defaultdict(list)
 
     for account_id, resource_val in account_vals.items():
-        response[resource_val].append(account_id)
-
-    if len(response) == 1:
-        return list(response.keys())[0]
+        response[resource_val].append({"account_id": account_id})
 
     return response
 
 
-async def group_str_attribute(
+async def base_group_str_attribute(
     account_config_map: dict[str, AccountConfig], account_resources: list[dict]
-) -> Union[str | dict[str, list]]:
+) -> dict[str, list]:
     """Groups a string attribute by a shared name across of accounts
 
     The ability to pass in and maintain arbitrary keys is necessary for
         parsing resource names related to a boto3 response
 
-    :param account_config_map: dict[str, AccountConfig]
+    Call group_int_or_str_attribute instead unless you need to transform this response.
+    An example would be grouping role names for generating the template where you need to keep the file_path ref.
+
+    :param account_config_map: dict(account_id:str = AccountConfig)
     :param account_resources: list[dict(account_id:str, resources=list[dict(resource_val: str, **)])]
     :return: dict(attribute_val: str = list[dict(resource_val: str, account_id: str, **)])
     """
@@ -156,18 +158,18 @@ async def group_str_attribute(
             ]
             grouped_resource_map[resource_val] = [account_resource["resources"][elem]]
 
-    if len(grouped_resource_map) == 1:
-        return list(grouped_resource_map.keys())[0]
-
     return grouped_resource_map
 
 
-async def group_dict_attribute(
+async def base_group_dict_attribute(
     account_config_map: dict[str, AccountConfig], account_resources: list[dict]
-):
+) -> list[dict]:
     """Groups an attribute that is a dict or list of dicts with matching accounts
 
-    :param account_config_map: dict[str, AccountConfig]
+    Call group_dict_attribute instead unless you need to transform this response.
+    An example would be tags which also contain role_access.
+
+    :param account_config_map: dict(account_id:str = AccountConfig)
     :param account_resources: list[dict(account_id:str, resources=list[dict])]
     :return: list[dict(included_accounts: str, resource_val=list[dict]|dict)]
     """
@@ -291,20 +293,21 @@ async def set_included_accounts_for_grouped_attribute(
     account_config_map: dict[str, AccountConfig],
     number_of_accounts_resource_on: int,
     grouped_attribute,
-):
-    if isinstance(grouped_attribute, dict):  # via group_str_attribute
+) -> Union[list | dict]:
+    if isinstance(grouped_attribute, dict):  # via base_group_str_attribute
         for k, resource_vals in grouped_attribute.items():
-            included_accounts = [
-                account_config_map[rv["account_id"]].account_name
-                for rv in resource_vals
-            ]
-            if len(included_accounts) == number_of_accounts_resource_on:
+            if len(resource_vals) == number_of_accounts_resource_on:
                 included_accounts = ["*"]
+            else:
+                included_accounts = [
+                    account_config_map[rv["account_id"]].account_name
+                    for rv in resource_vals
+                ]
             grouped_attribute[k] = included_accounts
 
         return grouped_attribute
 
-    elif isinstance(grouped_attribute, list):  # Generated via group_dict_attribute
+    elif isinstance(grouped_attribute, list):  # Generated via base_group_dict_attribute
         for elem in range(len(grouped_attribute)):
             if (
                 len(grouped_attribute[elem]["included_accounts"])
@@ -319,3 +322,82 @@ async def set_included_accounts_for_grouped_attribute(
                 grouped_attribute[elem]["included_accounts"] = included_accounts
 
         return grouped_attribute
+
+
+async def group_int_or_str_attribute(
+    account_config_map: dict[str, AccountConfig],
+    number_of_accounts_resource_on: int,
+    account_resources: Union[dict | list[dict]],
+    key: Union[int | str],
+) -> Union[int | str | list[dict]]:
+    """Groups an attribute by accounts, formats the attribute and normalizes the included accounts.
+
+    :param account_config_map:
+    :param number_of_accounts_resource_on:
+    :param account_resources: dict(account_id: str = int_val) | list[dict(account_id:str, resources=list[dict])]
+    :param key: Used to form the list[dict] response when there are multiple values for the attribute.
+    :return:
+    """
+    if isinstance(account_resources, list):
+        grouped_attribute = await base_group_str_attribute(
+            account_config_map, account_resources
+        )
+    else:
+        grouped_attribute = base_group_int_attribute(account_resources)
+
+    if len(grouped_attribute) == 1:
+        return list(grouped_attribute.keys())[0]
+
+    response = []
+    grouped_attribute = await set_included_accounts_for_grouped_attribute(
+        account_config_map, number_of_accounts_resource_on, grouped_attribute
+    )
+
+    for resource_val, included_accounts in grouped_attribute.items():
+        if included_accounts[0] == "*":
+            response.append({key: resource_val})
+        else:
+            response.append({key: resource_val, "included_accounts": included_accounts})
+
+    return response
+
+
+async def group_dict_attribute(
+    account_config_map: dict[str, AccountConfig],
+    number_of_accounts_resource_on: int,
+    account_resources: list[dict],
+    is_dict_attr: bool = True,
+) -> Union[dict | list[dict]]:
+    """Groups an attribute by accounts, formats the attribute and normalizes the included accounts.
+
+    :param account_config_map:
+    :param number_of_accounts_resource_on:
+    :param account_resources: list[dict(account_id:str, resources=list[dict])]
+    :param is_dict_attr: If false and only one hit, still return as a list. Useful for things like inline_policies.
+    :return:
+    """
+
+    response = []
+    grouped_attributes = await set_included_accounts_for_grouped_attribute(
+        account_config_map,
+        number_of_accounts_resource_on,
+        (await base_group_dict_attribute(account_config_map, account_resources)),
+    )
+
+    if len(grouped_attributes) == 1 and is_dict_attr:
+        attr_val = grouped_attributes[0]["resource_val"]
+        included_accounts = grouped_attributes[0]["included_accounts"]
+        if included_accounts != ["*"]:
+            attr_val["included_accounts"] = included_accounts
+
+        return attr_val
+
+    for grouped_attr in grouped_attributes:
+        attr_val = grouped_attr["resource_val"]
+        included_accounts = grouped_attr["included_accounts"]
+        if included_accounts != ["*"]:
+            attr_val["included_accounts"] = included_accounts
+
+        response.append(attr_val)
+
+    return response

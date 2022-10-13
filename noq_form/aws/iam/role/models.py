@@ -35,7 +35,8 @@ class RoleAccess(ExpiryModel, AccessModel):
 
 
 class PermissionBoundary(ExpiryModel, AccessModel):
-    permissions_boundary: str
+    permissions_boundary_type: str
+    permissions_boundary_arn: str
 
 
 class Path(AccessModel):
@@ -53,10 +54,12 @@ class MultiAccountRoleTemplate(NoqTemplate, AccessModel):
     owner: Optional[str] = None
     max_session_duration: Optional[Union[int | List[MaxSessionDuration]]] = 3600
     path: Optional[Union[str | List[Path]]] = "/"
-    permissions_boundary: Optional[str | None | List[PermissionBoundary]] = None
+    permissions_boundary: Optional[
+        None | PermissionBoundary | List[PermissionBoundary]
+    ] = None
     role_access: Optional[List[RoleAccess]] = []
     assume_role_policy_document: Optional[
-        AssumeRolePolicyDocument | None | List[AssumeRolePolicyDocument]
+        None | AssumeRolePolicyDocument | List[AssumeRolePolicyDocument]
     ] = None
     tags: Optional[List[Tag]] = []
     managed_policies: Optional[List[ManagedPolicy]] = []
