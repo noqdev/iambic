@@ -1,3 +1,7 @@
+extends:
+  - key: AWS_SECRETS_MANAGER
+    value: arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/google-MmAS1o
+
 accounts:
 - account_id: '759357822767'
   account_name: dev
@@ -8,3 +12,11 @@ accounts:
 - account_id: '940552945933'
   account_name: prod
   aws_profile: noq_prod
+
+slack:
+  alert_channel_id: 'C046KESSMQ8'
+
+sqs:
+  queues:
+    iam_mutation: 
+      arn: arn:aws:sqs:us-east-1:759357822767:noqform-iam-mutation-events

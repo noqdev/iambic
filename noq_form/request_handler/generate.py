@@ -1,22 +1,23 @@
+import asyncio
+import os
+
 from noq_form.aws.iam.role.template_generation import (
     ROLE_RESPONSE_DIR,
     generate_aws_role_templates,
 )
 from noq_form.config.models import Config
-from noq_form.core.logger import log
+from noq_form.google.models import generate_group_templates
 
 
-async def generate_templates(config_paths: str):
-    response_dir_list = [ROLE_RESPONSE_DIR]
-    configs = list()
-
-    for config_path in config_paths:
-        config = Config.load(config_path)
-        config.set_account_defaults()
-        configs.append(config)
-
+async def generate_templates(configs: list[Config], output_dir):
+    # TODO: Create a setting to enable support for google groups
+    # TODO: Ensure google_groups are not excluded from sync
+    response_dir_list = [output_dir, ROLE_RESPONSE_DIR]
     for response_dir in response_dir_list:
-        response_dir.mkdir(parents=True, exist_ok=True)
+        os.makedirs(str(response_dir), exist_ok=True)
 
-    log.info("Generating AWS role templates.")
-    await generate_aws_role_templates(configs)
+    tasks = [
+        generate_group_templates(config, "noq.dev", output_dir) for config in configs
+    ]
+    tasks.append(generate_aws_role_templates(configs, output_dir))
+    await asyncio.gather(*tasks)

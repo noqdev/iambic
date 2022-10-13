@@ -30,11 +30,15 @@ from noq_form.core.utils import (
 ROLE_RESPONSE_DIR = pathlib.Path.home().joinpath(
     ".noqform", "resources", "aws", "roles"
 )
-ROLE_REPO_DIR = pathlib.Path.cwd().joinpath("resources", "aws", "roles")
 
 
-def get_templated_role_file_path(role_name: str):
-    os.makedirs(ROLE_REPO_DIR, exist_ok=True)
+def get_role_dir(base_dir: str) -> str:
+    repo_dir = os.path.join(base_dir, "resources", "aws", "roles")
+    os.makedirs(repo_dir, exist_ok=True)
+    return str(repo_dir)
+
+
+def get_templated_role_file_path(role_dir: str, role_name: str):
     file_name = (
         role_name.replace("{{", "")
         .replace("}}_", "_")
@@ -42,7 +46,7 @@ def get_templated_role_file_path(role_name: str):
         .replace(".", "_")
         .lower()
     )
-    return str(os.path.join(ROLE_REPO_DIR, f"{file_name}.yaml"))
+    return str(os.path.join(role_dir, f"{file_name}.yaml"))
 
 
 def get_account_role_resource_dir(account_id: str) -> str:
@@ -143,6 +147,7 @@ async def create_templated_role(  # noqa: C901
     account_config_map: dict[str, AccountConfig],
     role_name: str,
     role_refs: list[dict],
+    role_dir: str,
 ):
     account_id_to_role_map = {}
     num_of_accounts = len(role_refs)
@@ -309,12 +314,13 @@ async def create_templated_role(  # noqa: C901
                     role_template_params["role_access"][elem].pop("included_accounts")
 
     role = MultiAccountRoleTemplate(
-        file_path=get_templated_role_file_path(role_name), **role_template_params
+        file_path=get_templated_role_file_path(role_dir, role_name),
+        **role_template_params,
     )
     role.write()
 
 
-async def generate_aws_role_templates(configs: list[Config]):
+async def generate_aws_role_templates(configs: list[Config], base_output_dir: str):
     account_config_map = get_account_config_map(configs)
     generate_account_role_resource_files_semaphore = NoqSemaphore(
         generate_account_role_resource_files, 5
@@ -326,6 +332,9 @@ async def generate_aws_role_templates(configs: list[Config]):
         set_role_resource_managed_policies, 30
     )
     set_role_resource_tags_semaphore = NoqSemaphore(set_role_resource_tags, 75)
+    role_dir = get_role_dir(base_output_dir)
+
+    log.info("Generating AWS role templates.")
     log.info(
         "Beginning to retrieve AWS IAM Roles.", accounts=list(account_config_map.keys())
     )
@@ -380,7 +389,7 @@ async def generate_aws_role_templates(configs: list[Config]):
     log.info("Writing templated roles")
     for role_name, role_refs in grouped_role_map.items():
         await create_templated_role(
-            configs[0], account_config_map, role_name, role_refs
+            configs[0], account_config_map, role_name, role_refs, role_dir
         )
 
     log.info("Finished templated role generation")

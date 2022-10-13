@@ -233,7 +233,7 @@ async def apply_role_inline_policies(
 
     if role_exists:
         template_policy_map = {
-            policy["PolicyName"]: policy["PolicyDocument"]
+            policy["PolicyName"]: {"Statement": policy["Statements"]}
             for policy in template_policies
         }
         existing_policy_map = await get_role_inline_policies(role_name, iam_client)
