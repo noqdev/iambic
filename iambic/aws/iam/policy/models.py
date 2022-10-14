@@ -2,8 +2,8 @@ from typing import List, Optional, Union
 
 from pydantic import Field
 
-from noq_form.config.models import AccountConfig
-from noq_form.core.models import AccessModel, BaseModel, ExpiryModel
+from iambic.config.models import AccountConfig
+from iambic.core.models import AccessModel, BaseModel, ExpiryModel
 
 
 class ManagedPolicy(AccessModel, ExpiryModel):

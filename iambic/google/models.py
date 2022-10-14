@@ -8,10 +8,10 @@ import googleapiclient.discovery
 from google.oauth2 import service_account
 from pydantic import Field
 
-from noq_form.config.models import Config
-from noq_form.core.logger import log
-from noq_form.core.models import BaseModel, ExpiryModel
-from noq_form.core.utils import aio_wrapper, yaml
+from iambic.config.models import Config
+from iambic.core.logger import log
+from iambic.core.models import BaseModel, ExpiryModel
+from iambic.core.utils import aio_wrapper, yaml
 
 
 class WhoCanInvite(Enum):

@@ -1,4 +1,4 @@
-from noq_form.aws.iam.role.models import MultiAccountRoleTemplate
+from iambic.aws.iam.role.models import MultiAccountRoleTemplate
 
 TEMPLATES = [MultiAccountRoleTemplate]
 TEMPLATE_TYPE_MAP = {

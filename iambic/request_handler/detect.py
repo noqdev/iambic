@@ -1,9 +1,9 @@
 # Intentionally hacky for demo
 import json
 
-from noq_form.config.models import Config
-from noq_form.slack.notifications import send_iam_mutation_message
-from noq_form.core.logger import log
+from iambic.config.models import Config
+from iambic.slack.notifications import send_iam_mutation_message
+from iambic.core.logger import log
 
 
 async def detect_changes(config: Config) -> bool:

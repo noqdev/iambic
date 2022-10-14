@@ -1,5 +1,5 @@
-from noq_form.config.models import Config
-from noq_form.core.logger import log
+from iambic.config.models import Config
+from iambic.core.logger import log
 
 
 async def send_iam_mutation_message(

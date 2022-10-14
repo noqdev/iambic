@@ -11,8 +11,8 @@ import aiofiles
 from asgiref.sync import sync_to_async
 from ruamel.yaml import YAML
 
-from noq_form.core import noq_json as json
-from noq_form.core.logger import log
+from iambic.core import noq_json as json
+from iambic.core.logger import log
 
 
 def camel_to_snake(str_obj: str) -> str:
@@ -94,7 +94,7 @@ def get_closest_value(matching_values: list, account_config):
 
 
 def evaluate_on_account(resource, account_config) -> bool:
-    from noq_form.core.models import AccessModel
+    from iambic.core.models import AccessModel
 
     if not issubclass(type(resource), AccessModel):
         return True
@@ -152,7 +152,7 @@ def apply_to_account(resource, account_config) -> bool:
 async def remove_expired_resources(
     resource, template_resource_type: str, template_resource_name: str
 ):
-    from noq_form.core.models import BaseModel
+    from iambic.core.models import BaseModel
 
     if (
         not issubclass(type(resource), BaseModel)

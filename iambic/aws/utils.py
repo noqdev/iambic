@@ -1,4 +1,4 @@
-from noq_form.core.utils import aio_wrapper
+from iambic.core.utils import aio_wrapper
 
 
 async def paginated_search(
