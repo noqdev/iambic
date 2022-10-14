@@ -13,7 +13,7 @@ async def detect_changes(config: Config) -> bool:
         return False
 
     queue_name = queue_arn.split(":")[-1]
-    session = config.get_boto_session_from_arn(queue_arn)
+    session = config.get_boto_session_from_arn(queue_arn, "us-east-1")
     identity = session.client("sts").get_caller_identity()
     identity_arn_with_session_name = (
         identity["Arn"].replace(":sts:", ":iam:").replace("assumed-role", "role")
@@ -42,7 +42,12 @@ async def detect_changes(config: Config) -> bool:
                         decoded_message = json.loads(message_body["Message"])["detail"]
                     else:
                         decoded_message = message_body["detail"]
-                except Exception:
+                except Exception as err:
+                    log.debug(
+                        "Unable to process message",
+                        error=str(err),
+                        message=message
+                    )
                     processed_messages.append(
                         {
                             "Id": message["MessageId"],
@@ -76,7 +81,12 @@ async def detect_changes(config: Config) -> bool:
                         session_name=session_name,
                         cloudtrail_event=decoded_message,
                     )
-            except Exception:
+            except Exception as err:
+                log.debug(
+                    "Unable to process message",
+                    error=str(err),
+                    message=message
+                )
                 continue
 
         sqs.delete_message_batch(QueueUrl=queue_url, Entries=processed_messages)

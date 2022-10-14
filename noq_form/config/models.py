@@ -137,12 +137,12 @@ class Config(BaseModel):
                         if not getattr(self, k):
                             setattr(self, k, v)
 
-    def get_boto_session_from_arn(self, arn: str):
-        region = arn.split(":")[3]
+    def get_boto_session_from_arn(self, arn: str, region_name: str = None):
+        region_name = region_name or arn.split(":")[3]
         account_id = arn.split(":")[4]
         account_config_map = {account.account_id: account for account in self.accounts}
         account_config = account_config_map[account_id]
-        return account_config.get_boto3_session(region)
+        return account_config.get_boto3_session(region_name)
 
     @classmethod
     def load(cls, file_path: str):
