@@ -1,3 +1,7 @@
+from noq_form.config.models import Config
+from noq_form.core.logger import log
+
+
 async def send_iam_mutation_message(
     config,
     identity: str,
@@ -69,7 +73,7 @@ async def send_iam_mutation_message(
     )
 
 
-async def send_slack_notification_to_channel(config, channel_id, text, blocks) -> bool:
+async def send_slack_notification_to_channel(config: Config, channel_id, text, blocks) -> bool:
     if not (slack_app := config.slack_app):
         return False
 

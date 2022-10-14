@@ -131,10 +131,11 @@ class Config(BaseModel):
 
     def combine_extended_configs(self):
         if self.extends:
-            self.secrets = {}
             for extend in self.extends:
                 if extend.key == ExtendsConfigKey.AWS_SECRETS_MANAGER:
-                    self.secrets.update(self.get_aws_secret(extend.value))
+                    for k, v in self.get_aws_secret(extend.value).items():
+                        if not getattr(self, k):
+                            setattr(self, k, v)
 
     def get_boto_session_from_arn(self, arn: str):
         region = arn.split(":")[3]
