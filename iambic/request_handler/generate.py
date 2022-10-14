@@ -1,12 +1,12 @@
 import asyncio
 import os
 
-from noq_form.aws.iam.role.template_generation import (
+from iambic.aws.iam.role.template_generation import (
     ROLE_RESPONSE_DIR,
     generate_aws_role_templates,
 )
-from noq_form.config.models import Config
-from noq_form.google.models import generate_group_templates
+from iambic.config.models import Config
+from iambic.google.models import generate_group_templates
 
 
 async def generate_templates(configs: list[Config], output_dir):

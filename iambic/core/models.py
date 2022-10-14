@@ -6,10 +6,10 @@ from typing import List, Optional, Union
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
 
-from noq_form.config.models import AccountConfig, Config
-from noq_form.core.context import ctx
-from noq_form.core.logger import log
-from noq_form.core.utils import (
+from iambic.config.models import AccountConfig, Config
+from iambic.core.context import ctx
+from iambic.core.logger import log
+from iambic.core.utils import (
     apply_to_account,
     evaluate_on_account,
     snake_to_camelcap,

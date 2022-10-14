@@ -3,10 +3,10 @@ import json
 
 from deepdiff import DeepDiff
 
-from noq_form.aws.utils import paginated_search
-from noq_form.core.context import ctx
-from noq_form.core.logger import log
-from noq_form.core.utils import aio_wrapper
+from iambic.aws.utils import paginated_search
+from iambic.core.context import ctx
+from iambic.core.logger import log
+from iambic.core.utils import aio_wrapper
 
 
 async def get_role_inline_policy_names(role_name: str, iam_client):

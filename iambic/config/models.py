@@ -7,8 +7,9 @@ import botocore
 from pydantic import BaseModel
 from slack_bolt import App as SlackBoltApp
 
-from noq_form.core.logger import log
-from noq_form.core.utils import yaml
+from iambic.aws.models import RegionName
+from iambic.core.logger import log
+from iambic.core.utils import yaml
 
 
 class Variable(BaseModel):

@@ -2,23 +2,23 @@ import asyncio
 import json
 from typing import List, Optional, Union
 
-from noq_form.aws.iam.policy.models import (
+from iambic.aws.iam.policy.models import (
     AssumeRolePolicyDocument,
     ManagedPolicy,
     PolicyDocument,
 )
-from noq_form.aws.iam.role.utils import (
+from iambic.aws.iam.role.utils import (
     apply_role_inline_policies,
     apply_role_managed_policies,
     apply_role_tags,
     delete_iam_role,
     update_assume_role_policy,
 )
-from noq_form.config.models import AccountConfig
-from noq_form.core.context import ctx
-from noq_form.core.logger import log
-from noq_form.core.models import AccessModel, ExpiryModel, NoqTemplate, Tag
-from noq_form.core.utils import aio_wrapper, apply_to_account
+from iambic.config.models import AccountConfig
+from iambic.core.context import ctx
+from iambic.core.logger import log
+from iambic.core.models import AccessModel, ExpiryModel, NoqTemplate, Tag
+from iambic.core.utils import aio_wrapper, apply_to_account
 
 
 class RoleAccess(ExpiryModel, AccessModel):

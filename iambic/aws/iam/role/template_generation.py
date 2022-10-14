@@ -3,24 +3,24 @@ import pathlib
 
 import aiofiles
 
-from noq_form.aws.iam.role.models import MultiAccountRoleTemplate
-from noq_form.aws.iam.role.utils import (
+from iambic.aws.iam.role.models import MultiAccountRoleTemplate
+from iambic.aws.iam.role.utils import (
     get_role_inline_policies,
     get_role_managed_policies,
     list_role_tags,
     list_roles,
 )
-from noq_form.config.models import AccountConfig, Config
-from noq_form.core import noq_json as json
-from noq_form.core.logger import log
-from noq_form.core.template_generation import (
+from iambic.config.models import AccountConfig, Config
+from iambic.core import noq_json as json
+from iambic.core.logger import log
+from iambic.core.template_generation import (
     base_group_dict_attribute,
     base_group_str_attribute,
     group_dict_attribute,
     group_int_or_str_attribute,
     set_included_accounts_for_grouped_attribute,
 )
-from noq_form.core.utils import (
+from iambic.core.utils import (
     NoqSemaphore,
     get_account_config_map,
     normalize_boto3_resp, resource_file_upsert,

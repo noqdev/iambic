@@ -3,8 +3,8 @@ from typing import Union
 
 import xxhash
 
-from noq_form.config.models import AccountConfig
-from noq_form.core import noq_json as json
+from iambic.config.models import AccountConfig
+from iambic.core import noq_json as json
 
 
 def templatize_resource(account_config: AccountConfig, resource):
