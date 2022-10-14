@@ -139,6 +139,7 @@ async def update_assume_role_policy(
             boto_action = "Creating" if existing_policy_document else "Updating"
             log_str = f"{log_str} {boto_action} AssumeRolePolicyDocument..."
             log.info(log_str, **log_params)
+            log.info(json.dumps(template_policy_document))
             await aio_wrapper(
                 iam_client.update_assume_role_policy,
                 RoleName=role_name,
@@ -233,7 +234,7 @@ async def apply_role_inline_policies(
 
     if role_exists:
         template_policy_map = {
-            policy["PolicyName"]: {"Statement": policy["Statements"]}
+            policy["PolicyName"]: {"Statement": policy["Statement"]}
             for policy in template_policies
         }
         existing_policy_map = await get_role_inline_policies(role_name, iam_client)

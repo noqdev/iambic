@@ -1,11 +1,17 @@
 import asyncio
+import glob
+import os
+import pathlib
 import re
 from datetime import datetime
 from io import StringIO
+from typing import Union
 
+import aiofiles
 from asgiref.sync import sync_to_async
 from ruamel.yaml import YAML
 
+from noq_form.core import noq_json as json
 from noq_form.core.logger import log
 
 
@@ -28,7 +34,22 @@ def snake_to_camelcap(str_obj: str) -> str:
     return str_obj.replace("_", "")  # Remove underscores
 
 
+async def resource_file_upsert(
+    file_path: Union[str | pathlib.Path],
+    content_as_dict: dict,
+    replace_file: bool = False,
+):
+    if not replace_file and os.path.exists(file_path):
+        async with aiofiles.open(file_path, mode="r") as f:
+            content_dict = json.loads(await f.read())
+            content_as_dict = {**content_dict, **content_as_dict}
+
+    async with aiofiles.open(file_path, mode="w") as f:
+        await f.write(json.dumps(content_as_dict, indent=2))
+
+
 def normalize_boto3_resp(obj):
+    skip_formatting_for = ["condition"]
     if isinstance(obj, dict):
         new_obj = dict()
         for k, v in obj.items():
@@ -36,7 +57,7 @@ def normalize_boto3_resp(obj):
             if isinstance(v, list):
                 new_obj[k] = [normalize_boto3_resp(x) for x in v]
             else:
-                new_obj[k] = normalize_boto3_resp(v)
+                new_obj[k] = normalize_boto3_resp(v) if k not in skip_formatting_for else v
         return new_obj
     elif isinstance(obj, list):
         return [normalize_boto3_resp(x) for x in obj]
@@ -197,13 +218,23 @@ def get_account_config_map(configs: list) -> dict:
     return account_config_map
 
 
-def gather_templates() -> list[str]:
-    """
-    Get pwd
-    Traverse all directories to get all yamls.
-    Return the path for each yaml with template_type: NOQ::.*
-    """
-    ...
+async def gather_templates(repo_dir: str, template_type: str = None) -> list[str]:
+    async def template_match(file_path: str, re_pattern: str) -> Union[str | None]:
+        async with aiofiles.open(file_path, mode="r") as f:
+            file_content = await f.read()
+            if re.search(re_pattern, file_content):
+                return file_path
+
+    regex_pattern = r".*template_type:\n?.*NOQ::"
+    if template_type:
+        regex_pattern = rf"{regex_pattern}.*{template_type}"
+
+    file_paths = glob.glob(f"{repo_dir}/**/*.yaml", recursive=True)
+    file_paths += glob.glob(f"{repo_dir}*.yaml", recursive=True)
+    file_paths = await asyncio.gather(*[
+        template_match(fp, regex_pattern) for fp in file_paths
+    ])
+    return [fp for fp in file_paths if fp]
 
 
 async def aio_wrapper(fnc, *args, **kwargs):
