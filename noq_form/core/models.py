@@ -69,7 +69,7 @@ class BaseModel(PydanticBaseModel):
                 exclude=exclude_keys, exclude_none=True, exclude_unset=False
             )
 
-        return self._resource_dict_case_normalizer(resource_dict)
+        return {self.case_convention(k): v for k, v in resource_dict.items()}
 
     def apply_resource_dict(self, account_config: AccountConfig) -> dict:
         response = self._apply_resource_dict(account_config)
@@ -87,9 +87,9 @@ class BaseModel(PydanticBaseModel):
     def exclude_keys(self):
         return set()
 
-    @staticmethod
-    def _resource_dict_case_normalizer(resource_dict) -> dict:
-        return {snake_to_camelcap(k): v for k, v in resource_dict.items()}
+    @property
+    def case_convention(self):
+        return snake_to_camelcap
 
 
 class AccessModel(BaseModel):
