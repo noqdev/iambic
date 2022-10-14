@@ -6,6 +6,7 @@ import click
 
 from noq_form.config.models import Config
 from noq_form.core.context import ctx
+from noq_form.core.utils import gather_templates
 from noq_form.request_handler.apply import apply_changes, flag_expired_resources
 from noq_form.request_handler.detect import detect_changes
 from noq_form.request_handler.generate import generate_templates
@@ -71,7 +72,18 @@ def detect(config_path: str):
     type=click.Path(exists=True),
     help="The template file path(s) to apply. Example: ./aws/roles/engineering.yaml",
 )
-def apply(no_prompt: bool, config_path: str, templates: list[str]):
+@click.option(
+    "--template-repo-dir",
+    "-d",
+    "template_dir",
+    required=False,
+    type=click.Path(exists=True),
+    help="The repo directory containing the templates. Example: ~/noq-templates",
+)
+def apply(no_prompt: bool, config_path: str, templates: list[str], template_dir: str):
+    if not templates:
+        templates = asyncio.run(gather_templates(template_dir or str(pathlib.Path.cwd())))
+
     config = Config.load(config_path)
     config.set_account_defaults()
     ctx.eval_only = not no_prompt

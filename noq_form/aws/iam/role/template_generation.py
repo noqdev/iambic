@@ -1,6 +1,5 @@
 import os
 import pathlib
-from typing import Union
 
 import aiofiles
 
@@ -24,7 +23,7 @@ from noq_form.core.template_generation import (
 from noq_form.core.utils import (
     NoqSemaphore,
     get_account_config_map,
-    normalize_boto3_resp,
+    normalize_boto3_resp, resource_file_upsert,
 )
 
 ROLE_RESPONSE_DIR = pathlib.Path.home().joinpath(
@@ -55,23 +54,9 @@ def get_account_role_resource_dir(account_id: str) -> str:
     return account_role_response_dir
 
 
-async def role_resource_file_upsert(
-    file_path: Union[str | pathlib.Path],
-    content_as_dict: dict,
-    replace_file: bool = False,
-):
-    if not replace_file and os.path.exists(file_path):
-        async with aiofiles.open(file_path, mode="r") as f:
-            content_dict = json.loads(await f.read())
-            content_as_dict = {**content_dict, **content_as_dict}
-
-    async with aiofiles.open(file_path, mode="w") as f:
-        await f.write(json.dumps(content_as_dict, indent=2))
-
-
 async def generate_account_role_resource_files(account_config: AccountConfig) -> dict:
     account_role_response_dir = get_account_role_resource_dir(account_config.account_id)
-    role_resource_file_upsert_semaphore = NoqSemaphore(role_resource_file_upsert, 10)
+    role_resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
     messages = []
 
     response = dict(account_id=account_config.account_id, roles=[])
@@ -115,7 +100,7 @@ async def set_role_resource_tags(
 ):
     iam_client = account_config.get_boto3_client("iam")
     role_tags = await list_role_tags(role_name, iam_client)
-    await role_resource_file_upsert(role_resource_path, {"Tags": role_tags}, False)
+    await resource_file_upsert(role_resource_path, {"Tags": role_tags}, False)
 
 
 async def set_role_resource_inline_policies(
@@ -127,7 +112,7 @@ async def set_role_resource_inline_policies(
         role_inline_policies[k]["policy_name"] = k
 
     role_inline_policies = list(role_inline_policies.values())
-    await role_resource_file_upsert(
+    await resource_file_upsert(
         role_resource_path, {"InlinePolicies": role_inline_policies}, False
     )
 
@@ -137,7 +122,7 @@ async def set_role_resource_managed_policies(
 ):
     iam_client = account_config.get_boto3_client("iam")
     role_managed_policies = await get_role_managed_policies(role_name, iam_client)
-    await role_resource_file_upsert(
+    await resource_file_upsert(
         role_resource_path, {"ManagedPolicies": role_managed_policies}, False
     )
 
