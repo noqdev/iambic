@@ -2,7 +2,8 @@ from typing import List, Optional, Union
 
 from pydantic import Field
 
-from noq_form.core.models import AccessModel, ExpiryModel
+from noq_form.config.models import AccountConfig
+from noq_form.core.models import AccessModel, BaseModel, ExpiryModel
 
 
 class ManagedPolicy(AccessModel, ExpiryModel):
@@ -17,10 +18,27 @@ class ManagedPolicy(AccessModel, ExpiryModel):
         return self.policy_arn
 
 
+class Principal(BaseModel):
+    aws: str
+
+    def _apply_resource_dict(self, account_config: AccountConfig = None) -> dict:
+        return {"AWS": self.aws}
+
+
+class Condition(BaseModel):
+    # Key = service/resource_type
+    # Value = resource_value | list[resource_value]
+    string_equals: Optional[dict] = None
+    string_not_equals: Optional[dict] = None
+    string_equals_ignore_case: Optional[dict] = None
+    string_like: Optional[dict] = None
+    string_not_like: Optional[dict] = None
+
+
 class PolicyStatement(AccessModel, ExpiryModel):
     effect: str = Field(..., description="Allow | Deny")
-    principal: Optional[dict] = None
-    not_principal: Optional[dict] = None
+    principal: Optional[Principal] = None
+    not_principal: Optional[Principal] = None
     action: Optional[Union[List[str] | str]] = None
     not_action: Optional[Union[List[str] | str]] = None
     resource: Optional[Union[List[str] | str]] = None

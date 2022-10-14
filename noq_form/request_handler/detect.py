@@ -1,23 +1,25 @@
 # Intentionally hacky for demo
 import json
 
-import boto3
-
+from noq_form.config.models import Config
 from noq_form.slack.notifications import send_iam_mutation_message
+from noq_form.core.logger import log
 
 
-async def detect_changes(config) -> bool:
-    session = boto3.Session()
-    identity = session.client(
-        "sts",
-    ).get_caller_identity()
+async def detect_changes(config: Config) -> bool:
+    queue_arn = config.sqs.get("queues", {}).get("iam_mutation", {}).get("arn", "")
+    if not queue_arn:
+        log.info("No queue arn found. Returning")
+        return False
+
+    queue_name = queue_arn.split(":")[-1]
+    session = config.get_boto_session_from_arn(queue_arn)
+    identity = session.client("sts").get_caller_identity()
     identity_arn_with_session_name = (
         identity["Arn"].replace(":sts:", ":iam:").replace("assumed-role", "role")
     )
     identity_arn = "/".join(identity_arn_with_session_name.split("/")[0:2])
-    queue_arn = config.sqs.get("queues", {}).get("iam_mutation", {}).get("arn", "")
-    queue_name = queue_arn.split(":")[-1]
-    sqs = boto3.client("sqs", region_name="us-east-1")
+    sqs = session.client("sqs", region_name="us-east-1")
     queue_url_res = sqs.get_queue_url(QueueName=queue_name)
     queue_url = queue_url_res.get("QueueUrl")
     messages = sqs.receive_message(QueueUrl=queue_url, MaxNumberOfMessages=10).get(

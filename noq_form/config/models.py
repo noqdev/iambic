@@ -115,11 +115,7 @@ class Config(BaseModel):
         Example: If the secret is in prod
           A build in the staging account won't work unless it has access to the prod secret
         """
-        region = secret_arn.split(":")[3]
-        account_id = secret_arn.split(":")[4]
-        account_config_map = {account.account_id: account for account in self.accounts}
-        account_config = account_config_map[account_id]
-        session = account_config.get_boto3_session(region)
+        session = self.get_boto_session_from_arn(secret_arn)
         client = session.client(service_name="secretsmanager")
         get_secret_value_response = client.get_secret_value(SecretId=secret_arn)
         if "SecretString" in get_secret_value_response:
@@ -139,6 +135,13 @@ class Config(BaseModel):
             for extend in self.extends:
                 if extend.key == ExtendsConfigKey.AWS_SECRETS_MANAGER:
                     self.secrets.update(self.get_aws_secret(extend.value))
+
+    def get_boto_session_from_arn(self, arn: str):
+        region = arn.split(":")[3]
+        account_id = arn.split(":")[4]
+        account_config_map = {account.account_id: account for account in self.accounts}
+        account_config = account_config_map[account_id]
+        return account_config.get_boto3_session(region)
 
     @classmethod
     def load(cls, file_path: str):
