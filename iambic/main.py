@@ -82,7 +82,9 @@ def detect(config_path: str):
 )
 def apply(no_prompt: bool, config_path: str, templates: list[str], template_dir: str):
     if not templates:
-        templates = asyncio.run(gather_templates(template_dir or str(pathlib.Path.cwd())))
+        templates = asyncio.run(
+            gather_templates(template_dir or str(pathlib.Path.cwd()))
+        )
 
     config = Config.load(config_path)
     config.set_account_defaults()

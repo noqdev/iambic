@@ -2,8 +2,8 @@
 import json
 
 from iambic.config.models import Config
-from iambic.slack.notifications import send_iam_mutation_message
 from iambic.core.logger import log
+from iambic.slack.notifications import send_iam_mutation_message
 
 
 async def detect_changes(config: Config) -> bool:
@@ -44,9 +44,7 @@ async def detect_changes(config: Config) -> bool:
                         decoded_message = message_body["detail"]
                 except Exception as err:
                     log.debug(
-                        "Unable to process message",
-                        error=str(err),
-                        message=message
+                        "Unable to process message", error=str(err), message=message
                     )
                     processed_messages.append(
                         {
@@ -82,11 +80,7 @@ async def detect_changes(config: Config) -> bool:
                         cloudtrail_event=decoded_message,
                     )
             except Exception as err:
-                log.debug(
-                    "Unable to process message",
-                    error=str(err),
-                    message=message
-                )
+                log.debug("Unable to process message", error=str(err), message=message)
                 continue
 
         sqs.delete_message_batch(QueueUrl=queue_url, Entries=processed_messages)
