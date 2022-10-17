@@ -4,7 +4,7 @@ from typing import List, Optional
 
 import boto3
 import botocore
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, constr
 from slack_bolt import App as SlackBoltApp
 
 from iambic.aws.models import RegionName
@@ -18,15 +18,38 @@ class Variable(BaseModel):
 
 
 class AccountConfig(BaseModel):
-    account_id: str
-    org_id: Optional[str] = None
+    account_id: constr(min_length=12, max_length=12) = Field(
+        None, description="The AWS Account ID"
+    )
+    org_id: Optional[str] = Field(
+        None,
+        description="A unique identifier designating the identity of the organization",
+    )
     account_name: Optional[str] = None
-    default_region: Optional[str] = "us-east-1"
-    aws_profile: Optional[str] = None
-    assume_role_arn: Optional[str] = None
-    external_id: Optional[str] = None
-    role_access_tag: Optional[str] = None
-    variables: Optional[List[Variable]] = []
+    default_region: Optional[RegionName] = Field(
+        RegionName.us_east_1,
+        description="Default region to use when making AWS requests",
+    )
+    aws_profile: Optional[str] = Field(
+        None,
+        description="The AWS profile used when making calls to the account",
+    )
+    assume_role_arn: Optional[str] = Field(
+        None,
+        description="The role arn to assume into when making calls to the account",
+    )
+    external_id: Optional[str] = Field(
+        None,
+        description="The external id to use for assuming into a role when making calls to the account",
+    )
+    role_access_tag: Optional[str] = Field(
+        None,
+        description="The key of the tag used to store users and groups that can assume into the role the tag is on",
+    )
+    variables: Optional[List[Variable]] = Field(
+        [],
+        description="A list of variables to be used when creating templates",
+    )
     boto3_session_map: Optional[dict] = None
 
     def get_boto3_session(self, region_name: str = None):
@@ -78,6 +101,10 @@ class AccountConfig(BaseModel):
     def __str__(self):
         return f"{self.account_name} - ({self.account_id})"
 
+    def __init__(self, **kwargs):
+        super(AccountConfig, self).__init__(**kwargs)
+        self.default_region = self.default_region.value
+
 
 class ExtendsConfigKey(Enum):
     AWS_SECRETS_MANAGER = "AWS_SECRETS_MANAGER"
@@ -92,9 +119,16 @@ class Config(BaseModel):
     accounts: List[AccountConfig]
     extends: List[ExtendsConfig] = []
     secrets: Optional[dict] = None
-    role_access_tag: Optional[str] = "noq-authorized"
-    variables: Optional[List[Variable]] = []
-    slack_app: Optional[SlackBoltApp] = None
+    role_access_tag: Optional[str] = Field(
+        "noq-authorized",
+        description="The key of the tag used to store users and groups that can assume into the role the tag is on",
+    )
+    variables: Optional[List[Variable]] = Field(
+        [],
+        description="A list of variables to be used when creating templates. "
+        "These apply to all accounts but can be overwritten by an account.",
+    )
+    slack_app: Optional[str] = None
     sqs: Optional[dict] = {}
     slack: Optional[dict] = {}
 
@@ -127,7 +161,9 @@ class Config(BaseModel):
         return yaml.load(return_val)
 
     def configure_slack(self):
-        if slack_bot_token := self.secrets.get("slack", {}).get("bot_token"):
+        if self.secrets and (
+            slack_bot_token := self.secrets.get("slack", {}).get("bot_token")
+        ):
             self.slack_app = SlackBoltApp(token=slack_bot_token)
 
     def combine_extended_configs(self):

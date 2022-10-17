@@ -1,13 +1,14 @@
 from typing import List, Optional, Union
 
-from pydantic import Field
+from pydantic import Field, constr
 
+from iambic.aws.models import ARN_RE
 from iambic.config.models import AccountConfig
 from iambic.core.models import AccessModel, BaseModel, ExpiryModel
 
 
 class ManagedPolicy(AccessModel, ExpiryModel):
-    policy_arn: str
+    policy_arn: constr(regex=ARN_RE)
 
     @property
     def resource_type(self):
@@ -26,7 +27,7 @@ class Principal(BaseModel):
 
     def _apply_resource_dict(self, account_config: AccountConfig = None) -> dict:
         resource_dict = super(Principal, self)._apply_resource_dict(account_config)
-        if aws_val := resource_dict.pop('aws', resource_dict.pop('Aws', None)):
+        if aws_val := resource_dict.pop("aws", resource_dict.pop("Aws", None)):
             resource_dict["AWS"] = aws_val
         return resource_dict
 
@@ -54,6 +55,7 @@ class Condition(BaseModel):
     https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_condition.html
 
     """
+
     # Key = service/resource_type
     # Value = resource_value | list[resource_value]
 
@@ -101,12 +103,38 @@ class PolicyStatement(AccessModel, ExpiryModel):
     effect: str = Field(..., description="Allow | Deny")
     principal: Optional[Union[Principal | str]] = None
     not_principal: Optional[Union[Principal | str]] = None
-    action: Optional[Union[List[str] | str]] = None
-    not_action: Optional[Union[List[str] | str]] = None
-    resource: Optional[Union[List[str] | str]] = None
-    not_resource: Optional[Union[List[str] | str]] = None
-    condition: Optional[dict] = None
-    sid: Optional[str] = None  # Fix constr(regex=r"^[a-zA-Z0-9]*")
+    action: Optional[Union[List[str] | str]] = Field(
+        None,
+        description="A single regex or list of regexes. "
+        "Values are the actions that can be performed on the resources in the policy statement",
+        example="dynamodb:list*",
+    )
+    not_resource: Optional[Union[List[str] | str]] = Field(
+        None,
+        description="An advanced policy element that explicitly matches every resource except those specified."
+        "DON'T use this with effect: allow and action: '*'",
+    )
+    not_action: Optional[Union[List[str] | str]] = Field(
+        None,
+        description="An advanced policy element that explicitly matches everything except the specified list of actions."
+        "DON'T use this with effect: allow in the same statement OR policy",
+    )
+    resource: Optional[Union[List[str] | str]] = Field(
+        None,
+        description="A single regex or list of regexes. Values specified are the resources the statement applies to",
+    )
+    not_resource: Optional[Union[List[str] | str]] = Field(
+        None,
+        description="A single regex or list of regexes. Values specified are the resources the statement applies to",
+    )
+    condition: Optional[dict] = Field(
+        None,
+        description="An optional set of conditions to determine of the policy applies to a resource.",
+    )
+    sid: Optional[str] = Field(
+        None,
+        description="The Policy Statement ID.",
+    )
 
     @property
     def resource_type(self):
@@ -123,9 +151,14 @@ class AssumeRolePolicyDocument(AccessModel):
 
 
 class PolicyDocument(AccessModel, ExpiryModel):
-    policy_name: str
+    policy_name: str = Field(
+        description="The name of the policy.",
+    )
     version: Optional[str] = None
-    statement: Optional[List[PolicyStatement]] = None
+    statement: Optional[List[PolicyStatement]] = Field(
+        None,
+        description="List of policy statements",
+    )
 
     @property
     def resource_type(self):

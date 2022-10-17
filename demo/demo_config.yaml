@@ -1,0 +1,7 @@
+accounts:
+- account_id: '694815895589'
+  account_name: 'demo-2'
+  aws_profile: demo_2
+- account_id: '518317429440'
+  account_name: 'demo-3'
+  aws_profile: demo_3

@@ -234,7 +234,7 @@ async def apply_role_inline_policies(
 
     if role_exists:
         template_policy_map = {
-            policy["PolicyName"]: {"Statement": policy["Statement"]}
+            policy["PolicyName"]: {k: v for k, v in policy.items() if k != "PolicyName"}
             for policy in template_policies
         }
         existing_policy_map = await get_role_inline_policies(role_name, iam_client)
@@ -259,10 +259,19 @@ async def apply_role_inline_policies(
         for policy_name, policy_document in template_policy_map.items():
             existing_policy_doc = existing_policy_map.get(policy_name)
             if not existing_policy_doc or (
-                await aio_wrapper(
-                    DeepDiff, policy_document, existing_policy_doc, ignore_order=True
+                policy_drift := (
+                    await aio_wrapper(
+                        DeepDiff,
+                        existing_policy_doc,
+                        policy_document,
+                        ignore_order=True,
+                    )
                 )
             ):
+                if policy_drift:
+                    log_params["policy_drift"] = policy_drift
+                    log_params["existing_policy_doc"] = existing_policy_doc
+                    log_params["policy_document"] = policy_document
                 changes_made = True
                 resource_existence = "New" if not existing_policy_doc else "Stale"
                 log_str = f"{resource_existence} inline policies discovered."
