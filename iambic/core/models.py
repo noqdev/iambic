@@ -5,6 +5,7 @@ from typing import List, Optional, Union
 
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Field
 
 from iambic.config.models import AccountConfig, Config
 from iambic.core.context import ctx
@@ -56,6 +57,7 @@ class BaseModel(PydanticBaseModel):
             "template_type",
             "file_path",
         }
+        exclude_keys.update(self.exclude_keys)
 
         if account_config:
             resource_dict = {
@@ -93,19 +95,44 @@ class BaseModel(PydanticBaseModel):
 
 
 class AccessModel(BaseModel):
-    included_accounts: List = ["*"]
-    excluded_accounts: Optional[List] = []
-    included_orgs: List = ["*"]
-    excluded_orgs: Optional[List] = []
+    included_accounts: List = Field(
+        ["*"],
+        description="A list of account ids and/or account names this statement applies to. "
+        "Account ids/names can be represented as a regex and string",
+    )
+    excluded_accounts: Optional[List] = Field(
+        [],
+        description="A list of account ids and/or account names this statement explicitly does not apply to. "
+        "Account ids/names can be represented as a regex and string",
+    )
+    included_orgs: List = Field(
+        ["*"],
+        description="A list of AWS organization ids this statement applies to. "
+        "Org ids can be represented as a regex and string",
+    )
+    excluded_orgs: Optional[List] = Field(
+        [],
+        description="A list of AWS organization ids this statement explicitly does not apply to. "
+        "Org ids can be represented as a regex and string",
+    )
 
 
 class Deleted(AccessModel):
-    deleted: bool
+    deleted: bool = Field(
+        description="Denotes whether the resource has been removed from AWS."
+        "Upon being set to true, the resource will be deleted the next time iambic is ran.",
+    )
 
 
 class ExpiryModel(BaseModel):
-    expires_at: Optional[datetime] = None
-    deleted: Optional[Union[bool | List[Deleted]]] = True
+    expires_at: Optional[datetime] = Field(
+        None, description="The date and time the resource will be/was set to deleted."
+    )
+    deleted: Optional[Union[bool | List[Deleted]]] = Field(
+        False,
+        description="Denotes whether the resource has been removed from AWS."
+        "Upon being set to true, the resource will be deleted the next time iambic is ran.",
+    )
 
     @property
     def resource_type(self):
@@ -132,7 +159,10 @@ class Tag(ExpiryModel, AccessModel):
 class NoqTemplate(ExpiryModel):
     template_type: str
     file_path: str
-    read_only: Optional[bool] = False
+    read_only: Optional[bool] = Field(
+        False,
+        description="If set to True, iambic will only log drift instead of apply changes when drift is detected.",
+    )
 
     def dict(
         self,

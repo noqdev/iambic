@@ -3,7 +3,7 @@ import pathlib
 
 import aiofiles
 
-from iambic.aws.iam.role.models import MultiAccountRoleTemplate
+from iambic.aws.iam.role.models import RoleTemplate
 from iambic.aws.iam.role.utils import (
     get_role_inline_policies,
     get_role_managed_policies,
@@ -23,7 +23,8 @@ from iambic.core.template_generation import (
 from iambic.core.utils import (
     NoqSemaphore,
     get_account_config_map,
-    normalize_boto3_resp, resource_file_upsert,
+    normalize_boto3_resp,
+    resource_file_upsert,
 )
 
 ROLE_RESPONSE_DIR = pathlib.Path.home().joinpath(
@@ -298,11 +299,14 @@ async def create_templated_role(  # noqa: C901
                 ]:
                     role_template_params["role_access"][elem].pop("included_accounts")
 
-    role = MultiAccountRoleTemplate(
-        file_path=get_templated_role_file_path(role_dir, role_name),
-        **role_template_params,
-    )
-    role.write()
+    try:
+        role = RoleTemplate(
+            file_path=get_templated_role_file_path(role_dir, role_name),
+            **role_template_params,
+        )
+        role.write()
+    except Exception as err:
+        log.info(str(err), role_params=role_template_params)
 
 
 async def generate_aws_role_templates(configs: list[Config], base_output_dir: str):
