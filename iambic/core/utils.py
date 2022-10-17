@@ -57,7 +57,9 @@ def normalize_boto3_resp(obj):
             if isinstance(v, list):
                 new_obj[k] = [normalize_boto3_resp(x) for x in v]
             else:
-                new_obj[k] = normalize_boto3_resp(v) if k not in skip_formatting_for else v
+                new_obj[k] = (
+                    normalize_boto3_resp(v) if k not in skip_formatting_for else v
+                )
         return new_obj
     elif isinstance(obj, list):
         return [normalize_boto3_resp(x) for x in obj]
@@ -136,14 +138,14 @@ def apply_to_account(resource, account_config) -> bool:
 
     if hasattr(resource, "deleted"):
         if isinstance(resource.deleted, bool):
-            if not resource.deleted:
+            if resource.deleted:
                 return False
         else:
-            enabled_obj = resource.get_attribute_val_for_account(
+            deleted_obj = resource.get_attribute_val_for_account(
                 account_config, "deleted"
             )
-            enabled_obj = get_closest_value(enabled_obj, account_config)
-            if not enabled_obj.enabled:
+            deleted_obj = get_closest_value(deleted_obj, account_config)
+            if deleted_obj.deleted:
                 return False
 
     return evaluate_on_account(resource, account_config)
@@ -157,7 +159,7 @@ async def remove_expired_resources(
     if (
         not issubclass(type(resource), BaseModel)
         or not hasattr(resource, "expires_at")
-        or getattr(resource, "deleted", None) is False
+        or getattr(resource, "deleted", None)
     ):
         return resource
 
@@ -173,7 +175,7 @@ async def remove_expired_resources(
 
     if hasattr(resource, "expires_at") and resource.expires_at:
         if resource.expires_at < datetime.utcnow():
-            resource.deleted = False
+            resource.deleted = True
             log.info("Expired resource found, marking for deletion", **log_params)
             return resource
 
@@ -231,9 +233,9 @@ async def gather_templates(repo_dir: str, template_type: str = None) -> list[str
 
     file_paths = glob.glob(f"{repo_dir}/**/*.yaml", recursive=True)
     file_paths += glob.glob(f"{repo_dir}*.yaml", recursive=True)
-    file_paths = await asyncio.gather(*[
-        template_match(fp, regex_pattern) for fp in file_paths
-    ])
+    file_paths = await asyncio.gather(
+        *[template_match(fp, regex_pattern) for fp in file_paths]
+    )
     return [fp for fp in file_paths if fp]
 
 

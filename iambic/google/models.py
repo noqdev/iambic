@@ -1,6 +1,5 @@
 import json
 import os
-from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 
@@ -8,9 +7,9 @@ import googleapiclient.discovery
 from google.oauth2 import service_account
 from pydantic import Field
 
-from iambic.config.models import Config
+from iambic.config.models import AccountConfig, Config
 from iambic.core.logger import log
-from iambic.core.models import BaseModel, ExpiryModel
+from iambic.core.models import ExpiryModel, NoqTemplate
 from iambic.core.utils import aio_wrapper, yaml
 
 
@@ -84,19 +83,14 @@ class GroupMember(ExpiryModel):
         False,
         description="Expand the group into the members of the group. This is useful for nested groups.",
     )
-    expires_at: Optional[datetime] = None
     role: GroupMemberRole = GroupMemberRole.MEMBER
     type: GroupMemberType = GroupMemberType.USER
     status: GroupMemberStatus = GroupMemberStatus.ACTIVE
     subscription: GroupMemberSubscription = GroupMemberSubscription.EACH_EMAIL
 
 
-class Group(BaseModel):
-    template_type = "NOQ::Google::Group"
-    file_path: str
-    enabled: Optional[bool] = True
-    deleted: Optional[bool] = False
-    expires_at: Optional[datetime] = None
+class GroupTemplate(NoqTemplate):
+    template_type = "NOQ::Google::GroupTemplate"
     name: str
     email: str
     description: str
@@ -114,6 +108,16 @@ class Group(BaseModel):
     # TODO: conversation_history
     # TODO: There is more. Check google group settings page
 
+    async def _apply_to_account(self, account_config: AccountConfig) -> bool:
+        # The bool represents whether the resource was altered in any way in the cloud
+        raise NotImplementedError
+
+    def resource_type(self):
+        return "google:group"
+
+    def resource_name(self):
+        return self.name
+
 
 async def get_service(
     config: Config,
@@ -130,6 +134,8 @@ async def get_service(
 
 
     """
+    if not config.secrets:
+        return
 
     service_key = config.secrets.get("google", {}).get("service_key")
     credential_subjects = config.secrets.get("google", {}).get("credential_subjects")
@@ -171,6 +177,8 @@ async def generate_group_templates(config, domain, output_dir):
 
     try:
         service = await get_service(config, "admin", "directory_v1")
+        if not service:
+            return []
     except AttributeError as err:
         log.exception("Unable to process google groups.", error=err)
         return
@@ -192,7 +200,7 @@ async def generate_group_templates(config, domain, output_dir):
             ]
             file_name = f"{group['email'].split('@')[0]}.yaml"
             groups.append(
-                Group(
+                GroupTemplate(
                     file_path=f"google_groups/{domain}/{file_name}",
                     name=group["name"],
                     email=group["email"],

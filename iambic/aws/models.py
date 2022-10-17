@@ -1,5 +1,7 @@
 from enum import Enum
 
+ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\*$"
+
 
 class RegionName(Enum):
     us_east_1 = "us-east-1"
@@ -14,4 +16,3 @@ class RegionName(Enum):
     ap_northeast_2 = "ap-northeast-2"
     sa_east_1 = "sa-east-1"
     cn_north_1 = "cn-north-1"
-
