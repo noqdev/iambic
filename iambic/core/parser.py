@@ -1,6 +1,6 @@
-from noq_form.config.templates import TEMPLATE_TYPE_MAP
-from noq_form.core.models import NoqTemplate
-from noq_form.core.utils import yaml
+from iambic.config.templates import TEMPLATE_TYPE_MAP
+from iambic.core.models import NoqTemplate
+from iambic.core.utils import yaml
 
 
 def load_templates(template_paths: list[str]) -> list[NoqTemplate]:

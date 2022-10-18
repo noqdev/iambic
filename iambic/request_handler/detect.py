@@ -1,23 +1,25 @@
 # Intentionally hacky for demo
 import json
 
-import boto3
+from iambic.config.models import Config
+from iambic.core.logger import log
+from iambic.slack.notifications import send_iam_mutation_message
 
-from noq_form.slack.notifications import send_iam_mutation_message
 
+async def detect_changes(config: Config) -> bool:
+    queue_arn = config.sqs.get("queues", {}).get("iam_mutation", {}).get("arn", "")
+    if not queue_arn:
+        log.info("No queue arn found. Returning")
+        return False
 
-async def detect_changes(config) -> bool:
-    session = boto3.Session()
-    identity = session.client(
-        "sts",
-    ).get_caller_identity()
+    queue_name = queue_arn.split(":")[-1]
+    session = config.get_boto_session_from_arn(queue_arn, "us-east-1")
+    identity = session.client("sts").get_caller_identity()
     identity_arn_with_session_name = (
         identity["Arn"].replace(":sts:", ":iam:").replace("assumed-role", "role")
     )
     identity_arn = "/".join(identity_arn_with_session_name.split("/")[0:2])
-    queue_arn = config.sqs.get("queues", {}).get("iam_mutation", {}).get("arn", "")
-    queue_name = queue_arn.split(":")[-1]
-    sqs = boto3.client("sqs", region_name="us-east-1")
+    sqs = session.client("sqs", region_name="us-east-1")
     queue_url_res = sqs.get_queue_url(QueueName=queue_name)
     queue_url = queue_url_res.get("QueueUrl")
     messages = sqs.receive_message(QueueUrl=queue_url, MaxNumberOfMessages=10).get(
@@ -40,7 +42,10 @@ async def detect_changes(config) -> bool:
                         decoded_message = json.loads(message_body["Message"])["detail"]
                     else:
                         decoded_message = message_body["detail"]
-                except Exception:
+                except Exception as err:
+                    log.debug(
+                        "Unable to process message", error=str(err), message=message
+                    )
                     processed_messages.append(
                         {
                             "Id": message["MessageId"],
@@ -74,7 +79,8 @@ async def detect_changes(config) -> bool:
                         session_name=session_name,
                         cloudtrail_event=decoded_message,
                     )
-            except:
+            except Exception as err:
+                log.debug("Unable to process message", error=str(err), message=message)
                 continue
 
         sqs.delete_message_batch(QueueUrl=queue_url, Entries=processed_messages)

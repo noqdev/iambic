@@ -5,11 +5,12 @@ from typing import List, Optional, Union
 
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Field
 
-from noq_form.config.models import AccountConfig, Config
-from noq_form.core.context import ctx
-from noq_form.core.logger import log
-from noq_form.core.utils import (
+from iambic.config.models import AccountConfig, Config
+from iambic.core.context import ctx
+from iambic.core.logger import log
+from iambic.core.utils import (
     apply_to_account,
     evaluate_on_account,
     snake_to_camelcap,
@@ -46,7 +47,7 @@ class BaseModel(PydanticBaseModel):
 
     def _apply_resource_dict(self, account_config: AccountConfig = None) -> dict:
         exclude_keys = {
-            "enabled",
+            "deleted",
             "expires_at",
             "included_accounts",
             "excluded_accounts",
@@ -56,6 +57,7 @@ class BaseModel(PydanticBaseModel):
             "template_type",
             "file_path",
         }
+        exclude_keys.update(self.exclude_keys)
 
         if account_config:
             resource_dict = {
@@ -69,7 +71,7 @@ class BaseModel(PydanticBaseModel):
                 exclude=exclude_keys, exclude_none=True, exclude_unset=False
             )
 
-        return self._resource_dict_case_normalizer(resource_dict)
+        return {self.case_convention(k): v for k, v in resource_dict.items()}
 
     def apply_resource_dict(self, account_config: AccountConfig) -> dict:
         response = self._apply_resource_dict(account_config)
@@ -87,25 +89,50 @@ class BaseModel(PydanticBaseModel):
     def exclude_keys(self):
         return set()
 
-    @staticmethod
-    def _resource_dict_case_normalizer(resource_dict) -> dict:
-        return {snake_to_camelcap(k): v for k, v in resource_dict.items()}
+    @property
+    def case_convention(self):
+        return snake_to_camelcap
 
 
 class AccessModel(BaseModel):
-    included_accounts: List = ["*"]
-    excluded_accounts: Optional[List] = []
-    included_orgs: List = ["*"]
-    excluded_orgs: Optional[List] = []
+    included_accounts: List = Field(
+        ["*"],
+        description="A list of account ids and/or account names this statement applies to. "
+        "Account ids/names can be represented as a regex and string",
+    )
+    excluded_accounts: Optional[List] = Field(
+        [],
+        description="A list of account ids and/or account names this statement explicitly does not apply to. "
+        "Account ids/names can be represented as a regex and string",
+    )
+    included_orgs: List = Field(
+        ["*"],
+        description="A list of AWS organization ids this statement applies to. "
+        "Org ids can be represented as a regex and string",
+    )
+    excluded_orgs: Optional[List] = Field(
+        [],
+        description="A list of AWS organization ids this statement explicitly does not apply to. "
+        "Org ids can be represented as a regex and string",
+    )
 
 
-class Enabled(AccessModel):
-    enabled: bool
+class Deleted(AccessModel):
+    deleted: bool = Field(
+        description="Denotes whether the resource has been removed from AWS."
+        "Upon being set to true, the resource will be deleted the next time iambic is ran.",
+    )
 
 
 class ExpiryModel(BaseModel):
-    expires_at: Optional[datetime] = None
-    enabled: Optional[Union[bool | List[Enabled]]] = True
+    expires_at: Optional[datetime] = Field(
+        None, description="The date and time the resource will be/was set to deleted."
+    )
+    deleted: Optional[Union[bool | List[Deleted]]] = Field(
+        False,
+        description="Denotes whether the resource has been removed from AWS."
+        "Upon being set to true, the resource will be deleted the next time iambic is ran.",
+    )
 
     @property
     def resource_type(self):
@@ -132,7 +159,10 @@ class Tag(ExpiryModel, AccessModel):
 class NoqTemplate(ExpiryModel):
     template_type: str
     file_path: str
-    dry_run_only: Optional[bool] = False
+    read_only: Optional[bool] = Field(
+        False,
+        description="If set to True, iambic will only log drift instead of apply changes when drift is detected.",
+    )
 
     def dict(
         self,

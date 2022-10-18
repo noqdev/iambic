@@ -1,3 +1,6 @@
+from iambic.config.models import Config
+
+
 async def send_iam_mutation_message(
     config,
     identity: str,
@@ -69,7 +72,9 @@ async def send_iam_mutation_message(
     )
 
 
-async def send_slack_notification_to_channel(config, channel_id, text, blocks) -> bool:
+async def send_slack_notification_to_channel(
+    config: Config, channel_id, text, blocks
+) -> bool:
     if not (slack_app := config.slack_app):
         return False
 

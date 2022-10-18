@@ -1,12 +1,18 @@
 import asyncio
+import glob
+import os
+import pathlib
 import re
 from datetime import datetime
 from io import StringIO
+from typing import Union
 
+import aiofiles
 from asgiref.sync import sync_to_async
 from ruamel.yaml import YAML
 
-from noq_form.core.logger import log
+from iambic.core import noq_json as json
+from iambic.core.logger import log
 
 
 def camel_to_snake(str_obj: str) -> str:
@@ -26,6 +32,39 @@ def snake_to_camelcap(str_obj: str) -> str:
         str_obj
     ).title()  # normalize string and add required case convention
     return str_obj.replace("_", "")  # Remove underscores
+
+
+async def resource_file_upsert(
+    file_path: Union[str | pathlib.Path],
+    content_as_dict: dict,
+    replace_file: bool = False,
+):
+    if not replace_file and os.path.exists(file_path):
+        async with aiofiles.open(file_path, mode="r") as f:
+            content_dict = json.loads(await f.read())
+            content_as_dict = {**content_dict, **content_as_dict}
+
+    async with aiofiles.open(file_path, mode="w") as f:
+        await f.write(json.dumps(content_as_dict, indent=2))
+
+
+def normalize_boto3_resp(obj):
+    skip_formatting_for = ["condition"]
+    if isinstance(obj, dict):
+        new_obj = dict()
+        for k, v in obj.items():
+            k = camel_to_snake(k)
+            if isinstance(v, list):
+                new_obj[k] = [normalize_boto3_resp(x) for x in v]
+            else:
+                new_obj[k] = (
+                    normalize_boto3_resp(v) if k not in skip_formatting_for else v
+                )
+        return new_obj
+    elif isinstance(obj, list):
+        return [normalize_boto3_resp(x) for x in obj]
+    else:
+        return obj
 
 
 def get_closest_value(matching_values: list, account_config):
@@ -57,7 +96,7 @@ def get_closest_value(matching_values: list, account_config):
 
 
 def evaluate_on_account(resource, account_config) -> bool:
-    from noq_form.core.models import AccessModel
+    from iambic.core.models import AccessModel
 
     if not issubclass(type(resource), AccessModel):
         return True
@@ -97,16 +136,16 @@ def evaluate_on_account(resource, account_config) -> bool:
 
 def apply_to_account(resource, account_config) -> bool:
 
-    if hasattr(resource, "enabled"):
-        if isinstance(resource.enabled, bool):
-            if not resource.enabled:
+    if hasattr(resource, "deleted"):
+        if isinstance(resource.deleted, bool):
+            if resource.deleted:
                 return False
         else:
-            enabled_obj = resource.get_attribute_val_for_account(
-                account_config, "enabled"
+            deleted_obj = resource.get_attribute_val_for_account(
+                account_config, "deleted"
             )
-            enabled_obj = get_closest_value(enabled_obj, account_config)
-            if not enabled_obj.enabled:
+            deleted_obj = get_closest_value(deleted_obj, account_config)
+            if deleted_obj.deleted:
                 return False
 
     return evaluate_on_account(resource, account_config)
@@ -115,12 +154,12 @@ def apply_to_account(resource, account_config) -> bool:
 async def remove_expired_resources(
     resource, template_resource_type: str, template_resource_name: str
 ):
-    from noq_form.core.models import BaseModel
+    from iambic.core.models import BaseModel
 
     if (
         not issubclass(type(resource), BaseModel)
         or not hasattr(resource, "expires_at")
-        or getattr(resource, "enabled", None) is False
+        or getattr(resource, "deleted", None)
     ):
         return resource
 
@@ -136,7 +175,7 @@ async def remove_expired_resources(
 
     if hasattr(resource, "expires_at") and resource.expires_at:
         if resource.expires_at < datetime.utcnow():
-            resource.enabled = False
+            resource.deleted = True
             log.info("Expired resource found, marking for deletion", **log_params)
             return resource
 
@@ -159,13 +198,45 @@ async def remove_expired_resources(
     return resource
 
 
-def gather_templates() -> list[str]:
+def get_account_config_map(configs: list) -> dict:
+    """Returns a map containing all account configs across all provided config instances
+
+    :param configs:
+    :return: dict(account_id:str = AccountConfig)
     """
-    Get pwd
-    Traverse all directories to get all yamls.
-    Return the path for each yaml with template_type: NOQ::.*
-    """
-    ...
+    account_config_map = dict()
+    for config in configs:
+        config.set_account_defaults()
+        for account_config in config.accounts:
+            if account_config_map.get(account_config.account_id):
+                log.critical(
+                    "Account definition found in multiple configs",
+                    account_id=account_config.account_id,
+                    account_name=account_config.account_name,
+                )
+                raise ValueError
+            account_config_map[account_config.account_id] = account_config
+
+    return account_config_map
+
+
+async def gather_templates(repo_dir: str, template_type: str = None) -> list[str]:
+    async def template_match(file_path: str, re_pattern: str) -> Union[str | None]:
+        async with aiofiles.open(file_path, mode="r") as f:
+            file_content = await f.read()
+            if re.search(re_pattern, file_content):
+                return file_path
+
+    regex_pattern = r".*template_type:\n?.*NOQ::"
+    if template_type:
+        regex_pattern = rf"{regex_pattern}.*{template_type}"
+
+    file_paths = glob.glob(f"{repo_dir}/**/*.yaml", recursive=True)
+    file_paths += glob.glob(f"{repo_dir}*.yaml", recursive=True)
+    file_paths = await asyncio.gather(
+        *[template_match(fp, regex_pattern) for fp in file_paths]
+    )
+    return [fp for fp in file_paths if fp]
 
 
 async def aio_wrapper(fnc, *args, **kwargs):
@@ -184,5 +255,43 @@ class NoqYaml(YAML):
             return stream.getvalue()
 
 
+class NoqSemaphore:
+    def __init__(
+        self, callback_function: any, batch_size: int, callback_is_async: bool = True
+    ):
+        """Makes a reusable semaphore that wraps a provided function.
+        Useful for batch processing things that could be rate limited.
+
+        Example prints hello there 3 times in quick succession, waits 3 seconds then processes another 3:
+            from datetime import datetime
+
+            async def hello_there():
+                print(f"Hello there - {datetime.utcnow()}")
+                await asyncio.sleep(3)
+
+            hello_there_semaphore = NoqSemaphore(hello_there, 3)
+            asyncio.run(hello_there_semaphore.process([{} for _ in range(10)]))
+        """
+        self.limit = asyncio.Semaphore(batch_size)
+        self.callback_function = callback_function
+        self.callback_is_async = callback_is_async
+
+    async def handle_message(self, **kwargs):
+        async with self.limit:
+            if self.callback_is_async:
+                return await self.callback_function(**kwargs)
+
+            return await aio_wrapper(self.callback_function, **kwargs)
+
+    async def process(self, messages: list[dict]):
+        return await asyncio.gather(
+            *[asyncio.create_task(self.handle_message(**msg)) for msg in messages]
+        )
+
+
 typ = "rt"
 yaml = NoqYaml(typ=typ)
+yaml.preserve_quotes = True
+yaml.indent(mapping=2, sequence=4, offset=2)
+yaml.representer.ignore_aliases = lambda *data: True
+yaml.width = 4096
