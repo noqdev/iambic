@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "NoqForm Plan",
+            "name": "Iambic Plan",
             "type": "python",
             "request": "launch",
-            "module": "noq_form.main",
+            "module": "iambic.main",
             "console": "integratedTerminal",
             "args": ["plan"],
             "env": {
@@ -17,10 +17,10 @@
             "justMyCode": true
         },
         {
-            "name": "NoqForm Apply",
+            "name": "Iambic Apply",
             "type": "python",
             "request": "launch",
-            "module": "noq_form.main",
+            "module": "iambic.main",
             "console": "integratedTerminal",
             "env": {
                 "AWS_PROFILE": "noq_dev"
@@ -34,10 +34,10 @@
             "justMyCode": true
         },
         {
-            "name": "NoqForm Import",
+            "name": "Iambic Import",
             "type": "python",
             "request": "launch",
-            "module": "noq_form.main",
+            "module": "iambic.main",
             "console": "integratedTerminal",
             "env": {
                 "AWS_PROFILE": "noq_dev"
@@ -51,10 +51,10 @@
             "justMyCode": true
         },
         {
-            "name": "NoqForm Detect",
+            "name": "Iambic Detect",
             "type": "python",
             "request": "launch",
-            "module": "noq_form.main",
+            "module": "iambic.main",
             "console": "integratedTerminal",
             "env": {
                 "AWS_PROFILE": "noq_dev"
