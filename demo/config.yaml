@@ -13,6 +13,10 @@ accounts:
   account_name: prod
   aws_profile: noq_prod
 
+google:
+  groups:
+    enabled: false
+
 slack:
   alert_channel_id: 'C046KESSMQ8'
 
