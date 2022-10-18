@@ -28,7 +28,7 @@
             "args": [
                 "apply",
             "--template",
-            "../noq-templates/aws_iam_roles/admin.yaml",
+            "../noq-templates/resources/aws/roles/application/noqmeter_null_test_role.yaml",
             "--config",
             "demo/config.yaml"],
             "justMyCode": true

@@ -29,7 +29,7 @@ google-api-python-client = "^2.64.0"
 google-auth = "^2.12.0"
 
 [tool.poetry.scripts]
-noq_form = "iambic.main:cli"
+iambic = "iambic.main:cli"
 
 [build-system]
 requires = ["poetry-core"]
