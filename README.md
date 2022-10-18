@@ -53,4 +53,5 @@ It is the responsibility of the caller to format the response as needed.
 
 Normally you will use `group_dict_attribute` which handles normalizing `base_group_dict_attribute`'s output
 
-
+## Additional Documentation
+* [Schemas](docs/SCHEMA.md)
