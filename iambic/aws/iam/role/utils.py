@@ -88,26 +88,22 @@ async def apply_role_tags(
         log_str = "Stale tags discovered."
         if ctx.execute:
             log_str = f"{log_str} Removing tags..."
-            log.info(log_str, tags=tags_to_remove, **log_params)
             tasks.append(
                 aio_wrapper(
                     iam_client.untag_role, RoleName=role_name, TagKeys=tags_to_remove
                 )
             )
-        else:
-            log.info(log_str, tags=tags_to_remove, **log_params)
+        log.info(log_str, tags=tags_to_remove, **log_params)
 
     if tags_to_apply:
         changes_made = True
         log_str = "New tags discovered in AWS."
         if ctx.execute:
             log_str = f"{log_str} Adding tags..."
-            log.info(log_str, tags=tags_to_apply, **log_params)
             tasks.append(
                 aio_wrapper(iam_client.tag_role, RoleName=role_name, Tags=tags_to_apply)
             )
-        else:
-            log.info(log_str, tags=tags_to_apply, **log_params)
+        log.info(log_str, tags=tags_to_apply, **log_params)
 
     if tasks:
         await asyncio.gather(*tasks)
@@ -138,15 +134,12 @@ async def update_assume_role_policy(
         if ctx.execute:
             boto_action = "Creating" if existing_policy_document else "Updating"
             log_str = f"{log_str} {boto_action} AssumeRolePolicyDocument..."
-            log.info(log_str, **log_params)
-            log.info(json.dumps(template_policy_document))
             await aio_wrapper(
                 iam_client.update_assume_role_policy,
                 RoleName=role_name,
                 PolicyDocument=json.dumps(template_policy_document),
             )
-        else:
-            log.info(log_str, **log_params)
+        log.info(log_str, **log_params)
 
         return True
 
@@ -181,7 +174,6 @@ async def apply_role_managed_policies(
         log_str = "New managed policies discovered."
         if ctx.execute:
             log_str = f"{log_str} Adding managed policies..."
-            log.info(log_str, managed_policies=new_managed_policies, **log_params)
             tasks = [
                 aio_wrapper(
                     iam_client.attach_role_policy,
@@ -190,8 +182,7 @@ async def apply_role_managed_policies(
                 )
                 for policy_arn in new_managed_policies
             ]
-        else:
-            log.info(log_str, managed_policies=new_managed_policies, **log_params)
+        log.info(log_str, managed_policies=new_managed_policies, **log_params)
 
     existing_managed_policies = [
         policy_arn
@@ -202,7 +193,6 @@ async def apply_role_managed_policies(
         log_str = "Stale managed policies discovered."
         if ctx.execute:
             log_str = f"{log_str} Removing managed policies..."
-            log.info(log_str, managed_policies=existing_managed_policies, **log_params)
             tasks.extend(
                 [
                     aio_wrapper(
@@ -213,8 +203,7 @@ async def apply_role_managed_policies(
                     for policy_arn in existing_managed_policies
                 ]
             )
-        else:
-            log.info(log_str, managed_policies=existing_managed_policies, **log_params)
+        log.info(log_str, managed_policies=existing_managed_policies, **log_params)
 
     if tasks:
         await asyncio.gather(*tasks)
@@ -245,7 +234,6 @@ async def apply_role_inline_policies(
                 log_str = "Stale inline policies discovered."
                 if ctx.execute:
                     log_str = f"{log_str} Removing inline policy..."
-                    log.info(log_str, policy_name=policy_name, **log_params)
                     tasks.append(
                         aio_wrapper(
                             iam_client.delete_role_policy,
@@ -253,33 +241,32 @@ async def apply_role_inline_policies(
                             PolicyName=policy_name,
                         )
                     )
-                else:
-                    log.info(log_str, policy_name=policy_name, **log_params)
+                log.info(log_str, policy_name=policy_name, **log_params)
 
         for policy_name, policy_document in template_policy_map.items():
             existing_policy_doc = existing_policy_map.get(policy_name)
-            if not existing_policy_doc or (
-                policy_drift := (
-                    await aio_wrapper(
-                        DeepDiff,
-                        existing_policy_doc,
-                        policy_document,
-                        ignore_order=True,
-                    )
+            policy_drift = None
+            if existing_policy_doc:
+                policy_drift = await aio_wrapper(
+                    DeepDiff,
+                    existing_policy_doc,
+                    policy_document,
+                    ignore_order=True,
                 )
-            ):
+
+            if not existing_policy_doc or policy_drift:
                 if policy_drift:
                     log_params["policy_drift"] = policy_drift
-                    log_params["existing_policy_doc"] = existing_policy_doc
-                    log_params["policy_document"] = policy_document
+                    boto_action = "Updating"
+                    resource_existence = "Stale"
+                else:
+                    boto_action = "Creating"
+                    resource_existence = "New"
+
                 changes_made = True
-                resource_existence = "New" if not existing_policy_doc else "Stale"
                 log_str = f"{resource_existence} inline policies discovered."
                 if ctx.execute:
-                    boto_action = "Creating" if not existing_policy_doc else "Updating"
                     log_str = f"{log_str} {boto_action} inline policy..."
-                    log.info(log_str, policy_name=policy_name, **log_params)
-
                     tasks.append(
                         aio_wrapper(
                             iam_client.put_role_policy,
@@ -288,8 +275,7 @@ async def apply_role_inline_policies(
                             PolicyDocument=json.dumps(policy_document),
                         )
                     )
-                else:
-                    log.info(log_str, policy_name=policy_name, **log_params)
+                log.info(log_str, policy_name=policy_name, **log_params)
 
         if tasks:
             await asyncio.gather(*tasks)
