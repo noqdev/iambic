@@ -1,12 +1,13 @@
 import asyncio
 import json
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from pydantic import Field, constr
 
+from iambic.aws.iam.models import Description, MaxSessionDuration, Path
 from iambic.aws.iam.policy.models import (
     AssumeRolePolicyDocument,
-    ManagedPolicy,
+    ManagedPolicyRef,
     PolicyDocument,
 )
 from iambic.aws.iam.role.utils import (
@@ -25,11 +26,11 @@ from iambic.core.utils import aio_wrapper, apply_to_account
 
 
 class RoleAccess(ExpiryModel, AccessModel):
-    users: List[str] = Field(
+    users: list[str] = Field(
         [],
         description="List of users who can assume into the role",
     )
-    groups: List[str] = Field(
+    groups: list[str] = Field(
         [],
         description="List of groups. Users in one or more of the groups can assume into the role",
     )
@@ -48,18 +49,6 @@ class PermissionBoundary(ExpiryModel, AccessModel):
     permissions_boundary_arn: constr(regex=ARN_RE)
 
 
-class Path(AccessModel):
-    file_path: str
-
-
-class MaxSessionDuration(AccessModel):
-    max_session_duration: int
-
-
-class Description(AccessModel):
-    description: Optional[str] = ""
-
-
 class RoleTemplate(NoqTemplate, AccessModel):
     template_type = "NOQ::IAM::MultiAccountRole"
     role_name: str = Field(
@@ -70,27 +59,27 @@ class RoleTemplate(NoqTemplate, AccessModel):
         description="Description of the role",
     )
     owner: Optional[str] = None
-    max_session_duration: Optional[Union[int | List[MaxSessionDuration]]] = 3600
-    path: Optional[Union[str | List[Path]]] = "/"
+    max_session_duration: Optional[Union[int | list[MaxSessionDuration]]] = 3600
+    path: Optional[Union[str | list[Path]]] = "/"
     permissions_boundary: Optional[
-        None | PermissionBoundary | List[PermissionBoundary]
+        None | PermissionBoundary | list[PermissionBoundary]
     ] = None
-    role_access: Optional[List[RoleAccess]] = Field(
+    role_access: Optional[list[RoleAccess]] = Field(
         [],
         description="List of users and groups who can assume into the role",
     )
     assume_role_policy_document: Optional[
-        None | AssumeRolePolicyDocument | List[AssumeRolePolicyDocument]
+        None | AssumeRolePolicyDocument | list[AssumeRolePolicyDocument]
     ] = None
-    tags: Optional[List[Tag]] = Field(
+    tags: Optional[list[Tag]] = Field(
         [],
         description="List of tags attached to the role",
     )
-    managed_policies: Optional[List[ManagedPolicy]] = Field(
+    managed_policies: Optional[list[ManagedPolicyRef]] = Field(
         [],
         description="Managed policy arns attached to the role",
     )
-    inline_policies: Optional[List[PolicyDocument]] = Field(
+    inline_policies: Optional[list[PolicyDocument]] = Field(
         [],
         description="List of the role's inline policies",
     )
@@ -169,7 +158,7 @@ class RoleTemplate(NoqTemplate, AccessModel):
 
                 changes_made = True
 
-            return changes_made
+            return changes_made and not (account_config.read_only or self.read_only)
 
         role_exists = bool(current_role)
         inline_policies = account_role.pop("InlinePolicies", [])
@@ -229,7 +218,7 @@ class RoleTemplate(NoqTemplate, AccessModel):
             if not ctx.execute:
                 log.info(log_str, **log_params)
                 # Exit now because apply functions won't work if resource doesn't exist
-                return True
+                return not (account_config.read_only or self.read_only)
 
             log_str = f"{log_str} Creating resource..."
             log.info(log_str, **log_params)
@@ -273,7 +262,7 @@ class RoleTemplate(NoqTemplate, AccessModel):
                 **log_params,
             )
 
-        return changes_made
+        return changes_made and not (account_config.read_only or self.read_only)
 
     @property
     def resource_type(self):
