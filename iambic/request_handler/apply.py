@@ -1,11 +1,11 @@
 import asyncio
 import os
 
-from noq_form.config.models import Config
-from noq_form.core.context import ctx
-from noq_form.core.logger import log
-from noq_form.core.parser import load_templates
-from noq_form.core.utils import remove_expired_resources, yaml
+from iambic.config.models import Config
+from iambic.core.context import ctx
+from iambic.core.logger import log
+from iambic.core.parser import load_templates
+from iambic.core.utils import remove_expired_resources, yaml
 
 
 async def apply_changes(config: Config, template_paths: list[str]) -> bool:

@@ -2,28 +2,37 @@ import asyncio
 import json
 from typing import List, Optional, Union
 
-from noq_form.aws.iam.policy.models import (
+from pydantic import Field, constr
+
+from iambic.aws.iam.policy.models import (
     AssumeRolePolicyDocument,
     ManagedPolicy,
     PolicyDocument,
 )
-from noq_form.aws.iam.role.utils import (
+from iambic.aws.iam.role.utils import (
     apply_role_inline_policies,
     apply_role_managed_policies,
     apply_role_tags,
     delete_iam_role,
     update_assume_role_policy,
 )
-from noq_form.config.models import AccountConfig
-from noq_form.core.context import ctx
-from noq_form.core.logger import log
-from noq_form.core.models import AccessModel, ExpiryModel, NoqTemplate, Tag
-from noq_form.core.utils import aio_wrapper, apply_to_account
+from iambic.aws.models import ARN_RE
+from iambic.config.models import AccountConfig
+from iambic.core.context import ctx
+from iambic.core.logger import log
+from iambic.core.models import AccessModel, ExpiryModel, NoqTemplate, Tag
+from iambic.core.utils import aio_wrapper, apply_to_account
 
 
 class RoleAccess(ExpiryModel, AccessModel):
-    users: List[str] = []
-    groups: List[str] = []
+    users: List[str] = Field(
+        [],
+        description="List of users who can assume into the role",
+    )
+    groups: List[str] = Field(
+        [],
+        description="List of groups. Users in one or more of the groups can assume into the role",
+    )
 
     @property
     def resource_type(self):
@@ -35,42 +44,66 @@ class RoleAccess(ExpiryModel, AccessModel):
 
 
 class PermissionBoundary(ExpiryModel, AccessModel):
-    permissions_boundary: str
+    permissions_boundary_type: str
+    permissions_boundary_arn: constr(regex=ARN_RE)
 
 
 class Path(AccessModel):
-    path: str
+    file_path: str
 
 
 class MaxSessionDuration(AccessModel):
     max_session_duration: int
 
 
-class MultiAccountRoleTemplate(NoqTemplate, AccessModel):
+class Description(AccessModel):
+    description: Optional[str] = ""
+
+
+class RoleTemplate(NoqTemplate, AccessModel):
     template_type = "NOQ::IAM::MultiAccountRole"
-    description: str
-    role_name: str
-    owner: str
+    role_name: str = Field(
+        description="Name of the role",
+    )
+    description: Optional[Union[str | list[Description]]] = Field(
+        "",
+        description="Description of the role",
+    )
+    owner: Optional[str] = None
     max_session_duration: Optional[Union[int | List[MaxSessionDuration]]] = 3600
     path: Optional[Union[str | List[Path]]] = "/"
-    permissions_boundary: Optional[str | None | List[PermissionBoundary]] = None
-    role_access: Optional[List[RoleAccess]] = []
-    assume_role_policy_document: Optional[
-        AssumeRolePolicyDocument | None | List[AssumeRolePolicyDocument]
+    permissions_boundary: Optional[
+        None | PermissionBoundary | List[PermissionBoundary]
     ] = None
-    tags: Optional[List[Tag]] = []
-    managed_policies: Optional[List[ManagedPolicy]] = []
-    inline_policies: Optional[List[PolicyDocument]] = []
+    role_access: Optional[List[RoleAccess]] = Field(
+        [],
+        description="List of users and groups who can assume into the role",
+    )
+    assume_role_policy_document: Optional[
+        None | AssumeRolePolicyDocument | List[AssumeRolePolicyDocument]
+    ] = None
+    tags: Optional[List[Tag]] = Field(
+        [],
+        description="List of tags attached to the role",
+    )
+    managed_policies: Optional[List[ManagedPolicy]] = Field(
+        [],
+        description="Managed policy arns attached to the role",
+    )
+    inline_policies: Optional[List[PolicyDocument]] = Field(
+        [],
+        description="List of the role's inline policies",
+    )
 
     def _apply_resource_dict(self, account_config: AccountConfig = None) -> dict:
-        response = super(MultiAccountRoleTemplate, self)._apply_resource_dict(
-            account_config
-        )
+        response = super(RoleTemplate, self)._apply_resource_dict(account_config)
         response.pop("RoleAccess", None)
+        if "Tags" not in response:
+            response["Tags"] = []
 
         # Add RoleAccess Tag to role tags
         role_access = [
-            ra._apply_resource_dict()
+            ra._apply_resource_dict(account_config)
             for ra in self.role_access
             if apply_to_account(ra, account_config)
         ]
@@ -95,6 +128,14 @@ class MultiAccountRoleTemplate(NoqTemplate, AccessModel):
                 permissions_boundary = permissions_boundary[0]
             response["PermissionsBoundary"] = permissions_boundary
 
+        if isinstance(response.get("Description"), list):
+            response["Description"] = response["Description"][0]["Description"]
+
+        if isinstance(response.get("MaxSessionDuration"), list):
+            response["MaxSessionDuration"] = response["MaxSessionDuration"][0][
+                "MaxSessionDuration"
+            ]
+
         return response
 
     async def _apply_to_account(self, account_config: AccountConfig) -> bool:
@@ -116,9 +157,9 @@ class MultiAccountRoleTemplate(NoqTemplate, AccessModel):
         except client.exceptions.NoSuchEntityException:
             current_role = {}
 
-        if not self.get_attribute_val_for_account(account_config, "enabled"):
+        if self.get_attribute_val_for_account(account_config, "deleted"):
             if current_role:
-                log_str = "Active resource found with enabled=false."
+                log_str = "Active resource found with deleted=false."
                 if ctx.execute:
                     log_str = f"{log_str} Deleting resource..."
                 log.info(log_str, **log_params)
@@ -159,7 +200,9 @@ class MultiAccountRoleTemplate(NoqTemplate, AccessModel):
             update_resource_log_params = {**log_params}
             update_role_params = {}
             for k in supported_update_keys:
-                if account_role.get(k) != current_role.get(k):
+                if account_role.get(k) is not None and account_role.get(
+                    k
+                ) != current_role.get(k):
                     update_resource_log_params[k] = dict(
                         old_value=current_role.get(k), new_value=account_role.get(k)
                     )

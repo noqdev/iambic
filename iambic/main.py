@@ -1,13 +1,15 @@
 import asyncio
+import pathlib
 import warnings
 
 import click
 
-from noq_form.config.models import Config
-from noq_form.core.context import ctx
-from noq_form.google.models import generate_group_templates
-from noq_form.request_handler.apply import apply_changes, flag_expired_resources
-from noq_form.request_handler.detect import detect_changes
+from iambic.config.models import Config
+from iambic.core.context import ctx
+from iambic.core.utils import gather_templates
+from iambic.request_handler.apply import apply_changes, flag_expired_resources
+from iambic.request_handler.detect import detect_changes
+from iambic.request_handler.generate import generate_templates
 
 warnings.filterwarnings("ignore", category=FutureWarning, module="botocore.client")
 
@@ -70,7 +72,20 @@ def detect(config_path: str):
     type=click.Path(exists=True),
     help="The template file path(s) to apply. Example: ./aws/roles/engineering.yaml",
 )
-def apply(no_prompt: bool, config_path: str, templates: list[str]):
+@click.option(
+    "--template-repo-dir",
+    "-d",
+    "template_dir",
+    required=False,
+    type=click.Path(exists=True),
+    help="The repo directory containing the templates. Example: ~/noq-templates",
+)
+def apply(no_prompt: bool, config_path: str, templates: list[str], template_dir: str):
+    if not templates:
+        templates = asyncio.run(
+            gather_templates(template_dir or str(pathlib.Path.cwd()))
+        )
+
     config = Config.load(config_path)
     config.set_account_defaults()
     ctx.eval_only = not no_prompt
@@ -85,26 +100,31 @@ def apply(no_prompt: bool, config_path: str, templates: list[str]):
 @click.option(
     "--config",
     "-c",
-    "config_path",
+    "config_paths",
     required=False,
+    multiple=True,
     type=click.Path(exists=True),
-    help="The config.yaml file path to apply. Example: ./prod/config.yaml",
+    help="The config.yaml file paths. Example: ./prod/config.yaml",
 )
 @click.option(
     "--output-dir",
     "-o",
     "output_dir",
-    required=True,
+    required=False,
     type=click.Path(exists=True),
     help="The output directory to export templates to. Example: ~/noq-templates",
 )
-def import_(config_path: str, output_dir: str):
-    config = Config.load(config_path)
-    config.set_account_defaults()
-    # TODO (wbeasley): Support importing AWS roles
-    # TODO: Create a setting to enable support for google groups
-    # TODO: Ensure google_groups are not excluded from sync
-    asyncio.run(generate_group_templates(config, "noq.dev", output_dir))
+def import_(config_paths: list[str], output_dir: str):
+    if not output_dir:
+        output_dir = str(pathlib.Path.cwd())
+
+    configs = list()
+    for config_path in config_paths:
+        config = Config.load(config_path)
+        config.set_account_defaults()
+        configs.append(config)
+
+    asyncio.run(generate_templates(configs, output_dir))
 
 
 if __name__ == "__main__":

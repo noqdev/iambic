@@ -3,41 +3,32 @@ import json
 
 from deepdiff import DeepDiff
 
-from noq_form.core.context import ctx
-from noq_form.core.logger import log
-from noq_form.core.utils import aio_wrapper
+from iambic.aws.utils import paginated_search
+from iambic.core.context import ctx
+from iambic.core.logger import log
+from iambic.core.utils import aio_wrapper
 
 
 async def get_role_inline_policy_names(role_name: str, iam_client):
-    marker: dict[str, str] = {}
-    inline_policies = []
-
-    while True:
-        response = await aio_wrapper(
-            iam_client.list_role_policies, RoleName=role_name, **marker
-        )
-        inline_policies.extend(response["PolicyNames"])
-
-        if response["IsTruncated"]:
-            marker["Marker"] = response["Marker"]
-        else:
-            return inline_policies
+    return await paginated_search(
+        iam_client.list_role_policies, "PolicyNames", RoleName=role_name
+    )
 
 
 async def get_role_instance_profiles(role_name: str, iam_client):
-    marker: dict[str, str] = {}
-    instance_profiles = []
+    return await paginated_search(
+        iam_client.list_instance_profiles_for_role,
+        "InstanceProfiles",
+        RoleName=role_name,
+    )
 
-    while True:
-        response = await aio_wrapper(
-            iam_client.list_instance_profiles_for_role, RoleName=role_name, **marker
-        )
-        instance_profiles.extend(response["InstanceProfiles"])
 
-        if response["IsTruncated"]:
-            marker["Marker"] = response["Marker"]
-        else:
-            return instance_profiles
+async def list_roles(iam_client):
+    return await paginated_search(iam_client.list_roles, "Roles")
+
+
+async def list_role_tags(role_name: str, iam_client):
+    return await paginated_search(iam_client.list_role_tags, "Tags", RoleName=role_name)
 
 
 async def get_role_policy(role_name: str, policy_name: str, iam_client):
@@ -148,6 +139,7 @@ async def update_assume_role_policy(
             boto_action = "Creating" if existing_policy_document else "Updating"
             log_str = f"{log_str} {boto_action} AssumeRolePolicyDocument..."
             log.info(log_str, **log_params)
+            log.info(json.dumps(template_policy_document))
             await aio_wrapper(
                 iam_client.update_assume_role_policy,
                 RoleName=role_name,
@@ -242,7 +234,7 @@ async def apply_role_inline_policies(
 
     if role_exists:
         template_policy_map = {
-            policy["PolicyName"]: {"Statement": policy["Statements"]}
+            policy["PolicyName"]: {k: v for k, v in policy.items() if k != "PolicyName"}
             for policy in template_policies
         }
         existing_policy_map = await get_role_inline_policies(role_name, iam_client)
@@ -267,10 +259,19 @@ async def apply_role_inline_policies(
         for policy_name, policy_document in template_policy_map.items():
             existing_policy_doc = existing_policy_map.get(policy_name)
             if not existing_policy_doc or (
-                await aio_wrapper(
-                    DeepDiff, policy_document, existing_policy_doc, ignore_order=True
+                policy_drift := (
+                    await aio_wrapper(
+                        DeepDiff,
+                        existing_policy_doc,
+                        policy_document,
+                        ignore_order=True,
+                    )
                 )
             ):
+                if policy_drift:
+                    log_params["policy_drift"] = policy_drift
+                    log_params["existing_policy_doc"] = existing_policy_doc
+                    log_params["policy_document"] = policy_document
                 changes_made = True
                 resource_existence = "New" if not existing_policy_doc else "Stale"
                 log_str = f"{resource_existence} inline policies discovered."
