@@ -51,6 +51,10 @@ class AccountConfig(BaseModel):
         description="A list of variables to be used when creating templates",
     )
     boto3_session_map: Optional[dict] = None
+    read_only: Optional[bool] = Field(
+        False,
+        description="If set to True, iambic will only log drift instead of apply changes when drift is detected.",
+    )
 
     def get_boto3_session(self, region_name: str = None):
         region_name = region_name or self.default_region
