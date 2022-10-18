@@ -25,7 +25,7 @@ def create_model_schemas(
         class_name = str(model.__name__)
         file_name = camel_to_snake(class_name)
         model_schema_path = str(os.path.join(schema_dir, f"{file_name}.md"))
-        schema_md_str += f"* [{class_name}]({model_schema_path})\n"
+        schema_md_str += f"* [{class_name}]({model_schema_path.replace('docs/', '')})\n"
         with open(model_schema_path, "w") as f:
             f.write("".join(parser.parse_schema(model.schema())))
 
