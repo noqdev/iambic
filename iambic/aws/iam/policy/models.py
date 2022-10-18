@@ -2,21 +2,10 @@ from typing import List, Optional, Union
 
 from pydantic import Field, constr
 
+from iambic.aws.iam.models import Description, Path
 from iambic.aws.models import ARN_RE
 from iambic.config.models import AccountConfig
-from iambic.core.models import AccessModel, BaseModel, ExpiryModel
-
-
-class ManagedPolicy(AccessModel, ExpiryModel):
-    policy_arn: constr(regex=ARN_RE)
-
-    @property
-    def resource_type(self):
-        return "Managed Policy"
-
-    @property
-    def resource_name(self):
-        return self.policy_arn
+from iambic.core.models import AccessModel, BaseModel, ExpiryModel, NoqTemplate, Tag
 
 
 class Principal(BaseModel):
@@ -162,8 +151,45 @@ class PolicyDocument(AccessModel, ExpiryModel):
 
     @property
     def resource_type(self):
-        return "Policy Document"
+        return "aws:policy_document"
 
     @property
     def resource_name(self):
         return self.policy_name
+
+
+class ManagedPolicyTemplate(NoqTemplate):
+    template_type = "NOQ::IAM::ManagedPolicy"
+    policy_name: str = Field(
+        description="The name of the policy.",
+    )
+    path: Optional[Union[str | List[Path]]] = "/"
+    description: Optional[Union[str | list[Description]]] = Field(
+        "",
+        description="Description of the role",
+    )
+    policy_document: str
+    tags: Optional[List[Tag]] = Field(
+        [],
+        description="List of tags attached to the role",
+    )
+
+    @property
+    def resource_type(self):
+        return "aws:policy_document"
+
+    @property
+    def resource_name(self):
+        return self.policy_name
+
+
+class ManagedPolicyRef(AccessModel, ExpiryModel):
+    policy_arn: constr(regex=ARN_RE)
+
+    @property
+    def resource_type(self):
+        return "Managed Policy"
+
+    @property
+    def resource_name(self):
+        return self.policy_arn
