@@ -212,9 +212,11 @@ class NoqTemplate(ExpiryModel):
         )
         for account in config.accounts:
             if evaluate_on_account(self, account):
-                log.info(
-                    "Applying changes to resource.", account=str(account), **log_params
-                )
+                if ctx.execute:
+                    log_str = "Applying changes to resource."
+                else:
+                    log_str = "Detecting changes for resource."
+                log.info(log_str, account=str(account), **log_params)
                 tasks.append(self._apply_to_account(account))
 
         changes_made = await asyncio.gather(*tasks)
@@ -229,7 +231,7 @@ class NoqTemplate(ExpiryModel):
                 **log_params,
             )
         else:
-            log.info("No changes detected for resource on any account.", **log_params)
+            log.debug("No changes detected for resource on any account.", **log_params)
 
         return changes_made
 

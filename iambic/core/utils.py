@@ -12,7 +12,10 @@ from asgiref.sync import sync_to_async
 from ruamel.yaml import YAML
 
 from iambic.core import noq_json as json
+from iambic.core.context import ctx
 from iambic.core.logger import log
+
+NOQ_TEMPLATE_REGEX = r".*template_type:\n?.*NOQ::"
 
 
 def camel_to_snake(str_obj: str) -> str:
@@ -98,6 +101,10 @@ def get_closest_value(matching_values: list, account_config):
 def evaluate_on_account(resource, account_config) -> bool:
     from iambic.core.models import AccessModel
 
+    if ctx.execute and (
+        account_config.read_only or getattr(resource, "read_only", False)
+    ):
+        return False
     if not issubclass(type(resource), AccessModel):
         return True
 
@@ -220,21 +227,23 @@ def get_account_config_map(configs: list) -> dict:
     return account_config_map
 
 
+async def file_regex_search(file_path: str, re_pattern: str) -> Union[str | None]:
+    async with aiofiles.open(file_path, mode="r") as f:
+        file_content = await f.read()
+        if re.search(re_pattern, file_content):
+            return file_path
+
+
 async def gather_templates(repo_dir: str, template_type: str = None) -> list[str]:
-    async def template_match(file_path: str, re_pattern: str) -> Union[str | None]:
-        async with aiofiles.open(file_path, mode="r") as f:
-            file_content = await f.read()
-            if re.search(re_pattern, file_content):
-                return file_path
-
-    regex_pattern = r".*template_type:\n?.*NOQ::"
-    if template_type:
-        regex_pattern = rf"{regex_pattern}.*{template_type}"
-
+    regex_pattern = (
+        rf"{NOQ_TEMPLATE_REGEX}.*{template_type}"
+        if template_type
+        else NOQ_TEMPLATE_REGEX
+    )
     file_paths = glob.glob(f"{repo_dir}/**/*.yaml", recursive=True)
     file_paths += glob.glob(f"{repo_dir}*.yaml", recursive=True)
     file_paths = await asyncio.gather(
-        *[template_match(fp, regex_pattern) for fp in file_paths]
+        *[file_regex_search(fp, regex_pattern) for fp in file_paths]
     )
     return [fp for fp in file_paths if fp]
 
