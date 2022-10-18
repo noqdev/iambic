@@ -31,7 +31,7 @@ jsonschema2md2 = "^0.6.0"
 GitPython = "^3.1.29"
 
 [tool.poetry.scripts]
-noq_form = "noq_form.main:cli"
+noq_form = "iambic.main:cli"
 
 [build-system]
 requires = ["poetry-core"]

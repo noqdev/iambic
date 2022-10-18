@@ -118,9 +118,15 @@ class ExtendsConfig(BaseModel):
     key: ExtendsConfigKey
     value: str
 
+class GoogleGroupsConfig(BaseModel):
+    enabled: Optional[bool] = False
+
+class GoogleConfig(BaseModel):
+    groups: Optional[GoogleGroupsConfig] = None
 
 class Config(BaseModel):
     accounts: List[AccountConfig]
+    google: Optional[GoogleConfig] = None
     extends: List[ExtendsConfig] = []
     secrets: Optional[dict] = None
     role_access_tag: Optional[str] = Field(
