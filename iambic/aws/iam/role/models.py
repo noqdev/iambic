@@ -127,6 +127,9 @@ class RoleTemplate(NoqTemplate, AccessModel):
 
         return response
 
+    def _is_read_only(self, account_config: AccountConfig):
+        return "aws-service-role" in self.path or account_config.read_only or self.read_only
+
     async def _apply_to_account(self, account_config: AccountConfig) -> bool:
         boto3_session = account_config.get_boto3_session()
         client = boto3_session.client("iam")
@@ -138,6 +141,7 @@ class RoleTemplate(NoqTemplate, AccessModel):
             account=str(account_config),
         )
         changes_made = False
+        read_only = self._is_read_only(account_config)
 
         try:
             current_role = (await aio_wrapper(client.get_role, RoleName=role_name))[
@@ -149,7 +153,7 @@ class RoleTemplate(NoqTemplate, AccessModel):
         if self.get_attribute_val_for_account(account_config, "deleted"):
             if current_role:
                 log_str = "Active resource found with deleted=false."
-                if ctx.execute:
+                if ctx.execute and not read_only:
                     log_str = f"{log_str} Deleting resource..."
                 log.info(log_str, **log_params)
 
@@ -158,7 +162,7 @@ class RoleTemplate(NoqTemplate, AccessModel):
 
                 changes_made = True
 
-            return changes_made and not (account_config.read_only or self.read_only)
+            return changes_made and not read_only
 
         role_exists = bool(current_role)
         inline_policies = account_role.pop("InlinePolicies", [])
@@ -218,7 +222,7 @@ class RoleTemplate(NoqTemplate, AccessModel):
             if not ctx.execute:
                 log.info(log_str, **log_params)
                 # Exit now because apply functions won't work if resource doesn't exist
-                return not (account_config.read_only or self.read_only)
+                return not read_only
 
             log_str = f"{log_str} Creating resource..."
             log.info(log_str, **log_params)
@@ -262,7 +266,7 @@ class RoleTemplate(NoqTemplate, AccessModel):
                 **log_params,
             )
 
-        return changes_made and not (account_config.read_only or self.read_only)
+        return changes_made and not read_only
 
     @property
     def resource_type(self):
