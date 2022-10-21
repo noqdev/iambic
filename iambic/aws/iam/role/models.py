@@ -128,7 +128,11 @@ class RoleTemplate(NoqTemplate, AccessModel):
         return response
 
     def _is_read_only(self, account_config: AccountConfig):
-        return "aws-service-role" in self.path or account_config.read_only or self.read_only
+        return (
+            "aws-service-role" in self.path
+            or account_config.read_only
+            or self.read_only
+        )
 
     async def _apply_to_account(self, account_config: AccountConfig) -> bool:
         boto3_session = account_config.get_boto3_session()
@@ -150,8 +154,13 @@ class RoleTemplate(NoqTemplate, AccessModel):
         except client.exceptions.NoSuchEntityException:
             current_role = {}
 
-        if self.get_attribute_val_for_account(account_config, "deleted"):
+        deleted = self.get_attribute_val_for_account(account_config, "deleted", False)
+        if isinstance(deleted, list):
+            deleted = deleted[0].deleted
+
+        if deleted:
             if current_role:
+                changes_made = True
                 log_str = "Active resource found with deleted=false."
                 if ctx.execute and not read_only:
                     log_str = f"{log_str} Deleting resource..."
@@ -159,8 +168,6 @@ class RoleTemplate(NoqTemplate, AccessModel):
 
                 if ctx.execute:
                     await delete_iam_role(role_name, client, log_params)
-
-                changes_made = True
 
             return changes_made and not read_only
 
