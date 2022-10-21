@@ -118,11 +118,14 @@ class ExtendsConfig(BaseModel):
     key: ExtendsConfigKey
     value: str
 
+
 class GoogleGroupsConfig(BaseModel):
     enabled: Optional[bool] = False
 
+
 class GoogleConfig(BaseModel):
     groups: Optional[GoogleGroupsConfig] = None
+
 
 class Config(BaseModel):
     accounts: List[AccountConfig]
