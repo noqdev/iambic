@@ -20,7 +20,8 @@ async def generate_templates(configs: list[Config], output_dir):
     for config in configs:
         if config.google and config.google.groups.enabled:
             tasks.extend(
-                generate_group_templates(config, "noq.dev", output_dir) for config in configs
+                generate_group_templates(config, "noq.dev", output_dir)
+                for config in configs
             )
 
     await asyncio.gather(*tasks)
