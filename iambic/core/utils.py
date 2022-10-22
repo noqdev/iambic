@@ -142,17 +142,20 @@ def evaluate_on_account(resource, account_config) -> bool:
 
 
 def apply_to_account(resource, account_config) -> bool:
+    from iambic.core.models import Deleted
 
     if hasattr(resource, "deleted"):
+        deleted_resource_type = isinstance(resource, Deleted)
+
         if isinstance(resource.deleted, bool):
-            if resource.deleted:
+            if resource.deleted and not deleted_resource_type:
                 return False
         else:
             deleted_obj = resource.get_attribute_val_for_account(
                 account_config, "deleted"
             )
             deleted_obj = get_closest_value(deleted_obj, account_config)
-            if deleted_obj.deleted:
+            if deleted_obj and deleted_obj.deleted and not deleted_resource_type:
                 return False
 
     return evaluate_on_account(resource, account_config)
