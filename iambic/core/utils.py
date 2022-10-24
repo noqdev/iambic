@@ -162,7 +162,7 @@ def apply_to_account(resource, account_config) -> bool:
 
 
 async def remove_expired_resources(
-    resource, template_resource_type: str, template_resource_name: str
+    resource, template_resource_type: str, template_resource_id: str
 ):
     from iambic.core.models import BaseModel
 
@@ -174,14 +174,14 @@ async def remove_expired_resources(
         return resource
 
     log_params = dict(
-        resource_type=resource.resource_type, resource_name=resource.resource_name
+        resource_type=resource.resource_type, resource_id=resource.resource_id
     )
     if (
         template_resource_type != resource.resource_type
-        or template_resource_name != resource.resource_name
+        or template_resource_id != resource.resource_id
     ):
         log_params["parent_resource_type"] = template_resource_type
-        log_params["parent_resource_name"] = template_resource_name
+        log_params["parent_resource_id"] = template_resource_id
 
     if hasattr(resource, "expires_at") and resource.expires_at:
         if resource.expires_at < datetime.utcnow():
@@ -195,14 +195,14 @@ async def remove_expired_resources(
             resource.__fields__[field_name] = await asyncio.gather(
                 *[
                     remove_expired_resources(
-                        elem, template_resource_type, template_resource_name
+                        elem, template_resource_type, template_resource_id
                     )
                     for elem in field_val
                 ]
             )
         else:
             resource.__fields__[field_name] = await remove_expired_resources(
-                field_val, template_resource_type, template_resource_name
+                field_val, template_resource_type, template_resource_id
             )
 
     return resource

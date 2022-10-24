@@ -130,7 +130,7 @@ class PolicyStatement(AccessModel, ExpiryModel):
         return "Policy Statement"
 
     @property
-    def resource_name(self):
+    def resource_id(self):
         return self.sid
 
 
@@ -154,7 +154,7 @@ class PolicyDocument(AccessModel, ExpiryModel):
         return "aws:policy_document"
 
     @property
-    def resource_name(self):
+    def resource_id(self):
         return self.policy_name
 
 
@@ -179,7 +179,7 @@ class ManagedPolicyTemplate(NoqTemplate):
         return "aws:policy_document"
 
     @property
-    def resource_name(self):
+    def resource_id(self):
         return self.policy_name
 
 
@@ -191,5 +191,5 @@ class ManagedPolicyRef(AccessModel, ExpiryModel):
         return "Managed Policy"
 
     @property
-    def resource_name(self):
+    def resource_id(self):
         return self.policy_arn

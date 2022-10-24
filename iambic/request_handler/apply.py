@@ -28,7 +28,7 @@ async def flag_expired_resources(template_paths: list[str]):
     templates = await asyncio.gather(
         *[
             remove_expired_resources(
-                template, template.resource_type, template.resource_name
+                template, template.resource_type, template.resource_id
             )
             for template in load_templates(template_paths)
         ]
