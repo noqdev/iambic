@@ -86,7 +86,7 @@ class BaseModel(PydanticBaseModel):
         return json.loads(data)
 
     @property
-    def exclude_keys(self):
+    def exclude_keys(self) -> set:
         return set()
 
     @property
@@ -135,11 +135,11 @@ class ExpiryModel(BaseModel):
     )
 
     @property
-    def resource_type(self):
+    def resource_type(self) -> str:
         raise NotImplementedError
 
     @property
-    def resource_name(self):
+    def resource_id(self) -> str:
         raise NotImplementedError
 
 
@@ -152,7 +152,7 @@ class Tag(ExpiryModel, AccessModel):
         return "Tag"
 
     @property
-    def resource_name(self):
+    def resource_id(self):
         return self.key
 
 
@@ -208,7 +208,7 @@ class NoqTemplate(ExpiryModel):
     async def apply_all(self, config: Config) -> bool:
         tasks = []
         log_params = dict(
-            resource_type=self.resource_type, resource_name=self.resource_name
+            resource_type=self.resource_type, resource_id=self.resource_id
         )
         for account in config.accounts:
             if evaluate_on_account(self, account):

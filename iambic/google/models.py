@@ -115,7 +115,7 @@ class GroupTemplate(NoqTemplate):
     def resource_type(self):
         return "google:group"
 
-    def resource_name(self):
+    def resource_id(self):
         return self.name
 
 

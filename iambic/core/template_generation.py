@@ -294,6 +294,13 @@ async def set_included_accounts_for_grouped_attribute(
     number_of_accounts_resource_on: int,
     grouped_attribute,
 ) -> Union[list | dict]:
+    """Takes a grouped attribute and formats its included accounts to * or a list of account names
+
+    :param account_config_map: {account_id: account_config}
+    :param number_of_accounts_resource_on:
+    :param grouped_attribute:
+    :return:
+    """
     if isinstance(grouped_attribute, dict):  # via base_group_str_attribute
         for k, resource_vals in grouped_attribute.items():
             if len(resource_vals) == number_of_accounts_resource_on:
@@ -370,7 +377,7 @@ async def group_dict_attribute(
 ) -> Union[dict | list[dict]]:
     """Groups an attribute by accounts, formats the attribute and normalizes the included accounts.
 
-    :param account_config_map:
+    :param account_config_map: {account_id: account_config}
     :param number_of_accounts_resource_on:
     :param account_resources: list[dict(account_id:str, resources=list[dict])]
     :param is_dict_attr: If false and only one hit, still return as a list. Useful for things like inline_policies.

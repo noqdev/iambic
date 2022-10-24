@@ -9,7 +9,7 @@ from iambic.config.models import Config
 from iambic.google.models import generate_group_templates
 
 
-async def generate_templates(configs: list[Config], output_dir):
+async def generate_templates(configs: list[Config], output_dir: str):
     # TODO: Create a setting to enable support for google groups
     # TODO: Ensure google_groups are not excluded from sync
     response_dir_list = [output_dir, ROLE_RESPONSE_DIR]
