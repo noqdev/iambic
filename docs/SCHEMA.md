@@ -14,7 +14,7 @@
 * [GroupMember](schemas/group_member.md)
 
 # Config Models
-* [AccountConfig](schemas/account_config.md)
+* [AWSAccount](schemas/awsaccount.md)
 * [Config](schemas/config.md)
 * [ExtendsConfig](schemas/extends_config.md)
 * [Variable](schemas/variable.md)
