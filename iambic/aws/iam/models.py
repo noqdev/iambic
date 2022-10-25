@@ -1,6 +1,6 @@
 from typing import Optional
 
-from iambic.core.models import AccessModel
+from iambic.aws.models import AccessModel
 
 
 class Path(AccessModel):

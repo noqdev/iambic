@@ -7,7 +7,7 @@ import botocore
 from pydantic import BaseModel, Field, constr
 from slack_bolt import App as SlackBoltApp
 
-from iambic.aws.models import RegionName
+from iambic.aws.utils import RegionName
 from iambic.core.logger import log
 from iambic.core.utils import yaml
 
@@ -17,7 +17,7 @@ class Variable(BaseModel):
     value: str
 
 
-class AccountConfig(BaseModel):
+class AWSAccount(BaseModel):
     account_id: constr(min_length=12, max_length=12) = Field(
         None, description="The AWS Account ID"
     )
@@ -106,7 +106,7 @@ class AccountConfig(BaseModel):
         return f"{self.account_name} - ({self.account_id})"
 
     def __init__(self, **kwargs):
-        super(AccountConfig, self).__init__(**kwargs)
+        super(AWSAccount, self).__init__(**kwargs)
         self.default_region = self.default_region.value
 
 
@@ -128,7 +128,7 @@ class GoogleConfig(BaseModel):
 
 
 class Config(BaseModel):
-    accounts: List[AccountConfig]
+    aws_accounts: List[AWSAccount]
     google: Optional[GoogleConfig] = None
     extends: List[ExtendsConfig] = []
     secrets: Optional[dict] = None
@@ -139,7 +139,7 @@ class Config(BaseModel):
     variables: Optional[List[Variable]] = Field(
         [],
         description="A list of variables to be used when creating templates. "
-        "These apply to all accounts but can be overwritten by an account.",
+        "These apply to all aws_accounts but can be overwritten by an account.",
     )
     slack_app: Optional[str] = None
     sqs: Optional[dict] = {}
@@ -149,13 +149,13 @@ class Config(BaseModel):
         arbitrary_types_allowed = True
 
     def set_account_defaults(self):
-        for elem, account in enumerate(self.accounts):
+        for elem, account in enumerate(self.aws_accounts):
             if not account.role_access_tag:
-                self.accounts[elem].role_access_tag = self.role_access_tag
+                self.aws_accounts[elem].role_access_tag = self.role_access_tag
 
             for variable in self.variables:
                 if variable.key not in [av.key for av in account.variables]:
-                    self.accounts[elem].variables.append(variable)
+                    self.aws_accounts[elem].variables.append(variable)
 
     def get_aws_secret(self, secret_arn: str) -> dict:
         """TODO: Secrets should be moved to the account to prevent an anti-pattern
@@ -190,9 +190,9 @@ class Config(BaseModel):
     def get_boto_session_from_arn(self, arn: str, region_name: str = None):
         region_name = region_name or arn.split(":")[3]
         account_id = arn.split(":")[4]
-        account_config_map = {account.account_id: account for account in self.accounts}
-        account_config = account_config_map[account_id]
-        return account_config.get_boto3_session(region_name)
+        aws_account_map = {account.account_id: account for account in self.aws_accounts}
+        aws_account = aws_account_map[account_id]
+        return aws_account.get_boto3_session(region_name)
 
     @classmethod
     def load(cls, file_path: str):

@@ -10,7 +10,7 @@ from iambic.aws.iam.role.utils import (
     list_role_tags,
     list_roles,
 )
-from iambic.config.models import AccountConfig, Config
+from iambic.config.models import AWSAccount, Config
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
@@ -18,11 +18,11 @@ from iambic.core.template_generation import (
     base_group_str_attribute,
     group_dict_attribute,
     group_int_or_str_attribute,
-    set_included_accounts_for_grouped_attribute,
+    set_included_accounts_for_grouped_attribute, get_existing_template_file_map,
 )
 from iambic.core.utils import (
     NoqSemaphore,
-    get_account_config_map,
+    get_aws_account_map,
     normalize_boto3_resp,
     resource_file_upsert,
 )
@@ -55,19 +55,19 @@ def get_account_role_resource_dir(account_id: str) -> str:
     return account_role_response_dir
 
 
-async def generate_account_role_resource_files(account_config: AccountConfig) -> dict:
-    account_role_response_dir = get_account_role_resource_dir(account_config.account_id)
+async def generate_account_role_resource_files(aws_account: AWSAccount) -> dict:
+    account_role_response_dir = get_account_role_resource_dir(aws_account.account_id)
     role_resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
     messages = []
 
-    response = dict(account_id=account_config.account_id, roles=[])
-    iam_client = account_config.get_boto3_client("iam")
+    response = dict(account_id=aws_account.account_id, roles=[])
+    iam_client = aws_account.get_boto3_client("iam")
     account_roles = await list_roles(iam_client)
 
     log.info(
         "Retrieved AWS IAM Roles.",
-        account_id=account_config.account_id,
-        account_name=account_config.account_name,
+        account_id=aws_account.account_id,
+        account_name=aws_account.account_name,
         role_count=len(account_roles),
     )
 
@@ -79,7 +79,7 @@ async def generate_account_role_resource_files(account_config: AccountConfig) ->
             {
                 "path": role_path,
                 "name": account_role["RoleName"],
-                "account_id": account_config.account_id,
+                "account_id": aws_account.account_id,
             }
         )
         messages.append(
@@ -89,7 +89,7 @@ async def generate_account_role_resource_files(account_config: AccountConfig) ->
     await role_resource_file_upsert_semaphore.process(messages)
     log.info(
         "Finished caching AWS IAM Roles.",
-        account_id=account_config.account_id,
+        account_id=aws_account.account_id,
         role_count=len(account_roles),
     )
 
@@ -97,17 +97,17 @@ async def generate_account_role_resource_files(account_config: AccountConfig) ->
 
 
 async def set_role_resource_tags(
-    role_name: str, role_resource_path: str, account_config: AccountConfig
+    role_name: str, role_resource_path: str, aws_account: AWSAccount
 ):
-    iam_client = account_config.get_boto3_client("iam")
+    iam_client = aws_account.get_boto3_client("iam")
     role_tags = await list_role_tags(role_name, iam_client)
     await resource_file_upsert(role_resource_path, {"Tags": role_tags}, False)
 
 
 async def set_role_resource_inline_policies(
-    role_name: str, role_resource_path: str, account_config: AccountConfig
+    role_name: str, role_resource_path: str, aws_account: AWSAccount
 ):
-    iam_client = account_config.get_boto3_client("iam")
+    iam_client = aws_account.get_boto3_client("iam")
     role_inline_policies = await get_role_inline_policies(role_name, iam_client)
     for k in role_inline_policies.keys():
         role_inline_policies[k]["policy_name"] = k
@@ -119,9 +119,9 @@ async def set_role_resource_inline_policies(
 
 
 async def set_role_resource_managed_policies(
-    role_name: str, role_resource_path: str, account_config: AccountConfig
+    role_name: str, role_resource_path: str, aws_account: AWSAccount
 ):
-    iam_client = account_config.get_boto3_client("iam")
+    iam_client = aws_account.get_boto3_client("iam")
     role_managed_policies = await get_role_managed_policies(role_name, iam_client)
     await resource_file_upsert(
         role_resource_path, {"ManagedPolicies": role_managed_policies}, False
@@ -130,10 +130,11 @@ async def set_role_resource_managed_policies(
 
 async def create_templated_role(  # noqa: C901
     global_config: Config,
-    account_config_map: dict[str, AccountConfig],
+    aws_account_map: dict[str, AWSAccount],
     role_name: str,
     role_refs: list[dict],
     role_dir: str,
+    existing_template_map: dict
 ):
     account_id_to_role_map = {}
     num_of_accounts = len(role_refs)
@@ -155,18 +156,11 @@ async def create_templated_role(  # noqa: C901
     tag_resources = list()
     max_session_duration_resources = dict()
     for account_id, role_dict in account_id_to_role_map.items():
+        max_session_duration_resources[account_id] = role_dict["max_session_duration"]
         path_resources.append(
             {
                 "account_id": account_id,
                 "resources": [{"resource_val": role_dict["path"]}],
-            }
-        )
-        managed_policy_resources.append(
-            {
-                "account_id": account_id,
-                "resources": [
-                    {"resource_val": mp} for mp in role_dict.get("managed_policies", [])
-                ],
             }
         )
         assume_role_policy_document_resources.append(
@@ -178,6 +172,16 @@ async def create_templated_role(  # noqa: C901
             }
         )
 
+        if managed_policies := role_dict.get("managed_policies"):
+            managed_policy_resources.append(
+                {
+                    "account_id": account_id,
+                    "resources": [
+                        {"resource_val": mp} for mp in managed_policies
+                    ],
+                }
+            )
+
         if permissions_boundary := role_dict.get("permissions_boundary"):
             permissions_boundary_resources.append(
                 {
@@ -185,8 +189,6 @@ async def create_templated_role(  # noqa: C901
                     "resources": [{"resource_val": permissions_boundary}],
                 }
             )
-
-        max_session_duration_resources[account_id] = role_dict["max_session_duration"]
 
         if inline_policies := role_dict.get("inline_policies"):
             inline_policy_document_resources.append(
@@ -212,20 +214,20 @@ async def create_templated_role(  # noqa: C901
                 {"account_id": account_id, "resources": [{"resource_val": description}]}
             )
 
-    if len(role_refs) != len(account_config_map):
+    if len(role_refs) != len(aws_account_map):
         role_template_params["included_accounts"] = [
-            account_config_map[role_ref["account_id"]].account_name
+            aws_account_map[role_ref["account_id"]].account_name
             for role_ref in role_refs
         ]
 
     path = await group_int_or_str_attribute(
-        account_config_map, num_of_accounts, path_resources, "path"
+        aws_account_map, num_of_accounts, path_resources, "path"
     )
     if path != "/":
         role_template_params["path"] = path
 
     max_session_duration = await group_int_or_str_attribute(
-        account_config_map,
+        aws_account_map,
         num_of_accounts,
         max_session_duration_resources,
         "max_session_duration",
@@ -237,33 +239,33 @@ async def create_templated_role(  # noqa: C901
         role_template_params[
             "assume_role_policy_document"
         ] = await group_dict_attribute(
-            account_config_map, num_of_accounts, assume_role_policy_document_resources
+            aws_account_map, num_of_accounts, assume_role_policy_document_resources
         )
 
     if permissions_boundary_resources:
         role_template_params["permissions_boundary"] = await group_dict_attribute(
-            account_config_map, num_of_accounts, permissions_boundary_resources
+            aws_account_map, num_of_accounts, permissions_boundary_resources
         )
 
     if description_resources:
         role_template_params["description"] = await group_int_or_str_attribute(
-            account_config_map, num_of_accounts, description_resources, "description"
+            aws_account_map, num_of_accounts, description_resources, "description"
         )
 
     if managed_policy_resources:
         role_template_params["managed_policies"] = await group_dict_attribute(
-            account_config_map, num_of_accounts, managed_policy_resources, False
+            aws_account_map, num_of_accounts, managed_policy_resources, False
         )
 
     if inline_policy_document_resources:
         role_template_params["inline_policies"] = await group_dict_attribute(
-            account_config_map, num_of_accounts, inline_policy_document_resources, False
+            aws_account_map, num_of_accounts, inline_policy_document_resources, False
         )
 
     if tag_resources:
         tags = []
         role_access = []
-        tag_lists = await base_group_dict_attribute(account_config_map, tag_resources)
+        tag_lists = await base_group_dict_attribute(aws_account_map, tag_resources)
         for tag_val in tag_lists:
             included_accounts = tag_val["included_accounts"]
             tag = tag_val["resource_val"]
@@ -281,7 +283,7 @@ async def create_templated_role(  # noqa: C901
             role_template_params[
                 "tags"
             ] = await set_included_accounts_for_grouped_attribute(
-                account_config_map, num_of_accounts, tags
+                aws_account_map, num_of_accounts, tags
             )
             for elem in range(len(role_template_params["tags"])):
                 if role_template_params["tags"][elem]["included_accounts"] == ["*"]:
@@ -291,7 +293,7 @@ async def create_templated_role(  # noqa: C901
             role_template_params[
                 "role_access"
             ] = await set_included_accounts_for_grouped_attribute(
-                account_config_map, num_of_accounts, role_access
+                aws_account_map, num_of_accounts, role_access
             )
             for elem in range(len(role_template_params["role_access"])):
                 if role_template_params["role_access"][elem]["included_accounts"] == [
@@ -301,7 +303,7 @@ async def create_templated_role(  # noqa: C901
 
     try:
         role = RoleTemplate(
-            file_path=get_templated_role_file_path(role_dir, role_name),
+            file_path=existing_template_map.get(role_name, get_templated_role_file_path(role_dir, role_name)),
             **role_template_params,
         )
         role.write()
@@ -310,7 +312,9 @@ async def create_templated_role(  # noqa: C901
 
 
 async def generate_aws_role_templates(configs: list[Config], base_output_dir: str):
-    account_config_map = get_account_config_map(configs)
+    aws_account_map = get_aws_account_map(configs)
+    existing_template_map = await get_existing_template_file_map(base_output_dir, "AWS::IAM::ROLE")
+    role_dir = get_role_dir(base_output_dir)
     generate_account_role_resource_files_semaphore = NoqSemaphore(
         generate_account_role_resource_files, 5
     )
@@ -321,17 +325,16 @@ async def generate_aws_role_templates(configs: list[Config], base_output_dir: st
         set_role_resource_managed_policies, 30
     )
     set_role_resource_tags_semaphore = NoqSemaphore(set_role_resource_tags, 75)
-    role_dir = get_role_dir(base_output_dir)
 
     log.info("Generating AWS role templates.")
     log.info(
-        "Beginning to retrieve AWS IAM Roles.", accounts=list(account_config_map.keys())
+        "Beginning to retrieve AWS IAM Roles.", accounts=list(aws_account_map.keys())
     )
 
     account_roles = await generate_account_role_resource_files_semaphore.process(
         [
-            {"account_config": account_config}
-            for account_config in account_config_map.values()
+            {"aws_account": aws_account}
+            for aws_account in aws_account_map.values()
         ]
     )
     messages = []
@@ -341,7 +344,7 @@ async def generate_aws_role_templates(configs: list[Config], base_output_dir: st
                 {
                     "role_name": role["name"],
                     "role_resource_path": role["path"],
-                    "account_config": account_config_map[account_role["account_id"]],
+                    "aws_account": aws_account_map[account_role["account_id"]],
                 }
             )
 
@@ -373,12 +376,12 @@ async def generate_aws_role_templates(configs: list[Config], base_output_dir: st
             account_role_elem
         ].pop("roles", [])
 
-    grouped_role_map = await base_group_str_attribute(account_config_map, account_roles)
+    grouped_role_map = await base_group_str_attribute(aws_account_map, account_roles)
 
     log.info("Writing templated roles")
     for role_name, role_refs in grouped_role_map.items():
         await create_templated_role(
-            configs[0], account_config_map, role_name, role_refs, role_dir
+            configs[0], aws_account_map, role_name, role_refs, role_dir, existing_template_map
         )
 
     log.info("Finished templated role generation")

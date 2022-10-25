@@ -10,7 +10,7 @@ from iambic.aws.iam.policy.models import (
     PolicyStatement,
 )
 from iambic.aws.iam.role.models import PermissionBoundary, RoleAccess, RoleTemplate
-from iambic.config.models import AccountConfig, Config, ExtendsConfig, Variable
+from iambic.config.models import AWSAccount, Config, ExtendsConfig, Variable
 from iambic.core.utils import camel_to_snake
 from iambic.google.models import GroupMember, GroupTemplate
 
@@ -46,7 +46,7 @@ def generate_docs():
     ]
     google_template_models = [GroupTemplate, GroupMember]
     config_models = [
-        AccountConfig,
+        AWSAccount,
         Config,
         ExtendsConfig,
         Variable,

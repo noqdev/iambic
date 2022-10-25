@@ -10,7 +10,7 @@ from pydantic import BaseModel as PydanticBaseModel
 from iambic.config.models import Config
 from iambic.config.templates import TEMPLATE_TYPE_MAP
 from iambic.core.logger import log
-from iambic.core.models import Deleted
+from iambic.aws.models import Deleted
 from iambic.core.utils import NOQ_TEMPLATE_REGEX, file_regex_search, yaml
 
 
@@ -119,8 +119,8 @@ def create_templates_for_modified_files(
 
     """
     Create a class instance of the original file content and the new file content with its template type
-    Check for accounts that were removed from included_accounts or added to excluded_accounts
-    Update the template to be applied to delete the role from the accounts that hit on the above statement
+    Check for aws_accounts that were removed from included_accounts or added to excluded_accounts
+    Update the template to be applied to delete the role from the aws_accounts that hit on the above statement
     """
     templates = []
     for git_diff in modified_files:
@@ -132,15 +132,15 @@ def create_templates_for_modified_files(
         template_dict = yaml.load(open(git_diff.path))
         template = template_cls(file_path=git_diff.path, **template_dict)
         deleted_included_accounts = []
-        # deleted_exclude_accounts are accounts that are included in the current commit so can't be deleted
+        # deleted_exclude_accounts are aws_accounts that are included in the current commit so can't be deleted
         deleted_exclude_accounts = [*template.included_accounts]
         deleted_exclude_accounts_str = "\n".join(deleted_exclude_accounts)
 
-        # Catch accounts that were in included accounts but have been removed
+        # Catch aws_accounts that were in included aws_accounts but have been removed
         if "*" not in deleted_exclude_accounts:
             if "*" in main_template.included_accounts:
                 """
-                Catch accounts that were implicitly removed from included_accounts.
+                Catch aws_accounts that were implicitly removed from included_accounts.
                 Example:
                     main branch included_accounts:
                         - *
@@ -148,12 +148,12 @@ def create_templates_for_modified_files(
                         - staging
                         - dev
 
-                If config.accounts included prod, staging, and dev this will catch that prod is no longer included.
+                If config.aws_accounts included prod, staging, and dev this will catch that prod is no longer included.
                     This means marking prod for deletion as it has been implicitly deleted.
                 """
-                for account_config in config.accounts:
+                for aws_account in config.aws_accounts:
                     account_regex = (
-                        rf"({account_config.account_id}|{account_config.account_name})"
+                        rf"({aws_account.account_id}|{aws_account.account_name})"
                     )
                     if re.search(account_regex, deleted_exclude_accounts_str):
                         log.debug(
@@ -173,7 +173,7 @@ def create_templates_for_modified_files(
                     template.included_accounts.append(account_regex)
             else:
                 """
-                Catch accounts that were explicitly removed from included_accounts.
+                Catch aws_accounts that were explicitly removed from included_accounts.
                 Example:
                     main branch included_accounts:
                         - prod
@@ -211,7 +211,7 @@ def create_templates_for_modified_files(
         )
         template_excluded_accounts = []
         """
-        Catch accounts that have been implicitly excluded.
+        Catch aws_accounts that have been implicitly excluded.
         Example:
             included_accounts:
                 - *
@@ -219,7 +219,7 @@ def create_templates_for_modified_files(
             current commit excluded_accounts:
                 - prod
 
-        If config.accounts included prod, staging, and dev this will catch that prod is no longer included.
+        If config.aws_accounts included prod, staging, and dev this will catch that prod is no longer included.
             This means marking prod for deletion as it has been implicitly deleted.
         """
         for account in template.excluded_accounts:
