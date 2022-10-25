@@ -10,6 +10,7 @@ from iambic.core.utils import gather_templates
 from iambic.request_handler.apply import apply_changes, flag_expired_resources
 from iambic.request_handler.detect import detect_changes
 from iambic.request_handler.generate import generate_templates
+from iambic.request_handler.git_apply import apply_git_changes
 
 warnings.filterwarnings("ignore", category=FutureWarning, module="botocore.client")
 
@@ -94,6 +95,27 @@ def apply(no_prompt: bool, config_path: str, templates: list[str], template_dir:
         ctx.eval_only = False
         asyncio.run(apply_changes(config, templates))
     asyncio.run(detect_changes(config))
+
+
+@cli.command(name="git-apply")
+@click.option(
+    "--config",
+    "-c",
+    "config_path",
+    required=False,
+    type=click.Path(exists=True),
+    help="The config.yaml file path to apply. Example: ./prod/config.yaml",
+)
+@click.option(
+    "repo-dir",
+    "-d",
+    "repo_dir",
+    required=False,
+    type=click.Path(exists=True),
+    help="The repo directory containing the templates. Example: ~/noq-templates",
+)
+def git_apply(config_path: str, repo_dir: str):
+    asyncio.run(apply_git_changes(config_path, repo_dir or str(pathlib.Path.cwd())))
 
 
 @cli.command(name="import")

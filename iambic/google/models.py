@@ -7,9 +7,10 @@ import googleapiclient.discovery
 from google.oauth2 import service_account
 from pydantic import Field
 
-from iambic.config.models import AccountConfig, Config
+from iambic.config.models import Config
 from iambic.core.logger import log
-from iambic.core.models import ExpiryModel, NoqTemplate
+from iambic.core.models import BaseTemplate
+from iambic.aws.models import ExpiryModel
 from iambic.core.utils import aio_wrapper, yaml
 
 
@@ -89,7 +90,7 @@ class GroupMember(ExpiryModel):
     subscription: GroupMemberSubscription = GroupMemberSubscription.EACH_EMAIL
 
 
-class GroupTemplate(NoqTemplate):
+class GroupTemplate(BaseTemplate):
     template_type = "NOQ::Google::GroupTemplate"
     name: str
     email: str
@@ -108,7 +109,7 @@ class GroupTemplate(NoqTemplate):
     # TODO: conversation_history
     # TODO: There is more. Check google group settings page
 
-    async def _apply_to_account(self, account_config: AccountConfig) -> bool:
+    async def apply(self, config: Config) -> bool:
         # The bool represents whether the resource was altered in any way in the cloud
         raise NotImplementedError
 
