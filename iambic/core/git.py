@@ -22,6 +22,10 @@ class GitDiff(PydanticBaseModel):
 
 async def retrieve_git_changes(repo_dir: str) -> dict[str, list[GitDiff]]:
     repo = Repo(repo_dir)
+
+    # Fetch latest
+    for remote in repo.remotes:
+        remote.fetch()
     # Last commit of the current branch
     commit_feature = repo.head.commit.tree
     # Comparing against main
