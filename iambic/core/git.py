@@ -79,7 +79,7 @@ async def retrieve_git_changes(repo_dir: str) -> dict[str, list[GitDiff]]:
                         file_path=deleted_file.path, **main_template_dict
                     )
                     template = template_cls(file_path=path, **template_dict)
-                    if main_template.resource_name != template.resource_name:
+                    if main_template.resource_id != template.resource_id:
                         files["deleted_files"].append(deleted_file)
                         files["new_files"].append(GitDiff(path=path))
                         continue
