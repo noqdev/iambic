@@ -16,7 +16,7 @@
     - *boolean*
     - *array*
       - **Items**: Refer to *[#/definitions/Deleted](#definitions/Deleted)*.
-- **`template_type`** *(string)*: Default: `"NOQ::IAM::MultiAccountRole"`.
+- **`template_type`** *(string)*: Default: `"NOQ::AWS::IAM::ROLE"`.
 - **`file_path`** *(string)*
 - **`read_only`** *(boolean)*: If set to True, iambic will only log drift instead of apply changes when drift is detected. Default: `false`.
 - **`role_name`** *(string)*: Name of the role.
@@ -182,17 +182,17 @@
       - *array*
         - **Items** *(string)*
       - *string*
-  - **`not_resource`**: A single regex or list of regexes. Values specified are the resources the statement applies to.
-    - **Any of**
-      - *array*
-        - **Items** *(string)*
-      - *string*
   - **`not_action`**: An advanced policy element that explicitly matches everything except the specified list of actions.DON'T use this with effect: allow in the same statement OR policy.
     - **Any of**
       - *array*
         - **Items** *(string)*
       - *string*
   - **`resource`**: A single regex or list of regexes. Values specified are the resources the statement applies to.
+    - **Any of**
+      - *array*
+        - **Items** *(string)*
+      - *string*
+  - **`not_resource`**: An advanced policy element that explicitly matches every resource except those specified.DON'T use this with effect: allow and action: '*'.
     - **Any of**
       - *array*
         - **Items** *(string)*

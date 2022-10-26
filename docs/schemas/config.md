@@ -2,14 +2,14 @@
 
 ## Properties
 
-- **`accounts`** *(array)*
-  - **Items**: Refer to *[#/definitions/AccountConfig](#definitions/AccountConfig)*.
+- **`aws_accounts`** *(array)*
+  - **Items**: Refer to *[#/definitions/AWSAccount](#definitions/AWSAccount)*.
 - **`google`**: Refer to *[#/definitions/GoogleConfig](#definitions/GoogleConfig)*.
 - **`extends`** *(array)*: Default: `[]`.
   - **Items**: Refer to *[#/definitions/ExtendsConfig](#definitions/ExtendsConfig)*.
 - **`secrets`** *(object)*
 - **`role_access_tag`** *(string)*: The key of the tag used to store users and groups that can assume into the role the tag is on. Default: `"noq-authorized"`.
-- **`variables`** *(array)*: A list of variables to be used when creating templates. These apply to all accounts but can be overwritten by an account. Default: `[]`.
+- **`variables`** *(array)*: A list of variables to be used when creating templates. These apply to all aws_accounts but can be overwritten by an account. Default: `[]`.
   - **Items**: Refer to *[#/definitions/Variable](#definitions/Variable)*.
 - **`slack_app`** *(string)*
 - **`sqs`** *(object)*: Default: `{}`.
@@ -20,7 +20,7 @@
 - <a id="definitions/Variable"></a>**`Variable`** *(object)*
   - **`key`** *(string)*
   - **`value`** *(string)*
-- <a id="definitions/AccountConfig"></a>**`AccountConfig`** *(object)*
+- <a id="definitions/AWSAccount"></a>**`AWSAccount`** *(object)*
   - **`account_id`** *(string)*: The AWS Account ID.
   - **`org_id`** *(string)*: A unique identifier designating the identity of the organization.
   - **`account_name`** *(string)*

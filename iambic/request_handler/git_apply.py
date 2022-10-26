@@ -17,8 +17,8 @@ async def apply_git_changes(config_path: str, repo_dir: str):
     Works by taking the diff and adding implied changes to the templates that were modified.
     These are the changes and this function detects:
         Deleting a file
-        Removing 1 or more accounts from included_accounts
-        Adding 1 or more accounts to excluded_accounts
+        Removing 1 or more aws_accounts from included_accounts
+        Adding 1 or more aws_accounts to excluded_accounts
 
     :param config_path:
     :param repo_dir:
@@ -44,7 +44,7 @@ async def apply_git_changes(config_path: str, repo_dir: str):
     )
 
     changes_made = await asyncio.gather(
-        *[template.apply_all(config) for template in templates]
+        *[template.apply(config) for template in templates]
     )
     changes_made = any(changes_made)
     if ctx.execute and changes_made:

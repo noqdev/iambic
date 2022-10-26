@@ -3,9 +3,9 @@ from typing import List, Optional, Union
 from pydantic import Field, constr
 
 from iambic.aws.iam.models import Description, Path
-from iambic.aws.models import ARN_RE
-from iambic.config.models import AccountConfig
-from iambic.core.models import AccessModel, BaseModel, ExpiryModel, NoqTemplate, Tag
+from iambic.aws.models import ARN_RE, AccessModel, ExpiryModel, Tag, AWSTemplate
+from iambic.config.models import AWSAccount
+from iambic.core.models import BaseModel
 
 
 class Principal(BaseModel):
@@ -14,11 +14,19 @@ class Principal(BaseModel):
     canonical_user: Optional[Union[str | list[str]]] = None
     federated: Optional[Union[str | list[str]]] = None
 
-    def _apply_resource_dict(self, account_config: AccountConfig = None) -> dict:
-        resource_dict = super(Principal, self)._apply_resource_dict(account_config)
+    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
+        resource_dict = super(Principal, self)._apply_resource_dict(aws_account)
         if aws_val := resource_dict.pop("aws", resource_dict.pop("Aws", None)):
             resource_dict["AWS"] = aws_val
         return resource_dict
+
+    @property
+    def resource_type(self) -> str:
+        return "aws:iam:policy_principal"
+
+    @property
+    def resource_id(self) -> str:
+        return self.service or self.canonical_user or self.federated or self.aws
 
 
 class ConditionalStatement(BaseModel):
@@ -98,11 +106,6 @@ class PolicyStatement(AccessModel, ExpiryModel):
         "Values are the actions that can be performed on the resources in the policy statement",
         example="dynamodb:list*",
     )
-    not_resource: Optional[Union[List[str] | str]] = Field(
-        None,
-        description="An advanced policy element that explicitly matches every resource except those specified."
-        "DON'T use this with effect: allow and action: '*'",
-    )
     not_action: Optional[Union[List[str] | str]] = Field(
         None,
         description="An advanced policy element that explicitly matches everything except the specified list of actions."
@@ -114,7 +117,8 @@ class PolicyStatement(AccessModel, ExpiryModel):
     )
     not_resource: Optional[Union[List[str] | str]] = Field(
         None,
-        description="A single regex or list of regexes. Values specified are the resources the statement applies to",
+        description="An advanced policy element that explicitly matches every resource except those specified."
+        "DON'T use this with effect: allow and action: '*'",
     )
     condition: Optional[dict] = Field(
         None,
@@ -127,7 +131,7 @@ class PolicyStatement(AccessModel, ExpiryModel):
 
     @property
     def resource_type(self):
-        return "Policy Statement"
+        return "aws:iam:policy_statement"
 
     @property
     def resource_id(self):
@@ -137,6 +141,14 @@ class PolicyStatement(AccessModel, ExpiryModel):
 class AssumeRolePolicyDocument(AccessModel):
     version: Optional[str] = None
     statement: Optional[List[PolicyStatement]] = None
+
+    @property
+    def resource_type(self) -> str:
+        return "aws:iam:assume_role_policy_document"
+
+    @property
+    def resource_id(self) -> str:
+        return ""
 
 
 class PolicyDocument(AccessModel, ExpiryModel):
@@ -158,7 +170,7 @@ class PolicyDocument(AccessModel, ExpiryModel):
         return self.policy_name
 
 
-class ManagedPolicyTemplate(NoqTemplate):
+class ManagedPolicyTemplate(AWSTemplate):
     template_type = "NOQ::IAM::ManagedPolicy"
     policy_name: str = Field(
         description="The name of the policy.",
@@ -176,7 +188,7 @@ class ManagedPolicyTemplate(NoqTemplate):
 
     @property
     def resource_type(self):
-        return "aws:policy_document"
+        return "aws:iam:policy_document"
 
     @property
     def resource_id(self):
@@ -188,7 +200,7 @@ class ManagedPolicyRef(AccessModel, ExpiryModel):
 
     @property
     def resource_type(self):
-        return "Managed Policy"
+        return "aws:iam:managed_policy"
 
     @property
     def resource_id(self):
