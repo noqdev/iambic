@@ -40,7 +40,7 @@ class RoleAccess(ExpiryModel, AccessModel):
         return "Role Access"
 
     @property
-    def resource_name(self):
+    def resource_id(self):
         return
 
 
@@ -141,7 +141,7 @@ class RoleTemplate(NoqTemplate, AccessModel):
         role_name = account_role["RoleName"]
         log_params = dict(
             resource_type=self.resource_type,
-            resource_name=role_name,
+            resource_id=role_name,
             account=str(account_config),
         )
         changes_made = False
@@ -280,5 +280,5 @@ class RoleTemplate(NoqTemplate, AccessModel):
         return "role"
 
     @property
-    def resource_name(self):
+    def resource_id(self):
         return self.role_name
