@@ -1,18 +1,13 @@
-import asyncio
 import json
-from datetime import datetime
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
 
-from iambic.config.models import AccountConfig, Config
-from iambic.core.context import ctx
-from iambic.core.logger import log
+from iambic.config.models import AWSAccount, Config
 from iambic.core.utils import (
     apply_to_account,
-    evaluate_on_account,
     snake_to_camelcap,
     yaml,
 )
@@ -20,24 +15,24 @@ from iambic.core.utils import (
 
 class BaseModel(PydanticBaseModel):
     def get_attribute_val_for_account(
-        self, account_config: AccountConfig, attr: str, as_boto_dict: bool = True
+        self, aws_account: AWSAccount, attr: str, as_boto_dict: bool = True
     ):
         attr_val = getattr(self, attr)
 
         if as_boto_dict and hasattr(attr_val, "_apply_resource_dict"):
-            return attr_val._apply_resource_dict(account_config)
+            return attr_val._apply_resource_dict(aws_account)
         elif not isinstance(attr_val, list):
             return attr_val
 
         matching_definitions = [
-            val for val in attr_val if apply_to_account(val, account_config)
+            val for val in attr_val if apply_to_account(val, aws_account)
         ]
         if len(matching_definitions) == 0:
             # Fallback to the default definition
             return self.__fields__[attr].default
         elif as_boto_dict:
             return [
-                match._apply_resource_dict(account_config)
+                match._apply_resource_dict(aws_account)
                 if hasattr(match, "_apply_resource_dict")
                 else match
                 for match in matching_definitions
@@ -45,7 +40,7 @@ class BaseModel(PydanticBaseModel):
         else:
             return matching_definitions
 
-    def _apply_resource_dict(self, account_config: AccountConfig = None) -> dict:
+    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
         exclude_keys = {
             "deleted",
             "expires_at",
@@ -59,9 +54,9 @@ class BaseModel(PydanticBaseModel):
         }
         exclude_keys.update(self.exclude_keys)
 
-        if account_config:
+        if aws_account:
             resource_dict = {
-                k: self.get_attribute_val_for_account(account_config, k)
+                k: self.get_attribute_val_for_account(aws_account, k)
                 for k in self.__dict__.keys()
                 if k not in exclude_keys
             }
@@ -73,11 +68,11 @@ class BaseModel(PydanticBaseModel):
 
         return {self.case_convention(k): v for k, v in resource_dict.items()}
 
-    def apply_resource_dict(self, account_config: AccountConfig) -> dict:
-        response = self._apply_resource_dict(account_config)
-        variables = {var.key: var.value for var in account_config.variables}
-        variables["account_id"] = account_config.account_id
-        variables["account_name"] = account_config.account_name
+    def apply_resource_dict(self, aws_account: AWSAccount) -> dict:
+        response = self._apply_resource_dict(aws_account)
+        variables = {var.key: var.value for var in aws_account.variables}
+        variables["account_id"] = aws_account.account_id
+        variables["account_name"] = aws_account.account_name
         if owner := getattr(self, "owner"):
             variables["owner"] = owner
 
@@ -93,47 +88,6 @@ class BaseModel(PydanticBaseModel):
     def case_convention(self):
         return snake_to_camelcap
 
-
-class AccessModel(BaseModel):
-    included_accounts: List = Field(
-        ["*"],
-        description="A list of account ids and/or account names this statement applies to. "
-        "Account ids/names can be represented as a regex and string",
-    )
-    excluded_accounts: Optional[List] = Field(
-        [],
-        description="A list of account ids and/or account names this statement explicitly does not apply to. "
-        "Account ids/names can be represented as a regex and string",
-    )
-    included_orgs: List = Field(
-        ["*"],
-        description="A list of AWS organization ids this statement applies to. "
-        "Org ids can be represented as a regex and string",
-    )
-    excluded_orgs: Optional[List] = Field(
-        [],
-        description="A list of AWS organization ids this statement explicitly does not apply to. "
-        "Org ids can be represented as a regex and string",
-    )
-
-
-class Deleted(AccessModel):
-    deleted: bool = Field(
-        description="Denotes whether the resource has been removed from AWS."
-        "Upon being set to true, the resource will be deleted the next time iambic is ran.",
-    )
-
-
-class ExpiryModel(BaseModel):
-    expires_at: Optional[datetime] = Field(
-        None, description="The date and time the resource will be/was set to deleted."
-    )
-    deleted: Optional[Union[bool | List[Deleted]]] = Field(
-        False,
-        description="Denotes whether the resource has been removed from AWS."
-        "Upon being set to true, the resource will be deleted the next time iambic is ran.",
-    )
-
     @property
     def resource_type(self) -> str:
         raise NotImplementedError
@@ -143,20 +97,7 @@ class ExpiryModel(BaseModel):
         raise NotImplementedError
 
 
-class Tag(ExpiryModel, AccessModel):
-    key: str
-    value: str
-
-    @property
-    def resource_type(self):
-        return "Tag"
-
-    @property
-    def resource_id(self):
-        return self.key
-
-
-class NoqTemplate(ExpiryModel):
+class BaseTemplate(BaseModel):
     template_type: str
     file_path: str
     read_only: Optional[bool] = Field(
@@ -198,42 +139,16 @@ class NoqTemplate(ExpiryModel):
         return template_dict
 
     def write(self):
+        as_yaml = yaml.dump(self.dict())
+        # Force template_type to be at the top of the yaml
+        template_type_str = f"template_type: {self.template_type}"
+        as_yaml = as_yaml.replace(f"\n{template_type_str}", "")
+        as_yaml = f"{template_type_str}\n{as_yaml}"
         with open(self.file_path, "w") as f:
-            f.write(yaml.dump(self.dict()))
+            f.write(as_yaml)
 
-    async def _apply_to_account(self, account_config: AccountConfig) -> bool:
-        # The bool represents whether the resource was altered in any way in the cloud
+    async def apply(self, config: Config) -> bool:
         raise NotImplementedError
-
-    async def apply_all(self, config: Config) -> bool:
-        tasks = []
-        log_params = dict(
-            resource_type=self.resource_type, resource_id=self.resource_id
-        )
-        for account in config.accounts:
-            if evaluate_on_account(self, account):
-                if ctx.execute:
-                    log_str = "Applying changes to resource."
-                else:
-                    log_str = "Detecting changes for resource."
-                log.info(log_str, account=str(account), **log_params)
-                tasks.append(self._apply_to_account(account))
-
-        changes_made = await asyncio.gather(*tasks)
-        changes_made = bool(any(changes_made))
-        if changes_made and ctx.execute:
-            log.info(
-                "Successfully applied resource changes to all accounts.", **log_params
-            )
-        elif changes_made and not ctx.execute:
-            log.info(
-                "Successfully detected required resource changes on all accounts.",
-                **log_params,
-            )
-        else:
-            log.debug("No changes detected for resource on any account.", **log_params)
-
-        return changes_made
 
     @classmethod
     def load(cls, file_path: str):

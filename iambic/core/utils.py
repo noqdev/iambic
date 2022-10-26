@@ -70,14 +70,14 @@ def normalize_boto3_resp(obj):
         return obj
 
 
-def get_closest_value(matching_values: list, account_config):
+def get_closest_value(matching_values: list, aws_account):
     if len(matching_values) == 1:
         return matching_values[0]
 
     account_value_hit = dict(returns=None, specificty=0)
 
-    account_ids = [account_config.account_id]
-    if account_name := account_config.account_name:
+    account_ids = [aws_account.account_id]
+    if account_name := aws_account.account_name:
         account_ids.append(account_name.lower())
 
     for matching_value in matching_values:
@@ -98,26 +98,26 @@ def get_closest_value(matching_values: list, account_config):
     return account_value_hit["returns"]
 
 
-def evaluate_on_account(resource, account_config) -> bool:
-    from iambic.core.models import AccessModel
+def evaluate_on_account(resource, aws_account) -> bool:
+    from iambic.aws.models import AccessModel
 
     if ctx.execute and (
-        account_config.read_only or getattr(resource, "read_only", False)
+        aws_account.read_only or getattr(resource, "read_only", False)
     ):
         return False
     if not issubclass(type(resource), AccessModel):
         return True
 
-    if account_config.org_id:
-        if account_config.org_id in resource.excluded_orgs:
+    if aws_account.org_id:
+        if aws_account.org_id in resource.excluded_orgs:
             return False
         elif not any(
-            re.match(org_id, account_config.org_id) for org_id in resource.included_orgs
+            re.match(org_id, aws_account.org_id) for org_id in resource.included_orgs
         ):
             return False
 
-    account_ids = [account_config.account_id]
-    if account_name := account_config.account_name:
+    account_ids = [aws_account.account_id]
+    if account_name := aws_account.account_name:
         account_ids.append(account_name.lower())
 
     for account_id in account_ids:
@@ -141,8 +141,8 @@ def evaluate_on_account(resource, account_config) -> bool:
     return False
 
 
-def apply_to_account(resource, account_config) -> bool:
-    from iambic.core.models import Deleted
+def apply_to_account(resource, aws_account) -> bool:
+    from iambic.aws.models import Deleted
 
     if hasattr(resource, "deleted"):
         deleted_resource_type = isinstance(resource, Deleted)
@@ -152,13 +152,13 @@ def apply_to_account(resource, account_config) -> bool:
                 return False
         else:
             deleted_obj = resource.get_attribute_val_for_account(
-                account_config, "deleted"
+                aws_account, "deleted"
             )
-            deleted_obj = get_closest_value(deleted_obj, account_config)
+            deleted_obj = get_closest_value(deleted_obj, aws_account)
             if deleted_obj and deleted_obj.deleted and not deleted_resource_type:
                 return False
 
-    return evaluate_on_account(resource, account_config)
+    return evaluate_on_account(resource, aws_account)
 
 
 async def remove_expired_resources(
@@ -208,26 +208,26 @@ async def remove_expired_resources(
     return resource
 
 
-def get_account_config_map(configs: list) -> dict:
+def get_aws_account_map(configs: list) -> dict:
     """Returns a map containing all account configs across all provided config instances
 
     :param configs:
-    :return: dict(account_id:str = AccountConfig)
+    :return: dict(account_id:str = AWSAccount)
     """
-    account_config_map = dict()
+    aws_account_map = dict()
     for config in configs:
         config.set_account_defaults()
-        for account_config in config.accounts:
-            if account_config_map.get(account_config.account_id):
+        for aws_account in config.aws_accounts:
+            if aws_account_map.get(aws_account.account_id):
                 log.critical(
                     "Account definition found in multiple configs",
-                    account_id=account_config.account_id,
-                    account_name=account_config.account_name,
+                    account_id=aws_account.account_id,
+                    account_name=aws_account.account_name,
                 )
                 raise ValueError
-            account_config_map[account_config.account_id] = account_config
+            aws_account_map[aws_account.account_id] = aws_account
 
-    return account_config_map
+    return aws_account_map
 
 
 async def file_regex_search(file_path: str, re_pattern: str) -> Union[str | None]:
@@ -238,6 +238,10 @@ async def file_regex_search(file_path: str, re_pattern: str) -> Union[str | None
 
 
 async def gather_templates(repo_dir: str, template_type: str = None) -> list[str]:
+    if template_type and template_type.startswith("NOQ::"):
+        # Strip the prefix so it plays nice with NOQ_TEMPLATE_REGEX
+        template_type = template_type.replace("NOQ::", "")
+
     regex_pattern = (
         rf"{NOQ_TEMPLATE_REGEX}.*{template_type}"
         if template_type

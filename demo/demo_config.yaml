@@ -1,4 +1,7 @@
-accounts:
+aws_accounts:
+- account_id: '972417093400'
+  account_name: 'demo-1'
+  aws_profile: demo_1
 - account_id: '694815895589'
   account_name: 'demo-2'
   aws_profile: demo_2

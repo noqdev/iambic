@@ -10,7 +10,7 @@ from iambic.core.utils import remove_expired_resources, yaml
 
 async def apply_changes(config: Config, template_paths: list[str]) -> bool:
     changes_made = await asyncio.gather(
-        *[template.apply_all(config) for template in load_templates(template_paths)]
+        *[template.apply(config) for template in load_templates(template_paths)]
     )
     changes_made = any(changes_made)
     if ctx.execute and changes_made:

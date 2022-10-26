@@ -2,7 +2,7 @@ extends:
   - key: AWS_SECRETS_MANAGER
     value: arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/google-MmAS1o
 
-accounts:
+aws_accounts:
 - account_id: '759357822767'
   account_name: dev
   aws_profile: noq_dev

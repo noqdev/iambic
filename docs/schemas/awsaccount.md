@@ -1,4 +1,4 @@
-# AccountConfig
+# AWSAccount
 
 ## Properties
 

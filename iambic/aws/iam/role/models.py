@@ -17,11 +17,10 @@ from iambic.aws.iam.role.utils import (
     delete_iam_role,
     update_assume_role_policy,
 )
-from iambic.aws.models import ARN_RE
-from iambic.config.models import AccountConfig
+from iambic.aws.models import ARN_RE, AccessModel, ExpiryModel, Tag, AWSTemplate
+from iambic.config.models import AWSAccount
 from iambic.core.context import ctx
 from iambic.core.logger import log
-from iambic.core.models import AccessModel, ExpiryModel, NoqTemplate, Tag
 from iambic.core.utils import aio_wrapper, apply_to_account
 
 
@@ -37,7 +36,7 @@ class RoleAccess(ExpiryModel, AccessModel):
 
     @property
     def resource_type(self):
-        return "Role Access"
+        return "aws:iam:role_access"
 
     @property
     def resource_id(self):
@@ -48,9 +47,17 @@ class PermissionBoundary(ExpiryModel, AccessModel):
     permissions_boundary_type: str
     permissions_boundary_arn: constr(regex=ARN_RE)
 
+    @property
+    def resource_type(self):
+        return "aws:iam:permission_boundary"
 
-class RoleTemplate(NoqTemplate, AccessModel):
-    template_type = "NOQ::IAM::MultiAccountRole"
+    @property
+    def resource_id(self):
+        return self.permissions_boundary_arn
+
+
+class RoleTemplate(AWSTemplate, AccessModel):
+    template_type = "NOQ::AWS::IAM::ROLE"
     role_name: str = Field(
         description="Name of the role",
     )
@@ -84,17 +91,17 @@ class RoleTemplate(NoqTemplate, AccessModel):
         description="List of the role's inline policies",
     )
 
-    def _apply_resource_dict(self, account_config: AccountConfig = None) -> dict:
-        response = super(RoleTemplate, self)._apply_resource_dict(account_config)
+    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
+        response = super(RoleTemplate, self)._apply_resource_dict(aws_account)
         response.pop("RoleAccess", None)
         if "Tags" not in response:
             response["Tags"] = []
 
         # Add RoleAccess Tag to role tags
         role_access = [
-            ra._apply_resource_dict(account_config)
+            ra._apply_resource_dict(aws_account)
             for ra in self.role_access
-            if apply_to_account(ra, account_config)
+            if apply_to_account(ra, aws_account)
         ]
         if role_access:
             value = []
@@ -102,7 +109,7 @@ class RoleTemplate(NoqTemplate, AccessModel):
                 value.extend(role_access_dict.get("Users", []))
                 value.extend(role_access_dict.get("Groups", []))
             response["Tags"].append(
-                {"Key": account_config.role_access_tag, "Value": ":".join(value)}
+                {"Key": aws_account.role_access_tag, "Value": ":".join(value)}
             )
 
         # Ensure only 1 of the following objects
@@ -127,25 +134,25 @@ class RoleTemplate(NoqTemplate, AccessModel):
 
         return response
 
-    def _is_read_only(self, account_config: AccountConfig):
+    def _is_read_only(self, aws_account: AWSAccount):
         return (
             "aws-service-role" in self.path
-            or account_config.read_only
+            or aws_account.read_only
             or self.read_only
         )
 
-    async def _apply_to_account(self, account_config: AccountConfig) -> bool:
-        boto3_session = account_config.get_boto3_session()
+    async def _apply_to_account(self, aws_account: AWSAccount) -> bool:
+        boto3_session = aws_account.get_boto3_session()
         client = boto3_session.client("iam")
-        account_role = self.apply_resource_dict(account_config)
+        account_role = self.apply_resource_dict(aws_account)
         role_name = account_role["RoleName"]
         log_params = dict(
             resource_type=self.resource_type,
             resource_id=role_name,
-            account=str(account_config),
+            account=str(aws_account),
         )
         changes_made = False
-        read_only = self._is_read_only(account_config)
+        read_only = self._is_read_only(aws_account)
 
         try:
             current_role = (await aio_wrapper(client.get_role, RoleName=role_name))[
@@ -154,7 +161,7 @@ class RoleTemplate(NoqTemplate, AccessModel):
         except client.exceptions.NoSuchEntityException:
             current_role = {}
 
-        deleted = self.get_attribute_val_for_account(account_config, "deleted", False)
+        deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
         if isinstance(deleted, list):
             deleted = deleted[0].deleted
 
@@ -277,7 +284,7 @@ class RoleTemplate(NoqTemplate, AccessModel):
 
     @property
     def resource_type(self):
-        return "role"
+        return "aws:iam:role"
 
     @property
     def resource_id(self):
