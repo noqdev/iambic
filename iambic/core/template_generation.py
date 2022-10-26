@@ -3,11 +3,26 @@ from typing import Union
 
 import xxhash
 
-from iambic.config.models import AccountConfig
+from iambic.config.models import AWSAccount
+from iambic.core.utils import gather_templates
 from iambic.core import noq_json as json
+from iambic.core.parser import load_templates
 
 
-def templatize_resource(account_config: AccountConfig, resource):
+async def get_existing_template_file_map(repo_dir: str, template_type: str) -> dict:
+    """Used to keep track of existing templates on import
+
+     Write to the existing file before creating a new one.
+
+    :param repo_dir:
+    :param template_type:
+    :return: {resource_id: file_path}
+    """
+    templates = load_templates(await gather_templates(repo_dir, template_type))
+    return {template.resource_id: template.file_path for template in templates}
+
+
+def templatize_resource(aws_account: AWSAccount, resource):
     resource_type = type(resource)
 
     if isinstance(resource, dict) or isinstance(resource, list):
@@ -15,9 +30,9 @@ def templatize_resource(account_config: AccountConfig, resource):
     elif resource_type != str:
         resource = str(resource)
 
-    resource = resource.replace(account_config.account_id, "{{account_id}}")
-    resource = resource.replace(account_config.account_name, "{{account_name}}")
-    for var in account_config.variables:
+    resource = resource.replace(aws_account.account_id, "{{account_id}}")
+    resource = resource.replace(aws_account.account_name, "{{account_name}}")
+    for var in aws_account.variables:
         resource = resource.replace(var.value, "{{{}}}".format(var.key))
 
     return (
@@ -28,7 +43,7 @@ def templatize_resource(account_config: AccountConfig, resource):
 
 
 def base_group_int_attribute(account_vals: dict) -> dict[int, list[dict[str, str]]]:
-    """Groups an int attribute by a shared name across of accounts
+    """Groups an int attribute by a shared name across of aws_accounts
 
     Just call group_int_or_str_attribute
 
@@ -44,9 +59,9 @@ def base_group_int_attribute(account_vals: dict) -> dict[int, list[dict[str, str
 
 
 async def base_group_str_attribute(
-    account_config_map: dict[str, AccountConfig], account_resources: list[dict]
+    aws_account_map: dict[str, AWSAccount], account_resources: list[dict]
 ) -> dict[str, list]:
-    """Groups a string attribute by a shared name across of accounts
+    """Groups a string attribute by a shared name across of aws_accounts
 
     The ability to pass in and maintain arbitrary keys is necessary for
         parsing resource names related to a boto3 response
@@ -54,7 +69,7 @@ async def base_group_str_attribute(
     Call group_int_or_str_attribute instead unless you need to transform this response.
     An example would be grouping role names for generating the template where you need to keep the file_path ref.
 
-    :param account_config_map: dict(account_id:str = AccountConfig)
+    :param aws_account_map: dict(account_id:str = AWSAccount)
     :param account_resources: list[dict(account_id:str, resources=list[dict(resource_val: str, **)])]
     :return: dict(attribute_val: str = list[dict(resource_val: str, account_id: str, **)])
     """
@@ -71,13 +86,13 @@ async def base_group_str_attribute(
     for account_resource_elem, account_resource in enumerate(account_resources):
         account_resources[account_resource_elem]["resource_val_map"] = dict()
         account_resources[account_resource_elem]["elem_resource_val_map"] = dict()
-        account_config = account_config_map[account_resource["account_id"]]
+        aws_account = aws_account_map[account_resource["account_id"]]
         for resource_elem, resource in enumerate(account_resource["resources"]):
             account_resource["resources"][resource_elem][
                 "account_id"
             ] = account_resource["account_id"]
             resource_val = resource["resource_val"]
-            templatized_resource_val = templatize_resource(account_config, resource_val)
+            templatized_resource_val = templatize_resource(aws_account, resource_val)
 
             account_resources[account_resource_elem]["resource_val_map"][
                 resource_val
@@ -96,7 +111,7 @@ async def base_group_str_attribute(
     grouped_resource_map = defaultdict(
         list
     )  # val:str = list(dict(name: str, path: str, account_id: str))
-    # Iterate everything looking for shared names across accounts
+    # Iterate everything looking for shared names across aws_accounts
     for outer_elem in range(len(account_resources)):
         for resource_val, outer_resource_elem in account_resources[outer_elem][
             "resource_val_map"
@@ -162,14 +177,14 @@ async def base_group_str_attribute(
 
 
 async def base_group_dict_attribute(
-    account_config_map: dict[str, AccountConfig], account_resources: list[dict]
+    aws_account_map: dict[str, AWSAccount], account_resources: list[dict]
 ) -> list[dict]:
-    """Groups an attribute that is a dict or list of dicts with matching accounts
+    """Groups an attribute that is a dict or list of dicts with matching aws_accounts
 
     Call group_dict_attribute instead unless you need to transform this response.
     An example would be tags which also contain role_access.
 
-    :param account_config_map: dict(account_id:str = AccountConfig)
+    :param aws_account_map: dict(account_id:str = AWSAccount)
     :param account_resources: list[dict(account_id:str, resources=list[dict])]
     :return: list[dict(included_accounts: str, resource_val=list[dict]|dict)]
     """
@@ -186,7 +201,7 @@ async def base_group_dict_attribute(
     for account_resource_elem, account_resource in enumerate(account_resources):
         account_resources[account_resource_elem]["resource_hash_map"] = dict()
         account_resources[account_resource_elem]["elem_resource_hash_map"] = dict()
-        account_config = account_config_map[account_resource["account_id"]]
+        aws_account = aws_account_map[account_resource["account_id"]]
         for resource_elem, resource in enumerate(account_resource["resources"]):
             account_resource["resources"][resource_elem][
                 "account_id"
@@ -198,7 +213,7 @@ async def base_group_dict_attribute(
             hash_map[resource_hash] = resource["resource_val"]
             # Set dict with attempted interpolation
             templatized_dict = templatize_resource(
-                account_config, resource["resource_val"]
+                aws_account, resource["resource_val"]
             )
             templatized_resource_hash = xxhash.xxh32(
                 json.dumps(templatized_dict)
@@ -222,7 +237,7 @@ async def base_group_dict_attribute(
     grouped_resource_map = (
         dict()
     )  # val:str = list(dict(name: str, path: str, account_id: str))
-    # Iterate everything looking for shared names across accounts
+    # Iterate everything looking for shared names across aws_accounts
     for outer_elem in range(len(account_resources)):
         for resource_hash, outer_resource_elem in account_resources[outer_elem][
             "resource_hash_map"
@@ -290,13 +305,13 @@ async def base_group_dict_attribute(
 
 
 async def set_included_accounts_for_grouped_attribute(
-    account_config_map: dict[str, AccountConfig],
+    aws_account_map: dict[str, AWSAccount],
     number_of_accounts_resource_on: int,
     grouped_attribute,
 ) -> Union[list | dict]:
-    """Takes a grouped attribute and formats its included accounts to * or a list of account names
+    """Takes a grouped attribute and formats its included aws_accounts to * or a list of account names
 
-    :param account_config_map: {account_id: account_config}
+    :param aws_account_map: {account_id: aws_account}
     :param number_of_accounts_resource_on:
     :param grouped_attribute:
     :return:
@@ -307,7 +322,7 @@ async def set_included_accounts_for_grouped_attribute(
                 included_accounts = ["*"]
             else:
                 included_accounts = [
-                    account_config_map[rv["account_id"]].account_name
+                    aws_account_map[rv["account_id"]].account_name
                     for rv in resource_vals
                 ]
             grouped_attribute[k] = included_accounts
@@ -323,7 +338,7 @@ async def set_included_accounts_for_grouped_attribute(
                 grouped_attribute[elem]["included_accounts"] = ["*"]
             else:
                 included_accounts = [
-                    account_config_map[rv].account_name
+                    aws_account_map[rv].account_name
                     for rv in grouped_attribute[elem]["included_accounts"]
                 ]
                 grouped_attribute[elem]["included_accounts"] = included_accounts
@@ -332,14 +347,14 @@ async def set_included_accounts_for_grouped_attribute(
 
 
 async def group_int_or_str_attribute(
-    account_config_map: dict[str, AccountConfig],
+    aws_account_map: dict[str, AWSAccount],
     number_of_accounts_resource_on: int,
     account_resources: Union[dict | list[dict]],
     key: Union[int | str],
 ) -> Union[int | str | list[dict]]:
-    """Groups an attribute by accounts, formats the attribute and normalizes the included accounts.
+    """Groups an attribute by aws_accounts, formats the attribute and normalizes the included aws_accounts.
 
-    :param account_config_map:
+    :param aws_account_map:
     :param number_of_accounts_resource_on:
     :param account_resources: dict(account_id: str = int_val) | list[dict(account_id:str, resources=list[dict])]
     :param key: Used to form the list[dict] response when there are multiple values for the attribute.
@@ -347,7 +362,7 @@ async def group_int_or_str_attribute(
     """
     if isinstance(account_resources, list):
         grouped_attribute = await base_group_str_attribute(
-            account_config_map, account_resources
+            aws_account_map, account_resources
         )
     else:
         grouped_attribute = base_group_int_attribute(account_resources)
@@ -357,7 +372,7 @@ async def group_int_or_str_attribute(
 
     response = []
     grouped_attribute = await set_included_accounts_for_grouped_attribute(
-        account_config_map, number_of_accounts_resource_on, grouped_attribute
+        aws_account_map, number_of_accounts_resource_on, grouped_attribute
     )
 
     for resource_val, included_accounts in grouped_attribute.items():
@@ -370,14 +385,14 @@ async def group_int_or_str_attribute(
 
 
 async def group_dict_attribute(
-    account_config_map: dict[str, AccountConfig],
+    aws_account_map: dict[str, AWSAccount],
     number_of_accounts_resource_on: int,
     account_resources: list[dict],
     is_dict_attr: bool = True,
 ) -> Union[dict | list[dict]]:
-    """Groups an attribute by accounts, formats the attribute and normalizes the included accounts.
+    """Groups an attribute by aws_accounts, formats the attribute and normalizes the included aws_accounts.
 
-    :param account_config_map: {account_id: account_config}
+    :param aws_account_map: {account_id: aws_account}
     :param number_of_accounts_resource_on:
     :param account_resources: list[dict(account_id:str, resources=list[dict])]
     :param is_dict_attr: If false and only one hit, still return as a list. Useful for things like inline_policies.
@@ -386,9 +401,9 @@ async def group_dict_attribute(
 
     response = []
     grouped_attributes = await set_included_accounts_for_grouped_attribute(
-        account_config_map,
+        aws_account_map,
         number_of_accounts_resource_on,
-        (await base_group_dict_attribute(account_config_map, account_resources)),
+        (await base_group_dict_attribute(aws_account_map, account_resources)),
     )
 
     if len(grouped_attributes) == 1 and is_dict_attr:
