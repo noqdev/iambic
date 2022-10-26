@@ -107,7 +107,7 @@ def apply(no_prompt: bool, config_path: str, templates: list[str], template_dir:
     help="The config.yaml file path to apply. Example: ./prod/config.yaml",
 )
 @click.option(
-    "repo-dir",
+    "--repo-dir",
     "-d",
     "repo_dir",
     required=False,
