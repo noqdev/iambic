@@ -75,14 +75,16 @@ class AWSAccount(BaseModel):
                 return self.boto3_session_map[region_name]
 
         session = boto3.Session(region_name=region_name)
-        if self.assume_role_arn and self.external_id:
+        if self.assume_role_arn:
             try:
                 sts = session.client("sts")
-                role = sts.assume_role(
+                role_params = dict(
                     RoleArn=self.assume_role_arn,
-                    ExternalId=self.external_id,
                     RoleSessionName="NoqForm",
                 )
+                if self.external_id:
+                    role_params["external_id"] = self.external_id
+                role = sts.assume_role(**role_params)
                 self.boto3_session_map[region_name] = boto3.Session(
                     region_name=region_name,
                     aws_access_key_id=role["Credentials"]["AccessKeyId"],
