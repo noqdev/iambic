@@ -1,16 +1,14 @@
 import json
+from enum import Enum
 from typing import Optional, Union
 
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
 
+from iambic.aws.utils import apply_to_account
 from iambic.config.models import AWSAccount, Config
-from iambic.core.utils import (
-    apply_to_account,
-    snake_to_camelcap,
-    yaml,
-)
+from iambic.core.utils import snake_to_camelcap, yaml
 
 
 class BaseModel(PydanticBaseModel):
@@ -97,6 +95,66 @@ class BaseModel(PydanticBaseModel):
         raise NotImplementedError
 
 
+class ProposedChangeType(Enum):
+    CREATE = "Create"
+    UPDATE = "Update"
+    DELETE = "Delete"
+    ATTACH = "Attach"
+    DETACH = "Detach"
+
+
+class ProposedChange(PydanticBaseModel):
+    change_type: ProposedChangeType
+    attribute: Optional[str]
+    resource_id: Optional[str]
+    resource_type: Optional[str]
+    current_value: Optional[Union[list | dict | str | int]]
+    new_value: Optional[Union[list | dict | str | int]]
+    change_summary: Optional[dict]
+
+
+class AccountChangeDetails(PydanticBaseModel):
+    account: Union[str | int]
+    resource_id: Union[str | int]
+    current_value: Optional[dict]
+    new_value: Optional[dict]
+    proposed_changes: list[ProposedChange] = Field(default=[])
+
+
+class TemplateChangeDetails(PydanticBaseModel):
+    resource_id: str
+    resource_type: str
+    template_path: str
+    # Supports multi-account providers and single-account providers
+    proposed_changes: Optional[list[AccountChangeDetails] | list[ProposedChange]]
+
+    def dict(
+        self,
+        *,
+        include: Optional[
+            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
+        ] = None,
+        exclude: Optional[
+            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
+        ] = None,
+        by_alias: bool = False,
+        skip_defaults: Optional[bool] = None,
+        exclude_unset: bool = True,
+        exclude_defaults: bool = False,
+        exclude_none: bool = True,
+    ) -> "DictStrAny":  # noqa
+        response = self.json(
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            skip_defaults=skip_defaults,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+        )
+        return json.loads(response)
+
+
 class BaseTemplate(BaseModel):
     template_type: str
     file_path: str
@@ -147,7 +205,7 @@ class BaseTemplate(BaseModel):
         with open(self.file_path, "w") as f:
             f.write(as_yaml)
 
-    async def apply(self, config: Config) -> bool:
+    async def apply(self, config: Config) -> TemplateChangeDetails:
         raise NotImplementedError
 
     @classmethod

@@ -7,10 +7,10 @@ from deepdiff import DeepDiff
 from git import Repo
 from pydantic import BaseModel as PydanticBaseModel
 
+from iambic.aws.models import Deleted
 from iambic.config.models import Config
 from iambic.config.templates import TEMPLATE_TYPE_MAP
 from iambic.core.logger import log
-from iambic.aws.models import Deleted
 from iambic.core.utils import NOQ_TEMPLATE_REGEX, file_regex_search, yaml
 
 
@@ -39,9 +39,9 @@ async def retrieve_git_changes(repo_dir: str) -> dict[str, list[GitDiff]]:
 
     # Collect all new files
     for file_obj in diff_index.iter_change_type("A"):
-        if (path := str(os.path.join(repo_dir, file_obj.b_path))).endswith(".yaml") and (
-            await file_regex_search(path, NOQ_TEMPLATE_REGEX)
-        ):
+        if (path := str(os.path.join(repo_dir, file_obj.b_path))).endswith(
+            ".yaml"
+        ) and (await file_regex_search(path, NOQ_TEMPLATE_REGEX)):
             file = GitDiff(path=str(os.path.join(repo_dir, path)))
             files["new_files"].append(file)
 
@@ -61,7 +61,9 @@ async def retrieve_git_changes(repo_dir: str) -> dict[str, list[GitDiff]]:
         if (path := str(os.path.join(repo_dir, file_obj.b_path))).endswith(
             ".yaml"
         ) and (await file_regex_search(path, NOQ_TEMPLATE_REGEX)):
-            if (main_path := str(os.path.join(repo_dir, file_obj.a_path))) != path:  # File was renamed
+            if (
+                main_path := str(os.path.join(repo_dir, file_obj.a_path))
+            ) != path:  # File was renamed
                 deleted_file = GitDiff(
                     path=str(os.path.join(repo_dir, main_path)),
                     content=file_obj.a_blob.data_stream.read().decode("utf-8"),
