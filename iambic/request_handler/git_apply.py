@@ -8,10 +8,13 @@ from iambic.core.git import (
     retrieve_git_changes,
 )
 from iambic.core.logger import log
+from iambic.core.models import TemplateChangeDetails
 from iambic.core.parser import load_templates
 
 
-async def apply_git_changes(config_path: str, repo_dir: str):
+async def apply_git_changes(
+    config_path: str, repo_dir: str
+) -> list[TemplateChangeDetails]:
     """Retrieves files added/updated/or removed when comparing the current branch to master
 
     Works by taking the diff and adding implied changes to the templates that were modified.
@@ -33,7 +36,7 @@ async def apply_git_changes(config_path: str, repo_dir: str):
         and not file_changes["deleted_files"]
     ):
         log.info("No changes found.")
-        return
+        return []
 
     templates = load_templates(
         [git_diff.path for git_diff in file_changes["new_files"]]
@@ -43,13 +46,20 @@ async def apply_git_changes(config_path: str, repo_dir: str):
         create_templates_for_modified_files(config, file_changes["modified_files"])
     )
 
-    changes_made = await asyncio.gather(
+    template_changes = await asyncio.gather(
         *[template.apply(config) for template in templates]
     )
-    changes_made = any(changes_made)
-    if ctx.execute and changes_made:
+    template_changes = [
+        template_change
+        for template_change in template_changes
+        if template_change.proposed_changes
+    ]
+
+    if ctx.execute and template_changes:
         log.info("Finished applying changes.")
     elif not ctx.execute:
         log.info("Finished scanning for changes.")
     else:
         log.info("No changes found.")
+
+    return template_changes

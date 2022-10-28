@@ -10,22 +10,19 @@ from iambic.aws.iam.role.utils import (
     list_role_tags,
     list_roles,
 )
+from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
 from iambic.config.models import AWSAccount, Config
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
     base_group_dict_attribute,
     base_group_str_attribute,
+    get_existing_template_file_map,
     group_dict_attribute,
     group_int_or_str_attribute,
-    set_included_accounts_for_grouped_attribute, get_existing_template_file_map,
+    set_included_accounts_for_grouped_attribute,
 )
-from iambic.core.utils import (
-    NoqSemaphore,
-    get_aws_account_map,
-    normalize_boto3_resp,
-    resource_file_upsert,
-)
+from iambic.core.utils import NoqSemaphore, resource_file_upsert
 
 ROLE_RESPONSE_DIR = pathlib.Path.home().joinpath(
     ".noqform", "resources", "aws", "roles"
@@ -134,7 +131,7 @@ async def create_templated_role(  # noqa: C901
     role_name: str,
     role_refs: list[dict],
     role_dir: str,
-    existing_template_map: dict
+    existing_template_map: dict,
 ):
     account_id_to_role_map = {}
     num_of_accounts = len(role_refs)
@@ -176,9 +173,7 @@ async def create_templated_role(  # noqa: C901
             managed_policy_resources.append(
                 {
                     "account_id": account_id,
-                    "resources": [
-                        {"resource_val": mp} for mp in managed_policies
-                    ],
+                    "resources": [{"resource_val": mp} for mp in managed_policies],
                 }
             )
 
@@ -303,7 +298,9 @@ async def create_templated_role(  # noqa: C901
 
     try:
         role = RoleTemplate(
-            file_path=existing_template_map.get(role_name, get_templated_role_file_path(role_dir, role_name)),
+            file_path=existing_template_map.get(
+                role_name, get_templated_role_file_path(role_dir, role_name)
+            ),
             **role_template_params,
         )
         role.write()
@@ -313,7 +310,9 @@ async def create_templated_role(  # noqa: C901
 
 async def generate_aws_role_templates(configs: list[Config], base_output_dir: str):
     aws_account_map = get_aws_account_map(configs)
-    existing_template_map = await get_existing_template_file_map(base_output_dir, "AWS::IAM::ROLE")
+    existing_template_map = await get_existing_template_file_map(
+        base_output_dir, "AWS::IAM::ROLE"
+    )
     role_dir = get_role_dir(base_output_dir)
     generate_account_role_resource_files_semaphore = NoqSemaphore(
         generate_account_role_resource_files, 5
@@ -332,10 +331,7 @@ async def generate_aws_role_templates(configs: list[Config], base_output_dir: st
     )
 
     account_roles = await generate_account_role_resource_files_semaphore.process(
-        [
-            {"aws_account": aws_account}
-            for aws_account in aws_account_map.values()
-        ]
+        [{"aws_account": aws_account} for aws_account in aws_account_map.values()]
     )
     messages = []
     for account_role in account_roles:
@@ -381,7 +377,12 @@ async def generate_aws_role_templates(configs: list[Config], base_output_dir: st
     log.info("Writing templated roles")
     for role_name, role_refs in grouped_role_map.items():
         await create_templated_role(
-            configs[0], aws_account_map, role_name, role_refs, role_dir, existing_template_map
+            configs[0],
+            aws_account_map,
+            role_name,
+            role_refs,
+            role_dir,
+            existing_template_map,
         )
 
     log.info("Finished templated role generation")

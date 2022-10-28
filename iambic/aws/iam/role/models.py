@@ -1,5 +1,6 @@
 import asyncio
 import json
+from itertools import chain
 from typing import Optional, Union
 
 from pydantic import Field, constr
@@ -15,13 +16,16 @@ from iambic.aws.iam.role.utils import (
     apply_role_managed_policies,
     apply_role_tags,
     delete_iam_role,
+    get_role,
     update_assume_role_policy,
 )
-from iambic.aws.models import ARN_RE, AccessModel, ExpiryModel, Tag, AWSTemplate
+from iambic.aws.models import ARN_RE, AccessModel, AWSTemplate, ExpiryModel, Tag
+from iambic.aws.utils import apply_to_account
 from iambic.config.models import AWSAccount
 from iambic.core.context import ctx
 from iambic.core.logger import log
-from iambic.core.utils import aio_wrapper, apply_to_account
+from iambic.core.models import AccountChangeDetails, ProposedChange, ProposedChangeType
+from iambic.core.utils import aio_wrapper
 
 
 class RoleAccess(ExpiryModel, AccessModel):
@@ -136,30 +140,30 @@ class RoleTemplate(AWSTemplate, AccessModel):
 
     def _is_read_only(self, aws_account: AWSAccount):
         return (
-            "aws-service-role" in self.path
-            or aws_account.read_only
-            or self.read_only
+            "aws-service-role" in self.path or aws_account.read_only or self.read_only
         )
 
-    async def _apply_to_account(self, aws_account: AWSAccount) -> bool:
+    async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
         boto3_session = aws_account.get_boto3_session()
         client = boto3_session.client("iam")
         account_role = self.apply_resource_dict(aws_account)
         role_name = account_role["RoleName"]
+        account_change_details = AccountChangeDetails(
+            account=str(aws_account),
+            resource_id=role_name,
+            new_value=dict(**account_role),
+            proposed_changes=[],
+        )
         log_params = dict(
             resource_type=self.resource_type,
             resource_id=role_name,
             account=str(aws_account),
         )
-        changes_made = False
         read_only = self._is_read_only(aws_account)
 
-        try:
-            current_role = (await aio_wrapper(client.get_role, RoleName=role_name))[
-                "Role"
-            ]
-        except client.exceptions.NoSuchEntityException:
-            current_role = {}
+        current_role = await get_role(role_name, client)
+        if current_role:
+            account_change_details.current_value = {**current_role}  # Create a new dict
 
         deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
         if isinstance(deleted, list):
@@ -167,7 +171,14 @@ class RoleTemplate(AWSTemplate, AccessModel):
 
         if deleted:
             if current_role:
-                changes_made = True
+                account_change_details.new_value = None
+                account_change_details.proposed_changes.append(
+                    ProposedChange(
+                        change_type=ProposedChangeType.DELETE,
+                        resource_id=role_name,
+                        resource_type=self.resource_type,
+                    )
+                )
                 log_str = "Active resource found with deleted=false."
                 if ctx.execute and not read_only:
                     log_str = f"{log_str} Deleting resource..."
@@ -176,11 +187,13 @@ class RoleTemplate(AWSTemplate, AccessModel):
                 if ctx.execute:
                     await delete_iam_role(role_name, client, log_params)
 
-            return changes_made and not read_only
+            return account_change_details
 
         role_exists = bool(current_role)
         inline_policies = account_role.pop("InlinePolicies", [])
         managed_policies = account_role.pop("ManagedPolicies", [])
+        existing_inline_policies = current_role.pop("InlinePolicies", [])
+        existing_managed_policies = current_role.pop("ManagedPolicies", [])
         tasks = []
 
         if role_exists:
@@ -216,7 +229,6 @@ class RoleTemplate(AWSTemplate, AccessModel):
                     update_role_params[k] = current_role.get(k)
 
             if update_role_params:
-                changes_made = True
                 log_str = "Out of date resource found."
                 if ctx.execute:
                     log.info(
@@ -232,11 +244,18 @@ class RoleTemplate(AWSTemplate, AccessModel):
                 else:
                     log.info(log_str, **update_resource_log_params)
         else:
+            account_change_details.proposed_changes.append(
+                ProposedChange(
+                    change_type=ProposedChangeType.CREATE,
+                    resource_id=role_name,
+                    resource_type=self.resource_type,
+                )
+            )
             log_str = "New resource found."
             if not ctx.execute:
                 log.info(log_str, **log_params)
                 # Exit now because apply functions won't work if resource doesn't exist
-                return not read_only
+                return account_change_details
 
             log_str = f"{log_str} Creating resource..."
             log.info(log_str, **log_params)
@@ -244,7 +263,6 @@ class RoleTemplate(AWSTemplate, AccessModel):
                 account_role["AssumeRolePolicyDocument"]
             )
             await aio_wrapper(client.create_role, **account_role)
-            changes_made = True
 
         tasks.extend(
             [
@@ -252,35 +270,39 @@ class RoleTemplate(AWSTemplate, AccessModel):
                     role_name,
                     client,
                     managed_policies,
-                    role_exists,
+                    existing_managed_policies,
                     log_params,
                 ),
                 apply_role_inline_policies(
                     role_name,
                     client,
                     inline_policies,
-                    role_exists,
+                    existing_inline_policies,
                     log_params,
                 ),
             ]
         )
 
-        changes_made = any(await asyncio.gather(*tasks)) or changes_made
+        changes_made = await asyncio.gather(*tasks)
+        if any(changes_made):
+            account_change_details.proposed_changes.extend(
+                list(chain.from_iterable(changes_made))
+            )
 
         if ctx.execute:
             log.debug(
                 "Successfully finished execution on account for resource",
-                changes_made=changes_made,
+                changes_made=bool(account_change_details.proposed_changes),
                 **log_params,
             )
         else:
             log.debug(
                 "Successfully finished scanning for drift on account for resource",
-                requires_changes=changes_made,
+                requires_changes=bool(account_change_details.proposed_changes),
                 **log_params,
             )
 
-        return changes_made and not read_only
+        return account_change_details
 
     @property
     def resource_type(self):

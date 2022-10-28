@@ -1,9 +1,7 @@
-from random import choice
+from pydantic_factories import Ignore, ModelFactory
 
-from pydantic_factories import Ignore, ModelFactory, Use
-
-from iambic.aws.iam.role.models import RoleTemplate
 from iambic.aws.iam.policy import models as policy_models
+from iambic.aws.iam.role.models import RoleTemplate
 
 
 class AssumeRolePolicyDocumentFactory(ModelFactory):
@@ -20,4 +18,3 @@ class RoleFactory(ModelFactory):
     deleted = Ignore()
     included_orgs = Ignore()
     excluded_orgs = Ignore()
-
