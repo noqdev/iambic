@@ -3,7 +3,7 @@ from typing import List, Optional, Union
 from pydantic import Field, constr
 
 from iambic.aws.iam.models import Description, Path
-from iambic.aws.models import ARN_RE, AccessModel, ExpiryModel, Tag, AWSTemplate
+from iambic.aws.models import ARN_RE, AccessModel, AWSTemplate, ExpiryModel, Tag
 from iambic.config.models import AWSAccount
 from iambic.core.models import BaseModel
 

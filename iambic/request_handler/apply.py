@@ -1,26 +1,35 @@
 import asyncio
 import os
 
+from iambic.aws.utils import remove_expired_resources
 from iambic.config.models import Config
 from iambic.core.context import ctx
 from iambic.core.logger import log
+from iambic.core.models import TemplateChangeDetails
 from iambic.core.parser import load_templates
-from iambic.core.utils import remove_expired_resources, yaml
+from iambic.core.utils import yaml
 
 
-async def apply_changes(config: Config, template_paths: list[str]) -> bool:
-    changes_made = await asyncio.gather(
+async def apply_changes(
+    config: Config, template_paths: list[str]
+) -> list[TemplateChangeDetails]:
+    template_changes = await asyncio.gather(
         *[template.apply(config) for template in load_templates(template_paths)]
     )
-    changes_made = any(changes_made)
-    if ctx.execute and changes_made:
+    template_changes = [
+        template_change
+        for template_change in template_changes
+        if template_change.proposed_changes
+    ]
+
+    if ctx.execute and template_changes:
         log.info("Finished applying changes.")
     elif not ctx.execute:
         log.info("Finished scanning for changes.")
     else:
         log.info("No changes found.")
 
-    return changes_made
+    return template_changes
 
 
 async def flag_expired_resources(template_paths: list[str]):

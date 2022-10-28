@@ -7,10 +7,10 @@ import googleapiclient.discovery
 from google.oauth2 import service_account
 from pydantic import Field
 
+from iambic.aws.models import ExpiryModel
 from iambic.config.models import Config
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate
-from iambic.aws.models import ExpiryModel
 from iambic.core.utils import aio_wrapper, yaml
 
 
