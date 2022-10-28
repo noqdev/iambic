@@ -64,9 +64,7 @@ def cli():
 )
 def plan(config_path: str, templates: list[str], repo_dir: str):
     if not templates:
-        templates = asyncio.run(
-            gather_templates(repo_dir or str(pathlib.Path.cwd()))
-        )
+        templates = asyncio.run(gather_templates(repo_dir or str(pathlib.Path.cwd())))
 
     asyncio.run(flag_expired_resources(templates))
 
@@ -123,9 +121,7 @@ def detect(config_path: str):
 )
 def apply(no_prompt: bool, config_path: str, templates: list[str], repo_dir: str):
     if not templates:
-        templates = asyncio.run(
-            gather_templates(repo_dir or str(pathlib.Path.cwd()))
-        )
+        templates = asyncio.run(gather_templates(repo_dir or str(pathlib.Path.cwd())))
 
     config = Config.load(config_path)
     config.set_account_defaults()
@@ -156,7 +152,9 @@ def apply(no_prompt: bool, config_path: str, templates: list[str], repo_dir: str
     help="The repo directory containing the templates. Example: ~/noq-templates",
 )
 def git_apply(config_path: str, repo_dir: str):
-    template_changes = asyncio.run(apply_git_changes(config_path, repo_dir or str(pathlib.Path.cwd())))
+    template_changes = asyncio.run(
+        apply_git_changes(config_path, repo_dir or str(pathlib.Path.cwd()))
+    )
     output_proposed_changes(template_changes)
 
 

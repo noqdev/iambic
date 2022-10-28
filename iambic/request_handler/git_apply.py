@@ -8,11 +8,13 @@ from iambic.core.git import (
     retrieve_git_changes,
 )
 from iambic.core.logger import log
-from iambic.core.parser import load_templates
 from iambic.core.models import TemplateChangeDetails
+from iambic.core.parser import load_templates
 
 
-async def apply_git_changes(config_path: str, repo_dir: str) -> list[TemplateChangeDetails]:
+async def apply_git_changes(
+    config_path: str, repo_dir: str
+) -> list[TemplateChangeDetails]:
     """Retrieves files added/updated/or removed when comparing the current branch to master
 
     Works by taking the diff and adding implied changes to the templates that were modified.
