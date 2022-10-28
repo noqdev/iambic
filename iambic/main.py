@@ -1,4 +1,5 @@
 import asyncio
+import json
 import pathlib
 import warnings
 
@@ -6,6 +7,8 @@ import click
 
 from iambic.config.models import Config
 from iambic.core.context import ctx
+from iambic.core.logger import log
+from iambic.core.models import TemplateChangeDetails
 from iambic.core.utils import gather_templates
 from iambic.request_handler.apply import apply_changes, flag_expired_resources
 from iambic.request_handler.detect import detect_changes
@@ -15,6 +18,20 @@ from iambic.request_handler.git_apply import apply_git_changes
 warnings.filterwarnings("ignore", category=FutureWarning, module="botocore.client")
 
 
+def output_proposed_changes(template_changes: list[TemplateChangeDetails]):
+    if template_changes:
+        file_name = "proposed_changes.json"
+        log.info(f"A detailed summary of descriptions was saved to {file_name}")
+
+        with open(file_name, "w") as f:
+            f.write(
+                json.dumps(
+                    [template_change.dict() for template_change in template_changes],
+                    indent=2,
+                )
+            )
+
+
 @click.group()
 def cli():
     ...
@@ -22,16 +39,41 @@ def cli():
 
 @cli.command()
 @click.option(
+    "--config",
+    "-c",
+    "config_path",
+    type=click.Path(exists=True),
+    help="The config.yaml file path to apply. Example: ./prod/config.yaml",
+)
+@click.option(
     "--template",
     "-t",
     "templates",
     required=False,
     multiple=True,
     type=click.Path(exists=True),
-    help="The template file path(s) to apply.",
+    help="The template file path(s) to apply. Example: ./aws/roles/engineering.yaml",
 )
-def plan(templates: list[str]):
+@click.option(
+    "--repo-dir",
+    "-d",
+    "repo_dir",
+    required=False,
+    type=click.Path(exists=True),
+    help="The repo directory containing the templates. Example: ~/noq-templates",
+)
+def plan(config_path: str, templates: list[str], repo_dir: str):
+    if not templates:
+        templates = asyncio.run(
+            gather_templates(repo_dir or str(pathlib.Path.cwd()))
+        )
+
     asyncio.run(flag_expired_resources(templates))
+
+    config = Config.load(config_path)
+    config.set_account_defaults()
+    ctx.eval_only = True
+    output_proposed_changes(asyncio.run(apply_changes(config, templates)))
 
 
 @cli.command()
@@ -39,7 +81,6 @@ def plan(templates: list[str]):
     "--config",
     "-c",
     "config_path",
-    required=False,
     type=click.Path(exists=True),
     help="The config.yaml file path to apply. Example: ./prod/config.yaml",
 )
@@ -60,7 +101,6 @@ def detect(config_path: str):
     "--config",
     "-c",
     "config_path",
-    required=False,
     type=click.Path(exists=True),
     help="The config.yaml file path to apply. Example: ./prod/config.yaml",
 )
@@ -74,33 +114,24 @@ def detect(config_path: str):
     help="The template file path(s) to apply. Example: ./aws/roles/engineering.yaml",
 )
 @click.option(
-    "--template-repo-dir",
+    "--repo-dir",
     "-d",
-    "template_dir",
+    "repo_dir",
     required=False,
     type=click.Path(exists=True),
     help="The repo directory containing the templates. Example: ~/noq-templates",
 )
-def apply(no_prompt: bool, config_path: str, templates: list[str], template_dir: str):
+def apply(no_prompt: bool, config_path: str, templates: list[str], repo_dir: str):
     if not templates:
         templates = asyncio.run(
-            gather_templates(template_dir or str(pathlib.Path.cwd()))
+            gather_templates(repo_dir or str(pathlib.Path.cwd()))
         )
 
     config = Config.load(config_path)
     config.set_account_defaults()
     ctx.eval_only = not no_prompt
     template_changes = asyncio.run(apply_changes(config, templates))
-    if template_changes:
-        import json
-
-        with open("proposed_changes.json", "w") as f:
-            f.write(
-                json.dumps(
-                    [template_change.dict() for template_change in template_changes],
-                    indent=2,
-                )
-            )
+    output_proposed_changes(template_changes)
 
     if ctx.eval_only and template_changes and click.confirm("Proceed?"):
         ctx.eval_only = False
@@ -113,7 +144,6 @@ def apply(no_prompt: bool, config_path: str, templates: list[str], template_dir:
     "--config",
     "-c",
     "config_path",
-    required=False,
     type=click.Path(exists=True),
     help="The config.yaml file path to apply. Example: ./prod/config.yaml",
 )
@@ -126,7 +156,8 @@ def apply(no_prompt: bool, config_path: str, templates: list[str], template_dir:
     help="The repo directory containing the templates. Example: ~/noq-templates",
 )
 def git_apply(config_path: str, repo_dir: str):
-    asyncio.run(apply_git_changes(config_path, repo_dir or str(pathlib.Path.cwd())))
+    template_changes = asyncio.run(apply_git_changes(config_path, repo_dir or str(pathlib.Path.cwd())))
+    output_proposed_changes(template_changes)
 
 
 @cli.command(name="import")
@@ -134,30 +165,26 @@ def git_apply(config_path: str, repo_dir: str):
     "--config",
     "-c",
     "config_paths",
-    required=False,
     multiple=True,
     type=click.Path(exists=True),
     help="The config.yaml file paths. Example: ./prod/config.yaml",
 )
 @click.option(
-    "--output-dir",
-    "-o",
-    "output_dir",
+    "--repo-dir",
+    "-d",
+    "repo_dir",
     required=False,
     type=click.Path(exists=True),
-    help="The output directory to export templates to. Example: ~/noq-templates",
+    help="The repo directory containing the templates. Example: ~/noq-templates",
 )
-def import_(config_paths: list[str], output_dir: str):
-    if not output_dir:
-        output_dir = str(pathlib.Path.cwd())
-
+def import_(config_paths: list[str], repo_dir: str):
     configs = list()
     for config_path in config_paths:
         config = Config.load(config_path)
         config.set_account_defaults()
         configs.append(config)
 
-    asyncio.run(generate_templates(configs, output_dir))
+    asyncio.run(generate_templates(configs, repo_dir or str(pathlib.Path.cwd())))
 
 
 if __name__ == "__main__":
