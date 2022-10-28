@@ -11,12 +11,12 @@ from iambic.aws.iam.policy.models import (
     ManagedPolicyRef,
     PolicyDocument,
 )
-from iambic.aws.iam.role.utils import (  # get_role_managed_policies,
+from iambic.aws.iam.role.utils import (
     apply_role_inline_policies,
     apply_role_managed_policies,
     apply_role_tags,
     delete_iam_role,
-    get_role_inline_policies,
+    get_role,
     update_assume_role_policy,
 )
 from iambic.aws.models import ARN_RE, AccessModel, AWSTemplate, ExpiryModel, Tag
@@ -161,12 +161,9 @@ class RoleTemplate(AWSTemplate, AccessModel):
         )
         read_only = self._is_read_only(aws_account)
 
-        try:
-            current_role = (await aio_wrapper(client.get_role, RoleName=role_name))[
-                "Role"
-            ]
-        except client.exceptions.NoSuchEntityException:
-            current_role = {}
+        current_role = await get_role(role_name, client)
+        if current_role:
+            account_change_details.current_value = {**current_role}  # Create a new dict
 
         deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
         if isinstance(deleted, list):
@@ -175,7 +172,6 @@ class RoleTemplate(AWSTemplate, AccessModel):
         if deleted:
             if current_role:
                 account_change_details.new_value = None
-                account_change_details.current_value = current_role
                 account_change_details.proposed_changes.append(
                     ProposedChange(
                         change_type=ProposedChangeType.DELETE,
@@ -194,25 +190,13 @@ class RoleTemplate(AWSTemplate, AccessModel):
             return account_change_details
 
         role_exists = bool(current_role)
-        # existing_inline_policy_map = {}
-        # existing_managed_policies = []
         inline_policies = account_role.pop("InlinePolicies", [])
         managed_policies = account_role.pop("ManagedPolicies", [])
+        existing_inline_policies = current_role.pop("InlinePolicies", [])
+        existing_managed_policies = current_role.pop("ManagedPolicies", [])
         tasks = []
 
         if role_exists:
-            existing_inline_policy_map = await get_role_inline_policies(
-                role_name, client
-            )
-            for k in existing_inline_policy_map.keys():
-                existing_inline_policy_map[k]["PolicyName"] = k
-
-            # role_inline_policies = list(existing_inline_policy_map.values())
-            # managed_policies_resp = await get_role_managed_policies(role_name, client)
-            # existing_managed_policies = [
-            #     policy["PolicyArn"] for policy in managed_policies_resp
-            # ]
-
             tasks.extend(
                 [
                     apply_role_tags(
@@ -286,14 +270,14 @@ class RoleTemplate(AWSTemplate, AccessModel):
                     role_name,
                     client,
                     managed_policies,
-                    role_exists,
+                    existing_managed_policies,
                     log_params,
                 ),
                 apply_role_inline_policies(
                     role_name,
                     client,
                     inline_policies,
-                    role_exists,
+                    existing_inline_policies,
                     log_params,
                 ),
             ]
