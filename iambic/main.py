@@ -90,8 +90,19 @@ def apply(no_prompt: bool, config_path: str, templates: list[str], template_dir:
     config = Config.load(config_path)
     config.set_account_defaults()
     ctx.eval_only = not no_prompt
-    changes_made = asyncio.run(apply_changes(config, templates))
-    if ctx.eval_only and changes_made and click.confirm("Proceed?"):
+    template_changes = asyncio.run(apply_changes(config, templates))
+    if template_changes:
+        import json
+
+        with open("proposed_changes.json", "w") as f:
+            f.write(
+                json.dumps(
+                    [template_change.dict() for template_change in template_changes],
+                    indent=2,
+                )
+            )
+
+    if ctx.eval_only and template_changes and click.confirm("Proceed?"):
         ctx.eval_only = False
         asyncio.run(apply_changes(config, templates))
     asyncio.run(detect_changes(config))

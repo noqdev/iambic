@@ -4,11 +4,16 @@ from typing import List, Optional, Union
 
 from pydantic import Field
 
+from iambic.aws.utils import evaluate_on_account
 from iambic.config.models import AWSAccount, Config
 from iambic.core.context import ctx
 from iambic.core.logger import log
-from iambic.core.models import BaseModel, BaseTemplate
-from iambic.core.utils import evaluate_on_account
+from iambic.core.models import (
+    AccountChangeDetails,
+    BaseModel,
+    BaseTemplate,
+    TemplateChangeDetails,
+)
 
 ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\*$"
 
@@ -68,13 +73,16 @@ class Tag(ExpiryModel, AccessModel):
 
 
 class AWSTemplate(BaseTemplate, ExpiryModel):
-
-    async def _apply_to_account(self, aws_account: AWSAccount) -> bool:
-        # The bool represents whether the resource was altered in any way in the cloud
+    async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
         raise NotImplementedError
 
-    async def apply(self, config: Config) -> bool:
+    async def apply(self, config: Config) -> TemplateChangeDetails:
         tasks = []
+        template_changes = TemplateChangeDetails(
+            resource_id=self.resource_id,
+            resource_type=self.resource_type,
+            template_path=self.file_path,
+        )
         log_params = dict(
             resource_type=self.resource_type, resource_id=self.resource_id
         )
@@ -87,13 +95,18 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
                 log.info(log_str, account=str(account), **log_params)
                 tasks.append(self._apply_to_account(account))
 
-        changes_made = await asyncio.gather(*tasks)
-        changes_made = bool(any(changes_made))
-        if changes_made and ctx.execute:
+        account_changes = await asyncio.gather(*tasks)
+        template_changes.proposed_changes = [
+            account_change
+            for account_change in account_changes
+            if any(account_change.proposed_changes)
+        ]
+        if account_changes and ctx.execute:
             log.info(
-                "Successfully applied resource changes to all aws_accounts.", **log_params
+                "Successfully applied resource changes to all aws_accounts.",
+                **log_params,
             )
-        elif changes_made and not ctx.execute:
+        elif account_changes and not ctx.execute:
             log.info(
                 "Successfully detected required resource changes on all aws_accounts.",
                 **log_params,
@@ -101,4 +114,4 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
         else:
             log.debug("No changes detected for resource on any account.", **log_params)
 
-        return changes_made
+        return template_changes
