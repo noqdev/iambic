@@ -6,7 +6,7 @@ from iambic.aws.iam.role.template_generation import (
     generate_aws_role_templates,
 )
 from iambic.config.models import Config
-from iambic.google.models import generate_group_templates
+from iambic.google.group.template_generation import generate_group_templates
 
 
 async def generate_templates(configs: list[Config], output_dir: str):

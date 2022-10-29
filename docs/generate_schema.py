@@ -12,7 +12,7 @@ from iambic.aws.iam.policy.models import (
 from iambic.aws.iam.role.models import PermissionBoundary, RoleAccess, RoleTemplate
 from iambic.config.models import AWSAccount, Config, ExtendsConfig, Variable
 from iambic.core.utils import camel_to_snake
-from iambic.google.models import GroupMember, GroupTemplate
+from iambic.google.group.models import GroupMember, GroupTemplate
 
 
 def create_model_schemas(
