@@ -61,7 +61,7 @@ class PermissionBoundary(ExpiryModel, AccessModel):
 
 
 class RoleTemplate(AWSTemplate, AccessModel):
-    template_type = "NOQ::AWS::IAM::ROLE"
+    template_type = "NOQ::AWS::IAM::Role"
     role_name: str = Field(
         description="Name of the role",
     )
@@ -251,7 +251,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                     resource_type=self.resource_type,
                 )
             )
-            log_str = "New resource found."
+            log_str = "New resource found in code."
             if not ctx.execute:
                 log.info(log_str, **log_params)
                 # Exit now because apply functions won't work if resource doesn't exist

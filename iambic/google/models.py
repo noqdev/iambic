@@ -74,15 +74,15 @@ class GroupMemberStatus(Enum):
 
 class GoogleTemplate(BaseTemplate, ExpiryModel):
     async def _apply_to_account(
-        self, google_account: GoogleProject
+        self, google_project: GoogleProject
     ) -> AccountChangeDetails:
         raise NotImplementedError
 
     async def apply(self, config: Config) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
-            resource_id=self.resource_id,
-            resource_type=self.resource_type,
+            resource_id=self.email,
+            resource_type=self.template_type,
             template_path=self.file_path,
         )
         log_params = dict(
@@ -105,15 +105,23 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
         ]
         if account_changes and ctx.execute:
             log.info(
-                "Successfully applied resource changes to all aws_accounts.",
+                "Successfully applied resource changes to all Google projects.",
                 **log_params,
             )
-        elif account_changes and not ctx.execute:
+        elif account_changes:
             log.info(
-                "Successfully detected required resource changes on all aws_accounts.",
+                "Successfully detected required resource changes on all Google projects.",
                 **log_params,
             )
         else:
             log.debug("No changes detected for resource on any account.", **log_params)
 
         return template_changes
+
+    @property
+    def resource_id(self) -> str:
+        return self.email
+
+    @property
+    def resource_type(self) -> str:
+        return "google:group"

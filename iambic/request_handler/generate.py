@@ -18,10 +18,12 @@ async def generate_templates(configs: list[Config], output_dir: str):
 
     tasks = [generate_aws_role_templates(configs, output_dir)]
     for config in configs:
-        if config.google and config.google.groups.enabled:
-            tasks.extend(
-                generate_group_templates(config, "noq.dev", output_dir)
-                for config in configs
-            )
+        for project in config.google_projects:
+            for subject in project.subjects:
+                tasks.append(
+                    generate_group_templates(
+                        config, subject.domain, output_dir, project
+                    )
+                )
 
     await asyncio.gather(*tasks)
