@@ -1,50 +1,16 @@
 import json
 import os
 
-from iambic.core.logger import log
 from iambic.core.utils import yaml
-from iambic.google.group.models import GroupMember, GroupTemplate
-from iambic.google.models import GroupMemberRole, GroupMemberStatus, GroupMemberType
+from iambic.google.group.utils import list_groups
 
 
-async def generate_group_templates(config, domain, output_dir):
+async def generate_group_templates(config, domain, output_dir, google_project):
     """List all groups in the domain, along with members and
     settings"""
-    groups = []
 
-    try:
-        service = await get_service(config, "admin", "directory_v1")
-        if not service:
-            return []
-    except AttributeError as err:
-        log.exception("Unable to process google groups.", error=err)
-        return
+    groups = await list_groups(domain, google_project)
 
-    req = service.groups().list(domain=domain)  # TODO: Async
-    res = req.execute()
-    if res and "groups" in res:
-        for group in res["groups"]:
-            member_req = service.members().list(groupKey=group["email"])
-            member_res = member_req.execute() or {}
-            members = [
-                GroupMember(
-                    email=member["email"],
-                    role=GroupMemberRole(member["role"]),
-                    type=GroupMemberType(member["type"]),
-                    status=GroupMemberStatus(member["status"]),
-                )
-                for member in member_res.get("members", [])
-            ]
-            file_name = f"{group['email'].split('@')[0]}.yaml"
-            groups.append(
-                GroupTemplate(
-                    file_path=f"google_groups/{domain}/{file_name}",
-                    name=group["name"],
-                    email=group["email"],
-                    description=group["description"],
-                    members=members,
-                )
-            )
     base_path = os.path.expanduser(output_dir)
     for group in groups:
         file_path = os.path.expanduser(group.file_path)

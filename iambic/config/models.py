@@ -140,16 +140,19 @@ class GoogleProject(BaseModel):
         False,
         description="If set to True, iambic will only log drift instead of apply changes when drift is detected.",
     )
-    _service_connection_map: Optional[dict] = None
+    _service_connection_map: dict = {}
 
     def __str__(self):
         if self.project_name:
             return f"{self.project_name} - ({self.project_id})"
 
-        return self.service_key.project_id
+        return self.project_id
 
-    async def get_service_connection(self, service_name: str, service_path: str):
-        key = f"{service_name}:{service_path}"
+    async def get_service_connection(
+        self, service_name: str, service_path: str, domain: str
+    ):
+        # sourcery skip: raise-specific-error
+        key = f"{domain}:{service_name}:{service_path}"
         if service_conn := self._service_connection_map.get(key):
             return service_conn
 
@@ -177,7 +180,17 @@ class GoogleProject(BaseModel):
             ],
         )
 
-        admin_delegated_credentials = admin_credentials.with_subject(self.subject)
+        admin_delegated_credentials = None
+
+        for s in self.subjects:
+            if s.domain == domain:
+                admin_delegated_credentials = admin_credentials.with_subject(
+                    s.service_account
+                )
+                break
+        if not admin_delegated_credentials:
+            raise Exception(f"Could not find service account for domain {domain}")
+
         self._service_connection_map[key] = await aio_wrapper(
             googleapiclient.discovery.build,
             service_name,
@@ -199,7 +212,7 @@ class ExtendsConfig(BaseModel):
 
 class Config(BaseModel):
     aws_accounts: List[AWSAccount]
-    google_projects: Optional[GoogleProject] = None
+    google_projects: List[GoogleProject] = []
     extends: List[ExtendsConfig] = []
     secrets: Optional[dict] = None
     role_access_tag: Optional[str] = Field(
@@ -249,6 +262,10 @@ class Config(BaseModel):
         ):
             self.slack_app = SlackBoltApp(token=slack_bot_token)
 
+    def configure_google(self):
+        if self.secrets and (google_secrets := self.secrets.get("google")):
+            self.google_projects = [GoogleProject(**x) for x in google_secrets]
+
     def combine_extended_configs(self):
         if self.extends:
             for extend in self.extends:
@@ -269,4 +286,5 @@ class Config(BaseModel):
         c = cls(file_path=file_path, **yaml.load(open(file_path)))
         c.combine_extended_configs()
         c.configure_slack()
+        c.configure_google()
         return c

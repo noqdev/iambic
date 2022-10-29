@@ -34,6 +34,23 @@
             "justMyCode": true
         },
         {
+            "name": "Iambic Apply Google Template",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "env": {
+                "AWS_PROFILE": "noq_dev"
+            },
+            "args": [
+                "apply",
+            "--template",
+            "../noq-templates/google_groups/noq.dev/dockerhub.yaml",
+            "--config",
+            "demo/config.yaml"],
+            "justMyCode": true
+        },
+        {
             "name": "Iambic Import",
             "type": "python",
             "request": "launch",
@@ -46,7 +63,7 @@
                 "import",
             "--config",
             "demo/config.yaml",
-            "--output-dir",
+            "--repo-dir",
             "../noq-templates"],
             "justMyCode": true
         },

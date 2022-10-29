@@ -16,7 +16,7 @@
     - *boolean*
     - *array*
       - **Items**: Refer to *[#/definitions/Deleted](#definitions/Deleted)*.
-- **`template_type`** *(string)*: Default: `"NOQ::AWS::IAM::ROLE"`.
+- **`template_type`** *(string)*: Default: `"NOQ::AWS::IAM::Role"`.
 - **`file_path`** *(string)*
 - **`read_only`** *(boolean)*: If set to True, iambic will only log drift instead of apply changes when drift is detected. Default: `false`.
 - **`role_name`** *(string)*: Name of the role.
