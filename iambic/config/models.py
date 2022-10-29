@@ -4,12 +4,14 @@ from typing import List, Optional
 
 import boto3
 import botocore
+import googleapiclient.discovery
+from google.oauth2 import service_account
 from pydantic import BaseModel, Field, constr
 from slack_bolt import App as SlackBoltApp
 
 from iambic.aws.utils import RegionName
 from iambic.core.logger import log
-from iambic.core.utils import yaml
+from iambic.core.utils import aio_wrapper, yaml
 
 
 class Variable(BaseModel):
@@ -112,6 +114,80 @@ class AWSAccount(BaseModel):
         self.default_region = self.default_region.value
 
 
+class GoogleSubjects(BaseModel):
+    domain: str
+    service_account: str
+
+
+class GoogleProject(BaseModel):
+    project_id: str
+    project_name: Optional[str]
+    subjects: list[GoogleSubjects]
+    type: str
+    private_key_id: str
+    private_key: str
+    client_email: str
+    client_id: str
+    auth_uri: str
+    token_uri: str
+    auth_provider_x509_cert_url: str
+    client_x509_cert_url: str
+    variables: Optional[List[Variable]] = Field(
+        [],
+        description="A list of variables to be used when creating templates",
+    )
+    read_only: Optional[bool] = Field(
+        False,
+        description="If set to True, iambic will only log drift instead of apply changes when drift is detected.",
+    )
+    _service_connection_map: Optional[dict] = None
+
+    def __str__(self):
+        if self.project_name:
+            return f"{self.project_name} - ({self.project_id})"
+
+        return self.service_key.project_id
+
+    async def get_service_connection(self, service_name: str, service_path: str):
+        key = f"{service_name}:{service_path}"
+        if service_conn := self._service_connection_map.get(key):
+            return service_conn
+
+        admin_credentials = service_account.Credentials.from_service_account_info(
+            self.dict(
+                include={
+                    "type",
+                    "project_id",
+                    "private_key_id",
+                    "private_key",
+                    "client_email",
+                    "client_id",
+                    "auth_uri",
+                    "token_uri",
+                    "auth_provider_x509_cert_url",
+                    "client_x509_cert_url",
+                }
+            ),
+            scopes=[
+                "https://www.googleapis.com/auth/admin.directory.user.security",
+                "https://www.googleapis.com/auth/admin.reports.audit.readonly",
+                "https://www.googleapis.com/auth/admin.directory.user",
+                "https://www.googleapis.com/auth/admin.directory.group",
+                "https://www.googleapis.com/auth/admin.directory.group.member",
+            ],
+        )
+
+        admin_delegated_credentials = admin_credentials.with_subject(self.subject)
+        self._service_connection_map[key] = await aio_wrapper(
+            googleapiclient.discovery.build,
+            service_name,
+            service_path,
+            credentials=admin_delegated_credentials,
+            thread_sensitive=True,
+        )
+        return self._service_connection_map[key]
+
+
 class ExtendsConfigKey(Enum):
     AWS_SECRETS_MANAGER = "AWS_SECRETS_MANAGER"
 
@@ -121,17 +197,9 @@ class ExtendsConfig(BaseModel):
     value: str
 
 
-class GoogleGroupsConfig(BaseModel):
-    enabled: Optional[bool] = False
-
-
-class GoogleConfig(BaseModel):
-    groups: Optional[GoogleGroupsConfig] = None
-
-
 class Config(BaseModel):
     aws_accounts: List[AWSAccount]
-    google: Optional[GoogleConfig] = None
+    google_projects: Optional[GoogleProject] = None
     extends: List[ExtendsConfig] = []
     secrets: Optional[dict] = None
     role_access_tag: Optional[str] = Field(
