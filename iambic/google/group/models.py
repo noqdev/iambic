@@ -67,12 +67,11 @@ class GroupTemplate(GoogleTemplate):
 
     def apply_resource_dict(self, google_project: GoogleProject):
         return {
-                "name": self.name,
-                "email": self.email,
-                "description": self.description,
-                "members": self.members,
-            }
-
+            "name": self.name,
+            "email": self.email,
+            "description": self.description,
+            "members": self.members,
+        }
 
     async def _apply_to_account(
         self, google_project: GoogleProject
@@ -132,6 +131,9 @@ class GroupTemplate(GoogleTemplate):
                 description=self.description,
                 google_project=google_project,
             )
+            current_group = await get_group(self.email, self.domain, google_project)
+            if current_group:
+                change_details.current_value = current_group
 
         # TODO: Support group expansion
         tasks.extend(

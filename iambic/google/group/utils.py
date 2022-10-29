@@ -51,8 +51,10 @@ async def get_group(group_email: str, domain: str, google_project: GoogleProject
         if group := req.execute():
             return await get_group_template(service, group, domain)
     except HttpError as err:
-        log.exception("Unable to get group", error=err)
-        return
+        if err.reason == "Not Authorized to access this resource/api":
+            log.error("Unable to get group. It may not exist", error=err.reason)
+        else:
+            raise
 
 
 async def create_group(
@@ -72,8 +74,9 @@ async def create_group(
     except AttributeError as err:
         log.exception("Unable to process google groups.", error=err)
         return
-    req = service.groups().insert(
-        body={"id": id, "email": email, "name": name, "description": description}
+    req = await aio_wrapper(
+        service.groups().insert,
+        body={"id": id, "email": email, "name": name, "description": description},
     )
     return req.execute()
 
