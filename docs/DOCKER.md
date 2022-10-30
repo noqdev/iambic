@@ -60,3 +60,16 @@ This Github action is rather inefficient because it is building the docker image
 
 TBD
 
+
+## Deploying to ECR
+
+```bash
+# Retrieve development_admin credentials
+export AWS_PROFILE=noq_dev
+# Login to public ECR
+aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/s2p9s3r8
+# (From iambic root directory) build the container
+docker build -t iambic .
+# Tag and push
+docker tag iambic:latest public.ecr.aws/s2p9s3r8/iambic:latest
+docker push public.ecr.aws/s2p9s3r8/iambic:latest
