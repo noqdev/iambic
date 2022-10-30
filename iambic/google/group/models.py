@@ -43,6 +43,14 @@ class GroupMember(ExpiryModel):
     status: GroupMemberStatus = GroupMemberStatus.ACTIVE
     subscription: GroupMemberSubscription = GroupMemberSubscription.EACH_EMAIL
 
+    @property
+    def resource_type(self):
+        return "google:group:member"
+
+    @property
+    def resource_id(self):
+        return self.email
+
 
 class GroupTemplate(GoogleTemplate):
     template_type = "NOQ::Google::Group"

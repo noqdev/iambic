@@ -52,7 +52,7 @@ class ExpiryModel(BaseModel):
     expires_at: Optional[datetime] = Field(
         None, description="The date and time the resource will be/was set to deleted."
     )
-    deleted: Optional[Union[bool | List[Deleted]]] = Field(
+    deleted: Optional[Union[bool, List[Deleted]]] = Field(
         False,
         description="Denotes whether the resource has been removed from AWS."
         "Upon being set to true, the resource will be deleted the next time iambic is ran.",

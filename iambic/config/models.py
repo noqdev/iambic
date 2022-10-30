@@ -82,10 +82,10 @@ class AWSAccount(BaseModel):
                 sts = session.client("sts")
                 role_params = dict(
                     RoleArn=self.assume_role_arn,
-                    RoleSessionName="NoqForm",
+                    RoleSessionName="iambic",
                 )
                 if self.external_id:
-                    role_params["external_id"] = self.external_id
+                    role_params["ExternalId"] = self.external_id
                 role = sts.assume_role(**role_params)
                 self.boto3_session_map[region_name] = boto3.Session(
                     region_name=region_name,
@@ -208,6 +208,8 @@ class ExtendsConfigKey(Enum):
 class ExtendsConfig(BaseModel):
     key: ExtendsConfigKey
     value: str
+    assume_role_arn: Optional[str]
+    external_id: Optional[str]
 
 
 class Config(BaseModel):
@@ -240,13 +242,31 @@ class Config(BaseModel):
                 if variable.key not in [av.key for av in account.variables]:
                     self.aws_accounts[elem].variables.append(variable)
 
-    def get_aws_secret(self, secret_arn: str) -> dict:
+    def get_aws_secret(self, extend: ExtendsConfig) -> dict:
         """TODO: Secrets should be moved to the account to prevent an anti-pattern
         It also makes it required for every account to have access to the account the secret exists on
         Example: If the secret is in prod
           A build in the staging account won't work unless it has access to the prod secret
         """
-        session = self.get_boto_session_from_arn(secret_arn)
+        secret_arn = extend.value
+        region_name = secret_arn.split(":")[3]
+        session = boto3.Session(region_name=region_name)
+        if extend.assume_role_arn:
+            sts = session.client("sts")
+            role_params = dict(
+                RoleArn=extend.assume_role_arn,
+                RoleSessionName="iambic",
+            )
+            if extend.external_id:
+                role_params["ExternalId"] = self.external_id
+            role = sts.assume_role(**role_params)
+            session = boto3.Session(
+                region_name=region_name,
+                aws_access_key_id=role["Credentials"]["AccessKeyId"],
+                aws_secret_access_key=role["Credentials"]["SecretAccessKey"],
+                aws_session_token=role["Credentials"]["SessionToken"],
+            )
+
         client = session.client(service_name="secretsmanager")
         get_secret_value_response = client.get_secret_value(SecretId=secret_arn)
         if "SecretString" in get_secret_value_response:
@@ -270,7 +290,7 @@ class Config(BaseModel):
         if self.extends:
             for extend in self.extends:
                 if extend.key == ExtendsConfigKey.AWS_SECRETS_MANAGER:
-                    for k, v in self.get_aws_secret(extend.value).items():
+                    for k, v in self.get_aws_secret(extend).items():
                         if not getattr(self, k):
                             setattr(self, k, v)
 
