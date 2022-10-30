@@ -1,16 +1,15 @@
 version: "3"
 services:
   iambic_gh_action:
+    # NOTE: This compose file loads the image from ECR, not from what you are running
+    # locally.
+    image: public.ecr.aws/s2p9s3r8/iambic:latest
     environment:
       - IAMBIC_CONFIG=arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full
       - IAMBIC_CONFIG_ASSUME_ROLE=arn:aws:iam::759357822767:role/IambicSpokeRole
       - AWS_ACCESS_KEY_ID
       - AWS_SECRET_ACCESS_KEY
       - AWS_SESSION_TOKEN
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: iambic
     volumes:
       - ~/.aws:/root/.aws:cached
     entrypoint: ""
