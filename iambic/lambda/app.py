@@ -108,5 +108,7 @@ def run_handler(event=None, context=None):
     
 
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        raise Exception("You must pass a command")
     command = sys.argv[1]
     run_handler(None, {"command": command})

@@ -5,6 +5,9 @@ services:
       - IAMBIC_CONFIG=arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full
       - AWS_PROFILE=arn:aws:iam::940552945933:role/NoqCentralRoleCorpNoqDev
       - IAMBIC_CONFIG_ASSUME_ROLE=arn:aws:iam::759357822767:role/development_admin
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
     build:
       context: .
       dockerfile: Dockerfile
@@ -20,11 +23,3 @@ services:
       - "-m"
       - "awslambdaric"
     command: "iambic.lambda.app.handler"
-    # command: >
-    #   bash -c '
-    #     watchmedo auto-restart --recursive --pattern="*.py" --directory="." "/usr/bin/aws-lambda-rie" "/usr/bin/python -m awslambdaric iambic.lambda.app.handler"
-    #     '
-    # command: >
-    #   bash -c '
-    #     /usr/bin/aws-lambda-rie python -m awslambdaric iambic.lambda.app.handler
-    #     '

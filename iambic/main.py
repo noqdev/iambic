@@ -7,7 +7,7 @@ import click
 
 from iambic.config.models import Config
 from iambic.core.context import ctx
-from iambic.core.git import clone_git_repo
+from iambic.core.git import clone_git_repos
 from iambic.core.logger import log
 from iambic.core.models import TemplateChangeDetails
 from iambic.core.utils import gather_templates
@@ -120,7 +120,7 @@ def clone_repos(config_path: str, repo_base_path: str):
 def run_clone_repos(config_path: str, repo_base_path: str):
     config = Config.load(config_path)
     config.set_account_defaults()
-    asyncio.run(clone_git_repo(config, repo_base_path))
+    asyncio.run(clone_git_repos(config, repo_base_path))
 
 
 @cli.command()
