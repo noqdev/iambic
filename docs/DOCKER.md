@@ -15,6 +15,7 @@ This code can import your AWS and Google environment, apply the environment, and
 - Get this container running as a GitHub action on 1) main branch push (apply the changes), 2) schedule (Every 5 minutes) to detect/correct drift
 - Support automatically detecting accounts via AWS organizations, and populating roles on these accounts.
 - Create a specific role for iambic (And don't re-use Noq SaaS SpokeRole)
+- Update Iambic container to be accessible on dockerhub or public ECR.
 
 ## Running Locally
 
@@ -52,6 +53,8 @@ For a full list of commands, see the `LambdaCommand` enum in iambic/lambda/app.p
 ## Running in GitHub Actions
 
 There is a GitHub action for testing the import functionality in `noq-templates/.github/workflows`. This action runs when changes are pushed to the main branch, and attempts to simply import the cloud environment. Right now, this is a no-op operation.
+
+This Github action is rather inefficient because it is building the docker images manually during every run. In reality, it should utilize an image in Public DockerHub or ECR.
 
 ## Running in AWS Lambda
 
