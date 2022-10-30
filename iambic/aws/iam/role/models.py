@@ -65,13 +65,13 @@ class RoleTemplate(AWSTemplate, AccessModel):
     role_name: str = Field(
         description="Name of the role",
     )
-    description: Optional[Union[str | list[Description]]] = Field(
+    description: Optional[Union[str, list[Description]]] = Field(
         "",
         description="Description of the role",
     )
     owner: Optional[str] = None
-    max_session_duration: Optional[Union[int | list[MaxSessionDuration]]] = 3600
-    path: Optional[Union[str | list[Path]]] = "/"
+    max_session_duration: Optional[Union[int, list[MaxSessionDuration]]] = 3600
+    path: Optional[Union[str, list[Path]]] = "/"
     permissions_boundary: Optional[
         None | PermissionBoundary | list[PermissionBoundary]
     ] = None

@@ -1,19 +1,16 @@
 extends:
   - key: AWS_SECRETS_MANAGER
     value: arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/google-MmAS1o
-
+    assume_role_arn: arn:aws:iam::759357822767:role/development_admin
 aws_accounts:
   - account_id: '759357822767'
     account_name: dev
-    aws_profile: noq_dev
     assume_role_arn: 'arn:aws:iam::759357822767:role/NoqSpokeRoleCorpNoqDev'
   - account_id: '259868150464'
     account_name: staging
-    aws_profile: noq_staging
     assume_role_arn: 'arn:aws:iam::259868150464:role/NoqSpokeRoleCorpNoqDev'
   - account_id: '940552945933'
     account_name: prod
-    aws_profile: noq_prod
     assume_role_arn: 'arn:aws:iam::940552945933:role/NoqSpokeRoleCorpNoqDev'
 
 google:
