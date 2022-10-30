@@ -49,10 +49,11 @@ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d
 
 For a full list of commands, see the `LambdaCommand` enum in iambic/lambda/app.py.
 
+## Running in GitHub Actions
+
+There is a GitHub action for testing the import functionality in `noq-templates/.github/workflows`. This action runs when changes are pushed to the main branch, and attempts to simply import the cloud environment. Right now, this is a no-op operation.
+
 ## Running in AWS Lambda
 
 TBD
 
-## Running in GitHub Actions
-
-TBD
