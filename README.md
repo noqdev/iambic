@@ -1,4 +1,4 @@
-# iambic
+# Iambic
 
 > IAM-better-in-code
 The python package used to generate, parse, and execute IAMbic yaml templates.
