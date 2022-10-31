@@ -149,7 +149,11 @@ class GoogleProject(BaseModel):
         return self.project_id
 
     async def get_service_connection(
-        self, service_name: str, service_path: str, domain: str
+        self,
+        service_name: str,
+        service_path: str,
+        domain: str,
+        cache_discovery: bool = False,
     ):
         # sourcery skip: raise-specific-error
         key = f"{domain}:{service_name}:{service_path}"
@@ -196,6 +200,7 @@ class GoogleProject(BaseModel):
             service_name,
             service_path,
             credentials=admin_delegated_credentials,
+            cache_discovery=cache_discovery,
             thread_sensitive=True,
         )
         return self._service_connection_map[key]

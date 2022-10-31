@@ -37,6 +37,7 @@ async def clone_git_repos(config, repo_base_path: str) -> None:
             repo = Repo(repo_path)
             for remote in repo.remotes:
                 remote.fetch()
+            repo.git.pull()
             repos[repo_name] = repo
     return repos
 
