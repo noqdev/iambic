@@ -1,11 +1,11 @@
 import asyncio
-import json
 import pathlib
 import warnings
 
 import click
 
 from iambic.config.models import Config
+from iambic.core import noq_json as json
 from iambic.core.context import ctx
 from iambic.core.git import clone_git_repos
 from iambic.core.logger import log
