@@ -184,5 +184,21 @@
                 "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
             },
         },
+        {
+            "name": "Iambic: Lambda App schedule",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/iambic/lambda/app.py",
+            "args": [
+                "schedule",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "AWS_PROFILE": "arn:aws:iam::940552945933:role/NoqCentralRoleCorpNoqDev",
+                "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/development_admin",
+                "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
+            },
+        },
     ]
 }

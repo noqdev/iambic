@@ -1,11 +1,11 @@
 import base64
 import os
 import sys
+import time
 from enum import Enum
 
 import boto3
 
-from iambic.core.context import ctx
 from iambic.core.models import BaseModel
 from iambic.core.utils import yaml
 from iambic.main import (
@@ -22,21 +22,24 @@ os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
 REPO_BASE_PATH = os.path.expanduser("~/.iambic/repos/")
 os.makedirs(os.path.dirname(REPO_BASE_PATH), exist_ok=True)
 
+
 class LambdaCommand(Enum):
     # `import` is reserved in Python. So we just prepend `run_` to everything.
-    run_import = "import" 
+    run_import = "import"
     run_plan = "plan"
     run_apply = "apply"
     run_detect = "detect"
     run_git_apply = "git_apply"
     run_clone_git_repos = "clone_git_repos"
-    
+
+
 class LambdaContext(BaseModel):
     command: str
 
 
 def handler(event, context):
     return run_handler(event, context)
+
 
 def run_handler(event=None, context=None):
     """
@@ -72,43 +75,42 @@ def run_handler(event=None, context=None):
 
     client = session.client(service_name="secretsmanager", region_name=region_name)
     get_secret_value_response = client.get_secret_value(SecretId=secret_arn)
-    config_text = get_secret_value_response["SecretString"] if "SecretString" in get_secret_value_response else base64.b64decode(get_secret_value_response["SecretBinary"])
+    config_text = (
+        get_secret_value_response["SecretString"]
+        if "SecretString" in get_secret_value_response
+        else base64.b64decode(get_secret_value_response["SecretBinary"])
+    )
     config = yaml.load(config_text)
     with open(CONFIG_PATH, "w") as f:
         yaml.dump(config, f)
     match lambda_context.command:
         case LambdaCommand.run_import.value:
-            return run_import(
-                (CONFIG_PATH,), 
-                REPO_BASE_PATH)
+            return run_import((CONFIG_PATH,), REPO_BASE_PATH)
         case LambdaCommand.run_plan.value:
-            return run_plan(
-                CONFIG_PATH, 
-                None,
-                REPO_BASE_PATH)
+            return run_plan(CONFIG_PATH, None, REPO_BASE_PATH)
         case LambdaCommand.run_apply.value:
-            return run_apply(
-                True,
-                (CONFIG_PATH,), 
-                None,
-                REPO_BASE_PATH)
+            return run_apply(True, CONFIG_PATH, None, REPO_BASE_PATH)
         case LambdaCommand.run_detect.value:
             return run_detect(
-                CONFIG_PATH,)
+                CONFIG_PATH,
+            )
         case LambdaCommand.run_git_apply.value:
-            return run_git_apply(
-                CONFIG_PATH, 
-                REPO_BASE_PATH)
+            return run_git_apply(CONFIG_PATH, REPO_BASE_PATH)
         case LambdaCommand.run_clone_git_repos.value:
-            return run_clone_repos(
-                CONFIG_PATH, 
-                REPO_BASE_PATH)
+            return run_clone_repos(CONFIG_PATH, REPO_BASE_PATH)
         case _:
             raise NotImplementedError(f"Unknown command {lambda_context.command}")
-    
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         raise Exception("You must pass a command")
     command = sys.argv[1]
-    run_handler(None, {"command": command})
+    # `schedule` is just for development and demo purposes
+    if command == "schedule":
+        while True:
+            run_handler(None, {"command": "clone_git_repos"})
+            run_handler(None, {"command": "apply"})
+            time.sleep(1)
+    else:
+        run_handler(None, {"command": command})
