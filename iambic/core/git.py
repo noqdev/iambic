@@ -5,6 +5,7 @@ from typing import Optional
 
 from deepdiff import DeepDiff
 from git import Repo
+from git.exc import GitCommandError
 from pydantic import BaseModel as PydanticBaseModel
 
 from iambic.aws.models import Deleted
@@ -20,6 +21,26 @@ class GitDiff(PydanticBaseModel):
     is_deleted: Optional[bool] = False
 
 
+async def clone_git_repos(config, repo_base_path: str) -> None:
+    # TODO: Formalize the model for secrets
+    repos = {}
+    for repository in config.secrets.get("git", {}).get("repositories", []):
+        repo_name = repository["name"]
+        git_uri = repository["uri"]
+        repo_path = os.path.join(repo_base_path, repo_name)
+        try:
+            repo = Repo.clone_from(git_uri, repo_path)
+            repos[repo_name] = repo
+        except GitCommandError as e:
+            if "already exists and is not an empty directory" not in e.stderr:
+                raise
+            repo = Repo(repo_path)
+            for remote in repo.remotes:
+                remote.fetch()
+            repos[repo_name] = repo
+    return repos
+
+
 async def retrieve_git_changes(repo_dir: str) -> dict[str, list[GitDiff]]:
     repo = Repo(repo_dir)
 
@@ -30,6 +51,7 @@ async def retrieve_git_changes(repo_dir: str) -> dict[str, list[GitDiff]]:
     commit_feature = repo.head.commit.tree
     # Comparing against main
     commit_origin_main = repo.commit("origin/main")
+    # TODO: We should consider if the default branch is named other than `main`
     diff_index = commit_origin_main.diff(commit_feature)
     files = {
         "new_files": [],

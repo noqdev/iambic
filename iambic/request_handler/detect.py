@@ -1,6 +1,8 @@
 # Intentionally hacky for demo
 import json
 
+import boto3
+
 from iambic.config.models import Config
 from iambic.core.logger import log
 from iambic.slack.notifications import send_iam_mutation_message
@@ -13,13 +15,18 @@ async def detect_changes(config: Config) -> bool:
         return False
 
     queue_name = queue_arn.split(":")[-1]
-    session = config.get_boto_session_from_arn(queue_arn, "us-east-1")
+    region_name = queue_arn.split(":")[3]
+    session = config.get_boto_session_from_arn(queue_arn, region_name)
     identity = session.client("sts").get_caller_identity()
     identity_arn_with_session_name = (
         identity["Arn"].replace(":sts:", ":iam:").replace("assumed-role", "role")
     )
+    # TODO: This only works for same account identities. We need to do similar to NoqMeter,
+    # check all roles we have access to on all accounts, or store this in configuration.
+    # Then exclude these from the list of roles to check.
+
     identity_arn = "/".join(identity_arn_with_session_name.split("/")[0:2])
-    sqs = session.client("sqs", region_name="us-east-1")
+    sqs = session.client("sqs", region_name=region_name)
     queue_url_res = sqs.get_queue_url(QueueName=queue_name)
     queue_url = queue_url_res.get("QueueUrl")
     messages = sqs.receive_message(QueueUrl=queue_url, MaxNumberOfMessages=10).get(

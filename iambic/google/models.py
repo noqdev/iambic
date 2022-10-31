@@ -1,17 +1,11 @@
-import json
-import os
+import asyncio
 from enum import Enum
-from typing import List, Optional
-
-import googleapiclient.discovery
-from google.oauth2 import service_account
-from pydantic import Field
 
 from iambic.aws.models import ExpiryModel
-from iambic.config.models import Config
+from iambic.config.models import Config, GoogleProject
+from iambic.core.context import ctx
 from iambic.core.logger import log
-from iambic.core.models import BaseTemplate
-from iambic.core.utils import aio_wrapper, yaml
+from iambic.core.models import AccountChangeDetails, BaseTemplate, TemplateChangeDetails
 
 
 class WhoCanInvite(Enum):
@@ -78,155 +72,56 @@ class GroupMemberStatus(Enum):
     PENDING = "PENDING"
 
 
-class GroupMember(ExpiryModel):
-    email: str
-    expand: bool = Field(
-        False,
-        description="Expand the group into the members of the group. This is useful for nested groups.",
-    )
-    role: GroupMemberRole = GroupMemberRole.MEMBER
-    type: GroupMemberType = GroupMemberType.USER
-    status: GroupMemberStatus = GroupMemberStatus.ACTIVE
-    subscription: GroupMemberSubscription = GroupMemberSubscription.EACH_EMAIL
-
-
-class GroupTemplate(BaseTemplate):
-    template_type = "NOQ::Google::GroupTemplate"
-    name: str
-    email: str
-    description: str
-    welcome_message: Optional[str]
-    members: List[GroupMember]
-    who_can_invite: WhoCanInvite = "ALL_MANAGERS_CAN_INVITE"
-    who_can_join: WhoCanJoin = "CAN_REQUEST_TO_JOIN"
-    who_can_post_message: WhoCanPostMessage = "NONE_CAN_POST"
-    who_can_view_group: WhoCanViewGroup = "ALL_MANAGERS_CAN_VIEW"
-    who_can_view_membership: WhoCanViewMembership = "ALL_MANAGERS_CAN_VIEW"
-    # TODO: who_can_contact_group_members
-    # TODO: who_can_view_member_email_addresses
-    # TODO: allow_email_posting
-    # TODO: allow_web_posting
-    # TODO: conversation_history
-    # TODO: There is more. Check google group settings page
-
-    async def apply(self, config: Config) -> bool:
-        # The bool represents whether the resource was altered in any way in the cloud
+class GoogleTemplate(BaseTemplate, ExpiryModel):
+    async def _apply_to_account(
+        self, google_project: GoogleProject
+    ) -> AccountChangeDetails:
         raise NotImplementedError
 
-    def resource_type(self):
+    async def apply(self, config: Config) -> TemplateChangeDetails:
+        tasks = []
+        template_changes = TemplateChangeDetails(
+            resource_id=self.email,
+            resource_type=self.template_type,
+            template_path=self.file_path,
+        )
+        log_params = dict(
+            resource_type=self.resource_type, resource_id=self.resource_id
+        )
+        for account in config.google_projects:
+            # if evaluate_on_google_account(self, account):
+            if ctx.execute:
+                log_str = "Applying changes to resource."
+            else:
+                log_str = "Detecting changes for resource."
+            log.info(log_str, account=str(account), **log_params)
+            tasks.append(self._apply_to_account(account))
+
+        account_changes = await asyncio.gather(*tasks)
+        template_changes.proposed_changes = [
+            account_change
+            for account_change in account_changes
+            if any(account_change.proposed_changes)
+        ]
+        if account_changes and ctx.execute:
+            log.info(
+                "Successfully applied resource changes to all Google projects.",
+                **log_params,
+            )
+        elif account_changes:
+            log.info(
+                "Successfully detected required resource changes on all Google projects.",
+                **log_params,
+            )
+        else:
+            log.debug("No changes detected for resource on any account.", **log_params)
+
+        return template_changes
+
+    @property
+    def resource_id(self) -> str:
+        return self.email
+
+    @property
+    def resource_type(self) -> str:
         return "google:group"
-
-    def resource_id(self):
-        return self.name
-
-
-async def get_service(
-    config: Config,
-    service_name: str,
-    service_path: str,
-):
-    """
-    Get a service connection to Google. You'll need to generate a GCP service account first.
-
-    Noq requires that you either have a service key file with content like below,
-    and you've set the configuration for `google.service_key_file` to the full path of that file on disk,
-    or you've just put the json for this in your Noq configuration in the `secrets.google.service_key_dict` configuration
-    key.
-
-
-    """
-    if not config.secrets:
-        return
-
-    service_key = config.secrets.get("google", {}).get("service_key")
-    credential_subjects = config.secrets.get("google", {}).get("credential_subjects")
-
-    admin_credentials = service_account.Credentials.from_service_account_info(
-        service_key,
-        scopes=[
-            "https://www.googleapis.com/auth/admin.directory.user.security",
-            "https://www.googleapis.com/auth/admin.reports.audit.readonly",
-            "https://www.googleapis.com/auth/admin.directory.user",
-            "https://www.googleapis.com/auth/admin.directory.group",
-            "https://www.googleapis.com/auth/admin.directory.group.member",
-        ],
-    )
-
-    credential_subject = None
-    for k, v in credential_subjects.items():
-        # TODO: If we want to support multiple domains in the feature, such as
-        # noq.dev and noqcontractors.dev, we would need to account for this here.
-        credential_subject = v
-        break
-
-    admin_delegated_credentials = admin_credentials.with_subject(credential_subject)
-    service = await aio_wrapper(
-        googleapiclient.discovery.build,
-        service_name,
-        service_path,
-        credentials=admin_delegated_credentials,
-        thread_sensitive=True,
-    )
-
-    return service
-
-
-async def generate_group_templates(config, domain, output_dir):
-    """List all groups in the domain, along with members and
-    settings"""
-    groups = []
-
-    try:
-        service = await get_service(config, "admin", "directory_v1")
-        if not service:
-            return []
-    except AttributeError as err:
-        log.exception("Unable to process google groups.", error=err)
-        return
-
-    req = service.groups().list(domain=domain)  # TODO: Async
-    res = req.execute()
-    if res and "groups" in res:
-        for group in res["groups"]:
-            member_req = service.members().list(groupKey=group["email"])
-            member_res = member_req.execute() or {}
-            members = [
-                GroupMember(
-                    email=member["email"],
-                    role=GroupMemberRole(member["role"]),
-                    type=GroupMemberType(member["type"]),
-                    status=GroupMemberStatus(member["status"]),
-                )
-                for member in member_res.get("members", [])
-            ]
-            file_name = f"{group['email'].split('@')[0]}.yaml"
-            groups.append(
-                GroupTemplate(
-                    file_path=f"google_groups/{domain}/{file_name}",
-                    name=group["name"],
-                    email=group["email"],
-                    description=group["description"],
-                    members=members,
-                )
-            )
-    base_path = os.path.expanduser(output_dir)
-    for group in groups:
-        file_path = os.path.expanduser(group.file_path)
-        path = os.path.join(base_path, file_path)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w") as f:
-            f.write(
-                yaml.dump(
-                    {
-                        "template_type": group.template_type,
-                        **json.loads(
-                            group.json(
-                                exclude_unset=True,
-                                exclude_defaults=True,
-                                exclude={"file_path"},
-                            )
-                        ),
-                    }
-                )
-            )
-    return groups

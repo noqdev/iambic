@@ -7,6 +7,7 @@ import click
 
 from iambic.config.models import Config
 from iambic.core.context import ctx
+from iambic.core.git import clone_git_repos
 from iambic.core.logger import log
 from iambic.core.models import TemplateChangeDetails
 from iambic.core.utils import gather_templates
@@ -63,6 +64,10 @@ def cli():
     help="The repo directory containing the templates. Example: ~/noq-templates",
 )
 def plan(config_path: str, templates: list[str], repo_dir: str):
+    run_plan(config_path, templates, repo_dir)
+
+
+def run_plan(config_path: str, templates: list[str], repo_dir: str):
     if not templates:
         templates = asyncio.run(gather_templates(repo_dir or str(pathlib.Path.cwd())))
 
@@ -83,9 +88,39 @@ def plan(config_path: str, templates: list[str], repo_dir: str):
     help="The config.yaml file path to apply. Example: ./prod/config.yaml",
 )
 def detect(config_path: str):
+    run_detect(config_path)
+
+
+def run_detect(config_path: str):
     config = Config.load(config_path)
     config.set_account_defaults()
     asyncio.run(detect_changes(config))
+
+
+@cli.command()
+@click.option(
+    "--config",
+    "-c",
+    "config_path",
+    type=click.Path(exists=True),
+    help="The config.yaml file path to apply. Example: ./prod/config.yaml",
+)
+@click.option(
+    "--repo_base_path",
+    "-d",
+    "repo_base_path",
+    required=True,
+    type=click.Path(exists=True),
+    help="The repo base directory that should contain the templates. Example: ~/iambic/templates",
+)
+def clone_repos(config_path: str, repo_base_path: str):
+    run_clone_repos(config_path, repo_base_path)
+
+
+def run_clone_repos(config_path: str, repo_base_path: str):
+    config = Config.load(config_path)
+    config.set_account_defaults()
+    asyncio.run(clone_git_repos(config, repo_base_path))
 
 
 @cli.command()
@@ -120,6 +155,10 @@ def detect(config_path: str):
     help="The repo directory containing the templates. Example: ~/noq-templates",
 )
 def apply(no_prompt: bool, config_path: str, templates: list[str], repo_dir: str):
+    run_apply(no_prompt, config_path, templates, repo_dir)
+
+
+def run_apply(no_prompt: bool, config_path: str, templates: list[str], repo_dir: str):
     if not templates:
         templates = asyncio.run(gather_templates(repo_dir or str(pathlib.Path.cwd())))
 
@@ -152,6 +191,10 @@ def apply(no_prompt: bool, config_path: str, templates: list[str], repo_dir: str
     help="The repo directory containing the templates. Example: ~/noq-templates",
 )
 def git_apply(config_path: str, repo_dir: str):
+    run_git_apply(config_path, repo_dir)
+
+
+def run_git_apply(config_path: str, repo_dir: str):
     template_changes = asyncio.run(
         apply_git_changes(config_path, repo_dir or str(pathlib.Path.cwd()))
     )
@@ -176,12 +219,15 @@ def git_apply(config_path: str, repo_dir: str):
     help="The repo directory containing the templates. Example: ~/noq-templates",
 )
 def import_(config_paths: list[str], repo_dir: str):
-    configs = list()
+    run_import(config_paths, repo_dir or str(pathlib.Path.cwd()))
+
+
+def run_import(config_paths: list[str], repo_dir: str):
+    configs = []
     for config_path in config_paths:
         config = Config.load(config_path)
         config.set_account_defaults()
         configs.append(config)
-
     asyncio.run(generate_templates(configs, repo_dir or str(pathlib.Path.cwd())))
 
 
