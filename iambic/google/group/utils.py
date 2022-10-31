@@ -294,7 +294,7 @@ async def update_group_members(
                 tasks.append(
                     aio_wrapper(
                         service.members()
-                        .delete(groupKey=group_email, memberKey=user)
+                        .delete(groupKey=group_email, memberKey=user.email)
                         .execute
                     )
                 )
