@@ -1,0 +1,25 @@
+version: "3"
+services:
+  iambic:
+    environment:
+      - IAMBIC_CONFIG=arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full
+      - AWS_PROFILE=arn:aws:iam::940552945933:role/NoqCentralRoleCorpNoqDev
+      - IAMBIC_CONFIG_ASSUME_ROLE=arn:aws:iam::759357822767:role/development_admin
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: iambic
+    ports:
+      - 9000:8080
+    volumes:
+      - ~/.aws:/root/.aws:cached
+      - .:/app:cached
+    entrypoint:
+      - "/usr/bin/aws-lambda-rie"
+      - "/usr/bin/python"
+      - "-m"
+      - "awslambdaric"
+    command: "iambic.lambda.app.handler"

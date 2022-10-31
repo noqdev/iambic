@@ -61,17 +61,17 @@ class PermissionBoundary(ExpiryModel, AccessModel):
 
 
 class RoleTemplate(AWSTemplate, AccessModel):
-    template_type = "NOQ::AWS::IAM::ROLE"
+    template_type = "NOQ::AWS::IAM::Role"
     role_name: str = Field(
         description="Name of the role",
     )
-    description: Optional[Union[str | list[Description]]] = Field(
+    description: Optional[Union[str, list[Description]]] = Field(
         "",
         description="Description of the role",
     )
     owner: Optional[str] = None
-    max_session_duration: Optional[Union[int | list[MaxSessionDuration]]] = 3600
-    path: Optional[Union[str | list[Path]]] = "/"
+    max_session_duration: Optional[Union[int, list[MaxSessionDuration]]] = 3600
+    path: Optional[Union[str, list[Path]]] = "/"
     permissions_boundary: Optional[
         None | PermissionBoundary | list[PermissionBoundary]
     ] = None
@@ -251,7 +251,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                     resource_type=self.resource_type,
                 )
             )
-            log_str = "New resource found."
+            log_str = "New resource found in code."
             if not ctx.execute:
                 log.info(log_str, **log_params)
                 # Exit now because apply functions won't work if resource doesn't exist

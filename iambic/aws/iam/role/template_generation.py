@@ -344,11 +344,11 @@ async def generate_aws_role_templates(configs: list[Config], base_output_dir: st
                 }
             )
 
-    log.info("Setting inline policies for roles")
+    log.info("Setting inline policies in role templates")
     await set_role_resource_inline_policies_semaphore.process(messages)
-    log.info("Setting managed policies for roles")
+    log.info("Setting managed policies in role templates")
     await set_role_resource_managed_policies_semaphore.process(messages)
-    log.info("Setting tags for roles")
+    log.info("Setting tags in role templates")
     await set_role_resource_tags_semaphore.process(messages)
     log.info("Finished retrieving role details")
 

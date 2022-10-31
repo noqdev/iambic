@@ -4,12 +4,14 @@ from typing import List, Optional
 
 import boto3
 import botocore
+import googleapiclient.discovery
+from google.oauth2 import service_account
 from pydantic import BaseModel, Field, constr
 from slack_bolt import App as SlackBoltApp
 
 from iambic.aws.utils import RegionName
 from iambic.core.logger import log
-from iambic.core.utils import yaml
+from iambic.core.utils import aio_wrapper, yaml
 
 
 class Variable(BaseModel):
@@ -80,10 +82,10 @@ class AWSAccount(BaseModel):
                 sts = session.client("sts")
                 role_params = dict(
                     RoleArn=self.assume_role_arn,
-                    RoleSessionName="NoqForm",
+                    RoleSessionName="iambic",
                 )
                 if self.external_id:
-                    role_params["external_id"] = self.external_id
+                    role_params["ExternalId"] = self.external_id
                 role = sts.assume_role(**role_params)
                 self.boto3_session_map[region_name] = boto3.Session(
                     region_name=region_name,
@@ -112,6 +114,93 @@ class AWSAccount(BaseModel):
         self.default_region = self.default_region.value
 
 
+class GoogleSubjects(BaseModel):
+    domain: str
+    service_account: str
+
+
+class GoogleProject(BaseModel):
+    project_id: str
+    project_name: Optional[str]
+    subjects: list[GoogleSubjects]
+    type: str
+    private_key_id: str
+    private_key: str
+    client_email: str
+    client_id: str
+    auth_uri: str
+    token_uri: str
+    auth_provider_x509_cert_url: str
+    client_x509_cert_url: str
+    variables: Optional[List[Variable]] = Field(
+        [],
+        description="A list of variables to be used when creating templates",
+    )
+    read_only: Optional[bool] = Field(
+        False,
+        description="If set to True, iambic will only log drift instead of apply changes when drift is detected.",
+    )
+    _service_connection_map: dict = {}
+
+    def __str__(self):
+        if self.project_name:
+            return f"{self.project_name} - ({self.project_id})"
+
+        return self.project_id
+
+    async def get_service_connection(
+        self, service_name: str, service_path: str, domain: str
+    ):
+        # sourcery skip: raise-specific-error
+        key = f"{domain}:{service_name}:{service_path}"
+        if service_conn := self._service_connection_map.get(key):
+            return service_conn
+
+        admin_credentials = service_account.Credentials.from_service_account_info(
+            self.dict(
+                include={
+                    "type",
+                    "project_id",
+                    "private_key_id",
+                    "private_key",
+                    "client_email",
+                    "client_id",
+                    "auth_uri",
+                    "token_uri",
+                    "auth_provider_x509_cert_url",
+                    "client_x509_cert_url",
+                }
+            ),
+            scopes=[
+                "https://www.googleapis.com/auth/admin.directory.user.security",
+                "https://www.googleapis.com/auth/admin.reports.audit.readonly",
+                "https://www.googleapis.com/auth/admin.directory.user",
+                "https://www.googleapis.com/auth/admin.directory.group",
+                "https://www.googleapis.com/auth/admin.directory.group.member",
+            ],
+        )
+
+        admin_delegated_credentials = None
+
+        for s in self.subjects:
+            if s.domain == domain:
+                admin_delegated_credentials = admin_credentials.with_subject(
+                    s.service_account
+                )
+                break
+        if not admin_delegated_credentials:
+            raise Exception(f"Could not find service account for domain {domain}")
+
+        self._service_connection_map[key] = await aio_wrapper(
+            googleapiclient.discovery.build,
+            service_name,
+            service_path,
+            credentials=admin_delegated_credentials,
+            thread_sensitive=True,
+        )
+        return self._service_connection_map[key]
+
+
 class ExtendsConfigKey(Enum):
     AWS_SECRETS_MANAGER = "AWS_SECRETS_MANAGER"
 
@@ -119,19 +208,13 @@ class ExtendsConfigKey(Enum):
 class ExtendsConfig(BaseModel):
     key: ExtendsConfigKey
     value: str
-
-
-class GoogleGroupsConfig(BaseModel):
-    enabled: Optional[bool] = False
-
-
-class GoogleConfig(BaseModel):
-    groups: Optional[GoogleGroupsConfig] = None
+    assume_role_arn: Optional[str]
+    external_id: Optional[str]
 
 
 class Config(BaseModel):
     aws_accounts: List[AWSAccount]
-    google: Optional[GoogleConfig] = None
+    google_projects: List[GoogleProject] = []
     extends: List[ExtendsConfig] = []
     secrets: Optional[dict] = None
     role_access_tag: Optional[str] = Field(
@@ -159,13 +242,31 @@ class Config(BaseModel):
                 if variable.key not in [av.key for av in account.variables]:
                     self.aws_accounts[elem].variables.append(variable)
 
-    def get_aws_secret(self, secret_arn: str) -> dict:
+    def get_aws_secret(self, extend: ExtendsConfig) -> dict:
         """TODO: Secrets should be moved to the account to prevent an anti-pattern
         It also makes it required for every account to have access to the account the secret exists on
         Example: If the secret is in prod
           A build in the staging account won't work unless it has access to the prod secret
         """
-        session = self.get_boto_session_from_arn(secret_arn)
+        secret_arn = extend.value
+        region_name = secret_arn.split(":")[3]
+        session = boto3.Session(region_name=region_name)
+        if extend.assume_role_arn:
+            sts = session.client("sts")
+            role_params = dict(
+                RoleArn=extend.assume_role_arn,
+                RoleSessionName="iambic",
+            )
+            if extend.external_id:
+                role_params["ExternalId"] = self.external_id
+            role = sts.assume_role(**role_params)
+            session = boto3.Session(
+                region_name=region_name,
+                aws_access_key_id=role["Credentials"]["AccessKeyId"],
+                aws_secret_access_key=role["Credentials"]["SecretAccessKey"],
+                aws_session_token=role["Credentials"]["SessionToken"],
+            )
+
         client = session.client(service_name="secretsmanager")
         get_secret_value_response = client.get_secret_value(SecretId=secret_arn)
         if "SecretString" in get_secret_value_response:
@@ -181,11 +282,15 @@ class Config(BaseModel):
         ):
             self.slack_app = SlackBoltApp(token=slack_bot_token)
 
+    def configure_google(self):
+        if self.secrets and (google_secrets := self.secrets.get("google")):
+            self.google_projects = [GoogleProject(**x) for x in google_secrets]
+
     def combine_extended_configs(self):
         if self.extends:
             for extend in self.extends:
                 if extend.key == ExtendsConfigKey.AWS_SECRETS_MANAGER:
-                    for k, v in self.get_aws_secret(extend.value).items():
+                    for k, v in self.get_aws_secret(extend).items():
                         if not getattr(self, k):
                             setattr(self, k, v)
 
@@ -201,4 +306,5 @@ class Config(BaseModel):
         c = cls(file_path=file_path, **yaml.load(open(file_path)))
         c.combine_extended_configs()
         c.configure_slack()
+        c.configure_google()
         return c

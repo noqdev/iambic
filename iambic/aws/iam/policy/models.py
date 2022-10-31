@@ -9,10 +9,10 @@ from iambic.core.models import BaseModel
 
 
 class Principal(BaseModel):
-    aws: Optional[Union[str | list[str]]] = None
-    service: Optional[Union[str | list[str]]] = None
-    canonical_user: Optional[Union[str | list[str]]] = None
-    federated: Optional[Union[str | list[str]]] = None
+    aws: Optional[Union[str, list[str]]] = None
+    service: Optional[Union[str, list[str]]] = None
+    canonical_user: Optional[Union[str, list[str]]] = None
+    federated: Optional[Union[str, list[str]]] = None
 
     def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
         resource_dict = super(Principal, self)._apply_resource_dict(aws_account)
