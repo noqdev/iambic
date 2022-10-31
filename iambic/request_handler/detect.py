@@ -1,8 +1,6 @@
 # Intentionally hacky for demo
 import json
 
-import boto3
-
 from iambic.config.models import Config
 from iambic.core.logger import log
 from iambic.slack.notifications import send_iam_mutation_message

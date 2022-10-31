@@ -195,74 +195,81 @@ class RoleTemplate(AWSTemplate, AccessModel):
         existing_inline_policies = current_role.pop("InlinePolicies", [])
         existing_managed_policies = current_role.pop("ManagedPolicies", [])
         tasks = []
-
-        if role_exists:
-            tasks.extend(
-                [
-                    apply_role_tags(
-                        role_name,
-                        client,
-                        account_role["Tags"],
-                        current_role.get("Tags", []),
-                        log_params,
-                    ),
-                    update_assume_role_policy(
-                        role_name,
-                        client,
-                        account_role.pop("AssumeRolePolicyDocument", {}),
-                        current_role["AssumeRolePolicyDocument"],
-                        log_params,
-                    ),
-                ]
-            )
-
-            supported_update_keys = ["Description", "MaxSessionDuration"]
-            update_resource_log_params = {**log_params}
-            update_role_params = {}
-            for k in supported_update_keys:
-                if account_role.get(k) is not None and account_role.get(
-                    k
-                ) != current_role.get(k):
-                    update_resource_log_params[k] = dict(
-                        old_value=current_role.get(k), new_value=account_role.get(k)
-                    )
-                    update_role_params[k] = current_role.get(k)
-
-            if update_role_params:
-                log_str = "Out of date resource found."
-                if ctx.execute:
-                    log.info(
-                        f"{log_str} Updating resource...", **update_resource_log_params
-                    )
-                    tasks.append(
-                        aio_wrapper(
-                            client.update_role,
-                            RoleName=role_name,
-                            **{k: account_role.get(k) for k in supported_update_keys},
-                        )
-                    )
-                else:
-                    log.info(log_str, **update_resource_log_params)
-        else:
-            account_change_details.proposed_changes.append(
-                ProposedChange(
-                    change_type=ProposedChangeType.CREATE,
-                    resource_id=role_name,
-                    resource_type=self.resource_type,
+        try:
+            if role_exists:
+                tasks.extend(
+                    [
+                        apply_role_tags(
+                            role_name,
+                            client,
+                            account_role["Tags"],
+                            current_role.get("Tags", []),
+                            log_params,
+                        ),
+                        update_assume_role_policy(
+                            role_name,
+                            client,
+                            account_role.pop("AssumeRolePolicyDocument", {}),
+                            current_role["AssumeRolePolicyDocument"],
+                            log_params,
+                        ),
+                    ]
                 )
-            )
-            log_str = "New resource found in code."
-            if not ctx.execute:
-                log.info(log_str, **log_params)
-                # Exit now because apply functions won't work if resource doesn't exist
-                return account_change_details
 
-            log_str = f"{log_str} Creating resource..."
-            log.info(log_str, **log_params)
-            account_role["AssumeRolePolicyDocument"] = json.dumps(
-                account_role["AssumeRolePolicyDocument"]
-            )
-            await aio_wrapper(client.create_role, **account_role)
+                supported_update_keys = ["Description", "MaxSessionDuration"]
+                update_resource_log_params = {**log_params}
+                update_role_params = {}
+                for k in supported_update_keys:
+                    if account_role.get(k) is not None and account_role.get(
+                        k
+                    ) != current_role.get(k):
+                        update_resource_log_params[k] = dict(
+                            old_value=current_role.get(k), new_value=account_role.get(k)
+                        )
+                        update_role_params[k] = current_role.get(k)
+
+                if update_role_params:
+                    log_str = "Out of date resource found."
+                    if ctx.execute:
+                        log.info(
+                            f"{log_str} Updating resource...",
+                            **update_resource_log_params,
+                        )
+                        tasks.append(
+                            aio_wrapper(
+                                client.update_role,
+                                RoleName=role_name,
+                                **{
+                                    k: account_role.get(k)
+                                    for k in supported_update_keys
+                                },
+                            )
+                        )
+                    else:
+                        log.info(log_str, **update_resource_log_params)
+            else:
+                account_change_details.proposed_changes.append(
+                    ProposedChange(
+                        change_type=ProposedChangeType.CREATE,
+                        resource_id=role_name,
+                        resource_type=self.resource_type,
+                    )
+                )
+                log_str = "New resource found in code."
+                if not ctx.execute:
+                    log.info(log_str, **log_params)
+                    # Exit now because apply functions won't work if resource doesn't exist
+                    return account_change_details
+
+                log_str = f"{log_str} Creating resource..."
+                log.info(log_str, **log_params)
+                account_role["AssumeRolePolicyDocument"] = json.dumps(
+                    account_role["AssumeRolePolicyDocument"]
+                )
+                await aio_wrapper(client.create_role, **account_role)
+        except Exception as e:
+            log.error("Unable to generate tasks for resource", error=e, **log_params)
+            return account_change_details
 
         tasks.extend(
             [
@@ -282,8 +289,11 @@ class RoleTemplate(AWSTemplate, AccessModel):
                 ),
             ]
         )
-
-        changes_made = await asyncio.gather(*tasks)
+        try:
+            changes_made = await asyncio.gather(*tasks)
+        except Exception as e:
+            log.error("Unable to apply changes to resource", error=e, **log_params)
+            return account_change_details
         if any(changes_made):
             account_change_details.proposed_changes.extend(
                 list(chain.from_iterable(changes_made))
