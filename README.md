@@ -1,4 +1,4 @@
-# iambic
+# Iambic
 
 > IAM-better-in-code
 The python package used to generate, parse, and execute IAMbic yaml templates.
@@ -28,6 +28,13 @@ Noq Enterprise offers many more enhancements on top of Iambic. Visit [https://ww
 | Automatically Generate Service Control Policies<br>base on usage | Coming<br>Soon! |
 | Prune Unused IAM Permissions, Access, Identities,<br>and Credentials | Coming<br>Soon! |
 | Generate Dynamic Reports based on<br>human identities, cloud identities, access, <br>and permissions | Coming<br>Soon! |
+
+## Setup for development
+
+# `python3.10 -m venv env`
+# `. env/bin/activate`
+# `pip install poetry` # (last tested with poetry version 1.2.2)
+# `poetry install`
 
 ## How to run
 
