@@ -3,6 +3,8 @@ import re
 from datetime import datetime
 from enum import Enum
 
+from botocore.exceptions import ClientError
+
 from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.utils import aio_wrapper, camel_to_snake
@@ -18,9 +20,22 @@ async def paginated_search(
     :return:
     """
     results = []
+    retry_count = 0
 
     while True:
-        response = await aio_wrapper(search_fnc, **search_kwargs)
+        try:
+            response = await aio_wrapper(search_fnc, **search_kwargs)
+        except ClientError as err:
+            if err.response["Error"]["Code"] == "Throttling":
+                if retry_count >= 10:
+                    raise
+                retry_count += 1
+                await asyncio.sleep(retry_count * 2)
+                continue
+            else:
+                raise
+
+        retry_count = 0
         results.extend(response.get(response_key, []))
 
         if not response["IsTruncated"] or (max_results and len(results) >= max_results):
@@ -217,3 +232,21 @@ def get_aws_account_map(configs: list) -> dict:
             aws_account_map[aws_account.account_id] = aws_account
 
     return aws_account_map
+
+
+def boto3_retry(f):
+    async def wrapper(*args, **kwargs):
+        max_retries = kwargs.pop("max_retries", 10)
+        for attempt in range(max_retries):
+            try:
+                return await f(*args, **kwargs)
+            except ClientError as err:
+                if (
+                    err.response["Error"]["Code"] == "Throttling"
+                    and attempt < max_retries - 1
+                ):
+                    await asyncio.sleep(1)
+                else:
+                    raise
+
+    return wrapper
