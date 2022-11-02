@@ -71,7 +71,7 @@ class BaseModel(PydanticBaseModel):
         variables = {var.key: var.value for var in aws_account.variables}
         variables["account_id"] = aws_account.account_id
         variables["account_name"] = aws_account.account_name
-        if owner := getattr(self, "owner"):
+        if hasattr(self, "owner") and (owner := getattr(self, "owner", None)):
             variables["owner"] = owner
 
         rtemplate = Environment(loader=BaseLoader()).from_string(json.dumps(response))

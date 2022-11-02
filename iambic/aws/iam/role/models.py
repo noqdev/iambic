@@ -143,7 +143,9 @@ class RoleTemplate(AWSTemplate, AccessModel):
             "aws-service-role" in self.path or aws_account.read_only or self.read_only
         )
 
-    async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
+    async def _apply_to_account(  # noqa: C901
+        self, aws_account: AWSAccount
+    ) -> AccountChangeDetails:
         boto3_session = aws_account.get_boto3_session()
         client = boto3_session.client("iam")
         account_role = self.apply_resource_dict(aws_account)
