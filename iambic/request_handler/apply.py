@@ -1,5 +1,4 @@
 import asyncio
-import os
 
 from iambic.aws.utils import remove_expired_resources
 from iambic.config.models import Config
@@ -44,9 +43,7 @@ async def flag_expired_resources(template_paths: list[str]):
     )
 
     for template in templates:
-        with open(
-            os.path.join(os.path.dirname(__file__), template.file_path), "w"
-        ) as f:
+        with open(template.file_path, "w") as f:
             f.write(yaml.dump(template.dict(exclude_none=True, exclude_unset=True)))
 
     log.info("Expired resource scan complete.")
