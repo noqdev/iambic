@@ -34,7 +34,7 @@
             "args": [
                 "apply",
                 "--template",
-                "resources/aws/roles/noqmeter_null_test_role.yaml",
+                "../noq_templates/resources/aws/roles/application/noqmeter_null_test_role.yaml",
                 "--config",
                 "demo/config.yaml"
             ],
