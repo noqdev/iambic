@@ -11,10 +11,14 @@
             "module": "iambic.main",
             "console": "integratedTerminal",
             "args": [
-                "plan"
+                "plan",
+                "--repo-dir",
+                "../noq-templates/",
+                "--config",
+                "demo/config.yaml"
             ],
             "env": {
-                "AWS_PROFILE": "noq_dev"
+                "AWS_PROFILE": "staging/IambicHubRole"
             },
             "justMyCode": true
         },
@@ -25,7 +29,7 @@
             "module": "iambic.main",
             "console": "integratedTerminal",
             "env": {
-                "AWS_PROFILE": "noq_dev"
+                "AWS_PROFILE": "staging/IambicHubRole"
             },
             "args": [
                 "apply",
@@ -43,7 +47,7 @@
             "module": "iambic.main",
             "console": "integratedTerminal",
             "env": {
-                "AWS_PROFILE": "noq_dev"
+                "AWS_PROFILE": "staging/IambicHubRole"
             },
             "args": [
                 "apply",
@@ -55,13 +59,49 @@
             "justMyCode": true
         },
         {
+            "name": "Iambic Git-Apply",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "env": {
+                "AWS_PROFILE": "staging/IambicHubRole"
+            },
+            "args": [
+                "git-apply",
+                "--repo-dir",
+                "../noq-templates/",
+                "--config",
+                "demo/config.yaml"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "Iambic Git-Plan",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "args": [
+                "git-plan",
+                "--repo-dir",
+                "../noq-templates/",
+                "--config",
+                "demo/config.yaml"
+            ],
+            "env": {
+                "AWS_PROFILE": "staging/IambicHubRole"
+            },
+            "justMyCode": true
+        },
+        {
             "name": "Iambic Import",
             "type": "python",
             "request": "launch",
             "module": "iambic.main",
             "console": "integratedTerminal",
             "env": {
-                "AWS_PROFILE": "arn:aws:iam::259868150464:role/IambicHubRole"
+                "AWS_PROFILE": "staging/IambicHubRole"
             },
             "args": [
                 "import",
@@ -79,7 +119,7 @@
             "module": "iambic.main",
             "console": "integratedTerminal",
             "env": {
-                "AWS_PROFILE": "noq_dev"
+                "AWS_PROFILE": "staging/IambicHubRole"
             },
             "args": [
                 "detect",
@@ -99,7 +139,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
-                "AWS_PROFILE": "arn:aws:iam::259868150464:role/IambicHubRole",
+                "AWS_PROFILE": "staging/IambicHubRole",
                 "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
                 "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
             },
@@ -115,7 +155,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
-                "AWS_PROFILE": "arn:aws:iam::259868150464:role/IambicHubRole",
+                "AWS_PROFILE": "staging/IambicHubRole",
                 "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
                 "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
             },
@@ -131,7 +171,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
-                "AWS_PROFILE": "arn:aws:iam::259868150464:role/IambicHubRole",
+                "AWS_PROFILE": "staging/IambicHubRole",
                 "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
                 "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
             },
@@ -147,7 +187,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
-                "AWS_PROFILE": "arn:aws:iam::259868150464:role/IambicHubRole",
+                "AWS_PROFILE": "staging/IambicHubRole",
                 "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
                 "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
             },
@@ -163,7 +203,23 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
-                "AWS_PROFILE": "arn:aws:iam::259868150464:role/IambicHubRole",
+                "AWS_PROFILE": "staging/IambicHubRole",
+                "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
+                "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
+            },
+        },
+        {
+            "name": "Iambic: Lambda App git-plan",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/iambic/lambda/app.py",
+            "args": [
+                "git_plan",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "AWS_PROFILE": "staging/IambicHubRole",
                 "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
                 "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
             },
@@ -179,7 +235,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
-                "AWS_PROFILE": "arn:aws:iam::259868150464:role/IambicHubRole",
+                "AWS_PROFILE": "staging/IambicHubRole",
                 "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
                 "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
             },
@@ -195,7 +251,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
-                "AWS_PROFILE": "arn:aws:iam::259868150464:role/IambicHubRole",
+                "AWS_PROFILE": "staging/IambicHubRole",
                 "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
                 "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
             },
