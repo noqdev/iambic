@@ -6,6 +6,7 @@ from iambic.aws.iam.models import MaxSessionDuration, Path
 from iambic.aws.iam.policy.models import (
     AssumeRolePolicyDocument,
     ManagedPolicyRef,
+    ManagedPolicyTemplate,
     PolicyDocument,
     PolicyStatement,
 )
@@ -43,6 +44,7 @@ def generate_docs():
         MaxSessionDuration,
         RoleAccess,
         PolicyStatement,
+        ManagedPolicyTemplate
     ]
     google_template_models = [GroupTemplate, GroupMember]
     config_models = [

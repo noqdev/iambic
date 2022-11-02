@@ -2,10 +2,17 @@
 
 ## Properties
 
-- **`template_type`** *(string)*: Default: `"NOQ::Google::GroupTemplate"`.
+- **`expires_at`** *(string)*: The date and time the resource will be/was set to deleted.
+- **`deleted`**: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+  - **Any of**
+    - *boolean*
+    - *array*
+      - **Items**: Refer to *[#/definitions/Deleted](#definitions/Deleted)*.
+- **`template_type`** *(string)*: Default: `"NOQ::Google::Group"`.
 - **`file_path`** *(string)*
-- **`read_only`** *(boolean)*: If set to True, iambic will only log drift instead of apply changes when drift is detected. Default: `false`.
+- **`read_only`** *(boolean)*: Default: `false`.
 - **`name`** *(string)*
+- **`domain`** *(string)*
 - **`email`** *(string)*
 - **`description`** *(string)*
 - **`welcome_message`** *(string)*
