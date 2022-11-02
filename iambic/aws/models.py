@@ -19,32 +19,32 @@ ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{account_
 
 
 class AccessModel(BaseModel):
-    included_accounts: List = Field(
+    included_accounts: list[str] = Field(
         ["*"],
-        description="A list of account ids and/or account names this statement applies to. "
-        "Account ids/names can be represented as a regex and string",
+        description=("A list of account ids and/or account names this statement applies to. "
+        "Account ids/names can be represented as a regex and string"),
     )
-    excluded_accounts: Optional[List] = Field(
+    excluded_accounts: Optional[list[str]] = Field(
         [],
-        description="A list of account ids and/or account names this statement explicitly does not apply to. "
-        "Account ids/names can be represented as a regex and string",
+        description=("A list of account ids and/or account names this statement explicitly does not apply to. "
+        "Account ids/names can be represented as a regex and string"),
     )
-    included_orgs: List = Field(
+    included_orgs: list[str] = Field(
         ["*"],
-        description="A list of AWS organization ids this statement applies to. "
-        "Org ids can be represented as a regex and string",
+        description=("A list of AWS organization ids this statement applies to. "
+        "Org ids can be represented as a regex and string"),
     )
-    excluded_orgs: Optional[List] = Field(
+    excluded_orgs: Optional[list[str]] = Field(
         [],
-        description="A list of AWS organization ids this statement explicitly does not apply to. "
-        "Org ids can be represented as a regex and string",
+        description=("A list of AWS organization ids this statement explicitly does not apply to. "
+        "Org ids can be represented as a regex and string"),
     )
 
 
 class Deleted(AccessModel):
     deleted: bool = Field(
-        description="Denotes whether the resource has been removed from AWS."
-        "Upon being set to true, the resource will be deleted the next time iambic is ran.",
+        description=("Denotes whether the resource has been removed from AWS."
+        "Upon being set to true, the resource will be deleted the next time iambic is ran."),
     )
 
 
@@ -54,8 +54,8 @@ class ExpiryModel(BaseModel):
     )
     deleted: Optional[Union[bool, List[Deleted]]] = Field(
         False,
-        description="Denotes whether the resource has been removed from AWS."
-        "Upon being set to true, the resource will be deleted the next time iambic is ran.",
+        description=("Denotes whether the resource has been removed from AWS."
+        "Upon being set to true, the resource will be deleted the next time iambic is ran."),
     )
 
 

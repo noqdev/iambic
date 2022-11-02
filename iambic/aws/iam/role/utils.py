@@ -41,7 +41,7 @@ async def get_role_policy(role_name: str, policy_name: str, iam_client):
 
 async def get_role_inline_policies(
     role_name: str, iam_client, as_dict: bool = True
-) -> Union[list | dict]:
+) -> Union[list , dict]:
     policy_names = await get_role_inline_policy_names(role_name, iam_client)
     policies = await asyncio.gather(
         *[

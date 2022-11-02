@@ -20,10 +20,10 @@
             "env": {
                 "AWS_PROFILE": "staging/IambicHubRole"
             },
-            "justMyCode": true
+            "justMyCode": false
         },
         {
-            "name": "Iambic Apply",
+            "name": "Iambic Apply AWS Template",
             "type": "python",
             "request": "launch",
             "module": "iambic.main",
@@ -53,6 +53,24 @@
                 "apply",
                 "--template",
                 "../noq-templates/google_groups/noq.dev/dockerhub.yaml",
+                "--config",
+                "demo/config.yaml"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "Iambic Apply All Templates",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "env": {
+                "AWS_PROFILE": "staging/IambicHubRole"
+            },
+            "args": [
+                "apply",
+                "-d",
+                "../noq-templates/",
                 "--config",
                 "demo/config.yaml"
             ],
