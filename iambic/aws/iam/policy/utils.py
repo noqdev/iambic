@@ -3,7 +3,7 @@ import asyncio
 from botocore.exceptions import ClientError
 from deepdiff import DeepDiff
 
-from iambic.aws.utils import boto3_retry, paginated_search
+from iambic.aws.utils import paginated_search
 from iambic.core import noq_json as json
 from iambic.core.context import ctx
 from iambic.core.logger import log
@@ -23,7 +23,6 @@ async def list_managed_policy_tags(managed_policy_arn: str, iam_client) -> list[
     )
 
 
-@boto3_retry
 async def get_managed_policy_version_doc(
     managed_policy_arn: str, version_id: str, iam_client, **kwargs
 ) -> dict:
@@ -40,7 +39,6 @@ async def get_managed_policy_version_doc(
     )
 
 
-@boto3_retry
 async def get_managed_policy(managed_policy_arn: str, iam_client, **kwargs) -> dict:
     try:
         response = (
@@ -94,12 +92,10 @@ async def list_managed_policies(
     )
 
 
-@boto3_retry
 async def delete_managed_policy(policy_arn: str, iam_client):
     await aio_wrapper(iam_client.delete_policy, PolicyArn=policy_arn)
 
 
-@boto3_retry
 async def update_managed_policy(
     policy_arn: str,
     iam_client,
