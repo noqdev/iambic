@@ -24,9 +24,7 @@ from iambic.core.template_generation import (
 )
 from iambic.core.utils import NoqSemaphore, resource_file_upsert
 
-ROLE_RESPONSE_DIR = pathlib.Path.home().joinpath(
-    ".noqform", "resources", "aws", "roles"
-)
+ROLE_RESPONSE_DIR = pathlib.Path.home().joinpath(".iambic", "resources", "aws", "roles")
 
 
 def get_role_dir(base_dir: str) -> str:
@@ -311,7 +309,7 @@ async def create_templated_role(  # noqa: C901
 async def generate_aws_role_templates(configs: list[Config], base_output_dir: str):
     aws_account_map = get_aws_account_map(configs)
     existing_template_map = await get_existing_template_file_map(
-        base_output_dir, "AWS::IAM::ROLE"
+        base_output_dir, "AWS::IAM::Role"
     )
     role_dir = get_role_dir(base_output_dir)
     generate_account_role_resource_files_semaphore = NoqSemaphore(
