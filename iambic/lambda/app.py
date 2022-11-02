@@ -13,6 +13,7 @@ from iambic.main import (
     run_clone_repos,
     run_detect,
     run_git_apply,
+    run_git_plan,
     run_import,
     run_plan,
 )
@@ -30,6 +31,7 @@ class LambdaCommand(Enum):
     run_apply = "apply"
     run_detect = "detect"
     run_git_apply = "git_apply"
+    run_git_plan = "git_plan"
     run_clone_git_repos = "clone_git_repos"
 
 
@@ -95,7 +97,9 @@ def run_handler(event=None, context=None):
                 CONFIG_PATH,
             )
         case LambdaCommand.run_git_apply.value:
-            return run_git_apply(CONFIG_PATH, REPO_BASE_PATH)
+            return run_git_apply(CONFIG_PATH, None, REPO_BASE_PATH)
+        case LambdaCommand.run_git_plan.value:
+            return run_git_plan(CONFIG_PATH, None, REPO_BASE_PATH)
         case LambdaCommand.run_clone_git_repos.value:
             return run_clone_repos(CONFIG_PATH, REPO_BASE_PATH)
         case _:
