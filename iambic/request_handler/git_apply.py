@@ -1,7 +1,7 @@
 import asyncio
 
 from iambic.config.models import Config
-from iambic.core.context import ctx
+from iambic.core.context import ExecutionContext, ctx
 from iambic.core.git import (
     create_templates_for_deleted_files,
     create_templates_for_modified_files,
@@ -13,7 +13,7 @@ from iambic.core.parser import load_templates
 
 
 async def apply_git_changes(
-    config_path: str, repo_dir: str
+    config_path: str, repo_dir: str, context: ExecutionContext = None
 ) -> list[TemplateChangeDetails]:
     """Retrieves files added/updated/or removed when comparing the current branch to master
 
@@ -27,6 +27,9 @@ async def apply_git_changes(
     :param repo_dir:
     :return:
     """
+    if context is None:
+        context = ctx
+
     config = Config.load(config_path)
     config.set_account_defaults()
     file_changes = await retrieve_git_changes(repo_dir)
@@ -55,9 +58,9 @@ async def apply_git_changes(
         if template_change.proposed_changes
     ]
 
-    if ctx.execute and template_changes:
+    if context.execute and template_changes:
         log.info("Finished applying changes.")
-    elif not ctx.execute:
+    elif not context.execute:
         log.info("Finished scanning for changes.")
     else:
         log.info("No changes found.")
