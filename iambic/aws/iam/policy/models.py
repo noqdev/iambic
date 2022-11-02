@@ -3,6 +3,7 @@ import json
 from itertools import chain
 from typing import List, Optional, Union
 
+import botocore
 from jinja2 import BaseLoader, Environment
 from pydantic import Field, constr
 
@@ -72,7 +73,7 @@ class Condition(BaseModel):
     """
 
     # Key = service/resource_type
-    # Value = resource_value | list[resource_value]
+    # Value = resource_value , list[resource_value]
 
     # String conditionals
     string_equals: Optional[dict] = None
@@ -116,24 +117,24 @@ class Condition(BaseModel):
 
 class PolicyStatement(AccessModel, ExpiryModel):
     effect: str = Field(..., description="Allow | Deny")
-    principal: Optional[Union[Principal | str]] = None
-    not_principal: Optional[Union[Principal | str]] = None
-    action: Optional[Union[List[str] | str]] = Field(
+    principal: Optional[Union[Principal, str]] = None
+    not_principal: Optional[Union[Principal, str]] = None
+    action: Optional[Union[List[str] , str]] = Field(
         None,
         description="A single regex or list of regexes. "
         "Values are the actions that can be performed on the resources in the policy statement",
         example="dynamodb:list*",
     )
-    not_action: Optional[Union[List[str] | str]] = Field(
+    not_action: Optional[Union[List[str], str]] = Field(
         None,
         description="An advanced policy element that explicitly matches everything except the specified list of actions."
         "DON'T use this with effect: allow in the same statement OR policy",
     )
-    resource: Optional[Union[List[str] | str]] = Field(
+    resource: Optional[Union[List[str], str]] = Field(
         None,
         description="A single regex or list of regexes. Values specified are the resources the statement applies to",
     )
-    not_resource: Optional[Union[List[str] | str]] = Field(
+    not_resource: Optional[Union[List[str], str]] = Field(
         None,
         description="An advanced policy element that explicitly matches every resource except those specified."
         "DON'T use this with effect: allow and action: '*'",
@@ -223,12 +224,12 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
     policy_name: str = Field(
         description="The name of the policy.",
     )
-    path: Optional[Union[str | List[Path]]] = "/"
-    description: Optional[Union[str | list[Description]]] = Field(
+    path: Optional[Union[str, List[Path]]] = "/"
+    description: Optional[Union[str, list[Description]]] = Field(
         "",
         description="Description of the role",
     )
-    policy_document: Union[ManagedPolicyDocument | List[ManagedPolicyDocument]]
+    policy_document: Union[ManagedPolicyDocument, List[ManagedPolicyDocument]]
     tags: Optional[List[Tag]] = Field(
         [],
         description="List of tags attached to the role",
@@ -246,7 +247,7 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
 
     async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
         boto3_session = aws_account.get_boto3_session()
-        client = boto3_session.client("iam")
+        client = boto3_session.client("iam", config=botocore.client.Config(max_pool_connections=50))
         account_policy = self.apply_resource_dict(aws_account)
         policy_name = account_policy["PolicyName"]
         account_change_details = AccountChangeDetails(

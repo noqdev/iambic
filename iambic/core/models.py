@@ -5,13 +5,50 @@ from typing import Optional, Union
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
+from types import GenericAlias
+from typing import List, Optional, Set, Union, get_args, get_origin
+
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic.fields import ModelField
 
 from iambic.aws.utils import apply_to_account
 from iambic.config.models import AWSAccount, Config
 from iambic.core.utils import snake_to_camelcap, yaml
 
+def to_camel(string):
+    """Convert a snake_case string to CamelCase"""
+    return "".join(word.capitalize() for word in string.split("_"))
 
 class BaseModel(PydanticBaseModel):
+    class Config:
+        alias_generator = to_camel
+        allow_population_by_field_name = True
+        
+    @classmethod
+    def required_fields(cls) -> list[str]:
+        return [
+            field_name
+            for field_name, field in cls.__dict__.get("__fields__", {}).items()
+            if field != Optional
+        ]
+    
+    @staticmethod
+    def get_field_type(field: any) -> any:
+        """
+        Resolves the base field type for a model
+        """
+        field_type = field.type_ if isinstance(field, ModelField) else field
+        if field_type == Optional:
+            field_type = field_type[0]
+
+        if (
+            type(field_type) in [dict, GenericAlias, list, List, Set, set]
+            or get_origin(field_type) == Union
+        ) and (field_types := get_args(field_type)):
+            return BaseModel.get_field_type(field_types[0])
+
+        return field_type
+
     def get_attribute_val_for_account(
         self, aws_account: AWSAccount, attr: str, as_boto_dict: bool = True
     ):
@@ -108,14 +145,14 @@ class ProposedChange(PydanticBaseModel):
     attribute: Optional[str]
     resource_id: Optional[str]
     resource_type: Optional[str]
-    current_value: Optional[Union[list | dict | str | int]]
-    new_value: Optional[Union[list | dict | str | int]]
+    current_value: Optional[Union[list , dict , str , int]]
+    new_value: Optional[Union[list , dict , str , int]]
     change_summary: Optional[dict]
 
 
 class AccountChangeDetails(PydanticBaseModel):
-    account: Union[str | int]
-    resource_id: Union[str | int]
+    account: Union[str , int]
+    resource_id: Union[str , int]
     current_value: Optional[dict]
     new_value: Optional[dict]
     proposed_changes: list[ProposedChange] = Field(default=[])
@@ -126,7 +163,7 @@ class TemplateChangeDetails(PydanticBaseModel):
     resource_type: str
     template_path: str
     # Supports multi-account providers and single-account providers
-    proposed_changes: Optional[list[AccountChangeDetails] | list[ProposedChange]]
+    proposed_changes: Optional[Union[list[AccountChangeDetails], list[ProposedChange]]] = None
 
     def dict(
         self,
