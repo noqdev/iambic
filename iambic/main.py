@@ -15,6 +15,7 @@ from iambic.request_handler.apply import apply_changes, flag_expired_resources
 from iambic.request_handler.detect import detect_changes
 from iambic.request_handler.generate import generate_templates
 from iambic.request_handler.git_apply import apply_git_changes
+from iambic.request_handler.git_plan import plan_git_changes
 
 warnings.filterwarnings("ignore", category=FutureWarning, module="botocore.client")
 
@@ -197,6 +198,42 @@ def git_apply(config_path: str, repo_dir: str):
 def run_git_apply(config_path: str, repo_dir: str):
     template_changes = asyncio.run(
         apply_git_changes(config_path, repo_dir or str(pathlib.Path.cwd()))
+    )
+    output_proposed_changes(template_changes)
+
+
+@cli.command()
+@click.option(
+    "--config",
+    "-c",
+    "config_path",
+    type=click.Path(exists=True),
+    help="The config.yaml file path to apply. Example: ./prod/config.yaml",
+)
+@click.option(
+    "--template",
+    "-t",
+    "templates",
+    required=False,
+    multiple=True,
+    type=click.Path(exists=True),
+    help="The template file path(s) to apply. Example: ./aws/roles/engineering.yaml",
+)
+@click.option(
+    "--repo-dir",
+    "-d",
+    "repo_dir",
+    required=False,
+    type=click.Path(exists=True),
+    help="The repo directory containing the templates. Example: ~/noq-templates",
+)
+def git_plan(config_path: str, templates: list[str], repo_dir: str):
+    run_git_plan(config_path, templates, repo_dir)
+
+
+def run_git_plan(config_path: str, templates: list[str], repo_dir: str):
+    template_changes = asyncio.run(
+        plan_git_changes(config_path, repo_dir or str(pathlib.Path.cwd()))
     )
     output_proposed_changes(template_changes)
 

@@ -29,6 +29,13 @@ Noq Enterprise offers many more enhancements on top of Iambic. Visit [https://ww
 | Prune Unused IAM Permissions, Access, Identities,<br>and Credentials | Coming<br>Soon! |
 | Generate Dynamic Reports based on<br>human identities, cloud identities, access, <br>and permissions | Coming<br>Soon! |
 
+## Setup for development
+
+# `python3.10 -m venv env`
+# `. env/bin/activate`
+# `pip install poetry` # (last tested with poetry version 1.2.2)
+# `poetry install`
+
 ## How to run
 
 `python -m iambic.main import -c demo/config.yaml`
