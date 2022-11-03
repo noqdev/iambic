@@ -238,7 +238,7 @@ async def apply_role_managed_policies(
                 )
             )
         if context.execute:
-            log_str = f"{log_str} Adding managed policies..."
+            log_str = f"{log_str} Attaching managed policies..."
             tasks = [
                 aio_wrapper(
                     iam_client.attach_role_policy,
@@ -266,7 +266,7 @@ async def apply_role_managed_policies(
                 )
             )
         if context.execute:
-            log_str = f"{log_str} Removing managed policies..."
+            log_str = f"{log_str} Detaching managed policies..."
             tasks.extend(
                 [
                     aio_wrapper(
