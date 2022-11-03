@@ -3,7 +3,7 @@ from enum import Enum
 
 from iambic.aws.models import ExpiryModel
 from iambic.config.models import Config, GoogleProject
-from iambic.core.context import ctx
+from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import AccountChangeDetails, BaseTemplate, TemplateChangeDetails
 
@@ -74,11 +74,15 @@ class GroupMemberStatus(Enum):
 
 class GoogleTemplate(BaseTemplate, ExpiryModel):
     async def _apply_to_account(
-        self, google_project: GoogleProject
+        self,
+        google_project: GoogleProject,
+        context: ExecutionContext,
     ) -> AccountChangeDetails:
         raise NotImplementedError
 
-    async def apply(self, config: Config) -> TemplateChangeDetails:
+    async def apply(
+        self, config: Config, context: ExecutionContext
+    ) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
             resource_id=self.email,
@@ -90,12 +94,12 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
         )
         for account in config.google_projects:
             # if evaluate_on_google_account(self, account):
-            if ctx.execute:
+            if context.execute:
                 log_str = "Applying changes to resource."
             else:
                 log_str = "Detecting changes for resource."
             log.info(log_str, account=str(account), **log_params)
-            tasks.append(self._apply_to_account(account))
+            tasks.append(self._apply_to_account(account, context))
 
         account_changes = await asyncio.gather(*tasks)
         template_changes.proposed_changes = [
@@ -103,7 +107,7 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
             for account_change in account_changes
             if any(account_change.proposed_changes)
         ]
-        if account_changes and ctx.execute:
+        if account_changes and context.execute:
             log.info(
                 "Successfully applied resource changes to all Google projects.",
                 **log_params,

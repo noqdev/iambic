@@ -5,7 +5,7 @@ from deepdiff import DeepDiff
 
 from iambic.aws.utils import paginated_search
 from iambic.core import noq_json as json
-from iambic.core.context import ctx
+from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import NoqSemaphore, aio_wrapper
@@ -103,6 +103,7 @@ async def update_managed_policy(
     existing_policy_document: dict,
     read_only: bool,
     log_params: dict,
+    context: ExecutionContext,
 ) -> list[ProposedChange]:
     response = []
     if isinstance(existing_policy_document, str):
@@ -156,6 +157,7 @@ async def apply_managed_policy_tags(
     existing_tags: list[dict],
     read_only: bool,
     log_params: dict,
+    context: ExecutionContext,
 ) -> list[ProposedChange]:
     existing_tag_map = {tag["Key"]: tag["Value"] for tag in existing_tags}
     template_tag_map = {tag["Key"]: tag["Value"] for tag in template_tags}
@@ -197,7 +199,7 @@ async def apply_managed_policy_tags(
                     new_value=tag,
                 )
             )
-        if ctx.execute:
+        if context.execute:
             log_str = f"{log_str} Adding tags..."
             tasks.append(
                 aio_wrapper(

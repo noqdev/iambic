@@ -5,7 +5,7 @@ from typing import Union
 from deepdiff import DeepDiff
 
 from iambic.aws.utils import paginated_search
-from iambic.core.context import ctx
+from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper
@@ -99,6 +99,7 @@ async def apply_role_tags(
     template_tags: list[dict],
     existing_tags: list[dict],
     log_params: dict,
+    context: ExecutionContext,
 ) -> list[ProposedChange]:
     existing_tag_map = {tag["Key"]: tag["Value"] for tag in existing_tags}
     template_tag_map = {tag["Key"]: tag["Value"] for tag in template_tags}
@@ -119,7 +120,7 @@ async def apply_role_tags(
                 change_summary={"TagKeys": tags_to_remove},
             )
         )
-        if ctx.execute:
+        if context.execute:
             log_str = f"{log_str} Removing tags..."
             tasks.append(
                 aio_wrapper(
@@ -138,7 +139,7 @@ async def apply_role_tags(
                     new_value=tag,
                 )
             )
-        if ctx.execute:
+        if context.execute:
             log_str = f"{log_str} Adding tags..."
             tasks.append(
                 aio_wrapper(iam_client.tag_role, RoleName=role_name, Tags=tags_to_apply)
@@ -157,6 +158,7 @@ async def update_assume_role_policy(
     template_policy_document: dict,
     existing_policy_document: str,
     log_params: dict,
+    context: ExecutionContext,
 ) -> list[ProposedChange]:
     response = []
     policy_drift = None
@@ -193,7 +195,7 @@ async def update_assume_role_policy(
                 )
             )
 
-        if ctx.execute:
+        if context.execute:
             boto_action = "Creating" if existing_policy_document else "Updating"
             log_str = f"{log_str} {boto_action} AssumeRolePolicyDocument..."
             await aio_wrapper(
@@ -212,6 +214,7 @@ async def apply_role_managed_policies(
     template_policies: list[dict],
     existing_policies: list[dict],
     log_params: dict,
+    context: ExecutionContext,
 ) -> list[ProposedChange]:
     tasks = []
     response = []
@@ -234,8 +237,8 @@ async def apply_role_managed_policies(
                     attribute="managed_policies",
                 )
             )
-        if ctx.execute:
-            log_str = f"{log_str} Adding managed policies..."
+        if context.execute:
+            log_str = f"{log_str} Attaching managed policies..."
             tasks = [
                 aio_wrapper(
                     iam_client.attach_role_policy,
@@ -262,8 +265,8 @@ async def apply_role_managed_policies(
                     attribute="managed_policies",
                 )
             )
-        if ctx.execute:
-            log_str = f"{log_str} Removing managed policies..."
+        if context.execute:
+            log_str = f"{log_str} Detaching managed policies..."
             tasks.extend(
                 [
                     aio_wrapper(
@@ -288,6 +291,7 @@ async def apply_role_inline_policies(
     template_policies: list[dict],
     existing_policies: list[dict],
     log_params: dict,
+    context: ExecutionContext,
 ) -> list[ProposedChange]:
     tasks = []
     response = []
@@ -303,7 +307,7 @@ async def apply_role_inline_policies(
     for policy_name in existing_policy_map.keys():
         if not template_policy_map.get(policy_name):
             log_str = "Stale inline policies discovered."
-            if ctx.execute:
+            if context.execute:
                 log_str = f"{log_str} Removing inline policy..."
                 response.append(
                     ProposedChange(
@@ -360,7 +364,7 @@ async def apply_role_inline_policies(
                 )
 
             log_str = f"{resource_existence} inline policies discovered."
-            if ctx.execute:
+            if context.execute:
                 log_str = f"{log_str} {boto_action} inline policy..."
                 tasks.append(
                     aio_wrapper(

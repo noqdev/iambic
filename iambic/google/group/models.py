@@ -6,7 +6,7 @@ from pydantic import Field
 
 from iambic.aws.models import ExpiryModel
 from iambic.config.models import GoogleProject
-from iambic.core.context import ctx
+from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import AccountChangeDetails, ProposedChange, ProposedChangeType
 from iambic.google.group.utils import (
@@ -73,7 +73,9 @@ class GroupTemplate(GoogleTemplate):
     # TODO: conversation_history
     # TODO: There is more. Check google group settings page
 
-    def apply_resource_dict(self, google_project: GoogleProject):
+    def apply_resource_dict(
+        self, google_project: GoogleProject, context: ExecutionContext
+    ):
         return {
             "name": self.name,
             "email": self.email,
@@ -82,9 +84,9 @@ class GroupTemplate(GoogleTemplate):
         }
 
     async def _apply_to_account(
-        self, google_project: GoogleProject
+        self, google_project: GoogleProject, context: ExecutionContext
     ) -> AccountChangeDetails:
-        proposed_group = self.apply_resource_dict(google_project)
+        proposed_group = self.apply_resource_dict(google_project, context)
         change_details = AccountChangeDetails(
             account=self.domain,
             resource_id=self.email,
@@ -123,7 +125,7 @@ class GroupTemplate(GoogleTemplate):
                 )
             )
             log_str = "New resource found in code."
-            if not ctx.execute:
+            if not context.execute:
                 log.info(log_str, **log_params)
                 # Exit now because apply functions won't work if resource doesn't exist
                 return change_details
@@ -146,13 +148,16 @@ class GroupTemplate(GoogleTemplate):
         # TODO: Support group expansion
         tasks.extend(
             [
-                update_group_domain(current_group.domain, self.domain, log_params),
+                update_group_domain(
+                    current_group.domain, self.domain, log_params, context
+                ),
                 update_group_email(
                     current_group.email,
                     self.email,
                     self.domain,
                     google_project,
                     log_params,
+                    context,
                 ),
                 update_group_name(
                     self.email,
@@ -161,6 +166,7 @@ class GroupTemplate(GoogleTemplate):
                     self.domain,
                     google_project,
                     log_params,
+                    context,
                 ),
                 update_group_description(
                     self.email,
@@ -169,6 +175,7 @@ class GroupTemplate(GoogleTemplate):
                     self.domain,
                     google_project,
                     log_params,
+                    context,
                 ),
                 update_group_members(
                     self.email,
@@ -177,6 +184,7 @@ class GroupTemplate(GoogleTemplate):
                     self.domain,
                     google_project,
                     log_params,
+                    context,
                 ),
             ]
         )
@@ -187,7 +195,7 @@ class GroupTemplate(GoogleTemplate):
                 list(chain.from_iterable(changes_made))
             )
 
-        if ctx.execute:
+        if context.execute:
             log.debug(
                 "Successfully finished execution for resource",
                 changes_made=bool(change_details.proposed_changes),
