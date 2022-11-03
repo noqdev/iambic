@@ -253,6 +253,13 @@ class RoleTemplate(AWSTemplate, AccessModel):
                         )
                     else:
                         log.info(log_str, **update_resource_log_params)
+                        account_change_details.proposed_changes.append(
+                            ProposedChange(
+                                change_type=ProposedChangeType.UPDATE,
+                                resource_id=role_name,
+                                resource_type=self.resource_type,
+                            )
+                        )
             else:
                 account_change_details.proposed_changes.append(
                     ProposedChange(
