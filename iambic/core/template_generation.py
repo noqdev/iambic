@@ -308,7 +308,7 @@ async def set_included_accounts_for_grouped_attribute(
     aws_account_map: dict[str, AWSAccount],
     number_of_accounts_resource_on: int,
     grouped_attribute,
-) -> Union[list , dict]:
+) -> Union[list, dict]:
     """Takes a grouped attribute and formats its included aws_accounts to * or a list of account names
 
     :param aws_account_map: {account_id: aws_account}
@@ -349,9 +349,9 @@ async def set_included_accounts_for_grouped_attribute(
 async def group_int_or_str_attribute(
     aws_account_map: dict[str, AWSAccount],
     number_of_accounts_resource_on: int,
-    account_resources: Union[dict , list[dict]],
-    key: Union[int , str],
-) -> Union[int , str , list[dict]]:
+    account_resources: Union[dict, list[dict]],
+    key: Union[int, str],
+) -> Union[int, str, list[dict]]:
     """Groups an attribute by aws_accounts, formats the attribute and normalizes the included aws_accounts.
 
     :param aws_account_map:
@@ -389,7 +389,7 @@ async def group_dict_attribute(
     number_of_accounts_resource_on: int,
     account_resources: list[dict],
     is_dict_attr: bool = True,
-) -> Union[dict , list[dict]]:
+) -> Union[dict, list[dict]]:
     """Groups an attribute by aws_accounts, formats the attribute and normalizes the included aws_accounts.
 
     :param aws_account_map: {account_id: aws_account}
