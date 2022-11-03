@@ -119,7 +119,7 @@ class PolicyStatement(AccessModel, ExpiryModel):
     effect: str = Field(..., description="Allow | Deny")
     principal: Optional[Union[Principal, str]] = None
     not_principal: Optional[Union[Principal, str]] = None
-    action: Optional[Union[List[str] , str]] = Field(
+    action: Optional[Union[List[str], str]] = Field(
         None,
         description="A single regex or list of regexes. "
         "Values are the actions that can be performed on the resources in the policy statement",
@@ -247,7 +247,9 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
 
     async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
         boto3_session = aws_account.get_boto3_session()
-        client = boto3_session.client("iam", config=botocore.client.Config(max_pool_connections=50))
+        client = boto3_session.client(
+            "iam", config=botocore.client.Config(max_pool_connections=50)
+        )
         account_policy = self.apply_resource_dict(aws_account)
         policy_name = account_policy["PolicyName"]
         account_change_details = AccountChangeDetails(

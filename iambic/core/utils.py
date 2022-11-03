@@ -48,7 +48,7 @@ async def resource_file_upsert(
         await f.write(json.dumps(content_as_dict, indent=2))
 
 
-async def file_regex_search(file_path: str, re_pattern: str) -> Union[str , None]:
+async def file_regex_search(file_path: str, re_pattern: str) -> Union[str, None]:
     async with aiofiles.open(file_path, mode="r") as f:
         file_content = await f.read()
         if re.search(re_pattern, file_content):

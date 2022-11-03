@@ -1,29 +1,28 @@
 import json
 from enum import Enum
-from typing import Optional, Union
+from types import GenericAlias
+from typing import List, Optional, Set, Union, get_args, get_origin
 
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
-from types import GenericAlias
-from typing import List, Optional, Set, Union, get_args, get_origin
-
-from pydantic import BaseModel as PydanticBaseModel
 from pydantic.fields import ModelField
 
 from iambic.aws.utils import apply_to_account
 from iambic.config.models import AWSAccount, Config
 from iambic.core.utils import snake_to_camelcap, yaml
 
+
 def to_camel(string):
     """Convert a snake_case string to CamelCase"""
     return "".join(word.capitalize() for word in string.split("_"))
+
 
 class BaseModel(PydanticBaseModel):
     class Config:
         alias_generator = to_camel
         allow_population_by_field_name = True
-        
+
     @classmethod
     def required_fields(cls) -> list[str]:
         return [
@@ -31,7 +30,7 @@ class BaseModel(PydanticBaseModel):
             for field_name, field in cls.__dict__.get("__fields__", {}).items()
             if field != Optional
         ]
-    
+
     @staticmethod
     def get_field_type(field: any) -> any:
         """
@@ -145,14 +144,14 @@ class ProposedChange(PydanticBaseModel):
     attribute: Optional[str]
     resource_id: Optional[str]
     resource_type: Optional[str]
-    current_value: Optional[Union[list , dict , str , int]]
-    new_value: Optional[Union[list , dict , str , int]]
+    current_value: Optional[Union[list, dict, str, int]]
+    new_value: Optional[Union[list, dict, str, int]]
     change_summary: Optional[dict]
 
 
 class AccountChangeDetails(PydanticBaseModel):
-    account: Union[str , int]
-    resource_id: Union[str , int]
+    account: Union[str, int]
+    resource_id: Union[str, int]
     current_value: Optional[dict]
     new_value: Optional[dict]
     proposed_changes: list[ProposedChange] = Field(default=[])
@@ -163,7 +162,9 @@ class TemplateChangeDetails(PydanticBaseModel):
     resource_type: str
     template_path: str
     # Supports multi-account providers and single-account providers
-    proposed_changes: Optional[Union[list[AccountChangeDetails], list[ProposedChange]]] = None
+    proposed_changes: Optional[
+        Union[list[AccountChangeDetails], list[ProposedChange]]
+    ] = None
 
     def dict(
         self,

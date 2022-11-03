@@ -44,7 +44,7 @@ def generate_docs():
         MaxSessionDuration,
         RoleAccess,
         PolicyStatement,
-        ManagedPolicyTemplate
+        ManagedPolicyTemplate,
     ]
     google_template_models = [GroupTemplate, GroupMember]
     config_models = [
