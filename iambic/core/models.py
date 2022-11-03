@@ -23,19 +23,19 @@ class BaseModel(PydanticBaseModel):
         attr_val = getattr(self, attr)
 
         if as_boto_dict and hasattr(attr_val, "_apply_resource_dict"):
-            return attr_val._apply_resource_dict(aws_account)
+            return attr_val._apply_resource_dict(aws_account, context)
         elif not isinstance(attr_val, list):
             return attr_val
 
         matching_definitions = [
-            val for val in attr_val if apply_to_account(val, aws_account)
+            val for val in attr_val if apply_to_account(val, aws_account, context)
         ]
         if len(matching_definitions) == 0:
             # Fallback to the default definition
             return self.__fields__[attr].default
         elif as_boto_dict:
             return [
-                match._apply_resource_dict(aws_account)
+                match._apply_resource_dict(aws_account, context)
                 if hasattr(match, "_apply_resource_dict")
                 else match
                 for match in matching_definitions
