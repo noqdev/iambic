@@ -200,12 +200,16 @@ class ManagedPolicyDocument(AccessModel):
         description="List of policy statements",
     )
 
-    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> str:
-        resource_dict = super()._apply_resource_dict(aws_account)
+    def _apply_resource_dict(
+        self, aws_account: AWSAccount = None, context: ExecutionContext = None
+    ) -> str:
+        resource_dict = super()._apply_resource_dict(aws_account, context)
         return json.dumps(resource_dict)
 
-    def apply_resource_dict(self, aws_account: AWSAccount) -> dict:
-        response = json.loads(self._apply_resource_dict(aws_account))
+    def apply_resource_dict(
+        self, aws_account: AWSAccount, context: ExecutionContext
+    ) -> dict:
+        response = json.loads(self._apply_resource_dict(aws_account, context))
         variables = {var.key: var.value for var in aws_account.variables}
         variables["account_id"] = aws_account.account_id
         variables["account_name"] = aws_account.account_name
