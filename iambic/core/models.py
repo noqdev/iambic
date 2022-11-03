@@ -8,12 +8,17 @@ from pydantic import Field
 
 from iambic.aws.utils import apply_to_account
 from iambic.config.models import AWSAccount, Config
+from iambic.core.context import ExecutionContext
 from iambic.core.utils import snake_to_camelcap, yaml
 
 
 class BaseModel(PydanticBaseModel):
     def get_attribute_val_for_account(
-        self, aws_account: AWSAccount, attr: str, as_boto_dict: bool = True
+        self,
+        aws_account: AWSAccount,
+        attr: str,
+        as_boto_dict: bool = True,
+        context: ExecutionContext = None,
     ):
         attr_val = getattr(self, attr)
 
@@ -38,7 +43,9 @@ class BaseModel(PydanticBaseModel):
         else:
             return matching_definitions
 
-    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
+    def _apply_resource_dict(
+        self, aws_account: AWSAccount = None, context: ExecutionContext = None
+    ) -> dict:
         exclude_keys = {
             "deleted",
             "expires_at",
@@ -54,7 +61,7 @@ class BaseModel(PydanticBaseModel):
 
         if aws_account:
             resource_dict = {
-                k: self.get_attribute_val_for_account(aws_account, k)
+                k: self.get_attribute_val_for_account(aws_account, k, context=context)
                 for k in self.__dict__.keys()
                 if k not in exclude_keys
             }
@@ -66,8 +73,10 @@ class BaseModel(PydanticBaseModel):
 
         return {self.case_convention(k): v for k, v in resource_dict.items()}
 
-    def apply_resource_dict(self, aws_account: AWSAccount) -> dict:
-        response = self._apply_resource_dict(aws_account)
+    def apply_resource_dict(
+        self, aws_account: AWSAccount, context: ExecutionContext
+    ) -> dict:
+        response = self._apply_resource_dict(aws_account, context)
         variables = {var.key: var.value for var in aws_account.variables}
         variables["account_id"] = aws_account.account_id
         variables["account_name"] = aws_account.account_name
@@ -205,7 +214,9 @@ class BaseTemplate(BaseModel):
         with open(self.file_path, "w") as f:
             f.write(as_yaml)
 
-    async def apply(self, config: Config) -> TemplateChangeDetails:
+    async def apply(
+        self, config: Config, context: ExecutionContext
+    ) -> TemplateChangeDetails:
         raise NotImplementedError
 
     @classmethod

@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 from enum import Enum
 
-from iambic.core.context import ctx
+from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.utils import aio_wrapper, camel_to_snake
 
@@ -91,10 +91,12 @@ def get_closest_value(matching_values: list, aws_account):
     return account_value_hit["returns"]
 
 
-def evaluate_on_account(resource, aws_account) -> bool:
+def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> bool:
     from iambic.aws.models import AccessModel
 
-    if ctx.execute and (aws_account.read_only or getattr(resource, "read_only", False)):
+    if context.execute and (
+        aws_account.read_only or getattr(resource, "read_only", False)
+    ):
         return False
     if not issubclass(type(resource), AccessModel):
         return True
@@ -132,7 +134,7 @@ def evaluate_on_account(resource, aws_account) -> bool:
     return False
 
 
-def apply_to_account(resource, aws_account) -> bool:
+def apply_to_account(resource, aws_account, context: ExecutionContext) -> bool:
     from iambic.aws.models import Deleted
 
     if hasattr(resource, "deleted"):
@@ -147,7 +149,7 @@ def apply_to_account(resource, aws_account) -> bool:
             if deleted_obj and deleted_obj.deleted and not deleted_resource_type:
                 return False
 
-    return evaluate_on_account(resource, aws_account)
+    return evaluate_on_account(resource, aws_account, context)
 
 
 async def remove_expired_resources(
