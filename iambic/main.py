@@ -77,7 +77,7 @@ def run_plan(config_path: str, templates: list[str], repo_dir: str):
     config = Config.load(config_path)
     config.set_account_defaults()
     ctx.eval_only = True
-    output_proposed_changes(asyncio.run(apply_changes(config, templates)))
+    output_proposed_changes(asyncio.run(apply_changes(config, templates, ctx)))
 
 
 @cli.command()
@@ -166,12 +166,12 @@ def run_apply(no_prompt: bool, config_path: str, templates: list[str], repo_dir:
     config = Config.load(config_path)
     config.set_account_defaults()
     ctx.eval_only = not no_prompt
-    template_changes = asyncio.run(apply_changes(config, templates))
+    template_changes = asyncio.run(apply_changes(config, templates, ctx))
     output_proposed_changes(template_changes)
 
     if ctx.eval_only and template_changes and click.confirm("Proceed?"):
         ctx.eval_only = False
-        asyncio.run(apply_changes(config, templates))
+        asyncio.run(apply_changes(config, templates, ctx))
     asyncio.run(detect_changes(config))
 
 

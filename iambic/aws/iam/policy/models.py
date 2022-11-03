@@ -5,6 +5,7 @@ from pydantic import Field, constr
 from iambic.aws.iam.models import Description, Path
 from iambic.aws.models import ARN_RE, AccessModel, AWSTemplate, ExpiryModel, Tag
 from iambic.config.models import AWSAccount
+from iambic.core.context import ExecutionContext
 from iambic.core.models import BaseModel
 
 
@@ -14,8 +15,12 @@ class Principal(BaseModel):
     canonical_user: Optional[Union[str, list[str]]] = None
     federated: Optional[Union[str, list[str]]] = None
 
-    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
-        resource_dict = super(Principal, self)._apply_resource_dict(aws_account)
+    def _apply_resource_dict(
+        self, aws_account: AWSAccount = None, context: ExecutionContext = None
+    ) -> dict:
+        resource_dict = super(Principal, self)._apply_resource_dict(
+            aws_account, context
+        )
         if aws_val := resource_dict.pop("aws", resource_dict.pop("Aws", None)):
             resource_dict["AWS"] = aws_val
         return resource_dict

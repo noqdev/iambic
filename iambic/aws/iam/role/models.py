@@ -22,7 +22,7 @@ from iambic.aws.iam.role.utils import (
 from iambic.aws.models import ARN_RE, AccessModel, AWSTemplate, ExpiryModel, Tag
 from iambic.aws.utils import apply_to_account
 from iambic.config.models import AWSAccount
-from iambic.core.context import ctx
+from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import AccountChangeDetails, ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper
@@ -95,17 +95,19 @@ class RoleTemplate(AWSTemplate, AccessModel):
         description="List of the role's inline policies",
     )
 
-    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
-        response = super(RoleTemplate, self)._apply_resource_dict(aws_account)
+    def _apply_resource_dict(
+        self, aws_account: AWSAccount = None, context: ExecutionContext = None
+    ) -> dict:
+        response = super(RoleTemplate, self)._apply_resource_dict(aws_account, context)
         response.pop("RoleAccess", None)
         if "Tags" not in response:
             response["Tags"] = []
 
         # Add RoleAccess Tag to role tags
         role_access = [
-            ra._apply_resource_dict(aws_account)
+            ra._apply_resource_dict(aws_account, context)
             for ra in self.role_access
-            if apply_to_account(ra, aws_account)
+            if apply_to_account(ra, aws_account, context)
         ]
         if role_access:
             value = []
@@ -143,10 +145,12 @@ class RoleTemplate(AWSTemplate, AccessModel):
             "aws-service-role" in self.path or aws_account.read_only or self.read_only
         )
 
-    async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
+    async def _apply_to_account(  # noqa: C901
+        self, aws_account: AWSAccount, context: ExecutionContext
+    ) -> AccountChangeDetails:
         boto3_session = aws_account.get_boto3_session()
         client = boto3_session.client("iam")
-        account_role = self.apply_resource_dict(aws_account)
+        account_role = self.apply_resource_dict(aws_account, context)
         role_name = account_role["RoleName"]
         account_change_details = AccountChangeDetails(
             account=str(aws_account),
@@ -180,11 +184,11 @@ class RoleTemplate(AWSTemplate, AccessModel):
                     )
                 )
                 log_str = "Active resource found with deleted=false."
-                if ctx.execute and not read_only:
+                if context.execute and not read_only:
                     log_str = f"{log_str} Deleting resource..."
                 log.info(log_str, **log_params)
 
-                if ctx.execute:
+                if context.execute:
                     await delete_iam_role(role_name, client, log_params)
 
             return account_change_details
@@ -205,6 +209,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                             account_role["Tags"],
                             current_role.get("Tags", []),
                             log_params,
+                            context,
                         ),
                         update_assume_role_policy(
                             role_name,
@@ -212,6 +217,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                             account_role.pop("AssumeRolePolicyDocument", {}),
                             current_role["AssumeRolePolicyDocument"],
                             log_params,
+                            context,
                         ),
                     ]
                 )
@@ -230,7 +236,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
 
                 if update_role_params:
                     log_str = "Out of date resource found."
-                    if ctx.execute:
+                    if context.execute:
                         log.info(
                             f"{log_str} Updating resource...",
                             **update_resource_log_params,
@@ -247,6 +253,13 @@ class RoleTemplate(AWSTemplate, AccessModel):
                         )
                     else:
                         log.info(log_str, **update_resource_log_params)
+                        account_change_details.proposed_changes.append(
+                            ProposedChange(
+                                change_type=ProposedChangeType.UPDATE,
+                                resource_id=role_name,
+                                resource_type=self.resource_type,
+                            )
+                        )
             else:
                 account_change_details.proposed_changes.append(
                     ProposedChange(
@@ -256,7 +269,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                     )
                 )
                 log_str = "New resource found in code."
-                if not ctx.execute:
+                if not context.execute:
                     log.info(log_str, **log_params)
                     # Exit now because apply functions won't work if resource doesn't exist
                     return account_change_details
@@ -279,6 +292,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                     managed_policies,
                     existing_managed_policies,
                     log_params,
+                    context,
                 ),
                 apply_role_inline_policies(
                     role_name,
@@ -286,6 +300,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                     inline_policies,
                     existing_inline_policies,
                     log_params,
+                    context,
                 ),
             ]
         )
@@ -299,7 +314,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                 list(chain.from_iterable(changes_made))
             )
 
-        if ctx.execute:
+        if context.execute:
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),

@@ -3,7 +3,6 @@ import asyncio
 from googleapiclient.errors import HttpError
 
 from iambic.config.models import GoogleProject
-from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper
@@ -81,7 +80,7 @@ async def create_group(
     return req.execute()
 
 
-async def update_group_domain(current_domain, proposed_domain, log_params):
+async def update_group_domain(current_domain, proposed_domain, log_params, context):
     response = []
     if current_domain != proposed_domain:
         log_str = "Modifying group domain"
@@ -116,6 +115,7 @@ async def update_group_description(
     domain,
     google_project,
     log_params,
+    context,
 ):
     response = []
     if current_description == proposed_description:
@@ -140,7 +140,7 @@ async def update_group_description(
             },
         )
     )
-    if ctx.execute:
+    if context.execute:
         log_str = "Updating group description"
         await aio_wrapper(
             service.groups()
@@ -157,7 +157,13 @@ async def update_group_description(
 
 
 async def update_group_name(
-    group_email, current_name, proposed_name, domain, google_project, log_params
+    group_email,
+    current_name,
+    proposed_name,
+    domain,
+    google_project,
+    log_params,
+    context,
 ):
     response = []
     if current_name == proposed_name:
@@ -180,7 +186,7 @@ async def update_group_name(
     except AttributeError as err:
         log.exception("Unable to process google groups.", error=err)
         return
-    if ctx.execute:
+    if context.execute:
         log_str = "Updating group name"
         await aio_wrapper(
             service.groups()
@@ -194,7 +200,7 @@ async def update_group_name(
 
 
 async def update_group_email(
-    current_email, proposed_email, domain, google_project, log_params
+    current_email, proposed_email, domain, google_project, log_params, context
 ):
     # TODO: This won't work as-is, since we aren't really aware of the old e-mail
     response = []
@@ -218,7 +224,7 @@ async def update_group_email(
     except AttributeError as err:
         log.exception("Unable to process google groups.", error=err)
         return
-    if ctx.execute:
+    if context.execute:
         log_str = "Updating group e-mail"
         await aio_wrapper(
             service.groups()
@@ -231,7 +237,7 @@ async def update_group_email(
     return response
 
 
-async def delete_group(group_email, domain, google_project, log_params):
+async def delete_group(group_email, domain, google_project, log_params, context):
     # TODO: This isn't used yet
     response = []
     try:
@@ -251,7 +257,7 @@ async def delete_group(group_email, domain, google_project, log_params):
             attribute="group_email",
         )
     )
-    if ctx.execute:
+    if context.execute:
         log_str = "Deleting Group"
         await aio_wrapper(service.groups().delete(groupKey=group_email).execute)
     log.info(log_str, group_email=group_email, **log_params)
@@ -259,7 +265,13 @@ async def delete_group(group_email, domain, google_project, log_params):
 
 
 async def update_group_members(
-    group_email, current_members, proposed_members, domain, google_project, log_params
+    group_email,
+    current_members,
+    proposed_members,
+    domain,
+    google_project,
+    log_params,
+    context,
 ):
     # TODO: This will likely fail if I change the Role of a user, since we are doing all
     # of these operations with asyncio.gather. Should do the remove operations first, then the add ones.
@@ -288,7 +300,7 @@ async def update_group_members(
                 },
             )
         )
-        if ctx.execute:
+        if context.execute:
             log_str = "Removing users from group"
             for user in users_to_remove:
                 tasks.append(
@@ -311,7 +323,7 @@ async def update_group_members(
                 change_summary={"UsersToAdd": [user.email for user in users_to_add]},
             )
         )
-        if ctx.execute:
+        if context.execute:
             log_str = "Adding users to group"
             for user in users_to_add:
                 tasks.append(
