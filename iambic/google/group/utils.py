@@ -80,7 +80,7 @@ async def create_group(
     return req.execute()
 
 
-async def update_group_domain(current_domain, proposed_domain, log_params):
+async def update_group_domain(current_domain, proposed_domain, log_params, context):
     response = []
     if current_domain != proposed_domain:
         log_str = "Modifying group domain"
