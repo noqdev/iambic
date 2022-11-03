@@ -317,8 +317,8 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
                 apply_managed_policy_tags(
                     policy_arn,
                     client,
-                    account_policy["Tags"],
-                    current_policy["Tags"],
+                    account_policy.get("Tags", []),
+                    current_policy.get("Tags", []),
                     read_only,
                     log_params,
                     context,
