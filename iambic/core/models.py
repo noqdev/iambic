@@ -251,6 +251,7 @@ class BaseTemplate(BaseModel):
         as_yaml = yaml.dump(self.dict())
         # Force template_type to be at the top of the yaml
         template_type_str = f"template_type: {self.template_type}"
+        as_yaml = as_yaml.replace(f"{template_type_str}\n", "")
         as_yaml = as_yaml.replace(f"\n{template_type_str}", "")
         as_yaml = f"{template_type_str}\n{as_yaml}"
         with open(self.file_path, "w") as f:
