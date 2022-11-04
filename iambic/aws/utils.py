@@ -198,7 +198,7 @@ async def remove_expired_resources(
     for field_name in resource.__fields__.keys():
         field_val = getattr(resource, field_name)
         if isinstance(field_val, list):
-            resource.__fields__[field_name] = await asyncio.gather(
+            new_value = await asyncio.gather(
                 *[
                     remove_expired_resources(
                         elem, template_resource_type, template_resource_id
@@ -206,10 +206,12 @@ async def remove_expired_resources(
                     for elem in field_val
                 ]
             )
+            setattr(resource, field_name, new_value)
         else:
-            resource.__fields__[field_name] = await remove_expired_resources(
+            new_value = await remove_expired_resources(
                 field_val, template_resource_type, template_resource_id
             )
+            setattr(resource, field_name, new_value)
 
     return resource
 
