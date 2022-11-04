@@ -45,6 +45,6 @@ async def flag_expired_resources(template_paths: list[str]):
     )
 
     for template in templates:
-        template.write()
+        template.write(exclude_none=True, exclude_unset=True, exclude_defaults=True)
 
     log.info("Expired resource scan complete.")
