@@ -3,6 +3,7 @@ from enum import Enum
 from types import GenericAlias
 from typing import List, Optional, Set, Union, get_args, get_origin
 
+from deepdiff.model import PrettyOrderedSet
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
@@ -174,6 +175,9 @@ class TemplateChangeDetails(PydanticBaseModel):
     proposed_changes: Optional[
         Union[list[AccountChangeDetails], list[ProposedChange]]
     ] = None
+
+    class Config:
+        json_encoders = {PrettyOrderedSet: list}
 
     def dict(
         self,
