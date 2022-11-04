@@ -50,7 +50,7 @@ async def apply_git_changes(
     )
 
     template_changes = await asyncio.gather(
-        *[template.apply(config) for template in templates]
+        *[template.apply(config, context) for template in templates]
     )
     template_changes = [
         template_change
