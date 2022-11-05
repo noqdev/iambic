@@ -36,11 +36,11 @@ def dumps(
     try:
         result = ujson.dumps(
             obj,
-            ensure_ascii,
-            double_precision,
-            encode_html_chars,
-            escape_forward_slashes,
-            sort_keys,
+            ensure_ascii=ensure_ascii,
+            double_precision=double_precision,
+            encode_html_chars=encode_html_chars,
+            escape_forward_slashes=escape_forward_slashes,
+            sort_keys=sort_keys,
             indent=indent,
             **kwargs
         )
