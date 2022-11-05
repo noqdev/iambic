@@ -2,8 +2,8 @@ ARG FUNCTION_DIR="/app/"
 ARG AWS_LINUX_VERSION="2022"
 ARG PYTHON_VERSION="3.10.8"
 
-
-FROM amazonlinux:${AWS_LINUX_VERSION} as python-layer
+ARG ARCH=
+FROM ${ARCH}amazonlinux:${AWS_LINUX_VERSION} as python-layer
 
 ARG PYTHON_VERSION
 
@@ -20,7 +20,7 @@ RUN ln -s /Python-${PYTHON_VERSION}/python /usr/bin/python
 RUN python -m pip install --upgrade pip
 
 
-FROM amazonlinux:${AWS_LINUX_VERSION} as base-layer
+FROM ${ARCH}amazonlinux:${AWS_LINUX_VERSION} as base-layer
 
 RUN yum groupinstall "Development Tools" -y
 RUN yum install git -y
