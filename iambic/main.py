@@ -192,13 +192,21 @@ def run_apply(force: bool, config_path: str, templates: list[str], repo_dir: str
     type=click.Path(exists=True),
     help="The repo directory containing the templates. Example: ~/noq-templates",
 )
-def git_apply(config_path: str, repo_dir: str):
-    run_git_apply(config_path, repo_dir)
+@click.option(
+    "--allow-dirty",
+    is_flag=True,
+    show_default=True,
+    help="Allow applying changes from a dirty git repo",
+)
+def git_apply(config_path: str, repo_dir: str, allow_dirty: bool):
+    run_git_apply(config_path, repo_dir, allow_dirty)
 
 
-def run_git_apply(config_path: str, repo_dir: str):
+def run_git_apply(config_path: str, repo_dir: str, allow_dirty: bool):
     template_changes = asyncio.run(
-        apply_git_changes(config_path, repo_dir or str(pathlib.Path.cwd()))
+        apply_git_changes(
+            config_path, repo_dir or str(pathlib.Path.cwd()), allow_dirty=allow_dirty
+        )
     )
     output_proposed_changes(template_changes)
 
