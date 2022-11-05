@@ -126,7 +126,8 @@ def run_clone_repos(config_path: str, repo_base_path: str):
 
 @cli.command()
 @click.option(
-    "--no-prompt",
+    "--force",
+    "-f",
     is_flag=True,
     show_default=True,
     help="Apply changes without asking for permission?",
@@ -155,17 +156,17 @@ def run_clone_repos(config_path: str, repo_base_path: str):
     type=click.Path(exists=True),
     help="The repo directory containing the templates. Example: ~/noq-templates",
 )
-def apply(no_prompt: bool, config_path: str, templates: list[str], repo_dir: str):
-    run_apply(no_prompt, config_path, templates, repo_dir)
+def apply(force: bool, config_path: str, templates: list[str], repo_dir: str):
+    run_apply(force, config_path, templates, repo_dir)
 
 
-def run_apply(no_prompt: bool, config_path: str, templates: list[str], repo_dir: str):
+def run_apply(force: bool, config_path: str, templates: list[str], repo_dir: str):
     if not templates:
         templates = asyncio.run(gather_templates(repo_dir or str(pathlib.Path.cwd())))
 
     config = Config.load(config_path)
     config.set_account_defaults()
-    ctx.eval_only = not no_prompt
+    ctx.eval_only = not force
     template_changes = asyncio.run(apply_changes(config, templates, ctx))
     output_proposed_changes(template_changes)
 

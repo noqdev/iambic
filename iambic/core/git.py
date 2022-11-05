@@ -97,7 +97,7 @@ async def retrieve_git_changes(repo_dir: str) -> dict[str, list[GitDiff]]:
                     template_dict = yaml.load(open(path))
                     main_template_dict = yaml.load(StringIO(deleted_file.content))
                     if not DeepDiff(
-                        template_dict, main_template_dict, ignore_order=True
+                        template_dict, main_template_dict, ignore_order=True,report_repetition=True,
                     ):
                         continue  # Just renamed but no file changes
 

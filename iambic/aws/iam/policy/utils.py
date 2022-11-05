@@ -113,6 +113,7 @@ async def update_managed_policy(
         existing_policy_document,
         template_policy_document,
         ignore_order=True,
+        report_repetition=True,
     )
 
     if policy_drift:

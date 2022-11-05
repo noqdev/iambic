@@ -171,6 +171,7 @@ async def update_assume_role_policy(
             DeepDiff,
             existing_policy_document,
             template_policy_document,
+            report_repetition=True,
             ignore_order=True,
         )
 
@@ -334,6 +335,7 @@ async def apply_role_inline_policies(
                 existing_policy_doc,
                 policy_document,
                 ignore_order=True,
+                report_repetition=True,
             )
 
         if not existing_policy_doc or policy_drift:
