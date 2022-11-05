@@ -13,7 +13,10 @@ from iambic.core.parser import load_templates
 
 
 async def apply_git_changes(
-    config_path: str, repo_dir: str, context: ExecutionContext = None
+    config_path: str,
+    repo_dir: str,
+    context: ExecutionContext = None,
+    allow_dirty: bool = False,
 ) -> list[TemplateChangeDetails]:
     """Retrieves files added/updated/or removed when comparing the current branch to master
 
@@ -32,7 +35,7 @@ async def apply_git_changes(
 
     config = Config.load(config_path)
     config.set_account_defaults()
-    file_changes = await retrieve_git_changes(repo_dir)
+    file_changes = await retrieve_git_changes(repo_dir, allow_dirty=allow_dirty)
     if (
         not file_changes["new_files"]
         and not file_changes["modified_files"]
@@ -50,7 +53,7 @@ async def apply_git_changes(
     )
 
     template_changes = await asyncio.gather(
-        *[template.apply(config) for template in templates]
+        *[template.apply(config, context) for template in templates]
     )
     template_changes = [
         template_change

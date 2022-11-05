@@ -42,9 +42,16 @@ async def clone_git_repos(config, repo_base_path: str) -> None:
     return repos
 
 
-async def retrieve_git_changes(repo_dir: str) -> dict[str, list[GitDiff]]:
+async def retrieve_git_changes(
+    repo_dir: str, allow_dirty: bool = False
+) -> dict[str, list[GitDiff]]:
     repo = Repo(repo_dir)
-
+    if repo.is_dirty():
+        log.error(
+            "Template git repo is dirty, and `allow_dirty` is not enabled. "
+            "Refusing to proceed",
+            file_path=repo_dir,
+        )
     # Fetch latest
     for remote in repo.remotes:
         remote.fetch()
@@ -97,7 +104,10 @@ async def retrieve_git_changes(repo_dir: str) -> dict[str, list[GitDiff]]:
                     template_dict = yaml.load(open(path))
                     main_template_dict = yaml.load(StringIO(deleted_file.content))
                     if not DeepDiff(
-                        template_dict, main_template_dict, ignore_order=True
+                        template_dict,
+                        main_template_dict,
+                        ignore_order=True,
+                        report_repetition=True,
                     ):
                         continue  # Just renamed but no file changes
 

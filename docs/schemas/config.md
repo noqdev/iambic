@@ -4,7 +4,8 @@
 
 - **`aws_accounts`** *(array)*
   - **Items**: Refer to *[#/definitions/AWSAccount](#definitions/AWSAccount)*.
-- **`google`**: Refer to *[#/definitions/GoogleConfig](#definitions/GoogleConfig)*.
+- **`google_projects`** *(array)*: Default: `[]`.
+  - **Items**: Refer to *[#/definitions/GoogleProject](#definitions/GoogleProject)*.
 - **`extends`** *(array)*: Default: `[]`.
   - **Items**: Refer to *[#/definitions/ExtendsConfig](#definitions/ExtendsConfig)*.
 - **`secrets`** *(object)*
@@ -35,11 +36,29 @@
     - **Items**: Refer to *[#/definitions/Variable](#definitions/Variable)*.
   - **`boto3_session_map`** *(object)*
   - **`read_only`** *(boolean)*: If set to True, iambic will only log drift instead of apply changes when drift is detected. Default: `false`.
-- <a id="definitions/GoogleGroupsConfig"></a>**`GoogleGroupsConfig`** *(object)*
-  - **`enabled`** *(boolean)*: Default: `false`.
-- <a id="definitions/GoogleConfig"></a>**`GoogleConfig`** *(object)*
-  - **`groups`**: Refer to *[#/definitions/GoogleGroupsConfig](#definitions/GoogleGroupsConfig)*.
+- <a id="definitions/GoogleSubjects"></a>**`GoogleSubjects`** *(object)*
+  - **`domain`** *(string)*
+  - **`service_account`** *(string)*
+- <a id="definitions/GoogleProject"></a>**`GoogleProject`** *(object)*
+  - **`project_id`** *(string)*
+  - **`project_name`** *(string)*
+  - **`subjects`** *(array)*
+    - **Items**: Refer to *[#/definitions/GoogleSubjects](#definitions/GoogleSubjects)*.
+  - **`type`** *(string)*
+  - **`private_key_id`** *(string)*
+  - **`private_key`** *(string)*
+  - **`client_email`** *(string)*
+  - **`client_id`** *(string)*
+  - **`auth_uri`** *(string)*
+  - **`token_uri`** *(string)*
+  - **`auth_provider_x509_cert_url`** *(string)*
+  - **`client_x509_cert_url`** *(string)*
+  - **`variables`** *(array)*: A list of variables to be used when creating templates. Default: `[]`.
+    - **Items**: Refer to *[#/definitions/Variable](#definitions/Variable)*.
+  - **`read_only`** *(boolean)*: If set to True, iambic will only log drift instead of apply changes when drift is detected. Default: `false`.
 - <a id="definitions/ExtendsConfigKey"></a>**`ExtendsConfigKey`**: An enumeration. Must be one of: `["AWS_SECRETS_MANAGER"]`.
 - <a id="definitions/ExtendsConfig"></a>**`ExtendsConfig`** *(object)*
   - **`key`**: Refer to *[#/definitions/ExtendsConfigKey](#definitions/ExtendsConfigKey)*.
   - **`value`** *(string)*
+  - **`assume_role_arn`** *(string)*
+  - **`external_id`** *(string)*

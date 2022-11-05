@@ -12,7 +12,7 @@ class Path(AccessModel):
 
 class RoleTemplate(NoqTemplate, AccessModel):
     ...
-    path: Optional[Union[str | list[Path]]] = "/"
+    path: Optional[Union[str , list[Path]]] = "/"
 ```
 
 NEVER use dict to represent an attribute unless absolutely necessary due to the attributes dynamic nature.
@@ -88,7 +88,7 @@ This list is used for validation and resolving the template type of a yaml file.
 #### Use the helper functions
 There are a number of functions in `iambic.core.template_generation.py` to simplify a lot of the import process. 
 
-##### `group_int_or_str_attribute(account_config_map: dict[str, AccountConfig], number_of_accounts_resource_on: int, account_resources: Union[dict | list[dict]], key: Union[int | str]) -> Union[int | str | list[dict]]:`
+##### `group_int_or_str_attribute(account_config_map: dict[str, AccountConfig], number_of_accounts_resource_on: int, account_resources: Union[dict , list[dict]], key: Union[int , str]) -> Union[int , str , list[dict]]:`
 Groups an attribute by accounts, formats the attribute and normalizes the included accounts.
 
 :param account_config_map:
@@ -96,7 +96,7 @@ Groups an attribute by accounts, formats the attribute and normalizes the includ
 :param account_resources: list[dict(account_id:str, resources=list[dict])]
 :param is_dict_attr: If false and only one hit, still return as a list. Useful for things like inline_policies.
 
-##### `group_dict_attribute(account_config_map: dict[str, AccountConfig], number_of_accounts_resource_on: int, account_resources: list[dict], is_dict_attr: bool = True) -> Union[dict | list[dict]]:`
+##### `group_dict_attribute(account_config_map: dict[str, AccountConfig], number_of_accounts_resource_on: int, account_resources: list[dict], is_dict_attr: bool = True) -> Union[dict , list[dict]]:`
 Groups an attribute by accounts, formats the attribute and normalizes the included accounts.
 
 :param account_config_map: {account_id: account_config}
@@ -128,7 +128,7 @@ An example would be grouping role names for generating the template where you ne
 :param account_resources: list[dict(account_id:str, resources=list[dict(resource_val: str, **)])]
 :return: dict(attribute_val: str = list[dict(resource_val: str, account_id: str, **)])
 
-##### `set_included_accounts_for_grouped_attribute(account_config_map: dict[str, AccountConfig], number_of_accounts_resource_on: int, grouped_attribute) -> Union[list | dict]:`
+##### `set_included_accounts_for_grouped_attribute(account_config_map: dict[str, AccountConfig], number_of_accounts_resource_on: int, grouped_attribute) -> Union[list , dict]:`
 Takes a grouped attribute and formats its `included_accounts` to * or a list of account names
 
 :param account_config_map: {account_id: account_config}

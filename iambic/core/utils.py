@@ -35,7 +35,7 @@ def snake_to_camelcap(str_obj: str) -> str:
 
 
 async def resource_file_upsert(
-    file_path: Union[str | pathlib.Path],
+    file_path: Union[str, pathlib.Path],
     content_as_dict: dict,
     replace_file: bool = False,
 ):
@@ -48,7 +48,7 @@ async def resource_file_upsert(
         await f.write(json.dumps(content_as_dict, indent=2))
 
 
-async def file_regex_search(file_path: str, re_pattern: str) -> Union[str | None]:
+async def file_regex_search(file_path: str, re_pattern: str) -> Union[str, None]:
     async with aiofiles.open(file_path, mode="r") as f:
         file_content = await f.read()
         if re.search(re_pattern, file_content):
