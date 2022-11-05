@@ -41,7 +41,7 @@ def dumps(
             encode_html_chars,
             escape_forward_slashes,
             sort_keys,
-            indent,
+            indent=indent,
             **kwargs
         )
     except TypeError:
