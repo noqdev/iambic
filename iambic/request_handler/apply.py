@@ -6,7 +6,6 @@ from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import TemplateChangeDetails
 from iambic.core.parser import load_templates
-from iambic.core.utils import yaml
 
 
 async def apply_changes(
@@ -46,7 +45,6 @@ async def flag_expired_resources(template_paths: list[str]):
     )
 
     for template in templates:
-        with open(template.file_path, "w") as f:
-            f.write(yaml.dump(template.dict(exclude_none=True, exclude_unset=True)))
+        template.write(exclude_none=True, exclude_unset=True, exclude_defaults=True)
 
     log.info("Expired resource scan complete.")

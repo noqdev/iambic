@@ -3,6 +3,8 @@ import re
 from datetime import datetime
 from enum import Enum
 
+from botocore.exceptions import ClientError
+
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.utils import aio_wrapper, camel_to_snake
@@ -18,9 +20,22 @@ async def paginated_search(
     :return:
     """
     results = []
+    retry_count = 0
 
     while True:
-        response = await aio_wrapper(search_fnc, **search_kwargs)
+        try:
+            response = await aio_wrapper(search_fnc, **search_kwargs)
+        except ClientError as err:
+            if err.response["Error"]["Code"] == "Throttling":
+                if retry_count >= 10:
+                    raise
+                retry_count += 1
+                await asyncio.sleep(retry_count * 2)
+                continue
+            else:
+                raise
+
+        retry_count = 0
         results.extend(response.get(response_key, []))
 
         if not response["IsTruncated"] or (max_results and len(results) >= max_results):
@@ -183,7 +198,7 @@ async def remove_expired_resources(
     for field_name in resource.__fields__.keys():
         field_val = getattr(resource, field_name)
         if isinstance(field_val, list):
-            resource.__fields__[field_name] = await asyncio.gather(
+            new_value = await asyncio.gather(
                 *[
                     remove_expired_resources(
                         elem, template_resource_type, template_resource_id
@@ -191,10 +206,12 @@ async def remove_expired_resources(
                     for elem in field_val
                 ]
             )
+            setattr(resource, field_name, new_value)
         else:
-            resource.__fields__[field_name] = await remove_expired_resources(
+            new_value = await remove_expired_resources(
                 field_val, template_resource_type, template_resource_id
             )
+            setattr(resource, field_name, new_value)
 
     return resource
 
@@ -219,3 +236,21 @@ def get_aws_account_map(configs: list) -> dict:
             aws_account_map[aws_account.account_id] = aws_account
 
     return aws_account_map
+
+
+def boto3_retry(f):
+    async def wrapper(*args, **kwargs):
+        max_retries = kwargs.pop("max_retries", 10)
+        for attempt in range(max_retries):
+            try:
+                return await f(*args, **kwargs)
+            except ClientError as err:
+                if (
+                    err.response["Error"]["Code"] == "Throttling"
+                    and attempt < max_retries - 1
+                ):
+                    await asyncio.sleep(1)
+                else:
+                    raise
+
+    return wrapper

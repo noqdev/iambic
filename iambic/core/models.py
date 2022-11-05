@@ -1,10 +1,13 @@
 import json
 from enum import Enum
-from typing import Optional, Union
+from types import GenericAlias
+from typing import List, Optional, Set, Union, get_args, get_origin
 
+from deepdiff.model import PrettyOrderedSet
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
+from pydantic.fields import ModelField
 
 from iambic.aws.utils import apply_to_account
 from iambic.config.models import AWSAccount, Config
@@ -12,7 +15,41 @@ from iambic.core.context import ExecutionContext
 from iambic.core.utils import snake_to_camelcap, yaml
 
 
+def to_camel(string):
+    """Convert a snake_case string to CamelCase"""
+    return "".join(word.capitalize() for word in string.split("_"))
+
+
 class BaseModel(PydanticBaseModel):
+    class Config:
+        alias_generator = to_camel
+        allow_population_by_field_name = True
+
+    @classmethod
+    def required_fields(cls) -> list[str]:
+        return [
+            field_name
+            for field_name, field in cls.__dict__.get("__fields__", {}).items()
+            if field != Optional
+        ]
+
+    @staticmethod
+    def get_field_type(field: any) -> any:
+        """
+        Resolves the base field type for a model
+        """
+        field_type = field.type_ if isinstance(field, ModelField) else field
+        if field_type == Optional:
+            field_type = field_type[0]
+
+        if (
+            type(field_type) in [dict, GenericAlias, list, List, Set, set]
+            or get_origin(field_type) == Union
+        ) and (field_types := get_args(field_type)):
+            return BaseModel.get_field_type(field_types[0])
+
+        return field_type
+
     def get_attribute_val_for_account(
         self,
         aws_account: AWSAccount,
@@ -80,7 +117,7 @@ class BaseModel(PydanticBaseModel):
         variables = {var.key: var.value for var in aws_account.variables}
         variables["account_id"] = aws_account.account_id
         variables["account_name"] = aws_account.account_name
-        if owner := getattr(self, "owner"):
+        if hasattr(self, "owner") and (owner := getattr(self, "owner", None)):
             variables["owner"] = owner
 
         rtemplate = Environment(loader=BaseLoader()).from_string(json.dumps(response))
@@ -117,14 +154,14 @@ class ProposedChange(PydanticBaseModel):
     attribute: Optional[str]
     resource_id: Optional[str]
     resource_type: Optional[str]
-    current_value: Optional[Union[list | dict | str | int]]
-    new_value: Optional[Union[list | dict | str | int]]
+    current_value: Optional[Union[list, dict, str, int]]
+    new_value: Optional[Union[list, dict, str, int]]
     change_summary: Optional[dict]
 
 
 class AccountChangeDetails(PydanticBaseModel):
-    account: Union[str | int]
-    resource_id: Union[str | int]
+    account: Union[str, int]
+    resource_id: Union[str, int]
     current_value: Optional[dict]
     new_value: Optional[dict]
     proposed_changes: list[ProposedChange] = Field(default=[])
@@ -135,7 +172,12 @@ class TemplateChangeDetails(PydanticBaseModel):
     resource_type: str
     template_path: str
     # Supports multi-account providers and single-account providers
-    proposed_changes: Optional[list[AccountChangeDetails] | list[ProposedChange]]
+    proposed_changes: Optional[
+        Union[list[AccountChangeDetails], list[ProposedChange]]
+    ] = None
+
+    class Config:
+        json_encoders = {PrettyOrderedSet: list}
 
     def dict(
         self,
@@ -205,10 +247,17 @@ class BaseTemplate(BaseModel):
         template_dict["template_type"] = self.template_type
         return template_dict
 
-    def write(self):
-        as_yaml = yaml.dump(self.dict())
+    def write(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
+        as_yaml = yaml.dump(
+            self.dict(
+                exclude_none=exclude_none,
+                exclude_unset=exclude_unset,
+                exclude_defaults=exclude_defaults,
+            )
+        )
         # Force template_type to be at the top of the yaml
         template_type_str = f"template_type: {self.template_type}"
+        as_yaml = as_yaml.replace(f"{template_type_str}\n", "")
         as_yaml = as_yaml.replace(f"\n{template_type_str}", "")
         as_yaml = f"{template_type_str}\n{as_yaml}"
         with open(self.file_path, "w") as f:

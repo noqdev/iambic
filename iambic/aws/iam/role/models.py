@@ -3,6 +3,7 @@ import json
 from itertools import chain
 from typing import Optional, Union
 
+import botocore
 from pydantic import Field, constr
 
 from iambic.aws.iam.models import Description, MaxSessionDuration, Path
@@ -73,14 +74,14 @@ class RoleTemplate(AWSTemplate, AccessModel):
     max_session_duration: Optional[Union[int, list[MaxSessionDuration]]] = 3600
     path: Optional[Union[str, list[Path]]] = "/"
     permissions_boundary: Optional[
-        None | PermissionBoundary | list[PermissionBoundary]
+        Union[None, PermissionBoundary, list[PermissionBoundary]]
     ] = None
     role_access: Optional[list[RoleAccess]] = Field(
         [],
         description="List of users and groups who can assume into the role",
     )
     assume_role_policy_document: Optional[
-        None | AssumeRolePolicyDocument | list[AssumeRolePolicyDocument]
+        Union[None, AssumeRolePolicyDocument, list[AssumeRolePolicyDocument]]
     ] = None
     tags: Optional[list[Tag]] = Field(
         [],
@@ -149,7 +150,9 @@ class RoleTemplate(AWSTemplate, AccessModel):
         self, aws_account: AWSAccount, context: ExecutionContext
     ) -> AccountChangeDetails:
         boto3_session = aws_account.get_boto3_session()
-        client = boto3_session.client("iam")
+        client = boto3_session.client(
+            "iam", config=botocore.client.Config(max_pool_connections=50)
+        )
         account_role = self.apply_resource_dict(aws_account, context)
         role_name = account_role["RoleName"]
         account_change_details = AccountChangeDetails(
