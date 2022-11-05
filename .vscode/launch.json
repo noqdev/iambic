@@ -41,6 +41,25 @@
             "justMyCode": true
         },
         {
+            "name": "Iambic Force Apply AWS Template",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "env": {
+                "AWS_PROFILE": "staging/IambicHubRole"
+            },
+            "args": [
+                "apply",
+                "-f",
+                "--template",
+                "../noq-templates/resources/aws/roles/application/noqmeter_null_test_role.yaml",
+                "--config",
+                "demo/config.yaml"
+            ],
+            "justMyCode": true
+        },
+        {
             "name": "Iambic Apply Google Template",
             "type": "python",
             "request": "launch",
