@@ -20,12 +20,15 @@ from iambic.request_handler.git_plan import plan_git_changes
 warnings.filterwarnings("ignore", category=FutureWarning, module="botocore.client")
 
 
-def output_proposed_changes(template_changes: list[TemplateChangeDetails]):
+def output_proposed_changes(
+    template_changes: list[TemplateChangeDetails], output_path: str = None
+):
+    if output_path is None:
+        output_path = "proposed_changes.json"
     if template_changes:
-        file_name = "proposed_changes.json"
-        log.info(f"A detailed summary of descriptions was saved to {file_name}")
+        log.info(f"A detailed summary of descriptions was saved to {output_path}")
 
-        with open(file_name, "w") as f:
+        with open(output_path, "w") as f:
             f.write(
                 json.dumps(
                     [template_change.dict() for template_change in template_changes],
@@ -236,15 +239,24 @@ def run_git_apply(config_path: str, repo_dir: str, allow_dirty: bool):
     type=click.Path(exists=True),
     help="The repo directory containing the templates. Example: ~/noq-templates",
 )
-def git_plan(config_path: str, templates: list[str], repo_dir: str):
-    run_git_plan(config_path, templates, repo_dir)
+@click.option(
+    "--plan-output",
+    "-o",
+    "plan_output",
+    type=click.Path(exists=True),
+    help="The location to output the plan Example: ./proposed_changes.json",
+)
+def git_plan(config_path: str, templates: list[str], repo_dir: str, plan_output: str):
+    run_git_plan(config_path, templates, repo_dir, plan_output)
 
 
-def run_git_plan(config_path: str, templates: list[str], repo_dir: str):
+def run_git_plan(
+    config_path: str, templates: list[str], repo_dir: str, output_path: str
+):
     template_changes = asyncio.run(
         plan_git_changes(config_path, repo_dir or str(pathlib.Path.cwd()))
     )
-    output_proposed_changes(template_changes)
+    output_proposed_changes(template_changes, output_path=output_path)
 
 
 @cli.command(name="import")
