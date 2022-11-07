@@ -22,6 +22,7 @@ CONFIG_PATH = os.path.expanduser("~/.iambic/config.yaml")
 os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
 REPO_BASE_PATH = os.path.expanduser("~/.iambic/repos/")
 os.makedirs(os.path.dirname(REPO_BASE_PATH), exist_ok=True)
+PLAN_OUTPUT_PATH = os.environ.get("PLAN_OUTPUT_PATH", None)
 
 
 class LambdaCommand(Enum):
@@ -99,7 +100,7 @@ def run_handler(event=None, context=None):
         case LambdaCommand.run_git_apply.value:
             return run_git_apply(CONFIG_PATH, None, REPO_BASE_PATH)
         case LambdaCommand.run_git_plan.value:
-            return run_git_plan(CONFIG_PATH, None, REPO_BASE_PATH)
+            return run_git_plan(CONFIG_PATH, None, REPO_BASE_PATH, PLAN_OUTPUT_PATH)
         case LambdaCommand.run_clone_git_repos.value:
             return run_clone_repos(CONFIG_PATH, REPO_BASE_PATH)
         case _:
