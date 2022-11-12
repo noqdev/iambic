@@ -1,10 +1,13 @@
 import asyncio
+import contextlib
 import glob
 import os
 import pathlib
 import re
+from datetime import datetime
 from io import StringIO
-from typing import Union
+from typing import Any, Union
+from urllib.parse import unquote_plus
 
 import aiofiles
 from asgiref.sync import sync_to_async
@@ -121,6 +124,53 @@ class NoqSemaphore:
         return await asyncio.gather(
             *[asyncio.create_task(self.handle_message(**msg)) for msg in messages]
         )
+
+
+def un_wrap_json(json_obj: Any) -> Any:
+    """Helper function to unwrap nested JSON in the AWS Config resource configuration."""
+    # pylint: disable=C0103,W0703,R0911
+    # Is this a field that we can safely return?
+    if isinstance(json_obj, (type(None), int, bool, float)):  # noqa
+        return json_obj
+    # Is this a Datetime? Convert it to a string and return it:
+    if isinstance(json_obj, datetime):
+        return str(json_obj)
+    # Is this a Dictionary?
+    if isinstance(json_obj, dict):
+        decoded = {k: un_wrap_json(v) for k, v in json_obj.items()}
+    elif isinstance(json_obj, list):
+        decoded = [un_wrap_json(x) for x in json_obj]
+        # Yes, try to sort the contents of lists. This is because AWS does not consistently store list ordering for many resource types:
+        with contextlib.suppress(Exception):
+            sorted_list = sorted(decoded)
+            decoded = sorted_list
+    else:
+        # Try to load the JSON string:
+        try:
+            # Check if the string starts with a "[" or a "{" (because apparently '123' is a valid JSON)
+            for check_field in {
+                "{",
+                "[",
+                '"{',
+                '"[',
+            }:  # Some of the double-wrapping is really ridiculous
+                if json_obj.startswith(check_field):
+                    decoded = json.loads(json_obj)
+                    # If we loaded this properly, then we need to pass the decoded JSON back in for all the nested stuff:
+                    return un_wrap_json(decoded)
+            # Check if this string is URL Encoded - if it is, then re-run it through:
+            decoded = unquote_plus(json_obj)
+            return un_wrap_json(decoded) if decoded != json_obj else json_obj
+        except Exception:  # noqa
+            return json_obj
+    return decoded
+
+
+def un_wrap_json_and_dump_values(json_obj: Any) -> Any:
+    json_obj = un_wrap_json(json_obj)
+    for k, v in json_obj.items():
+        json_obj[k] = json.dumps(v)
+    return json_obj
 
 
 typ = "rt"
