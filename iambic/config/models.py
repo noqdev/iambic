@@ -1,6 +1,7 @@
+import asyncio
 import base64
 from enum import Enum
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import boto3
 import botocore
@@ -11,12 +12,9 @@ from slack_bolt import App as SlackBoltApp
 
 from iambic.aws.utils import RegionName
 from iambic.core.logger import log
-from iambic.core.utils import aio_wrapper, yaml
-
-
-class Variable(BaseModel):
-    key: str
-    value: str
+from iambic.core.models import Variable
+from iambic.core.parser import load_templates
+from iambic.core.utils import aio_wrapper, gather_templates, yaml
 
 
 class AWSAccount(BaseModel):
@@ -218,10 +216,11 @@ class ExtendsConfig(BaseModel):
 
 
 class Config(BaseModel):
-    aws_accounts: List[AWSAccount]
+    aws_accounts: List[AWSAccount] = []
     google_projects: List[GoogleProject] = []
     extends: List[ExtendsConfig] = []
     secrets: Optional[dict] = None
+    templates: list[Any] = []
     role_access_tag: Optional[str] = Field(
         "noq-authorized",
         description="The key of the tag used to store users and groups that can assume into the role the tag is on",
@@ -281,6 +280,14 @@ class Config(BaseModel):
 
         return yaml.load(return_val)
 
+    async def configure_aws(self):
+        # TODO: This should be optional?
+        from iambic.aws.organizations.models import AWSOrganizationTemplate
+
+        orgs = [t for t in self.templates if isinstance(t, AWSOrganizationTemplate)]
+        tasks = [org.onboard_accounts(self) for org in orgs]
+        org_results = await asyncio.gather(*tasks)
+
     def configure_slack(self):
         if self.secrets and (
             slack_bot_token := self.secrets.get("slack", {}).get("bot_token")
@@ -307,9 +314,15 @@ class Config(BaseModel):
         return aws_account.get_boto3_session(region_name)
 
     @classmethod
-    def load(cls, file_path: str):
+    def load(cls, file_path: str, templates: list[str], repo_dir: str):
         c = cls(file_path=file_path, **yaml.load(open(file_path)))
+        if not templates:
+            templates = asyncio.run(gather_templates(repo_dir))
+
+        c.templates = asyncio.run(load_templates(templates))
+
         c.combine_extended_configs()
+        asyncio.run(c.configure_aws())
         c.configure_slack()
         c.configure_google()
         return c

@@ -2,6 +2,7 @@ import os
 
 import jsonschema2md2
 
+from iambic.aws.accounts.models import AWSAccountTemplate
 from iambic.aws.iam.models import MaxSessionDuration, Path
 from iambic.aws.iam.policy.models import (
     AssumeRolePolicyDocument,
@@ -11,7 +12,8 @@ from iambic.aws.iam.policy.models import (
     PolicyStatement,
 )
 from iambic.aws.iam.role.models import PermissionBoundary, RoleAccess, RoleTemplate
-from iambic.config.models import AWSAccount, Config, ExtendsConfig, Variable
+from iambic.config.models import Config, ExtendsConfig
+from iambic.core.models import Variable
 from iambic.core.utils import camel_to_snake
 from iambic.google.group.models import GroupMember, GroupTemplate
 
@@ -35,6 +37,7 @@ def create_model_schemas(
 
 def generate_docs():
     aws_template_models = [
+        AWSAccountTemplate,
         RoleTemplate,
         AssumeRolePolicyDocument,
         ManagedPolicyRef,
@@ -48,7 +51,6 @@ def generate_docs():
     ]
     google_template_models = [GroupTemplate, GroupMember]
     config_models = [
-        AWSAccount,
         Config,
         ExtendsConfig,
         Variable,

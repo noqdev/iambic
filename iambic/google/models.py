@@ -1,8 +1,9 @@
 import asyncio
 from enum import Enum
+from typing import Any
 
 from iambic.aws.models import ExpiryModel
-from iambic.config.models import Config, GoogleProject
+from iambic.config.google.models import GoogleProject
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import AccountChangeDetails, BaseTemplate, TemplateChangeDetails
@@ -81,7 +82,7 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
         raise NotImplementedError
 
     async def apply(
-        self, config: Config, context: ExecutionContext
+        self, config: Any, context: ExecutionContext
     ) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(

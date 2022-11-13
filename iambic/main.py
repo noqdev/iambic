@@ -276,14 +276,23 @@ def run_git_plan(
     type=click.Path(exists=True),
     help="The repo directory containing the templates. Example: ~/noq-templates",
 )
-def import_(config_paths: list[str], repo_dir: str):
-    run_import(config_paths, repo_dir or str(pathlib.Path.cwd()))
+@click.option(
+    "--template",
+    "-t",
+    "templates",
+    required=False,
+    multiple=True,
+    type=click.Path(exists=True),
+    help="The template file path(s) to apply. Example: ./aws/roles/engineering.yaml",
+)
+def import_(config_paths: list[str], repo_dir: str, templates: list[str]):
+    run_import(config_paths, repo_dir, templates)
 
 
-def run_import(config_paths: list[str], repo_dir: str):
+def run_import(config_paths: list[str], repo_dir: str, templates: list[str]):
     configs = []
     for config_path in config_paths:
-        config = Config.load(config_path)
+        config = Config.load(config_path, templates, repo_dir)
         config.set_account_defaults()
         configs.append(config)
     asyncio.run(generate_templates(configs, repo_dir or str(pathlib.Path.cwd())))

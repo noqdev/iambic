@@ -3,7 +3,7 @@ from typing import Union
 
 import xxhash
 
-from iambic.config.models import AWSAccount
+from iambic.aws.accounts.models import AWSAccountTemplate
 from iambic.core import noq_json as json
 from iambic.core.parser import load_templates
 from iambic.core.utils import gather_templates
@@ -22,7 +22,7 @@ async def get_existing_template_file_map(repo_dir: str, template_type: str) -> d
     return {template.resource_id: template.file_path for template in templates}
 
 
-def templatize_resource(aws_account: AWSAccount, resource):
+def templatize_resource(aws_account: AWSAccountTemplate, resource):
     resource_type = type(resource)
 
     if isinstance(resource, dict) or isinstance(resource, list):
@@ -59,7 +59,7 @@ def base_group_int_attribute(account_vals: dict) -> dict[int, list[dict[str, str
 
 
 async def base_group_str_attribute(
-    aws_account_map: dict[str, AWSAccount], account_resources: list[dict]
+    aws_account_map: dict[str, AWSAccountTemplate], account_resources: list[dict]
 ) -> dict[str, list]:
     """Groups a string attribute by a shared name across of aws_accounts
 
@@ -69,7 +69,7 @@ async def base_group_str_attribute(
     Call group_int_or_str_attribute instead unless you need to transform this response.
     An example would be grouping role names for generating the template where you need to keep the file_path ref.
 
-    :param aws_account_map: dict(account_id:str = AWSAccount)
+    :param aws_account_map: dict(account_id:str = AWSAccountTemplate)
     :param account_resources: list[dict(account_id:str, resources=list[dict(resource_val: str, **)])]
     :return: dict(attribute_val: str = list[dict(resource_val: str, account_id: str, **)])
     """
@@ -177,14 +177,14 @@ async def base_group_str_attribute(
 
 
 async def base_group_dict_attribute(
-    aws_account_map: dict[str, AWSAccount], account_resources: list[dict]
+    aws_account_map: dict[str, AWSAccountTemplate], account_resources: list[dict]
 ) -> list[dict]:
     """Groups an attribute that is a dict or list of dicts with matching aws_accounts
 
     Call group_dict_attribute instead unless you need to transform this response.
     An example would be tags which also contain role_access.
 
-    :param aws_account_map: dict(account_id:str = AWSAccount)
+    :param aws_account_map: dict(account_id:str = AWSAccountTemplate)
     :param account_resources: list[dict(account_id:str, resources=list[dict])]
     :return: list[dict(included_accounts: str, resource_val=list[dict]|dict)]
     """
@@ -305,7 +305,7 @@ async def base_group_dict_attribute(
 
 
 async def set_included_accounts_for_grouped_attribute(
-    aws_account_map: dict[str, AWSAccount],
+    aws_account_map: dict[str, AWSAccountTemplate],
     number_of_accounts_resource_on: int,
     grouped_attribute,
 ) -> Union[list, dict]:
@@ -347,7 +347,7 @@ async def set_included_accounts_for_grouped_attribute(
 
 
 async def group_int_or_str_attribute(
-    aws_account_map: dict[str, AWSAccount],
+    aws_account_map: dict[str, AWSAccountTemplate],
     number_of_accounts_resource_on: int,
     account_resources: Union[dict, list[dict]],
     key: Union[int, str],
@@ -385,7 +385,7 @@ async def group_int_or_str_attribute(
 
 
 async def group_dict_attribute(
-    aws_account_map: dict[str, AWSAccount],
+    aws_account_map: dict[str, AWSAccountTemplate],
     number_of_accounts_resource_on: int,
     account_resources: list[dict],
     is_dict_attr: bool = True,

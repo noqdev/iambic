@@ -2,7 +2,7 @@ import asyncio
 
 from googleapiclient.errors import HttpError
 
-from iambic.config.models import GoogleProject
+from iambic.config.google.models import GoogleProject
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper

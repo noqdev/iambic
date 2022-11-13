@@ -23,7 +23,7 @@
             "justMyCode": false
         },
         {
-            "name": "Iambic Apply AWS Template",
+            "name": "Iambic Apply AWS IAM Role Template",
             "type": "python",
             "request": "launch",
             "module": "iambic.main",
@@ -35,6 +35,24 @@
                 "apply",
                 "--template",
                 "../noq-templates/resources/aws/roles/application/noqmeter_null_test_role.yaml",
+                "--config",
+                "demo/config.yaml"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "Iambic AWS Managed Policy Template",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "env": {
+                "AWS_PROFILE": "staging/IambicHubRole"
+            },
+            "args": [
+                "apply",
+                "--template",
+                "../noq-templates/resources/aws/managed_policies/vanta.yaml",
                 "--config",
                 "demo/config.yaml"
             ],

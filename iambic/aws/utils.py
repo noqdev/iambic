@@ -1,9 +1,31 @@
 import asyncio
+import copy
+import datetime
+import hashlib
+import importlib
+import json
+import os
+import platform
 import re
+import tarfile
+import types
+from collections import defaultdict
 from datetime import datetime
+from decimal import Decimal
 from enum import Enum
+from functools import lru_cache, wraps
+from importlib.metadata import version
+from pathlib import Path
+from time import time
+from typing import Any, Dict, List, Optional, Set, Tuple
 
-from botocore.exceptions import ClientError
+import boto  # type: ignore
+import boto3
+import botocore
+import click
+from aws_error_utils import catch_aws_error, errors, get_aws_error_info
+from botocore.exceptions import ClientError, NoCredentialsError
+from cloudaux.aws.sts import boto3_cached_conn
 
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
@@ -220,7 +242,7 @@ def get_aws_account_map(configs: list) -> dict:
     """Returns a map containing all account configs across all provided config instances
 
     :param configs:
-    :return: dict(account_id:str = AWSAccount)
+    :return: dict(account_id:str = AWSAccountTemplate)
     """
     aws_account_map = dict()
     for config in configs:
@@ -254,3 +276,66 @@ def boto3_retry(f):
                     raise
 
     return wrapper
+
+
+async def get_aws_config() -> botocore.config.Config:
+    return botocore.config.Config(
+        retries=dict(
+            max_attempts=5,
+            mode="adaptive",
+        )
+    )
+
+
+async def get_current_role_arn() -> str:
+    arn = boto3.client("sts").get_caller_identity().get("Arn")
+    identity_arn_with_session_name = arn.replace(":sts:", ":iam:").replace(
+        "assumed-role", "role"
+    )
+    return "/".join(identity_arn_with_session_name.split("/")[:2])
+
+
+async def get_role_name_from_arn(role_arn: str) -> str:
+    return role_arn.split("/")[1]
+
+
+async def get_account_id_from_arn(role_arn: str) -> str:
+    return role_arn.split(":")[4]
+
+
+async def maybe_assume_role(
+    role_arn: Optional[str],
+    client_type: str,
+    service_type: str = "client",
+    region: str = "us-east-1",
+    simulate=False,
+    session_name="iambic",
+) -> boto3.client:
+    if simulate:
+        return {}
+    aws_config = await get_aws_config()
+    assume_account_id = ""
+    assume_role_name = ""
+    if role_arn:
+        current_role: str = await get_current_role_arn()
+        current_role_name: str = await get_role_name_from_arn(current_role)
+        current_role_account_id: str = await get_account_id_from_arn(current_role)
+        assume_account_id = await get_account_id_from_arn(role_arn)
+        assume_role_name = await get_role_name_from_arn(role_arn)
+
+        if (
+            current_role_name == assume_role_name
+            and current_role_account_id == assume_account_id
+        ):
+            assume_account_id = ""
+            assume_role_name = ""
+
+    return boto3_cached_conn(
+        client_type,
+        service_type=service_type,
+        region=region,
+        account_number=assume_account_id,
+        assume_role=assume_role_name,
+        session_name=session_name,
+        config=aws_config,
+    )
