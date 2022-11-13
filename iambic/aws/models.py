@@ -4,8 +4,8 @@ from typing import List, Optional, Union
 
 from pydantic import Field
 
+from iambic.aws.accounts.models import AWSAccountTemplate
 from iambic.aws.utils import evaluate_on_account
-from iambic.config.models import AWSAccount, Config
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -86,13 +86,11 @@ class Tag(ExpiryModel, AccessModel):
 
 class AWSTemplate(BaseTemplate, ExpiryModel):
     async def _apply_to_account(
-        self, aws_account: AWSAccount, context: ExecutionContext
+        self, aws_account: AWSAccountTemplate, context: ExecutionContext
     ) -> AccountChangeDetails:
         raise NotImplementedError
 
-    async def apply(
-        self, config: Config, context: ExecutionContext
-    ) -> TemplateChangeDetails:
+    async def apply(self, config, context: ExecutionContext) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
             resource_id=self.resource_id,

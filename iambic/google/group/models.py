@@ -5,7 +5,7 @@ from typing import List, Optional
 from pydantic import Field
 
 from iambic.aws.models import ExpiryModel
-from iambic.config.models import GoogleProject
+from iambic.config.google.models import GoogleProject
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import AccountChangeDetails, ProposedChange, ProposedChangeType

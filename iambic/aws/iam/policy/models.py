@@ -7,6 +7,7 @@ import botocore
 from jinja2 import BaseLoader, Environment
 from pydantic import Field, constr
 
+from iambic.aws.accounts.models import AWSAccountTemplate
 from iambic.aws.iam.models import Description, Path
 from iambic.aws.iam.policy.utils import (
     apply_managed_policy_tags,
@@ -15,7 +16,6 @@ from iambic.aws.iam.policy.utils import (
     update_managed_policy,
 )
 from iambic.aws.models import ARN_RE, AccessModel, AWSTemplate, ExpiryModel, Tag
-from iambic.config.models import AWSAccount
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -34,7 +34,7 @@ class Principal(BaseModel):
     federated: Optional[Union[str, list[str]]] = None
 
     def _apply_resource_dict(
-        self, aws_account: AWSAccount = None, context: ExecutionContext = None
+        self, aws_account: AWSAccountTemplate = None, context: ExecutionContext = None
     ) -> dict:
         resource_dict = super(Principal, self)._apply_resource_dict(
             aws_account, context
@@ -201,13 +201,13 @@ class ManagedPolicyDocument(AccessModel):
     )
 
     def _apply_resource_dict(
-        self, aws_account: AWSAccount = None, context: ExecutionContext = None
+        self, aws_account: AWSAccountTemplate = None, context: ExecutionContext = None
     ) -> str:
         resource_dict = super()._apply_resource_dict(aws_account, context)
         return json.dumps(resource_dict)
 
     def apply_resource_dict(
-        self, aws_account: AWSAccount, context: ExecutionContext
+        self, aws_account: AWSAccountTemplate, context: ExecutionContext
     ) -> dict:
         response = json.loads(self._apply_resource_dict(aws_account, context))
         variables = {var.key: var.value for var in aws_account.variables}
@@ -243,11 +243,11 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
         description="List of tags attached to the role",
     )
 
-    def _is_read_only(self, aws_account: AWSAccount, context: ExecutionContext):
+    def _is_read_only(self, aws_account: AWSAccountTemplate, context: ExecutionContext):
         return aws_account.read_only or self.read_only or context.eval_only
 
     def _apply_resource_dict(
-        self, aws_account: AWSAccount = None, context: ExecutionContext = None
+        self, aws_account: AWSAccountTemplate = None, context: ExecutionContext = None
     ) -> dict:
         resource_dict = super()._apply_resource_dict(aws_account, context)
         resource_dict[
@@ -256,7 +256,7 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
         return resource_dict
 
     async def _apply_to_account(
-        self, aws_account: AWSAccount, context: ExecutionContext
+        self, aws_account: AWSAccountTemplate, context: ExecutionContext
     ) -> AccountChangeDetails:
         boto3_session = aws_account.get_boto3_session()
         client = boto3_session.client(

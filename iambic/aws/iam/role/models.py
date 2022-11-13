@@ -6,6 +6,7 @@ from typing import Optional, Union
 import botocore
 from pydantic import Field, constr
 
+from iambic.aws.accounts.models import AWSAccountTemplate
 from iambic.aws.iam.models import Description, MaxSessionDuration, Path
 from iambic.aws.iam.policy.models import (
     AssumeRolePolicyDocument,
@@ -22,7 +23,6 @@ from iambic.aws.iam.role.utils import (
 )
 from iambic.aws.models import ARN_RE, AccessModel, AWSTemplate, ExpiryModel, Tag
 from iambic.aws.utils import apply_to_account
-from iambic.config.models import AWSAccount
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import AccountChangeDetails, ProposedChange, ProposedChangeType
@@ -97,7 +97,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
     )
 
     def _apply_resource_dict(
-        self, aws_account: AWSAccount = None, context: ExecutionContext = None
+        self, aws_account: AWSAccountTemplate = None, context: ExecutionContext = None
     ) -> dict:
         response = super(RoleTemplate, self)._apply_resource_dict(aws_account, context)
         response.pop("RoleAccess", None)
@@ -141,13 +141,13 @@ class RoleTemplate(AWSTemplate, AccessModel):
 
         return response
 
-    def _is_read_only(self, aws_account: AWSAccount):
+    def _is_read_only(self, aws_account: AWSAccountTemplate):
         return (
             "aws-service-role" in self.path or aws_account.read_only or self.read_only
         )
 
     async def _apply_to_account(  # noqa: C901
-        self, aws_account: AWSAccount, context: ExecutionContext
+        self, aws_account: AWSAccountTemplate, context: ExecutionContext
     ) -> AccountChangeDetails:
         boto3_session = aws_account.get_boto3_session()
         client = boto3_session.client(

@@ -10,7 +10,6 @@ from pydantic import Field
 from pydantic.fields import ModelField
 
 from iambic.aws.utils import apply_to_account
-from iambic.config.models import AWSAccount, Config
 from iambic.core.context import ExecutionContext
 from iambic.core.utils import snake_to_camelcap, yaml
 
@@ -18,6 +17,10 @@ from iambic.core.utils import snake_to_camelcap, yaml
 def to_camel(string):
     """Convert a snake_case string to CamelCase"""
     return "".join(word.capitalize() for word in string.split("_"))
+
+
+def to_snake(s):
+    return "".join([f"_{c.lower()}" if c.isupper() else c for c in s]).lstrip("_")
 
 
 class BaseModel(PydanticBaseModel):
@@ -52,7 +55,7 @@ class BaseModel(PydanticBaseModel):
 
     def get_attribute_val_for_account(
         self,
-        aws_account: AWSAccount,
+        aws_account: "AWSAccountTemplate",
         attr: str,
         as_boto_dict: bool = True,
         context: ExecutionContext = None,
@@ -81,7 +84,7 @@ class BaseModel(PydanticBaseModel):
             return matching_definitions
 
     def _apply_resource_dict(
-        self, aws_account: AWSAccount = None, context: ExecutionContext = None
+        self, aws_account: "AWSAccountTemplate" = None, context: ExecutionContext = None
     ) -> dict:
         exclude_keys = {
             "deleted",
@@ -111,7 +114,7 @@ class BaseModel(PydanticBaseModel):
         return {self.case_convention(k): v for k, v in resource_dict.items()}
 
     def apply_resource_dict(
-        self, aws_account: AWSAccount, context: ExecutionContext
+        self, aws_account: "AWSAccountTemplate", context: ExecutionContext
     ) -> dict:
         response = self._apply_resource_dict(aws_account, context)
         variables = {var.key: var.value for var in aws_account.variables}
@@ -139,6 +142,14 @@ class BaseModel(PydanticBaseModel):
     @property
     def resource_id(self) -> str:
         raise NotImplementedError
+
+    def update(self, data):
+        for k, v in data.items():
+            try:
+                setattr(self, k, v)
+            except ValueError:
+                setattr(self, to_snake(k), v)
+        return self
 
 
 class ProposedChangeType(Enum):
@@ -263,11 +274,14 @@ class BaseTemplate(BaseModel):
         with open(self.file_path, "w") as f:
             f.write(as_yaml)
 
-    async def apply(
-        self, config: Config, context: ExecutionContext
-    ) -> TemplateChangeDetails:
+    async def apply(self, config, context: ExecutionContext) -> TemplateChangeDetails:
         raise NotImplementedError
 
     @classmethod
     def load(cls, file_path: str):
         return cls(file_path=file_path, **yaml.load(open(file_path)))
+
+
+class Variable(BaseModel):
+    key: str
+    value: str

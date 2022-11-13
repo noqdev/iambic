@@ -3,10 +3,11 @@ import pathlib
 
 import aiofiles
 
+from iambic.aws.accounts.models import AWSAccountTemplate
 from iambic.aws.iam.policy.models import ManagedPolicyTemplate
 from iambic.aws.iam.policy.utils import list_managed_policies
 from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
-from iambic.config.models import AWSAccount, Config
+from iambic.config.models import Config
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
@@ -46,7 +47,7 @@ def get_account_managed_policy_resource_dir(account_id: str) -> str:
 
 
 async def generate_account_managed_policy_resource_files(
-    aws_account: AWSAccount,
+    aws_account: AWSAccountTemplate,
 ) -> dict:
     account_resource_dir = get_account_managed_policy_resource_dir(
         aws_account.account_id
@@ -94,7 +95,7 @@ async def generate_account_managed_policy_resource_files(
 
 
 async def create_templated_managed_policy(  # noqa: C901
-    aws_account_map: dict[str, AWSAccount],
+    aws_account_map: dict[str, AWSAccountTemplate],
     managed_policy_name: str,
     managed_policy_refs: list[dict],
     managed_policy_dir: str,
