@@ -15,14 +15,9 @@ from iambic.core.context import ExecutionContext
 from iambic.core.utils import snake_to_camelcap, yaml
 
 
-def to_camel(string):
-    """Convert a snake_case string to CamelCase"""
-    return "".join(word.capitalize() for word in string.split("_"))
-
-
 class BaseModel(PydanticBaseModel):
     class Config:
-        alias_generator = to_camel
+        alias_generator = snake_to_camelcap
         allow_population_by_field_name = True
 
     @classmethod
