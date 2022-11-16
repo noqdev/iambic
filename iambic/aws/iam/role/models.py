@@ -81,8 +81,11 @@ class RoleTemplate(AWSTemplate, AccessModel):
         description="List of users and groups who can assume into the role",
     )
     assume_role_policy_document: Optional[
-        Union[None, AssumeRolePolicyDocument, list[AssumeRolePolicyDocument]]
-    ] = None
+        Union[None, list[AssumeRolePolicyDocument], AssumeRolePolicyDocument]
+    ] = Field(
+        [],
+        description="Who can assume the Role",
+    )
     tags: Optional[list[Tag]] = Field(
         [],
         description="List of tags attached to the role",
