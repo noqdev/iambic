@@ -100,7 +100,7 @@ def run_handler(event=None, context=None):
                 CONFIG_PATH,
             )
         case LambdaCommand.run_git_apply.value:
-            return run_git_apply(CONFIG_PATH, None, REPO_BASE_PATH, FROM_SHA, TO_SHA)
+            return run_git_apply(CONFIG_PATH, REPO_BASE_PATH, None, FROM_SHA, TO_SHA)
         case LambdaCommand.run_git_plan.value:
             return run_git_plan(CONFIG_PATH, None, REPO_BASE_PATH, PLAN_OUTPUT_PATH)
         case LambdaCommand.run_clone_git_repos.value:
