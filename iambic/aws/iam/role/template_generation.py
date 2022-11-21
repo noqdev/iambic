@@ -10,8 +10,9 @@ from iambic.aws.iam.role.utils import (
     list_role_tags,
     list_roles,
 )
+from iambic.aws.models import AWSAccount
 from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
-from iambic.config.models import AWSAccount, Config
+from iambic.config.models import Config
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
@@ -141,7 +142,8 @@ async def create_templated_role(  # noqa: C901
             )
 
     # Generate the params used for attribute creation
-    role_template_params = {"role_name": role_name}
+    role_template_params = {"identifier": role_name}
+    role_template_properties = {"role_name": role_name}
     path_resources = list()
     description_resources = list()
     managed_policy_resources = list()
@@ -217,7 +219,7 @@ async def create_templated_role(  # noqa: C901
         aws_account_map, num_of_accounts, path_resources, "path"
     )
     if path != "/":
-        role_template_params["path"] = path
+        role_template_properties["path"] = path
 
     max_session_duration = await group_int_or_str_attribute(
         aws_account_map,
@@ -226,32 +228,32 @@ async def create_templated_role(  # noqa: C901
         "max_session_duration",
     )
     if max_session_duration != 3600:
-        role_template_params["max_session_duration"] = max_session_duration
+        role_template_properties["max_session_duration"] = max_session_duration
 
     if assume_role_policy_document_resources:
-        role_template_params[
+        role_template_properties[
             "assume_role_policy_document"
         ] = await group_dict_attribute(
             aws_account_map, num_of_accounts, assume_role_policy_document_resources
         )
 
     if permissions_boundary_resources:
-        role_template_params["permissions_boundary"] = await group_dict_attribute(
+        role_template_properties["permissions_boundary"] = await group_dict_attribute(
             aws_account_map, num_of_accounts, permissions_boundary_resources
         )
 
     if description_resources:
-        role_template_params["description"] = await group_int_or_str_attribute(
+        role_template_properties["description"] = await group_int_or_str_attribute(
             aws_account_map, num_of_accounts, description_resources, "description"
         )
 
     if managed_policy_resources:
-        role_template_params["managed_policies"] = await group_dict_attribute(
+        role_template_properties["managed_policies"] = await group_dict_attribute(
             aws_account_map, num_of_accounts, managed_policy_resources, False
         )
 
     if inline_policy_document_resources:
-        role_template_params["inline_policies"] = await group_dict_attribute(
+        role_template_properties["inline_policies"] = await group_dict_attribute(
             aws_account_map, num_of_accounts, inline_policy_document_resources, False
         )
 
@@ -273,14 +275,14 @@ async def create_templated_role(  # noqa: C901
                 tags.append({"included_accounts": included_accounts, **tag})
 
         if tags:
-            role_template_params[
+            role_template_properties[
                 "tags"
             ] = await set_included_accounts_for_grouped_attribute(
                 aws_account_map, num_of_accounts, tags
             )
-            for elem in range(len(role_template_params["tags"])):
-                if role_template_params["tags"][elem]["included_accounts"] == ["*"]:
-                    role_template_params["tags"][elem].pop("included_accounts")
+            for elem in range(len(role_template_properties["tags"])):
+                if role_template_properties["tags"][elem]["included_accounts"] == ["*"]:
+                    role_template_properties["tags"][elem].pop("included_accounts")
 
         if role_access:
             role_template_params[
@@ -299,6 +301,7 @@ async def create_templated_role(  # noqa: C901
             file_path=existing_template_map.get(
                 role_name, get_templated_role_file_path(role_dir, role_name)
             ),
+            properties=role_template_properties,
             **role_template_params,
         )
         role.write()

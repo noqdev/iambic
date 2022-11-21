@@ -14,8 +14,14 @@ from iambic.aws.iam.policy.utils import (
     get_managed_policy,
     update_managed_policy,
 )
-from iambic.aws.models import ARN_RE, AccessModel, AWSTemplate, ExpiryModel, Tag
-from iambic.config.models import AWSAccount
+from iambic.aws.models import (
+    ARN_RE,
+    AccessModel,
+    AWSAccount,
+    AWSTemplate,
+    ExpiryModel,
+    Tag,
+)
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -227,8 +233,7 @@ class ManagedPolicyDocument(AccessModel):
         return
 
 
-class ManagedPolicyTemplate(AWSTemplate, AccessModel):
-    template_type = "NOQ::IAM::ManagedPolicy"
+class ManagedPolicyProperties(BaseModel):
     policy_name: str = Field(
         description="The name of the policy.",
     )
@@ -241,6 +246,14 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
     tags: Optional[List[Tag]] = Field(
         [],
         description="List of tags attached to the role",
+    )
+
+
+class ManagedPolicyTemplate(AWSTemplate, AccessModel):
+    template_type = "NOQ::IAM::ManagedPolicy"
+    identifier: str
+    properties: ManagedPolicyProperties = Field(
+        description="The properties of the managed policy",
     )
 
     def _is_read_only(self, aws_account: AWSAccount, context: ExecutionContext):
@@ -365,7 +378,7 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
 
     @property
     def resource_id(self):
-        return self.policy_name
+        return self.properties.policy_name
 
 
 class ManagedPolicyRef(AccessModel, ExpiryModel):
