@@ -3,7 +3,7 @@ from typing import Union
 
 import xxhash
 
-from iambic.config.models import AWSAccount
+from iambic.aws.models import AWSAccount
 from iambic.core import noq_json as json
 from iambic.core.parser import load_templates
 from iambic.core.utils import gather_templates

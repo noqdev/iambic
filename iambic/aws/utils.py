@@ -44,6 +44,50 @@ async def paginated_search(
             search_kwargs["Marker"] = response["Marker"]
 
 
+async def legacy_paginated_search(
+    search_fnc, response_key: str, max_results: int = None, **search_kwargs
+) -> list:
+    """Retrieve and aggregate each paged response, returning a single list of each response object
+
+    Why is there 2 paginated searches? - AWS has 2 ways of paginating results
+    This one seems to be the older way which is why it's called legacy
+
+    :param search_fnc:
+    :param response_key:
+    :param max_results:
+    :return:
+    """
+    results = []
+    retry_count = 0
+    is_first_call = True
+
+    while True:
+        try:
+            response = await aio_wrapper(search_fnc, **search_kwargs)
+        except ClientError as err:
+            if err.response["Error"]["Code"] == "Throttling":
+                if retry_count >= 10:
+                    raise
+                retry_count += 1
+                await asyncio.sleep(retry_count * 2)
+                continue
+            else:
+                raise
+
+        retry_count = 0
+        results.extend(response.get(response_key, []))
+
+        if (
+            not response.get("NextToken")
+            or (max_results and len(results) >= max_results)
+            or (not results and not is_first_call)
+        ):
+            return results
+        else:
+            is_first_call = False
+            search_kwargs["NextToken"] = response["NextToken"]
+
+
 class RegionName(Enum):
     us_east_1 = "us-east-1"
     us_west_1 = "us-west-1"

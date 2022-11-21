@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import json
 from enum import Enum
 from types import GenericAlias
-from typing import List, Optional, Set, Union, get_args, get_origin
+from typing import TYPE_CHECKING, List, Optional, Set, Union, get_args, get_origin
 
 from deepdiff.model import PrettyOrderedSet
 from jinja2 import BaseLoader, Environment
@@ -10,9 +12,12 @@ from pydantic import Field
 from pydantic.fields import ModelField
 
 from iambic.aws.utils import apply_to_account
-from iambic.config.models import AWSAccount, Config
 from iambic.core.context import ExecutionContext
 from iambic.core.utils import snake_to_camelcap, yaml
+
+if TYPE_CHECKING:
+    from iambic.aws.models import AWSAccount
+    from iambic.config.models import Config
 
 
 class BaseModel(PydanticBaseModel):
@@ -52,7 +57,10 @@ class BaseModel(PydanticBaseModel):
         as_boto_dict: bool = True,
         context: ExecutionContext = None,
     ):
-        attr_val = getattr(self, attr)
+        # Support for nested attributes via dot notation. Example: properties.tags
+        attr_val = self
+        for attr_key in attr.split("."):
+            attr_val = getattr(attr_val, attr_key)
 
         if as_boto_dict and hasattr(attr_val, "_apply_resource_dict"):
             return attr_val._apply_resource_dict(aws_account, context)
@@ -64,7 +72,12 @@ class BaseModel(PydanticBaseModel):
         ]
         if len(matching_definitions) == 0:
             # Fallback to the default definition
-            return self.__fields__[attr].default
+            field = self
+            split_key = attr.split(".")
+            if len(split_key) > 1:
+                for key in split_key[:-1]:
+                    field = getattr(field, key)
+            return field.__fields__[split_key[-1]].default
         elif as_boto_dict:
             return [
                 match._apply_resource_dict(aws_account, context)
@@ -90,16 +103,21 @@ class BaseModel(PydanticBaseModel):
             "file_path",
         }
         exclude_keys.update(self.exclude_keys)
-
+        has_properties = hasattr(self, "properties")
+        properties = getattr(self, "properties", self)
         if aws_account:
             resource_dict = {
-                k: self.get_attribute_val_for_account(aws_account, k, context=context)
-                for k in self.__dict__.keys()
+                k: self.get_attribute_val_for_account(
+                    aws_account,
+                    f"properties.{k}" if has_properties else k,
+                    context=context,
+                )
+                for k in properties.__dict__.keys()
                 if k not in exclude_keys
             }
             resource_dict = {k: v for k, v in resource_dict.items() if bool(v)}
         else:
-            resource_dict = self.dict(
+            resource_dict = properties.dict(
                 exclude=exclude_keys, exclude_none=True, exclude_unset=False
             )
 
@@ -266,3 +284,8 @@ class BaseTemplate(BaseModel):
     @classmethod
     def load(cls, file_path: str):
         return cls(file_path=file_path, **yaml.load(open(file_path)))
+
+
+class Variable(PydanticBaseModel):
+    key: str
+    value: str

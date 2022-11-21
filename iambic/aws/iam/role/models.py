@@ -20,12 +20,23 @@ from iambic.aws.iam.role.utils import (
     get_role,
     update_assume_role_policy,
 )
-from iambic.aws.models import ARN_RE, AccessModel, AWSTemplate, ExpiryModel, Tag
+from iambic.aws.models import (
+    ARN_RE,
+    AccessModel,
+    AWSAccount,
+    AWSTemplate,
+    ExpiryModel,
+    Tag,
+)
 from iambic.aws.utils import apply_to_account
-from iambic.config.models import AWSAccount
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
-from iambic.core.models import AccountChangeDetails, ProposedChange, ProposedChangeType
+from iambic.core.models import (
+    AccountChangeDetails,
+    BaseModel,
+    ProposedChange,
+    ProposedChangeType,
+)
 from iambic.core.utils import aio_wrapper
 
 
@@ -61,8 +72,7 @@ class PermissionBoundary(ExpiryModel, AccessModel):
         return self.permissions_boundary_arn
 
 
-class RoleTemplate(AWSTemplate, AccessModel):
-    template_type = "NOQ::AWS::IAM::Role"
+class RoleProperties(BaseModel):
     role_name: str = Field(
         description="Name of the role",
     )
@@ -76,10 +86,6 @@ class RoleTemplate(AWSTemplate, AccessModel):
     permissions_boundary: Optional[
         Union[None, PermissionBoundary, list[PermissionBoundary]]
     ] = None
-    role_access: Optional[list[RoleAccess]] = Field(
-        [],
-        description="List of users and groups who can assume into the role",
-    )
     assume_role_policy_document: Optional[
         Union[None, AssumeRolePolicyDocument, list[AssumeRolePolicyDocument]]
     ] = None
@@ -94,6 +100,18 @@ class RoleTemplate(AWSTemplate, AccessModel):
     inline_policies: Optional[list[PolicyDocument]] = Field(
         [],
         description="List of the role's inline policies",
+    )
+
+
+class RoleTemplate(AWSTemplate, AccessModel):
+    template_type = "NOQ::AWS::IAM::Role"
+    identifier: str
+    properties: RoleProperties = Field(
+        description="Properties of the role",
+    )
+    role_access: Optional[list[RoleAccess]] = Field(
+        [],
+        description="List of users and groups who can assume into the role",
     )
 
     def _apply_resource_dict(
@@ -143,7 +161,9 @@ class RoleTemplate(AWSTemplate, AccessModel):
 
     def _is_read_only(self, aws_account: AWSAccount):
         return (
-            "aws-service-role" in self.path or aws_account.read_only or self.read_only
+            "aws-service-role" in self.properties.path
+            or aws_account.read_only
+            or self.read_only
         )
 
     async def _apply_to_account(  # noqa: C901
@@ -338,4 +358,4 @@ class RoleTemplate(AWSTemplate, AccessModel):
 
     @property
     def resource_id(self):
-        return self.role_name
+        return self.properties.role_name
