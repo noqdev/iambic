@@ -201,14 +201,36 @@ def run_apply(force: bool, config_path: str, templates: list[str], repo_dir: str
     show_default=True,
     help="Allow applying changes from a dirty git repo",
 )
-def git_apply(config_path: str, repo_dir: str, allow_dirty: bool):
-    run_git_apply(config_path, repo_dir, allow_dirty)
+@click.option(
+    "--from-sha",
+    "from_sha",
+    required=False,
+    type=str,
+    help="The from_sha to calculate diff",
+)
+@click.option(
+    "--to-sha",
+    "to_sha",
+    required=False,
+    type=str,
+    help="The to_sha to calculate diff",
+)
+def git_apply(
+    config_path: str, repo_dir: str, allow_dirty: bool, from_sha: str, to_sha: str
+):
+    run_git_apply(config_path, repo_dir, allow_dirty, from_sha, to_sha)
 
 
-def run_git_apply(config_path: str, repo_dir: str, allow_dirty: bool):
+def run_git_apply(
+    config_path: str, repo_dir: str, allow_dirty: bool, from_sha: str, to_sha: str
+):
     template_changes = asyncio.run(
         apply_git_changes(
-            config_path, repo_dir or str(pathlib.Path.cwd()), allow_dirty=allow_dirty
+            config_path,
+            repo_dir or str(pathlib.Path.cwd()),
+            allow_dirty=allow_dirty,
+            from_sha=from_sha,
+            to_sha=to_sha,
         )
     )
     output_proposed_changes(template_changes)
