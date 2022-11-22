@@ -9,7 +9,13 @@ import botocore
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, constr
 
-from iambic.aws.utils import RegionName, evaluate_on_account
+from iambic.aws.utils import (
+    RegionName,
+    evaluate_on_account,
+    get_account_value,
+    legacy_paginated_search,
+    set_org_account_variables,
+)
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -19,6 +25,7 @@ from iambic.core.models import (
     TemplateChangeDetails,
     Variable,
 )
+from iambic.core.utils import aio_wrapper
 
 if TYPE_CHECKING:
     from iambic.config.models import Config
@@ -132,7 +139,11 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         session = boto3.Session(region_name=region_name)
         if self.assume_role_arn:
             try:
-                sts = session.client("sts")
+                sts = session.client(
+                    "sts",
+                    endpoint_url=f"https://sts.{region_name}.amazonaws.com",
+                    region_name=region_name,
+                )
                 role_params = dict(
                     RoleArn=self.assume_role_arn,
                     RoleSessionName="iambic",
@@ -145,6 +156,7 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
                     aws_access_key_id=role["Credentials"]["AccessKeyId"],
                     aws_secret_access_key=role["Credentials"]["SecretAccessKey"],
                     aws_session_token=role["Credentials"]["SessionToken"],
+                    profile_name="iambic",
                 )
             except Exception as err:
                 log.exception(err)
@@ -164,7 +176,7 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         self.default_region = self.default_region.value
 
 
-class AWSAccount(PydanticBaseModel):
+class AWSAccount(BaseAWSAccountAndOrgModel):
     account_id: constr(min_length=12, max_length=12) = Field(
         None, description="The AWS Account ID"
     )
@@ -195,23 +207,18 @@ class AWSAccount(PydanticBaseModel):
         elif boto3_session := self.boto3_session_map.get(region_name):
             return boto3_session
 
-        if self.aws_profile:
+        if self.org_session_info:
             try:
-                self.boto3_session_map[region_name] = boto3.Session(
-                    profile_name=self.aws_profile, region_name=region_name
+                sts = self.org_session_info["boto3_session"].client(
+                    "sts",
+                    endpoint_url=f"https://sts.{region_name}.amazonaws.com",
+                    region_name=region_name,
                 )
-            except Exception as err:
-                log.exception(err)
-            else:
-                return self.boto3_session_map[region_name]
-
-        session = boto3.Session(region_name=region_name)
-        if self.assume_role_arn:
-            try:
-                sts = session.client("sts")
                 role_params = dict(
                     RoleArn=self.assume_role_arn,
                     RoleSessionName="iambic",
+                    endpoint_url=f"https://sts.{region_name}.amazonaws.com",
+                    region_name=region_name,
                 )
                 if self.external_id:
                     role_params["ExternalId"] = self.external_id
@@ -221,26 +228,22 @@ class AWSAccount(PydanticBaseModel):
                     aws_access_key_id=role["Credentials"]["AccessKeyId"],
                     aws_secret_access_key=role["Credentials"]["SecretAccessKey"],
                     aws_session_token=role["Credentials"]["SessionToken"],
+                    profile_name="iambic",
                 )
             except Exception as err:
                 log.exception(err)
             else:
                 return self.boto3_session_map[region_name]
 
-        self.boto3_session_map[region_name] = session
-        return self.boto3_session_map[region_name]
-
-    def get_boto3_client(self, service: str, region_name: str = None):
-        return self.get_boto3_session(region_name).client(
-            service, config=botocore.client.Config(max_pool_connections=50)
-        )
+        return super(AWSAccount, self).get_boto3_session(region_name)
 
     def __str__(self):
         return f"{self.account_name} - ({self.account_id})"
 
     def __init__(self, **kwargs):
         super(AWSAccount, self).__init__(**kwargs)
-        self.default_region = self.default_region.value
+        if not isinstance(self.default_region, str):
+            self.default_region = self.default_region.value
 
 
 class BaseAWSOrgRule(BaseModel):
@@ -289,6 +292,116 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         [],
         description="A list of rules used to determine how organization accounts are handled",
     )
+
+    async def _create_org_account_instance(
+        self, account: dict
+    ) -> Union[AWSAccount | None]:
+        """Create an AWSAccount instance from an AWS Organization account and account dict
+
+        Evaluate rules to determine if the account should be added to the config and if it is a read-only account.
+        """
+        account_id = account["Id"]
+        account_name = account["Name"]
+        account_rule = self.default_rule
+
+        if self.account_rules and (
+            new_rule := get_account_value(self.account_rules, account_id, account_name)
+        ):
+            account_rule = new_rule
+
+        if not account_rule.enabled:
+            return
+
+        org_boto3_session = self.get_boto3_session()
+        region_name = str(self.default_region)
+        aws_account = AWSAccount(
+            account_id=account_id,
+            account_name=account_name,
+            org_id=self.org_id,
+            variables=account["variables"],
+            read_only=account_rule.read_only,
+        )
+        aws_account.boto3_session_map = {}
+        assume_role_names = account_rule.assume_role_name
+        if not isinstance(assume_role_names, list):
+            assume_role_names = [assume_role_names]
+
+        # Determine the assume_role_arn by attempting to assume into the provided assume_role_names.
+        for assume_role_name in assume_role_names:
+            assume_role_arn = f"arn:aws:iam::{account_id}:role/{assume_role_name}"
+            try:
+                sts = org_boto3_session.client(
+                    "sts",
+                    endpoint_url=f"https://sts.{region_name}.amazonaws.com",
+                    region_name=region_name,
+                )
+                role_params = dict(RoleArn=assume_role_arn, RoleSessionName="iambic")
+                if self.external_id:
+                    role_params["ExternalId"] = self.external_id
+                role = await aio_wrapper(sts.assume_role, **role_params)
+                account_session = boto3.Session(
+                    region_name=region_name,
+                    aws_access_key_id=role["Credentials"]["AccessKeyId"],
+                    aws_secret_access_key=role["Credentials"]["SecretAccessKey"],
+                    aws_session_token=role["Credentials"]["SessionToken"],
+                )
+                await aio_wrapper(account_session.get_credentials)
+                aws_account.boto3_session_map[region_name] = account_session
+                aws_account.org_session_info = dict(boto3_session=org_boto3_session)
+                aws_account.assume_role_arn = assume_role_arn
+                return aws_account
+            except Exception as e:
+                log.debug(
+                    "Failed to assume role", assume_role_arn=assume_role_arn, error=e
+                )
+                continue
+
+    async def get_accounts(
+        self, existing_accounts_map: dict[str, AWSAccount] = None
+    ) -> list[AWSAccount]:
+        """Get all accounts in an AWS Organization
+
+        Also extends variables for accounts that are already in the config.
+        Does not overwrite variables.
+        """
+        if existing_accounts_map is None:
+            existing_accounts_map = {}
+
+        client = self.get_boto3_client("organizations")
+        org_accounts = await legacy_paginated_search(
+            client.list_accounts,
+            "Accounts",
+        )
+        org_accounts = await asyncio.gather(
+            *[
+                set_org_account_variables(client, account)
+                for account in org_accounts
+                if account["Status"] == "ACTIVE"
+            ]
+        )
+        response = list()
+        discovered_accounts = list()
+
+        for org_account in org_accounts:
+            account_id = org_account["Id"]
+            if account := existing_accounts_map.get(account_id):
+                account.org_id = self.org_id
+                existing_vars = {var["key"] for var in account.variables}
+                for org_var in org_account["variables"]:
+                    if org_var["key"] not in existing_vars:
+                        account.variables.append(org_var)
+                response.append(account)
+            else:
+                discovered_accounts.append(org_account)
+
+        discovered_accounts = await asyncio.gather(
+            *[
+                self._create_org_account_instance(account)
+                for account in discovered_accounts
+            ]
+        )
+        response.extend([account for account in discovered_accounts if account])
+        return response
 
     def __str__(self):
         return f"{self.org_name} - ({self.org_id})"

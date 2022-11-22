@@ -1,3 +1,4 @@
+import asyncio
 import base64
 from enum import Enum
 from typing import List, Optional
@@ -146,7 +147,7 @@ class Config(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def set_account_defaults(self):
+    async def setup_aws_accounts(self):
         for elem, account in enumerate(self.aws_accounts):
             if not account.role_access_tag:
                 self.aws_accounts[elem].role_access_tag = self.role_access_tag
@@ -154,6 +155,24 @@ class Config(BaseModel):
             for variable in self.variables:
                 if variable.key not in [av.key for av in account.variables]:
                     self.aws_accounts[elem].variables.append(variable)
+
+        account_map = {account.account_id: account for account in self.aws_accounts}
+        config_account_idx_map = {
+            account.account_id: idx for idx, account in enumerate(self.aws_accounts)
+        }
+
+        if self.aws and self.aws.organizations:
+            orgs_accounts = await asyncio.gather(
+                *[org.get_accounts(account_map) for org in self.aws.organizations]
+            )
+            for org_accounts in orgs_accounts:
+                for account in org_accounts:
+                    if (
+                        account_elem := config_account_idx_map.get(account.account_id)
+                    ) is not None:
+                        self.aws_accounts[account_elem] = account
+                    else:
+                        self.aws_accounts.append(account)
 
     def get_aws_secret(self, extend: ExtendsConfig) -> dict:
         """TODO: Secrets should be moved to the account to prevent an anti-pattern

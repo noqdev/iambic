@@ -78,7 +78,7 @@ def run_plan(config_path: str, templates: list[str], repo_dir: str):
     asyncio.run(flag_expired_resources(templates))
 
     config = Config.load(config_path)
-    config.set_account_defaults()
+    asyncio.run(config.setup_aws_accounts())
     ctx.eval_only = True
     output_proposed_changes(asyncio.run(apply_changes(config, templates, ctx)))
 
@@ -97,7 +97,7 @@ def detect(config_path: str):
 
 def run_detect(config_path: str):
     config = Config.load(config_path)
-    config.set_account_defaults()
+    asyncio.run(config.setup_aws_accounts())
     asyncio.run(detect_changes(config))
 
 
@@ -123,7 +123,7 @@ def clone_repos(config_path: str, repo_base_path: str):
 
 def run_clone_repos(config_path: str, repo_base_path: str):
     config = Config.load(config_path)
-    config.set_account_defaults()
+    asyncio.run(config.setup_aws_accounts())
     asyncio.run(clone_git_repos(config, repo_base_path))
 
 
@@ -168,7 +168,7 @@ def run_apply(force: bool, config_path: str, templates: list[str], repo_dir: str
         templates = asyncio.run(gather_templates(repo_dir or str(pathlib.Path.cwd())))
 
     config = Config.load(config_path)
-    config.set_account_defaults()
+    asyncio.run(config.setup_aws_accounts())
     ctx.eval_only = not force
     template_changes = asyncio.run(apply_changes(config, templates, ctx))
     output_proposed_changes(template_changes)
@@ -284,7 +284,7 @@ def run_import(config_paths: list[str], repo_dir: str):
     configs = []
     for config_path in config_paths:
         config = Config.load(config_path)
-        config.set_account_defaults()
+        asyncio.run(config.setup_aws_accounts())
         configs.append(config)
     asyncio.run(generate_templates(configs, repo_dir or str(pathlib.Path.cwd())))
 

@@ -199,7 +199,7 @@ async def create_templated_managed_policy(  # noqa: C901
 async def generate_aws_managed_policy_templates(
     configs: list[Config], base_output_dir: str
 ):
-    aws_account_map = get_aws_account_map(configs)
+    aws_account_map = await get_aws_account_map(configs)
     existing_template_map = await get_existing_template_file_map(
         base_output_dir, "NOQ::IAM::ManagedPolicy"
     )

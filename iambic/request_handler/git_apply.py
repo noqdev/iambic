@@ -34,7 +34,7 @@ async def apply_git_changes(
         context = ctx
 
     config = Config.load(config_path)
-    config.set_account_defaults()
+    await config.setup_aws_accounts()
     file_changes = await retrieve_git_changes(repo_dir, allow_dirty=allow_dirty)
     if (
         not file_changes["new_files"]
