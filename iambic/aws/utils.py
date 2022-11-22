@@ -122,32 +122,35 @@ def normalize_boto3_resp(obj):
         return obj
 
 
-def get_closest_value(matching_values: list, aws_account):
-    if len(matching_values) == 1:
-        return matching_values[0]
+def get_account_value(matching_values: list, account_id: str, account_name: str = None):
+    account_reprs = [account_id]
+    if account_name:
+        account_reprs.append(account_name.lower())
 
-    account_value_hit = dict(returns=None, specificty=0)
+    included_account_map = dict()
+    included_account_lists = list()
 
-    account_ids = [aws_account.account_id]
-    if account_name := aws_account.account_name:
-        account_ids.append(account_name.lower())
+    for matching_val in matching_values:
+        for included_account in matching_val.included_accounts:
+            included_account_map[included_account] = matching_val
+            included_account_lists.append(included_account)
 
-    for matching_value in matching_values:
-        resource_accounts = sorted(matching_value.included_accounts, key=len)
-        for resource_account in resource_accounts:
-            for account_id in account_ids:
-                if resource_account == "*" and account_value_hit["specificty"] == 0:
-                    account_value_hit = {"returns": matching_value, "specificty": 1}
-                elif re.match(resource_account.lower(), account_id) and len(
-                    resource_account
-                ) > account_value_hit.get("specificty", 0):
-                    account_value_hit = {
-                        "returns": matching_value,
-                        "specificty": len(resource_account),
-                    }
-                    break
-
-    return account_value_hit["returns"]
+    for included_account in sorted(included_account_lists, key=len, reverse=True):
+        cur_val = included_account_map[included_account]
+        if any(
+            any(
+                re.match(excluded_account.lower(), account_repr)
+                for account_repr in account_reprs
+            )
+            for excluded_account in cur_val.excluded_accounts
+        ):
+            log.debug("Hit an excluded account rule", account_id=account_id)
+            continue
+        elif included_account == "*" or any(
+            re.match(included_account.lower(), account_repr)
+            for account_repr in account_reprs
+        ):
+            return cur_val
 
 
 def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> bool:
@@ -163,7 +166,7 @@ def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> boo
     if aws_account.org_id:
         if aws_account.org_id in resource.excluded_orgs:
             return False
-        elif not any(
+        elif "*" not in resource.included_orgs and not any(
             re.match(org_id, aws_account.org_id) for org_id in resource.included_orgs
         ):
             return False
@@ -204,7 +207,9 @@ def apply_to_account(resource, aws_account, context: ExecutionContext) -> bool:
                 return False
         else:
             deleted_obj = resource.get_attribute_val_for_account(aws_account, "deleted")
-            deleted_obj = get_closest_value(deleted_obj, aws_account)
+            deleted_obj = get_account_value(
+                deleted_obj, aws_account.account_id, aws_account.account_name
+            )
             if deleted_obj and deleted_obj.deleted and not deleted_resource_type:
                 return False
 
@@ -260,7 +265,15 @@ async def remove_expired_resources(
     return resource
 
 
-def get_aws_account_map(configs: list) -> dict:
+async def set_org_account_variables(client, account: dict) -> dict:
+    tags = await legacy_paginated_search(
+        client.list_tags_for_resource, "Tags", ResourceId=account["Id"]
+    )
+    account["variables"] = [{"key": tag["Key"], "value": tag["Value"]} for tag in tags]
+    return account
+
+
+async def get_aws_account_map(configs: list) -> dict:
     """Returns a map containing all account configs across all provided config instances
 
     :param configs:
@@ -268,7 +281,6 @@ def get_aws_account_map(configs: list) -> dict:
     """
     aws_account_map = dict()
     for config in configs:
-        config.set_account_defaults()
         for aws_account in config.aws_accounts:
             if aws_account_map.get(aws_account.account_id):
                 log.critical(

@@ -310,7 +310,7 @@ async def create_templated_role(  # noqa: C901
 
 
 async def generate_aws_role_templates(configs: list[Config], base_output_dir: str):
-    aws_account_map = get_aws_account_map(configs)
+    aws_account_map = await get_aws_account_map(configs)
     existing_template_map = await get_existing_template_file_map(
         base_output_dir, "AWS::IAM::Role"
     )
