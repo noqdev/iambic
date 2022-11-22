@@ -56,7 +56,7 @@ async def generate_account_managed_policy_resource_files(
     messages = []
 
     response = dict(account_id=aws_account.account_id, managed_policies=[])
-    iam_client = aws_account.get_boto3_client("iam")
+    iam_client = await aws_account.get_boto3_client("iam")
     account_managed_policies = await list_managed_policies(iam_client)
 
     log.info(

@@ -57,7 +57,7 @@ async def generate_account_role_resource_files(aws_account: AWSAccount) -> dict:
     messages = []
 
     response = dict(account_id=aws_account.account_id, roles=[])
-    iam_client = aws_account.get_boto3_client("iam")
+    iam_client = await aws_account.get_boto3_client("iam")
     account_roles = await list_roles(iam_client)
 
     log.info(
@@ -95,7 +95,7 @@ async def generate_account_role_resource_files(aws_account: AWSAccount) -> dict:
 async def set_role_resource_tags(
     role_name: str, role_resource_path: str, aws_account: AWSAccount
 ):
-    iam_client = aws_account.get_boto3_client("iam")
+    iam_client = await aws_account.get_boto3_client("iam")
     role_tags = await list_role_tags(role_name, iam_client)
     await resource_file_upsert(role_resource_path, {"Tags": role_tags}, False)
 
@@ -103,7 +103,7 @@ async def set_role_resource_tags(
 async def set_role_resource_inline_policies(
     role_name: str, role_resource_path: str, aws_account: AWSAccount
 ):
-    iam_client = aws_account.get_boto3_client("iam")
+    iam_client = await aws_account.get_boto3_client("iam")
     role_inline_policies = await get_role_inline_policies(role_name, iam_client)
     for k in role_inline_policies.keys():
         role_inline_policies[k]["policy_name"] = k
@@ -117,7 +117,7 @@ async def set_role_resource_inline_policies(
 async def set_role_resource_managed_policies(
     role_name: str, role_resource_path: str, aws_account: AWSAccount
 ):
-    iam_client = aws_account.get_boto3_client("iam")
+    iam_client = await aws_account.get_boto3_client("iam")
     role_managed_policies = await get_role_managed_policies(role_name, iam_client)
     await resource_file_upsert(
         role_resource_path, {"ManagedPolicies": role_managed_policies}, False

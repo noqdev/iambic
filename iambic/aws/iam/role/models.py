@@ -172,7 +172,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
     async def _apply_to_account(  # noqa: C901
         self, aws_account: AWSAccount, context: ExecutionContext
     ) -> AccountChangeDetails:
-        boto3_session = aws_account.get_boto3_session()
+        boto3_session = await aws_account.get_boto3_session()
         client = boto3_session.client(
             "iam", config=botocore.client.Config(max_pool_connections=50)
         )

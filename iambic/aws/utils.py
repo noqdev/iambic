@@ -3,6 +3,7 @@ import re
 from datetime import datetime
 from enum import Enum
 
+import boto3
 from botocore.exceptions import ClientError
 
 from iambic.core.context import ExecutionContext
@@ -292,6 +293,33 @@ async def get_aws_account_map(configs: list) -> dict:
             aws_account_map[aws_account.account_id] = aws_account
 
     return aws_account_map
+
+
+async def create_assume_role_session(
+    boto3_session,
+    assume_role_arn: str,
+    region_name: str,
+    external_id: str = None,
+    session_name: str = "iambic",
+) -> boto3.Session:
+    try:
+        sts = boto3_session.client(
+            "sts",
+            endpoint_url=f"https://sts.{region_name}.amazonaws.com",
+            region_name=region_name,
+        )
+        role_params = dict(RoleArn=assume_role_arn, RoleSessionName=session_name)
+        if external_id:
+            role_params["ExternalId"] = external_id
+        role = await aio_wrapper(sts.assume_role, **role_params)
+        return boto3.Session(
+            region_name=region_name,
+            aws_access_key_id=role["Credentials"]["AccessKeyId"],
+            aws_secret_access_key=role["Credentials"]["SecretAccessKey"],
+            aws_session_token=role["Credentials"]["SessionToken"],
+        )
+    except Exception as err:
+        log.debug("Failed to assume role", assume_role_arn=assume_role_arn, error=err)
 
 
 def boto3_retry(f):
