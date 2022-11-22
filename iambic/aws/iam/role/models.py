@@ -87,8 +87,11 @@ class RoleProperties(BaseModel):
         Union[None, PermissionBoundary, list[PermissionBoundary]]
     ] = None
     assume_role_policy_document: Optional[
-        Union[None, AssumeRolePolicyDocument, list[AssumeRolePolicyDocument]]
-    ] = None
+        Union[None, list[AssumeRolePolicyDocument], AssumeRolePolicyDocument]
+    ] = Field(
+        [],
+        description="Who can assume the Role",
+    )
     tags: Optional[list[Tag]] = Field(
         [],
         description="List of tags attached to the role",
