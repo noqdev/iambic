@@ -1,11 +1,4 @@
 template_type: NOQ::AWS::IAM::Role
-included_accounts:
-  - demo-1
-  - staging
-  - demo-2
-  - demo-3
-  - production
-  - development
 identifier: iambic_demo
 properties:
   role_name: iambic_demo
