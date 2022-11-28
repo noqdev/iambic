@@ -1,7 +1,4 @@
 template_type: NOQ::AWS::IAM::ROLE
-included_accounts:
-  - staging
-  - dev
 role_name: noqform_{{account_name}}_engineering
 assume_role_policy_document:
   - included_accounts:
