@@ -30,13 +30,17 @@ async def apply_git_changes(
 
     :param config_path:
     :param repo_dir:
+    :param context:
+    :param allow_dirty:
+    :param from_sha:
+    :param to_sha:
     :return:
     """
     if context is None:
         context = ctx
 
     config = Config.load(config_path)
-    config.set_account_defaults()
+    await config.setup_aws_accounts()
     file_changes = await retrieve_git_changes(
         repo_dir, allow_dirty=allow_dirty, from_sha=from_sha, to_sha=to_sha
     )
