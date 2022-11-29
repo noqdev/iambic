@@ -2,6 +2,7 @@ import asyncio
 import re
 from datetime import datetime
 from enum import Enum
+from typing import Optional
 
 import boto3
 from botocore.exceptions import ClientError
@@ -299,7 +300,7 @@ async def create_assume_role_session(
     boto3_session,
     assume_role_arn: str,
     region_name: str,
-    external_id: str = None,
+    external_id: Optional[str] = None,
     session_name: str = "iambic",
 ) -> boto3.Session:
     try:
