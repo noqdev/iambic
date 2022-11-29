@@ -263,7 +263,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
     )
 
     async def _create_org_account_instance(
-        self, account: dict
+        self, account: dict, session: boto3.Session
     ) -> Union[AWSAccount | None]:
         """Create an AWSAccount instance from an AWS Organization account and account dict
 
@@ -281,7 +281,6 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         if not account_rule.enabled:
             return
 
-        org_boto3_session = await self.get_boto3_session()
         region_name = str(self.default_region)
         aws_account = AWSAccount(
             account_id=account_id,
@@ -299,7 +298,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         for assume_role_name in assume_role_names:
             assume_role_arn = f"arn:aws:iam::{account_id}:role/{assume_role_name}"
             boto3_session = await create_assume_role_session(
-                org_boto3_session,
+                session,
                 assume_role_arn,
                 region_name,
                 external_id=self.external_id,
@@ -308,7 +307,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
                 try:
                     await aio_wrapper(boto3_session.get_credentials)
                     aws_account.boto3_session_map[region_name] = boto3_session
-                    aws_account.org_session_info = dict(boto3_session=org_boto3_session)
+                    aws_account.org_session_info = dict(boto3_session=boto3_session)
                     aws_account.assume_role_arn = assume_role_arn
                     return aws_account
                 except Exception as err:
@@ -330,7 +329,15 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         if existing_accounts_map is None:
             existing_accounts_map = {}
 
-        client = await self.get_boto3_client("organizations")
+        session = boto3.Session(region_name=self.default_region)
+        if self.assume_role_arn:
+            session = await create_assume_role_session(
+                session,
+                self.assume_role_arn,
+                self.default_region,
+                external_id=self.external_id,
+            )
+        client = session.client("organizations")
         org_accounts = await legacy_paginated_search(
             client.list_accounts,
             "Accounts",
@@ -359,7 +366,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
 
         discovered_accounts = await asyncio.gather(
             *[
-                self._create_org_account_instance(account)
+                self._create_org_account_instance(account, session)
                 for account in discovered_accounts
             ]
         )
