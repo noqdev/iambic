@@ -224,7 +224,7 @@ class BaseAWSOrgRule(BaseModel):
         False,
         description="If set to True, iambic will only log drift instead of apply changes when drift is detected.",
     )
-    assume_role_name: Optional[Union[str | list[str]]] = Field(
+    assume_role_name: Optional[Union[str, list[str]]] = Field(
         default=["OrganizationAccountAccessRole", "AWSControlTowerExecution"],
         description="The role name(s) to use when assuming into an included account. "
         "If not provided, this iambic will use the default AWS organization role(s).",
@@ -264,7 +264,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
 
     async def _create_org_account_instance(
         self, account: dict, session: boto3.Session
-    ) -> Union[AWSAccount | None]:
+    ) -> Optional[AWSAccount]:
         """Create an AWSAccount instance from an AWS Organization account and account dict
 
         Evaluate rules to determine if the account should be added to the config and if it is a read-only account.
