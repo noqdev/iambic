@@ -2,6 +2,25 @@ extends:
   - key: AWS_SECRETS_MANAGER
     value: arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/google-MmAS1o
     assume_role_arn: arn:aws:iam::759357822767:role/IambicSpokeRole
+
+aws:
+  organizations:
+    - org_id: 'o-yfdp0r70sq'
+      assume_role_arn: 'arn:aws:iam::259868150464:role/IambicSpokeRole'
+      org_name: 'staging'
+      account_rules:
+        - included_accounts:
+            - '*'
+          enabled: true
+          read_only: false
+        - included_accounts:
+            - '969947703986'
+            - '114567474685'
+          enabled: false
+      default_rule:
+        enabled: true
+        read_only: true
+
 aws_accounts:
   - account_id: '759357822767'
     account_name: dev

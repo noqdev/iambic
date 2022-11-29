@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from enum import Enum
 from types import GenericAlias
 from typing import TYPE_CHECKING, List, Optional, Set, Union, get_args, get_origin
@@ -273,6 +274,7 @@ class BaseTemplate(BaseModel):
         as_yaml = as_yaml.replace(f"{template_type_str}\n", "")
         as_yaml = as_yaml.replace(f"\n{template_type_str}", "")
         as_yaml = f"{template_type_str}\n{as_yaml}"
+        os.makedirs(os.path.dirname(os.path.expanduser(self.file_path)), exist_ok=True)
         with open(self.file_path, "w") as f:
             f.write(as_yaml)
 
