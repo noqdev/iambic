@@ -29,7 +29,18 @@ def get_managed_policy_dir(base_dir: str) -> str:
     return str(repo_dir)
 
 
-def get_templated_managed_policy_file_path(managed_policy_dir: str, policy_name: str):
+def get_templated_managed_policy_file_path(
+    managed_policy_dir: str,
+    policy_name: str,
+    included_accounts: list[str],
+    account_map: dict[str, AWSAccount],
+):
+    if len(included_accounts) > 1:
+        separator = "multi_account"
+    elif included_accounts == ["*"] or included_accounts is None:
+        separator = "all_accounts"
+    else:
+        separator = included_accounts[0]
     file_name = (
         policy_name.replace("{{", "")
         .replace("}}_", "_")
@@ -37,7 +48,7 @@ def get_templated_managed_policy_file_path(managed_policy_dir: str, policy_name:
         .replace(".", "_")
         .lower()
     )
-    return str(os.path.join(managed_policy_dir, f"{file_name}.yaml"))
+    return str(os.path.join(managed_policy_dir, separator, f"{file_name}.yaml"))
 
 
 def get_account_managed_policy_resource_dir(account_id: str) -> str:
@@ -181,7 +192,10 @@ async def create_templated_managed_policy(  # noqa: C901
             file_path=existing_template_map.get(
                 managed_policy_name,
                 get_templated_managed_policy_file_path(
-                    managed_policy_dir, managed_policy_name
+                    managed_policy_dir,
+                    managed_policy_name,
+                    managed_policy_template_params.get("included_accounts"),
+                    aws_account_map,
                 ),
             ),
             properties=managed_policy_properties,

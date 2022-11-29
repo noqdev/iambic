@@ -34,7 +34,19 @@ def get_role_dir(base_dir: str) -> str:
     return str(repo_dir)
 
 
-def get_templated_role_file_path(role_dir: str, role_name: str):
+def get_templated_role_file_path(
+    role_dir: str,
+    role_name: str,
+    included_accounts: list[str],
+    account_map: dict[str, AWSAccount],
+) -> str:
+    if len(included_accounts) > 1:
+        separator = "multi_account"
+    elif included_accounts == ["*"] or included_accounts is None:
+        separator = "all_accounts"
+    else:
+        separator = included_accounts[0]
+
     file_name = (
         role_name.replace("{{", "")
         .replace("}}_", "_")
@@ -42,7 +54,7 @@ def get_templated_role_file_path(role_dir: str, role_name: str):
         .replace(".", "_")
         .lower()
     )
-    return str(os.path.join(role_dir, f"{file_name}.yaml"))
+    return str(os.path.join(role_dir, separator, f"{file_name}.yaml"))
 
 
 def get_account_role_resource_dir(account_id: str) -> str:
@@ -299,7 +311,13 @@ async def create_templated_role(  # noqa: C901
     try:
         role = RoleTemplate(
             file_path=existing_template_map.get(
-                role_name, get_templated_role_file_path(role_dir, role_name)
+                role_name,
+                get_templated_role_file_path(
+                    role_dir,
+                    role_name,
+                    role_template_params.get("included_accounts"),
+                    aws_account_map,
+                ),
             ),
             properties=role_template_properties,
             **role_template_params,
