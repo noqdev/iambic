@@ -1,0 +1,33 @@
+template_type: NOQ::AWS::IAM::Role
+identifier: iambic_demo
+properties:
+  role_name: iambic_demo
+  assume_role_policy_document:
+    version: '2012-10-17'
+    statement:
+      - effect: Allow
+        principal:
+          service: ec2.amazonaws.com
+        action: sts:AssumeRole
+  tags:
+    - key: service
+      value: iambic
+  inline_policies:
+    - excluded_accounts:
+        - demo-3
+      policy_name: NoqUserUpload
+      version: '2012-10-17'
+      statement:
+        - effect: Allow
+          action:
+            - s3:getbucket*
+            - s3:getobject
+            - s3:getobjectacl
+            - s3:getobjecttagging
+            - s3:getobjectversion
+            - s3:getobjectversionacl
+            - s3:getobjectversiontagging
+          resource:
+            - arn:aws:s3:::noq-user-uploads
+            - arn:aws:s3:::noq-user-uploads/*
+          sid: get
