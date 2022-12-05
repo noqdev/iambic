@@ -191,7 +191,7 @@ class TemplateChangeDetails(PydanticBaseModel):
     ] = None
 
     class Config:
-        json_encoders = {PrettyOrderedSet: list}
+        json_encoders = {PrettyOrderedSet: list, type: str}
 
     def dict(
         self,
