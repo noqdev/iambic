@@ -93,6 +93,17 @@ async def get_role(role_name: str, iam_client):
     return current_role
 
 
+def is_tag_not_equivalent(role_access_tag_key, tag_key, iambic_value, cloud_value):
+    # EN-1547 role_access_tag equivalence check
+    if role_access_tag_key == tag_key:
+        # need to see if we already have equivalence
+        template_set = set(iambic_value.split(":"))
+        cloud_set = set(cloud_value.split(":") if cloud_value else [])
+        return template_set != cloud_set
+    else:
+        return iambic_value != cloud_value
+
+
 async def apply_role_tags(
     role_name: str,
     iam_client,
@@ -100,18 +111,23 @@ async def apply_role_tags(
     existing_tags: list[dict],
     log_params: dict,
     context: ExecutionContext,
+    role_access_tag: str = None,
 ) -> list[ProposedChange]:
     existing_tag_map = {tag["Key"]: tag["Value"] for tag in existing_tags}
     template_tag_map = {tag["Key"]: tag["Value"] for tag in template_tags}
     tags_to_apply = [
-        tag for tag in template_tags if tag["Value"] != existing_tag_map.get(tag["Key"])
+        tag
+        for tag in template_tags
+        if is_tag_not_equivalent(
+            role_access_tag, tag["Key"], tag["Value"], existing_tag_map.get(tag["Key"])
+        )
     ]
     tasks = []
     response = []
 
-    if tags_to_remove := [
-        tag["Key"] for tag in existing_tags if not template_tag_map.get(tag["Key"])
-    ]:
+    if tags_to_remove := list(
+        set(existing_tag_map.keys()) - set(template_tag_map.keys())
+    ):
         log_str = "Stale tags discovered."
         response.append(
             ProposedChange(
