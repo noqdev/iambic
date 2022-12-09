@@ -92,6 +92,8 @@ class BaseModel(PydanticBaseModel):
     def _apply_resource_dict(
         self, aws_account: AWSAccount = None, context: ExecutionContext = None
     ) -> dict:
+        from iambic.aws.models import Tag
+
         exclude_keys = {
             "deleted",
             "expires_at",
@@ -117,7 +119,9 @@ class BaseModel(PydanticBaseModel):
                 if k not in exclude_keys
             }
             resource_dict = {
-                k: v for k, v in resource_dict.items() if bool(v) or v == ""
+                k: v
+                for k, v in resource_dict.items()
+                if bool(v) or (v == "" and isinstance(self, Tag))
             }
         else:
             resource_dict = properties.dict(
