@@ -283,7 +283,10 @@ async def create_templated_role(  # noqa: C901
                         "groups": tag["value"].split(":"),
                     }
                 )
-            elif tag["value"]:
+            else:
+                # we use a simple else case because an empty string tag value
+                # still require us to preserve it in the tag value.
+                # for example, tag like {"Key": "do_not_Remove", "Value": ""}
                 tags.append({"included_accounts": included_accounts, **tag})
 
         if tags:
