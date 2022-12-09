@@ -116,7 +116,9 @@ class BaseModel(PydanticBaseModel):
                 for k in properties.__dict__.keys()
                 if k not in exclude_keys
             }
-            resource_dict = {k: v for k, v in resource_dict.items() if bool(v)}
+            resource_dict = {
+                k: v for k, v in resource_dict.items() if bool(v) or v == ""
+            }
         else:
             resource_dict = properties.dict(
                 exclude=exclude_keys, exclude_none=True, exclude_unset=False
