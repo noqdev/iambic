@@ -236,6 +236,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                             current_role.get("Tags", []),
                             log_params,
                             context,
+                            role_access_tag=aws_account.role_access_tag,
                         ),
                         update_assume_role_policy(
                             role_name,
