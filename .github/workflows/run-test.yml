@@ -14,5 +14,5 @@ jobs:
       - name: run-test
         id: run-test
         run: |
-	  python3.10 -m venv env
+          python3.10 -m venv env
           . env/bin/activate && make test
