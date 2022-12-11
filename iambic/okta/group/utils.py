@@ -1,10 +1,13 @@
 import asyncio
 from typing import List
+
+import okta.models as models
+
 from iambic.config.models import OktaOrganization
+from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.okta.models import Group, User
-import okta.models as models
-from iambic.core.logger import log
+
 
 async def list_all_users(okta_organization: OktaOrganization) -> List[User]:
     client = await okta_organization.get_okta_client()
@@ -35,9 +38,7 @@ async def list_all_users(okta_organization: OktaOrganization) -> List[User]:
 async def list_group_users(group: Group, okta_organization: OktaOrganization) -> Group:
     # Get a group from Okta using the okta library
     client = await okta_organization.get_okta_client()
-    users, resp, err = await client.list_group_users(
-            group.extra["okta_group_id"]
-        )
+    users, resp, err = await client.list_group_users(group.extra["okta_group_id"])
     if err:
         raise Exception("Error listing users")
 
@@ -46,8 +47,7 @@ async def list_group_users(group: Group, okta_organization: OktaOrganization) ->
             group.extra["okta_group_id"]
         )
         if err:
-            log.error("Error encountered when listing users in group",
-            error=str(err))
+            log.error("Error encountered when listing users in group", error=str(err))
             return [], str(err)
         users.append(next_users)
     users_to_return = []
@@ -102,9 +102,14 @@ async def get_group(group_id, group_name, okta_organization: OktaOrganization):
     client = await okta_organization.get_okta_client()
     group, resp, err = await client.get_group(group_id)
     if err:
-        log.error("Error encountered when getting group", group_id=group_id, group_name=group_name, error=str(err))
+        log.error(
+            "Error encountered when getting group",
+            group_id=group_id,
+            group_name=group_name,
+            error=str(err),
+        )
         return None
-    
+
     if err:
         return None
     group = Group(
@@ -121,23 +126,24 @@ async def get_group(group_id, group_name, okta_organization: OktaOrganization):
     group = await list_group_users(group, okta_organization)
     return group
 
+
 async def create_group(
     group_name: str,
     idp_name: str,
     description: str,
-    okta_organization: OktaOrganization
+    okta_organization: OktaOrganization,
 ):
     # TODO: Need ProposedChanges, support context.execute = False
     client = await okta_organization.get_okta_client()
-    
-    group_profile = models.GroupProfile({
-    'name': group_name,
-})
+
+    group_profile = models.GroupProfile(
+        {
+            "name": group_name,
+        }
+    )
 
     # Create the group
-    group_model = models.Group({
-        'profile': group_profile
-    })
+    group_model = models.Group({"profile": group_profile})
     group, resp, err = await client.create_group(group_model)
     if err:
         raise Exception("Error creating group")
@@ -160,7 +166,7 @@ async def update_group_name(
     new_name: str,
     okta_organization: OktaOrganization,
     log_params,
-    context
+    context,
 ) -> List[ProposedChange]:
     response = []
     if group.name == new_name:
@@ -175,14 +181,20 @@ async def update_group_name(
         )
     )
     client = await okta_organization.get_okta_client()
-    group_model = models.Group({
-        'profile': models.GroupProfile({
-            'name': new_name,
-            'description': group.description,
-        })
-    })
+    group_model = models.Group(
+        {
+            "profile": models.GroupProfile(
+                {
+                    "name": new_name,
+                    "description": group.description,
+                }
+            )
+        }
+    )
     if context.execute:
-        group, resp, err = await client.update_group(group.extra["okta_group_id"], group_model)
+        group, resp, err = await client.update_group(
+            group.extra["okta_group_id"], group_model
+        )
         if err:
             raise Exception("Error updating group")
         Group(
@@ -198,23 +210,28 @@ async def update_group_name(
         )
     return response
 
+
 async def update_group_description(
     group: Group,
     new_description: str,
     okta_organization: OktaOrganization,
     log_params,
-    context
+    context,
 ) -> List[ProposedChange]:
     response = []
     if group.description == new_description:
         return response
     client = await okta_organization.get_okta_client()
-    group_model = models.Group({
-        'profile': models.GroupProfile({
-            'name': group.name,
-            'description': new_description,
-        })
-    })
+    group_model = models.Group(
+        {
+            "profile": models.GroupProfile(
+                {
+                    "name": group.name,
+                    "description": new_description,
+                }
+            )
+        }
+    )
     response.append(
         ProposedChange(
             change_type=ProposedChangeType.UPDATE,
@@ -228,7 +245,9 @@ async def update_group_description(
         )
     )
     if context.execute:
-        new_group, resp, err = await client.update_group(group.extra["okta_group_id"], group_model)
+        new_group, resp, err = await client.update_group(
+            group.extra["okta_group_id"], group_model
+        )
         if err:
             raise Exception("Error updating group")
         Group(
@@ -244,12 +263,13 @@ async def update_group_description(
         )
     return response
 
+
 async def update_group_members(
     group: Group,
     new_members: List[User],
     okta_organization: OktaOrganization,
     log_params,
-    context
+    context,
 ) -> List[ProposedChange]:
     client = await okta_organization.get_okta_client()
     response = []
@@ -264,7 +284,7 @@ async def update_group_members(
     for user in desired_user_usernames:
         if user not in current_user_usernames:
             users_to_add.append(user)
-    
+
     if users_to_remove:
         response.append(
             ProposedChange(
@@ -272,9 +292,7 @@ async def update_group_members(
                 resource_id=group.group_id,
                 resource_type=group.resource_type,
                 attribute="users",
-                change_summary={
-                    "UsersToRemove": [user for user in users_to_remove]
-                },
+                change_summary={"UsersToRemove": [user for user in users_to_remove]},
             )
         )
     if users_to_add:
@@ -282,11 +300,9 @@ async def update_group_members(
             ProposedChange(
                 change_type=ProposedChangeType.ATTACH,
                 resource_id=group.group_id,
-            resource_type=group.resource_type,
+                resource_type=group.resource_type,
                 attribute="users",
-                change_summary={
-                    "UsersToAdd": [user for user in users_to_add]
-                },
+                change_summary={"UsersToAdd": [user for user in users_to_add]},
             )
         )
     if context.execute:
@@ -295,18 +311,32 @@ async def update_group_members(
             if err:
                 log.error("Error retrieving user", user=user, **log_params)
                 continue
-            _, err = await client.remove_user_from_group(group.extra["okta_group_id"], user_okta.id)
+            _, err = await client.remove_user_from_group(
+                group.extra["okta_group_id"], user_okta.id
+            )
             if err:
-                log.error("Error removing user to group", user=user, group=group.name, **log_params)
+                log.error(
+                    "Error removing user to group",
+                    user=user,
+                    group=group.name,
+                    **log_params
+                )
                 continue
-        
+
         for user in users_to_add:
             user_okta, _, err = await client.get_user(user)
             if err:
                 log.error("Error retrieving user", user=user, **log_params)
                 continue
-            _, err = await client.add_user_to_group(group.extra["okta_group_id"], user_okta.id)
+            _, err = await client.add_user_to_group(
+                group.extra["okta_group_id"], user_okta.id
+            )
             if err:
-                log.error("Error adding user to group", user=user, group=group.name, **log_params)
+                log.error(
+                    "Error adding user to group",
+                    user=user,
+                    group=group.name,
+                    **log_params
+                )
                 continue
     return response
