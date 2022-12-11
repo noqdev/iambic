@@ -1,23 +1,38 @@
 import asyncio
+import json
 from enum import Enum
 from itertools import chain
-import json
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, List, Optional
 
-from pydantic import Field, constr
+from pydantic import Field
+
 from iambic.aws.models import ExpiryModel
 from iambic.config.models import Config, OktaOrganization
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
-from iambic.core.models import AccountChangeDetails, BaseModel, BaseTemplate, TemplateChangeDetails
-from iambic.okta.group.utils import create_group, get_group, update_group_description, update_group_members, update_group_name
-from iambic.core.models import AccountChangeDetails, ProposedChange, ProposedChangeType
+from iambic.core.models import (
+    AccountChangeDetails,
+    BaseModel,
+    BaseTemplate,
+    ProposedChange,
+    ProposedChangeType,
+    TemplateChangeDetails,
+)
+from iambic.okta.group.utils import (
+    create_group,
+    get_group,
+    update_group_description,
+    update_group_members,
+    update_group_name,
+)
 from iambic.okta.models import Group
+
 
 class UserStatus(Enum):
     active = "active"
     provisioned = "provisioned"
     deprovisioned = "deprovisioned"
+
 
 class UserSimple(ExpiryModel):
     username: str
@@ -34,7 +49,8 @@ class User(UserSimple):
     groups: Optional[List[str]]
     background_check_status: Optional[bool]
     extra: Any = Field(None, description=("Extra attributes to store"))
-    
+
+
 class OktaGroupTemplateProperties(BaseModel):
     name: str = Field(..., description="Name of the group")
     owner: Optional[str] = Field(None, description="Owner of the group")
@@ -49,10 +65,10 @@ class OktaGroupTemplateProperties(BaseModel):
     extra: Any = Field(None, description=("Extra attributes to store"))
     members: Optional[List[UserSimple]] = Field(None, description="Users in the group")
 
-
     @property
     def resource_type(self) -> str:
         return "google:group"
+
 
 class OktaGroupTemplate(BaseTemplate):
     template_type = "NOQ::Okta::Group"
@@ -70,7 +86,8 @@ class OktaGroupTemplate(BaseTemplate):
             template_path=self.file_path,
         )
         log_params = dict(
-            resource_type=self.resource_type, resource_name=self.properties.name,
+            resource_type=self.resource_type,
+            resource_name=self.properties.name,
         )
         for okta_organization in config.okta_organizations:
             # if evaluate_on_google_account(self, account):
@@ -110,7 +127,6 @@ class OktaGroupTemplate(BaseTemplate):
     def resource_type(self) -> str:
         return "okta:group"
 
-
     def apply_resource_dict(
         self, okta_organization: OktaOrganization, context: ExecutionContext
     ):
@@ -137,7 +153,9 @@ class OktaGroupTemplate(BaseTemplate):
             organization=str(self.properties.idp_name),
         )
 
-        current_group = await get_group(self.properties.group_id, self.properties.name, okta_organization)
+        current_group = await get_group(
+            self.properties.group_id, self.properties.name, okta_organization
+        )
         if current_group:
             change_details.current_value = current_group
         # TODO: Check if deleted
@@ -160,14 +178,16 @@ class OktaGroupTemplate(BaseTemplate):
 
             log_str = f"{log_str} Creating resource..."
             log.info(log_str, **log_params)
-        
+
             await create_group(
                 group_name=self.properties.name,
                 idp_name=self.properties.idp_name,
                 description=self.properties.description,
                 okta_organization=okta_organization,
             )
-            current_group = await get_group(self.properties.name, self.properties.idp_name, okta_organization)
+            current_group = await get_group(
+                self.properties.name, self.properties.idp_name, okta_organization
+            )
             if current_group:
                 change_details.current_value = current_group
 
@@ -221,6 +241,7 @@ class OktaGroupTemplate(BaseTemplate):
 
         return change_details
 
+
 async def list_all_groups(okta_organization: OktaOrganization):
     client = await okta_organization.get_okta_client()
     groups, resp, err = await client.list_groups()
@@ -259,5 +280,5 @@ async def get_group_template(group: Group) -> OktaGroupTemplate:
             name=group.name,
             description=group.description,
             members=group_members,
-        )
+        ),
     )

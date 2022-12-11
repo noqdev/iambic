@@ -1,27 +1,18 @@
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
-import asyncio
-from enum import Enum
+from typing import Any, List, Optional, Union
+
+from pydantic import Field
 
 from iambic.aws.models import ExpiryModel
-from iambic.config.models import Config, GoogleProject
+from iambic.config.models import OktaOrganization
 from iambic.core.context import ExecutionContext
-from iambic.core.logger import log
-from iambic.core.models import AccountChangeDetails, BaseModel, BaseTemplate, TemplateChangeDetails
-
-from pydantic import Field, constr
+from iambic.core.models import AccountChangeDetails, BaseModel, BaseTemplate
 
 # Reference: https://www.guidodiepen.nl/2019/02/implementing-a-simple-plugin-framework-in-python/
 
 
 class IdentityProvider(BaseModel):
     name: str
-
-
-class OktaIdentityProvider(IdentityProvider):
-    idp_type: constr(regex=r"okta")
-    org_url: str
-    api_token: str
 
 
 class UserStatus(Enum):
@@ -173,7 +164,7 @@ class GroupRequestsTable(BaseModel):
 class OktaTemplate(BaseTemplate, ExpiryModel):
     async def _apply_to_account(
         self,
-        okta_account: GoogleProject,
+        okta_account: OktaOrganization,
         context: ExecutionContext,
     ) -> AccountChangeDetails:
         raise NotImplementedError
