@@ -2,7 +2,7 @@ import asyncio
 from itertools import chain
 from typing import List, Optional
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from iambic.aws.models import ExpiryModel
 from iambic.config.models import GoogleProject
@@ -31,6 +31,8 @@ from iambic.google.models import (
     WhoCanViewMembership,
 )
 
+# TODO: Okta Applications and User/Group -> Application assignments
+
 
 class GroupMember(ExpiryModel):
     email: str
@@ -52,8 +54,7 @@ class GroupMember(ExpiryModel):
         return self.email
 
 
-class GroupTemplate(GoogleTemplate):
-    template_type = "NOQ::Google::Group"
+class GroupTemplateProperties(BaseModel):
     name: str
     domain: str
     email: str
@@ -72,15 +73,21 @@ class GroupTemplate(GoogleTemplate):
     # TODO: allow_web_posting
     # TODO: conversation_history
     # TODO: There is more. Check google group settings page
+    # google_project?
+
+
+class GroupTemplate(GoogleTemplate):
+    template_type = "NOQ::Google::Group"
+    properties: GroupTemplateProperties
 
     def apply_resource_dict(
         self, google_project: GoogleProject, context: ExecutionContext
     ):
         return {
-            "name": self.name,
-            "email": self.email,
-            "description": self.description,
-            "members": self.members,
+            "name": self.properties.name,
+            "email": self.properties.email,
+            "description": self.properties.description,
+            "members": self.properties.members,
         }
 
     async def _apply_to_account(
@@ -88,20 +95,22 @@ class GroupTemplate(GoogleTemplate):
     ) -> AccountChangeDetails:
         proposed_group = self.apply_resource_dict(google_project, context)
         change_details = AccountChangeDetails(
-            account=self.domain,
-            resource_id=self.email,
+            account=self.properties.domain,
+            resource_id=self.properties.email,
             new_value=proposed_group,  # TODO fix
             proposed_changes=[],
         )
 
         log_params = dict(
-            resource_type=self.resource_type,
-            resource_id=self.email,
-            account=str(self.domain),
+            resource_type=self.properties.resource_type,
+            resource_id=self.properties.email,
+            account=str(self.properties.domain),
         )
         # read_only = self._is_read_only(google_project)
 
-        current_group = await get_group(self.email, self.domain, google_project)
+        current_group = await get_group(
+            self.properties.email, self.properties.domain, google_project
+        )
         if current_group:
             change_details.current_value = current_group
         # TODO: Check if deleted
@@ -120,8 +129,8 @@ class GroupTemplate(GoogleTemplate):
             change_details.proposed_changes.append(
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
-                    resource_id=self.email,
-                    resource_type=self.resource_type,
+                    resource_id=self.properties.email,
+                    resource_type=self.properties.resource_type,
                 )
             )
             log_str = "New resource found in code."
@@ -134,14 +143,16 @@ class GroupTemplate(GoogleTemplate):
             log.info(log_str, **log_params)
 
             await create_group(
-                id=self.email,
-                domain=self.domain,
-                email=self.email,
-                name=self.name,
-                description=self.description,
+                id=self.properties.email,
+                domain=self.properties.domain,
+                email=self.properties.email,
+                name=self.properties.name,
+                description=self.properties.description,
                 google_project=google_project,
             )
-            current_group = await get_group(self.email, self.domain, google_project)
+            current_group = await get_group(
+                self.properties.email, self.properties.domain, google_project
+            )
             if current_group:
                 change_details.current_value = current_group
 
@@ -149,39 +160,39 @@ class GroupTemplate(GoogleTemplate):
         tasks.extend(
             [
                 update_group_domain(
-                    current_group.domain, self.domain, log_params, context
+                    current_group.domain, self.properties.domain, log_params, context
                 ),
                 update_group_email(
                     current_group.email,
-                    self.email,
-                    self.domain,
+                    self.properties.email,
+                    self.properties.domain,
                     google_project,
                     log_params,
                     context,
                 ),
                 update_group_name(
-                    self.email,
+                    self.properties.email,
                     current_group.name,
-                    self.name,
-                    self.domain,
+                    self.properties.name,
+                    self.properties.domain,
                     google_project,
                     log_params,
                     context,
                 ),
                 update_group_description(
-                    self.email,
+                    self.properties.email,
                     current_group.description,
-                    self.description,
-                    self.domain,
+                    self.properties.description,
+                    self.properties.domain,
                     google_project,
                     log_params,
                     context,
                 ),
                 update_group_members(
-                    self.email,
+                    self.properties.email,
                     current_group.members,
-                    self.members,
-                    self.domain,
+                    self.properties.members,
+                    self.properties.domain,
                     google_project,
                     log_params,
                     context,
@@ -232,10 +243,12 @@ async def get_group_template(service, group, domain) -> GroupTemplate:
     ]
     file_name = f"{group['email'].split('@')[0]}.yaml"
     return GroupTemplate(
-        file_path=f"google_groups/{domain}/{file_name}",
-        domain=domain,
-        name=group["name"],
-        email=group["email"],
-        description=group["description"],
-        members=members,
+        file_path=f"google/groups/{domain}/{file_name}",
+        properties=dict(
+            domain=domain,
+            name=group["name"],
+            email=group["email"],
+            description=group["description"],
+            members=members,
+        ),
     )

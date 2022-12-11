@@ -1,4 +1,5 @@
 import asyncio
+from typing import List
 
 from googleapiclient.errors import HttpError
 
@@ -201,7 +202,7 @@ async def update_group_name(
 
 async def update_group_email(
     current_email, proposed_email, domain, google_project, log_params, context
-):
+) -> List[ProposedChange]:
     # TODO: This won't work as-is, since we aren't really aware of the old e-mail
     response = []
     if current_email == proposed_email:
