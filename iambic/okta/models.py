@@ -99,7 +99,7 @@ class Group(BaseModel):
         ),
     )
     extra: Any = Field(None, description=("Extra attributes to store"))
-    members: Optional[List[User]] = Field(None, description="Users in the group")
+    members: List[User] = Field([], description="Users in the group")
 
     @property
     def resource_type(self) -> str:
