@@ -167,7 +167,7 @@
                 "--config",
                 "demo/config.yaml",
                 "--repo-dir",
-                "../noq-templates"
+                "/tmp/noq-templates"
             ],
             "justMyCode": true
         },
