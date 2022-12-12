@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import asyncio
-from typing import List
+from typing import TYPE_CHECKING, List
 
 import okta.models as models
 
@@ -7,8 +9,10 @@ from iambic.config.models import OktaOrganization
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
-from iambic.okta.group.models import UserSimple
 from iambic.okta.models import Group, User
+
+if TYPE_CHECKING:
+    from iambic.okta.group.models import UserSimple
 
 
 async def list_all_users(okta_organization: OktaOrganization) -> List[User]:
@@ -375,7 +379,7 @@ async def update_group_members(
                     "Error removing user to group",
                     user=user,
                     group=group.name,
-                    **log_params
+                    **log_params,
                 )
                 continue
 
@@ -392,7 +396,7 @@ async def update_group_members(
                     "Error adding user to group",
                     user=user,
                     group=group.name,
-                    **log_params
+                    **log_params,
                 )
                 continue
     return response
