@@ -4,8 +4,10 @@ from typing import List
 import okta.models as models
 
 from iambic.config.models import OktaOrganization
+from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
+from iambic.okta.group.models import UserSimple
 from iambic.okta.models import Group, User
 
 
@@ -48,7 +50,7 @@ async def list_group_users(group: Group, okta_organization: OktaOrganization) ->
         )
         if err:
             log.error("Error encountered when listing users in group", error=str(err))
-            return [], str(err)
+            return group
         users.append(next_users)
     users_to_return = []
     for user in users:
@@ -133,6 +135,19 @@ async def create_group(
     description: str,
     okta_organization: OktaOrganization,
 ):
+    """
+    Create a new group in Okta.
+
+    Args:
+        group_name (str): The name of the group to create.
+        idp_name (str): The IDP name for the group.
+        description (str): The description for the group.
+        okta_organization (OktaOrganization): The Okta organization to create the group in.
+
+    Returns:
+        Group: The created Group object.
+    """
+
     # TODO: Need ProposedChanges, support context.execute = False
     client = await okta_organization.get_okta_client()
 
@@ -165,10 +180,24 @@ async def update_group_name(
     group: Group,
     new_name: str,
     okta_organization: OktaOrganization,
-    log_params,
-    context,
+    log_params: dict[str, str],
+    context: ExecutionContext,
 ) -> List[ProposedChange]:
-    response = []
+    """
+    Update the name of a group in Okta.
+
+    Args:
+        group (Group): The group to update the name of.
+        new_name (str): The new name for the group.
+        okta_organization (OktaOrganization): The Okta organization to update the group in.
+        log_params (dict): Logging parameters.
+        context (ExecutionContext): The context object containing the execution flag.
+
+    Returns:
+        List[ProposedChange]: A list of proposed changes to be applied.
+    """
+
+    response: list[ProposedChange] = []
     if group.name == new_name:
         return response
     response.append(
@@ -192,20 +221,20 @@ async def update_group_name(
         }
     )
     if context.execute:
-        group, resp, err = await client.update_group(
+        updated_group, resp, err = await client.update_group(
             group.extra["okta_group_id"], group_model
         )
         if err:
             raise Exception("Error updating group")
         Group(
             idp_name=okta_organization.idp_name,
-            name=group.profile.name,
-            description=group.profile.description,
-            group_id=group.id,
+            name=updated_group.profile.name,
+            description=updated_group.profile.description,
+            group_id=updated_group.id,
             attributes=dict(),
             extra=dict(
-                okta_group_id=group.id,
-                created=group.created,
+                okta_group_id=updated_group.id,
+                created=updated_group.created,
             ),
         )
     return response
@@ -215,10 +244,23 @@ async def update_group_description(
     group: Group,
     new_description: str,
     okta_organization: OktaOrganization,
-    log_params,
-    context,
+    log_params: dict[str, str],
+    context: ExecutionContext,
 ) -> List[ProposedChange]:
-    response = []
+    """
+    Update the description of a group in Okta.
+
+    Args:
+        group (Group): The group to update the description of.
+        new_description (str): The new description for the group.
+        okta_organization (OktaOrganization): The Okta organization to update the group in.
+        log_params (dict): Logging parameters.
+        context (object): The context object containing the execution flag.
+
+    Returns:
+        List[ProposedChange]: A list of proposed changes to be applied.
+    """
+    response: list[ProposedChange] = []
     if group.description == new_description:
         return response
     client = await okta_organization.get_okta_client()
@@ -266,24 +308,36 @@ async def update_group_description(
 
 async def update_group_members(
     group: Group,
-    new_members: List[User],
+    new_members: List[UserSimple],
     okta_organization: OktaOrganization,
-    log_params,
-    context,
+    log_params: dict[str, str],
+    context: ExecutionContext,
 ) -> List[ProposedChange]:
+    """
+    Update the members of a group in Okta.
+
+    Args:
+        group (Group): The group to update the members of.
+        new_members (List[UserSimple]): The new members to add to the group.
+        okta_organization (OktaOrganization): The Okta organization to update the group in.
+        log_params (dict): Logging parameters.
+        context (object): The context object containing the execution flag.
+
+    Returns:
+        List[ProposedChange]: A list of proposed changes to be applied.
+    """
+
     client = await okta_organization.get_okta_client()
     response = []
-    users_to_remove = []
-    users_to_add = []
-
     current_user_usernames = [user.username for user in group.members]
     desired_user_usernames = [user.username for user in new_members]
-    for user in current_user_usernames:
-        if user not in desired_user_usernames:
-            users_to_remove.append(user)
-    for user in desired_user_usernames:
-        if user not in current_user_usernames:
-            users_to_add.append(user)
+    users_to_remove = [
+        user for user in current_user_usernames if user not in desired_user_usernames
+    ]
+
+    users_to_add = [
+        user for user in desired_user_usernames if user not in current_user_usernames
+    ]
 
     if users_to_remove:
         response.append(
@@ -292,9 +346,10 @@ async def update_group_members(
                 resource_id=group.group_id,
                 resource_type=group.resource_type,
                 attribute="users",
-                change_summary={"UsersToRemove": [user for user in users_to_remove]},
+                change_summary={"UsersToRemove": list(users_to_remove)},
             )
         )
+
     if users_to_add:
         response.append(
             ProposedChange(
@@ -302,9 +357,10 @@ async def update_group_members(
                 resource_id=group.group_id,
                 resource_type=group.resource_type,
                 attribute="users",
-                change_summary={"UsersToAdd": [user for user in users_to_add]},
+                change_summary={"UsersToAdd": list(users_to_add)},
             )
         )
+
     if context.execute:
         for user in users_to_remove:
             user_okta, _, err = await client.get_user(user)
