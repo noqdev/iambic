@@ -16,6 +16,16 @@ if TYPE_CHECKING:
 
 
 async def list_all_users(okta_organization: OktaOrganization) -> List[User]:
+    """
+    List all users in Okta.
+
+    Args:
+    - okta_organization: An instance of the OktaOrganization class, which provides access to the Okta API.
+
+    Returns:
+    - A list of `User` instances, representing the users in Okta.
+    """
+
     client = await okta_organization.get_okta_client()
     users, resp, err = await client.list_users()
     while resp.has_next():
@@ -42,7 +52,18 @@ async def list_all_users(okta_organization: OktaOrganization) -> List[User]:
 
 
 async def list_group_users(group: Group, okta_organization: OktaOrganization) -> Group:
-    # Get a group from Okta using the okta library
+    """
+    List the members of a group in Okta.
+
+    Args:
+    - group: An instance of the `Group` class, representing the group whose members we want to list.
+    - okta_organization: An instance of the OktaOrganization class, which provides access to the Okta API.
+
+    Returns:
+    - The same instance of the `Group` class, with the `members` attribute populated with a list of `User` instances,
+    representing the members of the group.
+    """
+
     client = await okta_organization.get_okta_client()
     users, resp, err = await client.list_group_users(group.extra["okta_group_id"])
     if err:
@@ -75,6 +96,16 @@ async def list_group_users(group: Group, okta_organization: OktaOrganization) ->
 
 
 async def list_all_groups(okta_organization: OktaOrganization) -> List[Group]:
+    """
+    List all groups in Okta.
+
+    Args:
+    - okta_organization: An instance of the OktaOrganization class, which provides access to the Okta API.
+
+    Returns:
+    - A list of `Group` instances, representing the groups in Okta.
+    """
+
     client = await okta_organization.get_okta_client()
     groups, resp, err = await client.list_groups()
     while resp.has_next():
@@ -103,7 +134,20 @@ async def list_all_groups(okta_organization: OktaOrganization) -> List[Group]:
     return groups_to_return
 
 
-async def get_group(group_id, group_name, okta_organization: OktaOrganization):
+async def get_group(
+    group_id: str, group_name: str, okta_organization: OktaOrganization
+) -> Group:
+    """
+    Get a group from Okta using the okta library.
+
+    Args:
+    - group_id: The ID of the group to get.
+    - group_name: The name of the group to get.
+    - okta_organization: An instance of the OktaOrganization class, which provides access to the Okta API.
+
+    Returns:
+    - An instance of the `Group` class, representing the retrieved group. If an error occurs, returns None.
+    """
     # Get a group from Okta using the okta library
     client = await okta_organization.get_okta_client()
     group, resp, err = await client.get_group(group_id)
@@ -138,7 +182,7 @@ async def create_group(
     idp_name: str,
     description: str,
     okta_organization: OktaOrganization,
-):
+) -> Group:
     """
     Create a new group in Okta.
 
