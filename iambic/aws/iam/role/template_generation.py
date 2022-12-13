@@ -324,7 +324,11 @@ async def create_templated_role(  # noqa: C901
         )
         role.write()
     except Exception as err:
-        log.info(str(err), role_params=role_template_params)
+        log.error(
+            "Unable to create role template.",
+            error=str(err),
+            role_params=role_template_params,
+        )
 
 
 async def generate_aws_role_templates(configs: list[Config], base_output_dir: str):

@@ -1,10 +1,10 @@
-from iambic.aws.models import AWSTemplate
 from iambic.config.templates import TEMPLATE_TYPE_MAP
 from iambic.core.logger import log
+from iambic.core.models import BaseTemplate
 from iambic.core.utils import yaml
 
 
-def load_templates(template_paths: list[str]) -> list[AWSTemplate]:
+def load_templates(template_paths: list[str]) -> list[BaseTemplate]:
     templates = []
 
     for template_path in template_paths:
