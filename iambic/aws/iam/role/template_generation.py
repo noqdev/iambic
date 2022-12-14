@@ -326,9 +326,11 @@ async def create_templated_role(  # noqa: C901
             existing_template, read_only_token
         )
     elif execution_context and execution_context.iambic_managed_preference is not None:
+        # the current wording read_only will be inverse of iambic_managed
+        # read_only (true) will mean iambic_managed (false)
         role_template_params[
             read_only_token
-        ] = execution_context.iambic_managed_preference
+        ] = not execution_context.iambic_managed_preference
 
     try:
         role = RoleTemplate(
