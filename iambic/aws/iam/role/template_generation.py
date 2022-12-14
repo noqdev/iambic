@@ -14,6 +14,7 @@ from iambic.aws.models import AWSAccount
 from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
 from iambic.config.models import Config
 from iambic.core import noq_json as json
+from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.parser import load_templates
 from iambic.core.template_generation import (
@@ -144,6 +145,7 @@ async def create_templated_role(  # noqa: C901
     role_refs: list[dict],
     role_dir: str,
     existing_template_map: dict,
+    execution_context: ExecutionContext = None,
 ):
     account_id_to_role_map = {}
     num_of_accounts = len(role_refs)
@@ -312,6 +314,7 @@ async def create_templated_role(  # noqa: C901
     # iambic-specific knowledge requires us to load the existing template
     # because it will not be reflected by AWS API.
     existing_template_path = existing_template_map.get(role_name, None)
+    read_only_token = "read_only"  # move this to constant
     if existing_template_path is not None:
         # In this juncture, we don't have the template object, only the path.
         # We have to re-load from filesystem again. Opportunities to reuse
@@ -319,10 +322,13 @@ async def create_templated_role(  # noqa: C901
         # templates before calling this function.
         templates = load_templates([existing_template_path])
         existing_template = templates[0]
-        read_only_token = "read_only"  # move this to constant
         role_template_params[read_only_token] = getattr(
             existing_template, read_only_token
         )
+    elif execution_context and execution_context.iambic_managed_preference is not None:
+        role_template_params[
+            read_only_token
+        ] = execution_context.iambic_managed_preference
 
     try:
         role = RoleTemplate(
@@ -410,6 +416,9 @@ async def generate_aws_role_templates(configs: list[Config], base_output_dir: st
     grouped_role_map = await base_group_str_attribute(aws_account_map, account_roles)
 
     log.info("Writing templated roles")
+    execution_context = ExecutionContext()
+    # EN-1509 By default, import templates is by default not iambic managed
+    execution_context.iambic_managed_preference = False
     for role_name, role_refs in grouped_role_map.items():
         await create_templated_role(
             configs[0],
@@ -418,6 +427,7 @@ async def generate_aws_role_templates(configs: list[Config], base_output_dir: st
             role_refs,
             role_dir,
             existing_template_map,
+            execution_context=execution_context,
         )
 
     log.info("Finished templated role generation")
