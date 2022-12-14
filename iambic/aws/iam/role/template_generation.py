@@ -320,8 +320,9 @@ async def create_templated_role(  # noqa: C901
         templates = load_templates([existing_template_path])
         existing_template = templates[0]
         read_only_token = "read_only"  # move this to constant
-        if existing_read_only_attribute := getattr(existing_template, read_only_token):
-            role_template_params[read_only_token] = existing_read_only_attribute
+        role_template_params[read_only_token] = getattr(
+            existing_template, read_only_token
+        )
 
     try:
         role = RoleTemplate(
