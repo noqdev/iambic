@@ -177,12 +177,8 @@ def un_wrap_json_and_dump_values(json_obj: Any) -> Any:
 def sort_dict(original):
     """Recursively sorts dictionary keys and dictionary values in alphabetical order"""
     if isinstance(original, dict):
-        res = (
-            dict()
-        )  # Make a new "ordered" dictionary. No need for Collections in Python 3.7+
-        for k, v in sorted(original.items()):
-            res[k] = v
-        d = res
+        # Make a new "ordered" dictionary. No need for Collections in Python 3.7+
+        d = {k: v for k, v in sorted(original.items())}
     else:
         d = original
     for k in d:
