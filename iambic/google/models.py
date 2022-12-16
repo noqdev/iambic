@@ -98,7 +98,7 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
                 log_str = "Applying changes to resource."
             else:
                 log_str = "Detecting changes for resource."
-            log.info(log_str, account=str(account), **log_params)
+            log.info(log_str, **log_params)
             tasks.append(self._apply_to_account(account, context))
 
         account_changes = await asyncio.gather(*tasks)

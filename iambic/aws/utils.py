@@ -158,9 +158,7 @@ def get_account_value(matching_values: list, account_id: str, account_name: str 
 def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> bool:
     from iambic.aws.models import AccessModel
 
-    if context.execute and (
-        aws_account.read_only or getattr(resource, "read_only", False)
-    ):
+    if aws_account.read_only or getattr(resource, "read_only", False):
         return False
     if not issubclass(type(resource), AccessModel):
         return True
