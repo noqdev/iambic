@@ -14,6 +14,7 @@ from iambic.aws.models import AWSAccount
 from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
 from iambic.config.models import Config
 from iambic.core import noq_json as json
+from iambic.core.constants import READ_ONLY_TOKEN
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.parser import load_templates
@@ -314,7 +315,6 @@ async def create_templated_role(  # noqa: C901
     # iambic-specific knowledge requires us to load the existing template
     # because it will not be reflected by AWS API.
     existing_template_path = existing_template_map.get(role_name, None)
-    read_only_token = "read_only"  # move this to constant
     if existing_template_path is not None:
         # In this juncture, we don't have the template object, only the path.
         # We have to re-load from filesystem again. Opportunities to reuse
@@ -322,14 +322,14 @@ async def create_templated_role(  # noqa: C901
         # templates before calling this function.
         templates = load_templates([existing_template_path])
         existing_template = templates[0]
-        role_template_params[read_only_token] = getattr(
-            existing_template, read_only_token
+        role_template_params[READ_ONLY_TOKEN] = getattr(
+            existing_template, READ_ONLY_TOKEN
         )
     elif execution_context and execution_context.iambic_managed_preference is not None:
         # the current wording read_only will be inverse of iambic_managed
         # read_only (true) will mean iambic_managed (false)
         role_template_params[
-            read_only_token
+            READ_ONLY_TOKEN
         ] = not execution_context.iambic_managed_preference
 
     try:
