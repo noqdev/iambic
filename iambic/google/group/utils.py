@@ -3,6 +3,7 @@ import asyncio
 from googleapiclient.errors import HttpError
 
 from iambic.config.models import GoogleProject
+from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper
@@ -80,7 +81,9 @@ async def create_group(
     return req.execute()
 
 
-async def update_group_domain(current_domain, proposed_domain, log_params, context):
+async def update_group_domain(
+    current_domain, proposed_domain, log_params: dict[str, str], context
+):
     response = []
     if current_domain != proposed_domain:
         log_str = "Modifying group domain"
@@ -114,10 +117,10 @@ async def update_group_description(
     proposed_description,
     domain,
     google_project,
-    log_params,
-    context,
-):
-    response = []
+    log_params: dict[str, str],
+    context: ExecutionContext,
+) -> list[ProposedChange]:
+    response: list[ProposedChange] = []
     if current_description == proposed_description:
         return response
     try:
@@ -125,7 +128,7 @@ async def update_group_description(
             "admin", "directory_v1", domain
         )
         if not service:
-            return False
+            return response
     except AttributeError as err:
         log.exception("Unable to process google groups.", error=err)
         return response
@@ -162,10 +165,10 @@ async def update_group_name(
     proposed_name,
     domain,
     google_project,
-    log_params,
-    context,
-):
-    response = []
+    log_params: dict[str, str],
+    context: ExecutionContext,
+) -> list[ProposedChange]:
+    response: list[ProposedChange] = []
     if current_name == proposed_name:
         return response
     log_str = "Detected group name update"
@@ -182,10 +185,10 @@ async def update_group_name(
             "admin", "directory_v1", domain
         )
         if not service:
-            return False
+            return response
     except AttributeError as err:
         log.exception("Unable to process google groups.", error=err)
-        return
+        return response
     if context.execute:
         log_str = "Updating group name"
         await aio_wrapper(
@@ -200,10 +203,15 @@ async def update_group_name(
 
 
 async def update_group_email(
-    current_email, proposed_email, domain, google_project, log_params, context
-):
+    current_email,
+    proposed_email,
+    domain,
+    google_project,
+    log_params: dict[str, str],
+    context,
+) -> list[ProposedChange]:
     # TODO: This won't work as-is, since we aren't really aware of the old e-mail
-    response = []
+    response: list[ProposedChange] = []
     if current_email == proposed_email:
         return response
     log_str = "Detected group e-mail update"
@@ -220,10 +228,10 @@ async def update_group_email(
             "admin", "directory_v1", domain
         )
         if not service:
-            return False
+            return response
     except AttributeError as err:
         log.exception("Unable to process google groups.", error=err)
-        return
+        return response
     if context.execute:
         log_str = "Updating group e-mail"
         await aio_wrapper(
@@ -237,15 +245,17 @@ async def update_group_email(
     return response
 
 
-async def delete_group(group_email, domain, google_project, log_params, context):
+async def delete_group(
+    group_email, domain, google_project, log_params: dict[str, str], context
+) -> list[ProposedChange]:
     # TODO: This isn't used yet
-    response = []
+    response: list[ProposedChange] = []
     try:
         service = await google_project.get_service_connection(
             "admin", "directory_v1", domain
         )
         if not service:
-            return False
+            return response
     except AttributeError as err:
         log.exception("Unable to process google groups.", error=err)
         return response
@@ -270,8 +280,8 @@ async def update_group_members(
     proposed_members,
     domain,
     google_project,
-    log_params,
-    context,
+    log_params: dict[str, str],
+    context: ExecutionContext,
 ):
     # TODO: This will likely fail if I change the Role of a user, since we are doing all
     # of these operations with asyncio.gather. Should do the remove operations first, then the add ones.

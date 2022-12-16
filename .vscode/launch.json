@@ -78,6 +78,24 @@
             "justMyCode": true
         },
         {
+            "name": "Iambic Apply Okta Template",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "env": {
+                "AWS_PROFILE": "staging/IambicHubRole"
+            },
+            "args": [
+                "apply",
+                "--template",
+                "../noq-templates/okta/groups/development/networking.yaml",
+                "--config",
+                "demo/config.yaml"
+            ],
+            "justMyCode": true
+        },
+        {
             "name": "Iambic Apply All Templates",
             "type": "python",
             "request": "launch",

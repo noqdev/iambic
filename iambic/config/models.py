@@ -6,6 +6,7 @@ from typing import List, Optional
 import boto3
 import googleapiclient.discovery
 from google.oauth2 import service_account
+from okta.client import Client as OktaClient
 from pydantic import BaseModel, Field
 from slack_bolt import App as SlackBoltApp
 
@@ -17,6 +18,28 @@ from iambic.core.utils import aio_wrapper, yaml
 class GoogleSubjects(BaseModel):
     domain: str
     service_account: str
+
+
+class OktaOrganization(BaseModel):
+    idp_name: str
+    org_url: str
+    api_token: str
+    request_timeout: int = 60
+    client: Optional[OktaClient]
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    async def get_okta_client(self):
+        if not self.client:
+            self.client = OktaClient(
+                {
+                    "orgUrl": self.org_url,
+                    "token": self.api_token,
+                    "requestTimeout": self.request_timeout,
+                }
+            )
+        return self.client
 
 
 class GoogleProject(BaseModel):
@@ -129,6 +152,7 @@ class Config(BaseModel):
     )
     aws_accounts: List[AWSAccount]
     google_projects: List[GoogleProject] = []
+    okta_organizations: List[OktaOrganization] = []
     extends: List[ExtendsConfig] = []
     secrets: Optional[dict] = None
     role_access_tag: Optional[str] = Field(
@@ -218,6 +242,10 @@ class Config(BaseModel):
         if self.secrets and (google_secrets := self.secrets.get("google")):
             self.google_projects = [GoogleProject(**x) for x in google_secrets]
 
+    def configure_okta(self):
+        if self.secrets and (okta_secrets := self.secrets.get("okta")):
+            self.okta_organizations = [OktaOrganization(**x) for x in okta_secrets]
+
     def combine_extended_configs(self):
         if self.extends:
             for extend in self.extends:
@@ -226,12 +254,12 @@ class Config(BaseModel):
                         if not getattr(self, k):
                             setattr(self, k, v)
 
-    def get_boto_session_from_arn(self, arn: str, region_name: str = None):
+    async def get_boto_session_from_arn(self, arn: str, region_name: str = None):
         region_name = region_name or arn.split(":")[3]
         account_id = arn.split(":")[4]
         aws_account_map = {account.account_id: account for account in self.aws_accounts}
         aws_account = aws_account_map[account_id]
-        return aws_account.get_boto3_session(region_name)
+        return await aws_account.get_boto3_session(region_name)
 
     @classmethod
     def load(cls, file_path: str):
@@ -239,4 +267,5 @@ class Config(BaseModel):
         c.combine_extended_configs()
         c.configure_slack()
         c.configure_google()
+        c.configure_okta()
         return c
