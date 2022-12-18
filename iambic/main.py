@@ -5,12 +5,11 @@ import warnings
 import click
 
 from iambic.config.models import Config
-from iambic.core import noq_json as json
 from iambic.core.context import ctx
 from iambic.core.git import clone_git_repos
 from iambic.core.logger import log
 from iambic.core.models import TemplateChangeDetails
-from iambic.core.utils import gather_templates
+from iambic.core.utils import gather_templates, yaml
 from iambic.request_handler.apply import apply_changes, flag_expired_resources
 from iambic.request_handler.detect import detect_changes
 from iambic.request_handler.generate import generate_templates
@@ -24,15 +23,14 @@ def output_proposed_changes(
     template_changes: list[TemplateChangeDetails], output_path: str = None
 ):
     if output_path is None:
-        output_path = "proposed_changes.json"
+        output_path = "proposed_changes.yaml"
     if template_changes:
         log.info(f"A detailed summary of descriptions was saved to {output_path}")
 
         with open(output_path, "w") as f:
             f.write(
-                json.dumps(
+                yaml.dump(
                     [template_change.dict() for template_change in template_changes],
-                    indent=2,
                 )
             )
 
