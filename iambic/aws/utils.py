@@ -155,6 +155,14 @@ def get_account_value(matching_values: list, account_id: str, account_name: str 
             return cur_val
 
 
+def is_regex_match(regex, test_string):
+    if "*" in regex:
+        return re.match(regex.lower(), test_string)
+    else:
+        # it is not an actual regex string, just string comparison
+        return regex.lower() == test_string.lower()
+
+
 def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> bool:
     from iambic.aws.models import AccessModel
 
@@ -188,7 +196,7 @@ def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> boo
         ):
             return True
         elif any(
-            re.match(resource_account.lower(), account_id)
+            is_regex_match(resource_account.lower(), account_id)
             for resource_account in resource.included_accounts
         ):
             return True
