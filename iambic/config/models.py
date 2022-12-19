@@ -191,6 +191,8 @@ class Config(BaseModel):
             )
             for org_accounts in orgs_accounts:
                 for account in org_accounts:
+                    if not account.role_access_tag:
+                        account.role_access_tag = self.role_access_tag
                     if (
                         account_elem := config_account_idx_map.get(account.account_id)
                     ) is not None:
