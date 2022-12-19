@@ -14,7 +14,7 @@ from pydantic.fields import ModelField
 
 from iambic.aws.utils import apply_to_account
 from iambic.core.context import ExecutionContext
-from iambic.core.utils import snake_to_camelcap, yaml
+from iambic.core.utils import snake_to_camelcap, sort_dict, yaml
 
 if TYPE_CHECKING:
     from iambic.aws.models import AWSAccount
@@ -262,13 +262,13 @@ class BaseTemplate(BaseModel):
         return template_dict
 
     def write(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
-        as_yaml = yaml.dump(
-            self.dict(
-                exclude_none=exclude_none,
-                exclude_unset=exclude_unset,
-                exclude_defaults=exclude_defaults,
-            )
+        input_dict = self.dict(
+            exclude_none=exclude_none,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
         )
+        sorted_input_dict = sort_dict(input_dict)
+        as_yaml = yaml.dump(sorted_input_dict)
         # Force template_type to be at the top of the yaml
         template_type_str = f"template_type: {self.template_type}"
         as_yaml = as_yaml.replace(f"{template_type_str}\n", "")
