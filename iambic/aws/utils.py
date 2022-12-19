@@ -318,7 +318,7 @@ async def create_assume_role_session(
             aws_session_token=role["Credentials"]["SessionToken"],
         )
     except Exception as err:
-        log.debug("Failed to assume role", assume_role_arn=assume_role_arn, error=err)
+        log.error("Failed to assume role", assume_role_arn=assume_role_arn, error=err)
 
 
 def boto3_retry(f):
