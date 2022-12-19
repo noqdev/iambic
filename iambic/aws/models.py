@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import defaultdict
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Union
 
@@ -119,7 +120,7 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
     )
     boto3_session_map: Optional[dict] = None
 
-    async def get_boto3_session(self, region_name: str = None):
+    async def get_boto3_session(self, region_name: Optional[str] = None):
         region_name = region_name or self.default_region
 
         if self.boto3_session_map is None:
@@ -152,10 +153,97 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         self.boto3_session_map[region_name] = session
         return self.boto3_session_map[region_name]
 
-    async def get_boto3_client(self, service: str, region_name: str = None):
+    # @cached(TTLCache(1024, 60))
+    async def get_boto3_client(self, service: str, region_name: Optional[str] = None):
         return (await self.get_boto3_session(region_name)).client(
             service, config=botocore.client.Config(max_pool_connections=50)
         )
+
+    # @cached(LRUCache(1024))
+    async def get_active_regions(self) -> list[str]:
+        client = await self.get_boto3_client("ec2")
+        res = await aio_wrapper(client.describe_regions)
+        return [region["RegionName"] for region in res["Regions"]]
+
+    # @cached(LRUCache(1024))
+    async def discover_sso_settings(
+        self, account_ids: list[str]
+    ) -> Optional[dict[str, str]]:
+        """
+        Discover AWS Single Sign-On (SSO) instances in the active regions.
+
+        Returns:
+            A tuple containing the region name and the SSO instance ID, if found.
+            If no SSO instance is found, returns (None, None).
+        """
+        regions: list[str] = await self.get_active_regions()
+        sso_clients = await asyncio.gather(
+            *[
+                self.get_boto3_client("sso-admin", region_name=region)
+                for region in regions
+            ]
+        )
+
+        sso_instances = await asyncio.gather(
+            *[aio_wrapper(sso.list_instances) for sso in sso_clients],
+            return_exceptions=True,
+        )
+        for sso_instance_res in sso_instances:
+            if isinstance(sso_instance_res, Exception):
+                continue
+            if sso_instance_res:
+                sso_instance_arn = sso_instance_res["Instances"][0]["InstanceArn"]
+                identity_store_id = sso_instance_res["Instances"][0]["IdentityStoreId"]
+                region = regions[sso_instances.index(sso_instance_res)]
+                identity_store = await self.get_boto3_client(
+                    "identitystore", region_name=region
+                )
+                client = sso_clients[regions.index(region)]
+                permission_set_res = await aio_wrapper(
+                    client.list_permission_sets, InstanceArn=sso_instance_arn
+                )
+                permission_sets = permission_set_res["PermissionSets"]
+                assignments = defaultdict(lambda: defaultdict(list))
+                # TODO: Paginate
+                users = await aio_wrapper(
+                    identity_store.list_users,
+                    IdentityStoreId=identity_store_id,
+                )
+
+                groups = await aio_wrapper(
+                    identity_store.list_groups,
+                    IdentityStoreId=identity_store_id,
+                )
+                for group in groups["Groups"]:
+                    group_memberships = await aio_wrapper(
+                        identity_store.list_group_memberships,
+                        IdentityStoreId=identity_store_id,
+                        GroupId=group["GroupId"],
+                    )
+                    group["members"] = group_memberships["GroupMemberships"]
+                # TODO: List group memberships
+                for permission_set in permission_sets:
+                    # TODO: Handle pagination
+                    for account_id in account_ids:
+                        account_assignments = await aio_wrapper(
+                            client.list_account_assignments,
+                            InstanceArn=sso_instance_arn,
+                            AccountId=account_id,
+                            PermissionSetArn=permission_set,
+                            MaxResults=100,
+                        )
+                        assignments[permission_set][account_id] = account_assignments[
+                            "AccountAssignments"
+                        ]
+                # Use https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/identitystore.html
+                return {
+                    "region": region,
+                    "sso_instance_arn": sso_instance_arn,
+                    "permission_sets": permission_sets,
+                    "assignments": assignments,
+                    "users": users,
+                    "groups": groups,
+                }
 
     def __init__(self, **kwargs):
         super(BaseAWSAccountAndOrgModel, self).__init__(**kwargs)
