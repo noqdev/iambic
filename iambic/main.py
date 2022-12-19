@@ -304,7 +304,7 @@ def run_import(config_paths: list[str], repo_dir: str):
     configs = []
     for config_path in config_paths:
         config = Config.load(config_path)
-        asyncio.run(config.setup_aws_accounts())
+        # asyncio.run(config.setup_aws_accounts())
         configs.append(config)
     asyncio.run(generate_templates(configs, repo_dir or str(pathlib.Path.cwd())))
 

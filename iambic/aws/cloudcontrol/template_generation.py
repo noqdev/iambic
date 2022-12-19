@@ -7,6 +7,10 @@ from iambic.aws.cloudcontrol.utils import list_resources
 from iambic.aws.iam.policy.models import ManagedPolicyTemplate
 from iambic.aws.iam.policy.utils import list_managed_policies
 from iambic.aws.models import AWSAccount
+from iambic.aws.sso.models import (
+    AWSSSOPermissionSetProperties,
+    get_aws_sso_permission_set_template,
+)
 from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
 from iambic.config.models import Config
 from iambic.core import noq_json as json
@@ -17,11 +21,13 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, aio_wrapper, resource_file_upsert, yaml
 
 
 async def generate_cloudcontrol_resource_files(
     aws_account: AWSAccount,
+    output_dir: str,
+    aws_account_map: dict[str, AWSAccount],
 ) -> dict:
     # TODO: Depends on resource type
     # account_resource_dir = get_account_managed_policy_resource_dir(
@@ -31,21 +37,76 @@ async def generate_cloudcontrol_resource_files(
     messages = []
 
     response = dict(account_id=aws_account.account_id, resources=[])
+    # TODO: Remove in final version. Used to speed things up
+    if aws_account.account_id != "259868150464":
+        return {}
     # TODO: We need to parse all active regions, not just the default one
+    account_ids = list(aws_account_map.keys())
+    sso_settings = await aws_account.discover_sso_settings(account_ids)
+
     cloudcontrol_client = await aws_account.get_boto3_client(
         "cloudcontrol", region_name=aws_account.default_region
     )
+    collected_resources = {}
+    base_path = os.path.expanduser(output_dir)
 
-    # TODO: Need this data first for AWS SSO:
-    cloudcontrol_client.list_resources(
-        TypeName=resource_type.get("type"),
-        ResourceModel=json.dumps(
-            {
-                "InstanceArn": "arn:aws:sso:::instance/ssoins-7223e919c6a1baec",
-                "PermissionSetArn": "arn:aws:sso:::permissionSet/ssoins-7223e919c6a1baec/ps-1f0281f0000336b3",
-            }
-        ),
-    )
+    if sso_settings:
+        resource_type = "AWS::SSO::PermissionSet"
+        call_params = {"TypeName": resource_type}
+        for permission_set in sso_settings.get("permission_sets", []):
+            while True:
+                sso_permission_set_details = await aio_wrapper(
+                    cloudcontrol_client.list_resources,
+                    ResourceModel=json.dumps(
+                        {
+                            "InstanceArn": sso_settings["sso_instance"],
+                            "PermissionSetArn": permission_set,
+                        }
+                    ),
+                    **call_params,
+                )
+                resource_identifier = sso_permission_set_details[
+                    "ResourceDescriptions"
+                ][0]["Identifier"]
+                resource_details = await aio_wrapper(
+                    cloudcontrol_client.get_resource,
+                    TypeName="AWS::SSO::PermissionSet",
+                    Identifier=resource_identifier,
+                )
+                del resource_details["ResponseMetadata"]
+                print(sso_permission_set_details)
+                collected_resources[resource_identifier] = resource_details
+                resource_properties: dict = json.loads(
+                    resource_details["ResourceDescription"]["Properties"]
+                )
+                resource_properties["arn"] = resource_details["ResourceDescription"][
+                    "Identifier"
+                ]
+                model = AWSSSOPermissionSetProperties.parse_obj(resource_properties)
+                template = await get_aws_sso_permission_set_template(model)
+                file_path = os.path.expanduser(template.file_path)
+                path = os.path.join(base_path, file_path)
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(path, "w") as f:
+                    f.write(
+                        yaml.dump(
+                            {
+                                "template_type": template.template_type,
+                                **json.loads(
+                                    template.json(
+                                        exclude_unset=True,
+                                        exclude_defaults=True,
+                                        exclude={"file_path"},
+                                    )
+                                ),
+                            }
+                        )
+                    )
+                try:
+                    call_params["NextToken"] = sso_permission_set_details["NextToken"]
+                except KeyError:
+                    break
+
     supported_resource_types = [
         {
             "type": "AWS::SSO::PermissionSet",
@@ -115,7 +176,14 @@ async def generate_cloudcontrol_templates(configs: list[Config], base_output_dir
 
     account_cloudcontrol_resources = (
         await generate_cloudcontrol_resource_files_semaphore.process(
-            [{"aws_account": aws_account} for aws_account in aws_account_map.values()]
+            [
+                {
+                    "aws_account": aws_account,
+                    "output_dir": base_output_dir,
+                    "aws_account_map": aws_account_map,
+                }
+                for aws_account in aws_account_map.values()
+            ]
         )
     )
     messages = []
