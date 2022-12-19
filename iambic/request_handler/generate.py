@@ -27,20 +27,20 @@ async def generate_templates(configs: list[Config], output_dir: str):
         os.makedirs(str(response_dir), exist_ok=True)
     tasks = [
         # generate_aws_role_templates(configs, output_dir),
-        generate_aws_managed_policy_templates(configs, output_dir),
+        # generate_aws_managed_policy_templates(configs, output_dir),
         generate_cloudcontrol_templates(configs, output_dir),
     ]
-    for config in configs:
-        for project in config.google_projects:
-            for subject in project.subjects:
-                tasks.append(
-                    generate_group_templates(
-                        config, subject.domain, output_dir, project
-                    )
-                )
-        for okta_organization in config.okta_organizations:
-            tasks.append(
-                generate_okta_group_templates(config, output_dir, okta_organization)
-            )
+    # for config in configs:
+    #     for project in config.google_projects:
+    #         for subject in project.subjects:
+    #             tasks.append(
+    #                 generate_group_templates(
+    #                     config, subject.domain, output_dir, project
+    #                 )
+    #             )
+    #     for okta_organization in config.okta_organizations:
+    #         tasks.append(
+    #             generate_okta_group_templates(config, output_dir, okta_organization)
+    #         )
 
     await asyncio.gather(*tasks)

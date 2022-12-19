@@ -1,8 +1,8 @@
-from iambic.aws.models import AccessModel, AWSTemplate
+from typing import Any
+
+from iambic.core.models import BaseTemplate
 
 
-# How do I have a base template and modify it with all of the supported types?
-class CloudControlBase():
-    
-    
-type('NewClass', (CloudControlBase, AWSTemplate, AccessModel), {})
+class CloudControlBaseTemplate(BaseTemplate):
+    template_type: str
+    properties: Any
