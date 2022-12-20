@@ -239,6 +239,7 @@ async def remove_expired_resources(
         log_params["parent_resource_id"] = template_resource_id
 
     if hasattr(resource, "expires_at") and resource.expires_at:
+
         if resource.expires_at < datetime.utcnow():
             resource.deleted = True
             log.info("Expired resource found, marking for deletion", **log_params)

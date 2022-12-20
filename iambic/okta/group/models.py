@@ -6,7 +6,6 @@ from typing import Any, List, Optional
 
 from pydantic import Field
 
-from iambic.aws.models import ExpiryModel
 from iambic.config.models import Config, OktaOrganization
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
@@ -14,6 +13,7 @@ from iambic.core.models import (
     AccountChangeDetails,
     BaseModel,
     BaseTemplate,
+    ExpiryModel,
     ProposedChange,
     ProposedChangeType,
     TemplateChangeDetails,
@@ -21,6 +21,7 @@ from iambic.core.models import (
 from iambic.okta.group.utils import (
     create_group,
     get_group,
+    maybe_delete_group,
     update_group_description,
     update_group_members,
     update_group_name,
@@ -34,7 +35,7 @@ class UserStatus(Enum):
     deprovisioned = "deprovisioned"
 
 
-class UserSimple(ExpiryModel):
+class UserSimple(BaseModel, ExpiryModel):
     username: str
     status: Optional[UserStatus] = UserStatus.active
 
@@ -51,7 +52,7 @@ class User(UserSimple):
     extra: Any = Field(None, description=("Extra attributes to store"))
 
 
-class OktaGroupTemplateProperties(BaseModel):
+class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the group")
     owner: Optional[str] = Field(None, description="Owner of the group")
     idp_name: str = Field(
@@ -67,10 +68,10 @@ class OktaGroupTemplateProperties(BaseModel):
 
     @property
     def resource_type(self) -> str:
-        return "google:group"
+        return "okta:group"
 
 
-class OktaGroupTemplate(BaseTemplate):
+class OktaGroupTemplate(BaseTemplate, ExpiryModel):
     template_type = "NOQ::Okta::Group"
     properties: OktaGroupTemplateProperties = Field(
         ..., description="Properties for the Okta Group"
@@ -153,7 +154,7 @@ class OktaGroupTemplate(BaseTemplate):
             organization=str(self.properties.idp_name),
         )
 
-        current_group = await get_group(
+        current_group: Optional[Group] = await get_group(
             self.properties.group_id, self.properties.name, okta_organization
         )
         if current_group:
@@ -179,17 +180,17 @@ class OktaGroupTemplate(BaseTemplate):
             log_str = f"{log_str} Creating resource..."
             log.info(log_str, **log_params)
 
-            await create_group(
+            current_group: Group = await create_group(
                 group_name=self.properties.name,
                 idp_name=self.properties.idp_name,
                 description=self.properties.description,
                 okta_organization=okta_organization,
-            )
-            current_group = await get_group(
-                self.properties.name, self.properties.idp_name, okta_organization
+                context=context,
             )
             if current_group:
                 change_details.current_value = current_group
+
+        changes = await self.remove_expired_resources(context)
 
         # TODO: Support group expansion
         tasks.extend(
@@ -215,6 +216,13 @@ class OktaGroupTemplate(BaseTemplate):
                     log_params,
                     context,
                 ),
+                maybe_delete_group(
+                    self.deleted,
+                    current_group,
+                    okta_organization,
+                    log_params,
+                    context,
+                ),
                 # TODO
                 # upgrade_group_application_assignments
             ]
@@ -232,6 +240,9 @@ class OktaGroupTemplate(BaseTemplate):
                 changes_made=bool(change_details.proposed_changes),
                 **log_params,
             )
+            # TODO: Check if deleted, remove git commit the change to ratify it
+            if self.deleted:
+                self.delete()
         else:
             log.debug(
                 "Successfully finished scanning for drift for resource",
