@@ -1,23 +1,30 @@
 from __future__ import annotations
 
+import asyncio
+import datetime
 import json
 import os
+import resource
+from datetime import date, datetime
 from enum import Enum
 from types import GenericAlias
 from typing import TYPE_CHECKING, List, Optional, Set, Union, get_args, get_origin
 
+import dateparser
 from deepdiff.model import PrettyOrderedSet
+from git import Repo
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field
+from pydantic import Field, validator
 from pydantic.fields import ModelField
 
 from iambic.aws.utils import apply_to_account
 from iambic.core.context import ExecutionContext
+from iambic.core.logger import log
 from iambic.core.utils import snake_to_camelcap, yaml
 
 if TYPE_CHECKING:
-    from iambic.aws.models import AWSAccount
+    from iambic.aws.models import AWSAccount, Deleted
     from iambic.config.models import Config
 
 
@@ -138,6 +145,33 @@ class BaseModel(PydanticBaseModel):
         data = rtemplate.render(**variables)
         return json.loads(data)
 
+    async def remove_expired_resources(self, context: ExecutionContext):
+        # Look at current model and recurse through submodules to see if it is a subclass of ExpiryModel
+        # If it is, then call the remove_expired_resources method
+        if issubclass(type(self), ExpiryModel):
+            if hasattr(self, "expires_at") and self.expires_at:
+                if self.expires_at < datetime.utcnow():
+                    # TODO: How to handle this?
+                    # ProposedChange(
+                    #     change_type=ProposedChangeType.DELETE,
+                    #     change_summary=self.dict(),
+                    # )
+                    if context.execute:
+                        self.deleted = True
+                        return
+        for field_name in self.__fields__.keys():
+            field_val = getattr(self, field_name)
+            if not issubclass(type(field_val), ExpiryModel):
+                continue
+            if isinstance(field_val, list):
+                new_value = await asyncio.gather(
+                    *[elem.remove_expired_resources(context) for elem in field_val]
+                )
+                setattr(self, field_name, new_value)
+            else:
+                new_value = await field_val.remove_expired_resources(context)
+                setattr(resource, field_name, new_value)
+
     @property
     def exclude_keys(self) -> set:
         return set()
@@ -220,7 +254,9 @@ class TemplateChangeDetails(PydanticBaseModel):
         return json.loads(response)
 
 
-class BaseTemplate(BaseModel):
+class BaseTemplate(
+    BaseModel,
+):
     template_type: str
     file_path: str
     read_only: Optional[bool] = Field(
@@ -278,6 +314,19 @@ class BaseTemplate(BaseModel):
         with open(self.file_path, "w") as f:
             f.write(as_yaml)
 
+    def delete(self):
+        log.info(f"Deleting template file", file_path=self.file_path)
+        try:
+            repo = Repo(self.file_path, search_parent_directories=True)
+            repo.index.remove([self.file_path], working_tree=True)
+        except Exception as e:
+            log.error(
+                f"Unable to remove file from local Git repo. Deleting manually",
+                error=e,
+                file_path=self.file_path,
+            )
+            os.remove(self.file_path)
+
     async def apply(
         self, config: Config, context: ExecutionContext
     ) -> TemplateChangeDetails:
@@ -291,3 +340,24 @@ class BaseTemplate(BaseModel):
 class Variable(PydanticBaseModel):
     key: str
     value: str
+
+
+class ExpiryModel(PydanticBaseModel):
+    expires_at: Optional[Union[str, datetime, date]] = Field(
+        None, description="The date and time the resource will be/was set to deleted."
+    )
+    deleted: Optional[Union[bool, List[Deleted]]] = Field(
+        False,
+        description=(
+            "Denotes whether the resource has been removed from AWS."
+            "Upon being set to true, the resource will be deleted the next time iambic is ran."
+        ),
+    )
+
+    @validator("expires_at", pre=True)
+    def parse_expires_at(cls, value):
+        if isinstance(value, datetime) or isinstance(value, date):
+            return value
+        return dateparser.parse(
+            value,
+        )

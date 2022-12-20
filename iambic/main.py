@@ -166,8 +166,9 @@ def run_apply(force: bool, config_path: str, templates: list[str], repo_dir: str
         templates = asyncio.run(gather_templates(repo_dir or str(pathlib.Path.cwd())))
 
     config = Config.load(config_path)
-    asyncio.run(config.setup_aws_accounts())
+    # asyncio.run(config.setup_aws_accounts())
     ctx.eval_only = not force
+
     template_changes = asyncio.run(apply_changes(config, templates, ctx))
     output_proposed_changes(template_changes)
 

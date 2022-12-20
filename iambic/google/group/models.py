@@ -4,11 +4,15 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from iambic.aws.models import ExpiryModel
 from iambic.config.models import GoogleProject
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
-from iambic.core.models import AccountChangeDetails, ProposedChange, ProposedChangeType
+from iambic.core.models import (
+    AccountChangeDetails,
+    ExpiryModel,
+    ProposedChange,
+    ProposedChangeType,
+)
 from iambic.google.group.utils import (
     create_group,
     get_group,

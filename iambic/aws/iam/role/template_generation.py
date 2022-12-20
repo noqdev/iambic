@@ -40,7 +40,7 @@ def get_templated_role_file_path(
     included_accounts: list[str],
     account_map: dict[str, AWSAccount],
 ) -> str:
-    if len(included_accounts) > 1:
+    if included_accounts and len(included_accounts) > 1:
         separator = "multi_account"
     elif included_accounts == ["*"] or included_accounts is None:
         separator = "all_accounts"
@@ -198,6 +198,10 @@ async def create_templated_role(  # noqa: C901
             )
 
         if inline_policies := role_dict.get("inline_policies"):
+            # Normalize the inline policy statements to be a list
+            for inline_policy in inline_policies:
+                if isinstance(inline_policy.get("statement"), dict):
+                    inline_policy["statement"] == [inline_policy["statement"]]
             inline_policy_document_resources.append(
                 {
                     "account_id": account_id,
@@ -324,7 +328,7 @@ async def create_templated_role(  # noqa: C901
         )
         role.write()
     except Exception as err:
-        log.error(
+        log.exception(
             "Unable to create role template.",
             error=str(err),
             role_params=role_template_params,
