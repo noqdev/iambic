@@ -28,6 +28,13 @@ if TYPE_CHECKING:
 
 
 class BaseModel(PydanticBaseModel):
+    @classmethod
+    def update_forward_refs(cls, **kwargs):
+        from iambic.aws.models import Deleted
+
+        kwargs.update({"Union": Union, "Deleted": Deleted})
+        super().update_forward_refs(**kwargs)
+
     class Config:
         alias_generator = snake_to_camelcap
         allow_population_by_field_name = True
@@ -355,7 +362,11 @@ class ExpiryModel(PydanticBaseModel):
 
     @validator("expires_at", pre=True)
     def parse_expires_at(cls, value):
-        if isinstance(value, datetime.datetime) or isinstance(value, datetime.date):
+        if (
+            not value
+            or isinstance(value, datetime.datetime)
+            or isinstance(value, datetime.date)
+        ):
             return value
         return dateparser.parse(
             value,

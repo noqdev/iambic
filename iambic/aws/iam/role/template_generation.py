@@ -201,7 +201,7 @@ async def create_templated_role(  # noqa: C901
             # Normalize the inline policy statements to be a list
             for inline_policy in inline_policies:
                 if isinstance(inline_policy.get("statement"), dict):
-                    inline_policy["statement"] == [inline_policy["statement"]]
+                    inline_policy["statement"] = [inline_policy["statement"]]
             inline_policy_document_resources.append(
                 {
                     "account_id": account_id,
