@@ -1,7 +1,7 @@
 import asyncio
 import base64
 from enum import Enum
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import boto3
 import googleapiclient.discovery
@@ -25,7 +25,7 @@ class OktaOrganization(BaseModel):
     org_url: str
     api_token: str
     request_timeout: int = 60
-    client: Optional[OktaClient]
+    client: Optional[Any]
 
     class Config:
         arbitrary_types_allowed = True
@@ -144,13 +144,20 @@ class AWSConfig(BaseModel):
     organizations: Optional[list[AWSOrganization]] = Field(
         description="A list of AWS Organizations to be managed by iambic"
     )
+    accounts: list[AWSAccount] = Field(
+        [],
+        description=(
+            "A list of AWS Accounts to be managed by iambic. "
+            "This doesn't need to be defined if you are using "
+            "AWS Organizations to auto-discover accounts."
+        ),
+    )
 
 
 class Config(BaseModel):
     aws: Optional[AWSConfig] = Field(
         description="AWS configuration for iambic to use when managing AWS resources"
     )
-    aws_accounts: List[AWSAccount]
     google_projects: List[GoogleProject] = []
     okta_organizations: List[OktaOrganization] = []
     extends: List[ExtendsConfig] = []
@@ -172,17 +179,17 @@ class Config(BaseModel):
         arbitrary_types_allowed = True
 
     async def setup_aws_accounts(self):
-        for elem, account in enumerate(self.aws_accounts):
+        for elem, account in enumerate(self.aws.accounts):
             if not account.role_access_tag:
-                self.aws_accounts[elem].role_access_tag = self.role_access_tag
+                self.aws.accounts[elem].role_access_tag = self.role_access_tag
 
             for variable in self.variables:
                 if variable.key not in [av.key for av in account.variables]:
-                    self.aws_accounts[elem].variables.append(variable)
+                    self.aws.accounts[elem].variables.append(variable)
 
-        account_map = {account.account_id: account for account in self.aws_accounts}
+        account_map = {account.account_id: account for account in self.aws.accounts}
         config_account_idx_map = {
-            account.account_id: idx for idx, account in enumerate(self.aws_accounts)
+            account.account_id: idx for idx, account in enumerate(self.aws.accounts)
         }
 
         if self.aws and self.aws.organizations:
@@ -196,9 +203,9 @@ class Config(BaseModel):
                     if (
                         account_elem := config_account_idx_map.get(account.account_id)
                     ) is not None:
-                        self.aws_accounts[account_elem] = account
+                        self.aws.accounts[account_elem] = account
                     else:
-                        self.aws_accounts.append(account)
+                        self.aws.accounts.append(account)
 
     def get_aws_secret(self, extend: ExtendsConfig) -> dict:
         """TODO: Secrets should be moved to the account to prevent an anti-pattern
@@ -259,7 +266,7 @@ class Config(BaseModel):
     async def get_boto_session_from_arn(self, arn: str, region_name: str = None):
         region_name = region_name or arn.split(":")[3]
         account_id = arn.split(":")[4]
-        aws_account_map = {account.account_id: account for account in self.aws_accounts}
+        aws_account_map = {account.account_id: account for account in self.aws.accounts}
         aws_account = aws_account_map[account_id]
         return await aws_account.get_boto3_session(region_name)
 

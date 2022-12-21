@@ -13,29 +13,15 @@ aws:
             - '*'
           enabled: true
           read_only: false
-        - included_accounts:
-            - '969947703986'
-            - '114567474685'
-          enabled: false
       default_rule:
         enabled: true
-        read_only: true
-
-aws_accounts:
-  - account_id: '759357822767'
-    account_name: dev
-    assume_role_arn: 'arn:aws:iam::759357822767:role/IambicSpokeRole'
-  - account_id: '259868150464'
-    account_name: staging
-    assume_role_arn: 'arn:aws:iam::259868150464:role/IambicSpokeRole'
-  - account_id: '940552945933'
-    account_name: prod
-    assume_role_arn: 'arn:aws:iam::940552945933:role/IambicSpokeRole'
+        read_only: false
 
 google:
   groups:
     enabled: false
 
+# Doesn't need to exist in V1
 slack:
   alert_channel_id: 'C046KESSMQ8'
 
