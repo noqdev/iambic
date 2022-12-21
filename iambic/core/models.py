@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime
 from enum import Enum
 from types import GenericAlias
 from typing import TYPE_CHECKING, List, Optional, Set, Union, get_args, get_origin
@@ -17,7 +18,7 @@ from iambic.core.context import ExecutionContext
 from iambic.core.utils import snake_to_camelcap, sort_dict, yaml
 
 if TYPE_CHECKING:
-    from iambic.aws.models import AWSAccount
+    from iambic.aws.models import AWSAccount, Deleted
     from iambic.config.models import Config
 
 
@@ -291,3 +292,16 @@ class BaseTemplate(BaseModel):
 class Variable(PydanticBaseModel):
     key: str
     value: str
+
+
+class ExpiryModel(PydanticBaseModel):
+    expires_at: Optional[datetime] = Field(
+        None, description="The date and time the resource will be/was set to deleted."
+    )
+    deleted: Optional[Union[bool, List[Deleted]]] = Field(
+        False,
+        description=(
+            "Denotes whether the resource has been removed from AWS."
+            "Upon being set to true, the resource will be deleted the next time iambic is ran."
+        ),
+    )
