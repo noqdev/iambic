@@ -39,6 +39,14 @@ class UserSimple(BaseModel, ExpiryModel):
     username: str
     status: Optional[UserStatus] = UserStatus.active
 
+    @property
+    def resource_type(self) -> str:
+        return "okta:user"
+
+    @property
+    def resource_id(self) -> str:
+        return self.username
+
 
 class User(UserSimple):
     idp_name: str
@@ -69,6 +77,10 @@ class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
     @property
     def resource_type(self) -> str:
         return "okta:group"
+
+    @property
+    def resource_id(self) -> str:
+        return self.group_id
 
 
 class OktaGroupTemplate(BaseTemplate, ExpiryModel):
