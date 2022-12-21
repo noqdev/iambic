@@ -203,10 +203,10 @@ def create_templates_for_modified_files(
                         - staging
                         - dev
 
-                If config.aws_accounts included prod, staging, and dev this will catch that prod is no longer included.
+                If config.aws.accounts included prod, staging, and dev this will catch that prod is no longer included.
                     This means marking prod for deletion as it has been implicitly deleted.
                 """
-                for aws_account in config.aws_accounts:
+                for aws_account in config.aws.accounts:
                     account_regex = (
                         rf"({aws_account.account_id}|{aws_account.account_name})"
                     )
@@ -274,7 +274,7 @@ def create_templates_for_modified_files(
             current commit excluded_accounts:
                 - prod
 
-        If config.aws_accounts included prod, staging, and dev this will catch that prod is no longer included.
+        If config.aws.accounts included prod, staging, and dev this will catch that prod is no longer included.
             This means marking prod for deletion as it has been implicitly deleted.
         """
         for account in template.excluded_accounts:
