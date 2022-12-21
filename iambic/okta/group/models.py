@@ -6,7 +6,6 @@ from typing import Any, List, Optional
 
 from pydantic import Field
 
-from iambic.aws.models import ExpiryModel
 from iambic.config.models import Config, OktaOrganization
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
@@ -14,6 +13,7 @@ from iambic.core.models import (
     AccountChangeDetails,
     BaseModel,
     BaseTemplate,
+    ExpiryModel,
     ProposedChange,
     ProposedChangeType,
     TemplateChangeDetails,

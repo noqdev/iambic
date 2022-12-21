@@ -3,10 +3,14 @@ from typing import Any, List, Optional, Union
 
 from pydantic import Field
 
-from iambic.aws.models import ExpiryModel
 from iambic.config.models import OktaOrganization
 from iambic.core.context import ExecutionContext
-from iambic.core.models import AccountChangeDetails, BaseModel, BaseTemplate
+from iambic.core.models import (
+    AccountChangeDetails,
+    BaseModel,
+    BaseTemplate,
+    ExpiryModel,
+)
 
 # Reference: https://www.guidodiepen.nl/2019/02/implementing-a-simple-plugin-framework-in-python/
 
