@@ -308,6 +308,7 @@ class BaseTemplate(
             exclude_none=exclude_none,
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
+            exclude={"file_path"},
         )
         sorted_input_dict = sort_dict(input_dict)
         as_yaml = yaml.dump(sorted_input_dict)
