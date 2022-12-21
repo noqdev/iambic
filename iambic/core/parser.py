@@ -1,6 +1,3 @@
-from typing import Union
-
-from iambic.aws.models import Deleted
 from iambic.config.templates import TEMPLATE_TYPE_MAP
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate
@@ -14,7 +11,7 @@ def load_templates(template_paths: list[str]) -> list[BaseTemplate]:
         try:
             template_dict = yaml.load(open(template_path))
             template_cls = TEMPLATE_TYPE_MAP[template_dict["template_type"]]
-            template_cls.update_forward_refs(Union=Union, Deleted=Deleted)
+            template_cls.update_forward_refs()
             templates.append(template_cls(file_path=template_path, **template_dict))
         except KeyError:
             log.critical(

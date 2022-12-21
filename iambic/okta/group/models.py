@@ -190,7 +190,8 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
             if current_group:
                 change_details.current_value = current_group
 
-        changes = await self.remove_expired_resources(context)
+        # TODO: Figure out how to handle eval-only changes
+        await self.remove_expired_resources(context)
 
         # TODO: Support group expansion
         tasks.extend(
@@ -266,6 +267,7 @@ async def get_group_template(group: Group) -> OktaGroupTemplate:
 
     file_name = f"{group.name}.yaml"
     group_members = [json.loads(m.json()) for m in group.members]
+    OktaGroupTemplate.update_forward_refs()
     return OktaGroupTemplate(
         file_path=f"okta/groups/{group.idp_name}/{file_name}",
         properties=dict(
