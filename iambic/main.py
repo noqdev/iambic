@@ -5,6 +5,7 @@ import warnings
 import click
 
 from iambic.config.models import Config
+from iambic.config.wizard import configuration_wizard
 from iambic.core.context import ctx
 from iambic.core.git import clone_git_repos
 from iambic.core.logger import log
@@ -307,6 +308,19 @@ def run_import(config_paths: list[str], repo_dir: str):
         asyncio.run(config.setup_aws_accounts())
         configs.append(config)
     asyncio.run(generate_templates(configs, repo_dir or str(pathlib.Path.cwd())))
+
+
+@cli.command(name="config")
+@click.option(
+    "--config",
+    "-c",
+    "config_path",
+    multiple=False,
+    type=click.Path(exists=False),
+    help="The config.yaml file paths. Example: ./prod/config.yaml",
+)
+def configure(config_path: str):
+    asyncio.run(configuration_wizard(config_path))
 
 
 if __name__ == "__main__":
