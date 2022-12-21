@@ -289,7 +289,7 @@ async def get_aws_account_map(configs: list) -> dict:
     """
     aws_account_map = dict()
     for config in configs:
-        for aws_account in config.aws_accounts:
+        for aws_account in config.aws.accounts:
             if aws_account_map.get(aws_account.account_id):
                 log.critical(
                     "Account definition found in multiple configs",

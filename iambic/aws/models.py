@@ -382,7 +382,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
         log_params = dict(
             resource_type=self.resource_type, resource_id=self.resource_id
         )
-        for account in config.aws_accounts:
+        for account in config.aws.accounts:
             if evaluate_on_account(self, account, context):
                 if context.execute:
                     log_str = "Applying changes to resource."
