@@ -79,6 +79,14 @@ class GroupTemplateProperties(BaseModel):
     # TODO: There is more. Check google group settings page
     # google_project?
 
+    @property
+    def resource_type(self):
+        return "google:group:template"
+
+    @property
+    def resource_id(self):
+        return self.email
+
 
 class GroupTemplate(GoogleTemplate):
     template_type = "NOQ::Google::Group"
@@ -164,10 +172,13 @@ class GroupTemplate(GoogleTemplate):
         tasks.extend(
             [
                 update_group_domain(
-                    current_group.domain, self.properties.domain, log_params, context
+                    current_group.properties.domain,
+                    self.properties.domain,
+                    log_params,
+                    context,
                 ),
                 update_group_email(
-                    current_group.email,
+                    current_group.properties.email,
                     self.properties.email,
                     self.properties.domain,
                     google_project,
@@ -176,7 +187,7 @@ class GroupTemplate(GoogleTemplate):
                 ),
                 update_group_name(
                     self.properties.email,
-                    current_group.name,
+                    current_group.properties.name,
                     self.properties.name,
                     self.properties.domain,
                     google_project,
@@ -185,7 +196,7 @@ class GroupTemplate(GoogleTemplate):
                 ),
                 update_group_description(
                     self.properties.email,
-                    current_group.description,
+                    current_group.properties.description,
                     self.properties.description,
                     self.properties.domain,
                     google_project,
@@ -194,7 +205,7 @@ class GroupTemplate(GoogleTemplate):
                 ),
                 update_group_members(
                     self.properties.email,
-                    current_group.members,
+                    current_group.properties.members,
                     self.properties.members,
                     self.properties.domain,
                     google_project,
