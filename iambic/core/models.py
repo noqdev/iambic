@@ -5,7 +5,6 @@ import datetime
 import json
 import os
 import resource
-from datetime import date, datetime
 from enum import Enum
 from types import GenericAlias
 from typing import TYPE_CHECKING, List, Optional, Set, Union, get_args, get_origin
@@ -21,7 +20,7 @@ from pydantic.fields import ModelField
 from iambic.aws.utils import apply_to_account
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
-from iambic.core.utils import snake_to_camelcap, yaml
+from iambic.core.utils import snake_to_camelcap, sort_dict, yaml
 
 if TYPE_CHECKING:
     from iambic.aws.models import AWSAccount, Deleted
@@ -298,13 +297,13 @@ class BaseTemplate(
         return template_dict
 
     def write(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
-        as_yaml = yaml.dump(
-            self.dict(
-                exclude_none=exclude_none,
-                exclude_unset=exclude_unset,
-                exclude_defaults=exclude_defaults,
-            )
+        input_dict = self.dict(
+            exclude_none=exclude_none,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
         )
+        sorted_input_dict = sort_dict(input_dict)
+        as_yaml = yaml.dump(sorted_input_dict)
         # Force template_type to be at the top of the yaml
         template_type_str = f"template_type: {self.template_type}"
         as_yaml = as_yaml.replace(f"{template_type_str}\n", "")
@@ -315,13 +314,13 @@ class BaseTemplate(
             f.write(as_yaml)
 
     def delete(self):
-        log.info(f"Deleting template file", file_path=self.file_path)
+        log.info("Deleting template file", file_path=self.file_path)
         try:
             repo = Repo(self.file_path, search_parent_directories=True)
             repo.index.remove([self.file_path], working_tree=True)
         except Exception as e:
             log.error(
-                f"Unable to remove file from local Git repo. Deleting manually",
+                "Unable to remove file from local Git repo. Deleting manually",
                 error=e,
                 file_path=self.file_path,
             )
@@ -343,7 +342,7 @@ class Variable(PydanticBaseModel):
 
 
 class ExpiryModel(PydanticBaseModel):
-    expires_at: Optional[Union[str, datetime, date]] = Field(
+    expires_at: Optional[Union[str, datetime.datetime, datetime.date]] = Field(
         None, description="The date and time the resource will be/was set to deleted."
     )
     deleted: Optional[Union[bool, List[Deleted]]] = Field(
@@ -356,7 +355,7 @@ class ExpiryModel(PydanticBaseModel):
 
     @validator("expires_at", pre=True)
     def parse_expires_at(cls, value):
-        if isinstance(value, datetime) or isinstance(value, date):
+        if isinstance(value, datetime.datetime) or isinstance(value, datetime.date):
             return value
         return dateparser.parse(
             value,
