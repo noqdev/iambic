@@ -14,19 +14,13 @@ from iambic.aws.iam.policy.utils import (
     get_managed_policy,
     update_managed_policy,
 )
-from iambic.aws.models import (
-    ARN_RE,
-    AccessModel,
-    AWSAccount,
-    AWSTemplate,
-    ExpiryModel,
-    Tag,
-)
+from iambic.aws.models import ARN_RE, AccessModel, AWSAccount, AWSTemplate, Tag
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
     BaseModel,
+    ExpiryModel,
     ProposedChange,
     ProposedChangeType,
 )
