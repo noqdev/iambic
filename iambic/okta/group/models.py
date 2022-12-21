@@ -175,6 +175,8 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
         group_exists = bool(current_group)
         tasks = []
 
+        await self.remove_expired_resources(context)
+
         if not group_exists:
             change_details.proposed_changes.append(
                 ProposedChange(
@@ -201,9 +203,6 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
             )
             if current_group:
                 change_details.current_value = current_group
-
-        # TODO: Figure out how to handle eval-only changes
-        await self.remove_expired_resources(context)
 
         # TODO: Support group expansion
         tasks.extend(

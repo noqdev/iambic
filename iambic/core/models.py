@@ -4,7 +4,6 @@ import asyncio
 import datetime
 import json
 import os
-import resource
 from enum import Enum
 from types import GenericAlias
 from typing import TYPE_CHECKING, List, Optional, Set, Union, get_args, get_origin
@@ -156,27 +155,23 @@ class BaseModel(PydanticBaseModel):
         # If it is, then call the remove_expired_resources method
         if issubclass(type(self), ExpiryModel):
             if hasattr(self, "expires_at") and self.expires_at:
-                if self.expires_at < datetime.utcnow():
-                    # TODO: How to handle this?
-                    # ProposedChange(
-                    #     change_type=ProposedChangeType.DELETE,
-                    #     change_summary=self.dict(),
-                    # )
-                    if context.execute:
-                        self.deleted = True
-                        return
+                if self.expires_at < datetime.datetime.utcnow():
+                    self.deleted = True
+                    return self
         for field_name in self.__fields__.keys():
             field_val = getattr(self, field_name)
-            if not issubclass(type(field_val), ExpiryModel):
-                continue
             if isinstance(field_val, list):
-                new_value = await asyncio.gather(
+                await asyncio.gather(
                     *[elem.remove_expired_resources(context) for elem in field_val]
                 )
-                setattr(self, field_name, new_value)
+
+            elif not (
+                isinstance(field_val, BaseModel) or isinstance(field_val, ExpiryModel)
+            ):
+                continue
+
             else:
-                new_value = await field_val.remove_expired_resources(context)
-                setattr(resource, field_name, new_value)
+                await field_val.remove_expired_resources(context)
 
     @property
     def exclude_keys(self) -> set:

@@ -2,13 +2,14 @@ import asyncio
 from itertools import chain
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from iambic.config.models import GoogleProject
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
+    BaseModel,
     ExpiryModel,
     ProposedChange,
     ProposedChangeType,
@@ -38,7 +39,7 @@ from iambic.google.models import (
 # TODO: Okta Applications and User/Group -> Application assignments
 
 
-class GroupMember(ExpiryModel):
+class GroupMember(BaseModel, ExpiryModel):
     email: str
     expand: bool = Field(
         False,
@@ -125,19 +126,14 @@ class GroupTemplate(GoogleTemplate):
         )
         if current_group:
             change_details.current_value = current_group
-        # TODO: Check if deleted
-        # deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
-        # if isinstance(deleted, list):
-        #     deleted = deleted[0].deleted
-        # if deleted:
-        #     if current_group:
-        #         # Delete me
 
         group_exists = bool(current_group)
 
         tasks = []
 
-        if not group_exists:
+        await self.remove_expired_resources(context)
+
+        if not group_exists and not self.deleted:
             change_details.proposed_changes.append(
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
@@ -206,7 +202,11 @@ class GroupTemplate(GoogleTemplate):
                 update_group_members(
                     self.properties.email,
                     current_group.properties.members,
-                    self.properties.members,
+                    [
+                        member
+                        for member in self.properties.members
+                        if not member.deleted
+                    ],
                     self.properties.domain,
                     google_project,
                     log_params,
@@ -252,7 +252,7 @@ async def get_group_template(service, group, domain) -> GroupTemplate:
             email=member["email"],
             role=GroupMemberRole(member["role"]),
             type=GroupMemberType(member["type"]),
-            status=GroupMemberStatus(member["status"]),
+            status=GroupMemberStatus(member.get("status", "ACTIVE")),
         )
         for member in member_res.get("members", [])
     ]

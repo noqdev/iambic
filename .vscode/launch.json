@@ -71,7 +71,7 @@
             "args": [
                 "apply",
                 "--template",
-                "../noq-templates/google_groups/noq.dev/dockerhub.yaml",
+                "../noq-templates/google/groups/noq.dev/dockerhub.yaml",
                 "--config",
                 "demo/config.yaml"
             ],
