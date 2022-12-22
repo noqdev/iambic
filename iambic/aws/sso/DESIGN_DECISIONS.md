@@ -38,14 +38,3 @@ It's a better UX but the flow is a little backwards.
 
 Basically, we're treating org as an attribute of the account it is on, which it is; instead of treating an org as way to manage a series of accounts (which it also is). 
 
-
-### AccountAccess definition change
-SSO Permission Sets are special snowflakes if you really hate snow
-
-A permission set is linked to an Org, the org is on an account, BUT the org also represents multiple accounts.
-
-How does it differ for this 1 template? 
-For every other template, included/excluded accounts means that this resource will be created there and included/excluded orgs is a way to reduce the set of included/excluded accounts based on the org it is assigned to. 
-BUTTTT for a permission set template, included org means this resource will be created on the account the org is on and included/excluded accounts is a way to scope where the permission set will be provisioned (created as a role). 
-It's pedantic but we're basically changing the relationship between the attributes of the AccountAccess model.
-
