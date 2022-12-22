@@ -177,7 +177,7 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
 
         await self.remove_expired_resources(context)
 
-        if not group_exists:
+        if not group_exists and not self.deleted:
             change_details.proposed_changes.append(
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
@@ -223,7 +223,11 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
                 ),
                 update_group_members(
                     current_group,
-                    self.properties.members,
+                    [
+                        member
+                        for member in self.properties.members
+                        if not member.deleted
+                    ],
                     okta_organization,
                     log_params,
                     context,
