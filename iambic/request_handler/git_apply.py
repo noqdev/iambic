@@ -1,5 +1,6 @@
 import asyncio
 
+from iambic.aws.sso.permission_set.utils import generate_permission_set_map
 from iambic.config.models import Config
 from iambic.core.context import ExecutionContext, ctx
 from iambic.core.git import (
@@ -59,6 +60,8 @@ async def apply_git_changes(
     templates.extend(
         create_templates_for_modified_files(config, file_changes["modified_files"])
     )
+
+    await generate_permission_set_map(config.aws_accounts, templates)
 
     template_changes = await asyncio.gather(
         *[template.apply(config, context) for template in templates]
