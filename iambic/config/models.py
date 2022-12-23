@@ -150,10 +150,10 @@ class Config(BaseModel):
     aws: Optional[AWSConfig] = Field(
         description="AWS configuration for iambic to use when managing AWS resources"
     )
-    aws_accounts: List[AWSAccount]
-    google_projects: List[GoogleProject] = []
-    okta_organizations: List[OktaOrganization] = []
-    extends: List[ExtendsConfig] = []
+    aws_accounts: Optional[list[AWSAccount]] = []
+    google_projects: Optional[List[GoogleProject]] = []
+    okta_organizations: Optional[List[OktaOrganization]] = []
+    extends: Optional[List[ExtendsConfig]] = []
     secrets: Optional[dict] = None
     role_access_tag: Optional[str] = Field(
         "noq-authorized",

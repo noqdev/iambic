@@ -1,6 +1,7 @@
 import asyncio
 import os
 import pathlib
+from collections import defaultdict
 
 import aiofiles
 
@@ -17,7 +18,7 @@ from iambic.core.template_generation import (
     base_group_str_attribute,
     get_existing_template_file_map,
     group_dict_attribute,
-    group_int_or_str_attribute,
+    group_int_or_str_attribute, base_group_dict_attribute,
 )
 from iambic.core.utils import NoqSemaphore, resource_file_upsert
 
@@ -74,45 +75,66 @@ async def generate_permission_set_resource_file(
 
 async def create_templated_permission_set(  # noqa: C901
     aws_account_map: dict[str, AWSAccount],
-    managed_policy_name: str,
-    managed_policy_refs: list[dict],
-    managed_policy_dir: str,
+    permission_set_name: str,
+    permission_set_refs: list[dict],
+    permission_set_dir: str,
     existing_template_map: dict,
 ):
-    account_id_to_mp_map = {}
-    num_of_accounts = len(managed_policy_refs)
-    for managed_policy_ref in managed_policy_refs:
-        async with aiofiles.open(managed_policy_ref["file_path"], mode="r") as f:
+    account_id_to_permissionn_set_map = {}
+    num_of_accounts = len(permission_set_refs)
+    for permission_set_ref in permission_set_refs:
+        async with aiofiles.open(permission_set_ref["file_path"], mode="r") as f:
             content_dict = json.loads(await f.read())
-            account_id_to_mp_map[
-                managed_policy_ref["account_id"]
-            ] = normalize_boto3_resp(content_dict)
+            account_id_to_permissionn_set_map[permission_set_ref["account_id"]] = normalize_boto3_resp(
+                content_dict
+            )
 
     # Generate the params used for attribute creation
-    managed_policy_properties = {"policy_name": managed_policy_name}
-
-    # TODO: Fix identifier it should be something along the lines of v but path can vary by account
-    #       f"arn:aws:iam::{account_id}:policy{resource['Path']}{managed_policy_name}"
-    managed_policy_template_params = {"identifier": managed_policy_name}
-    path_resources = list()
+    role_template_params = {"identifier": permission_set_name}
+    permission_set_properties = {"name": permission_set_name}
     description_resources = list()
-    policy_document_resources = list()
+    relay_state_resources = list()
+    customer_managed_policy_ref_resources = list()
+    managed_policy_resources = list()
+    inline_policy_resources = list()
+    permissions_boundary_resources = list()
     tag_resources = list()
-    for account_id, managed_policy_dict in account_id_to_mp_map.items():
-        path_resources.append(
-            {
-                "account_id": account_id,
-                "resources": [{"resource_val": managed_policy_dict["path"]}],
-            }
-        )
-        policy_document_resources.append(
-            {
-                "account_id": account_id,
-                "resources": [{"resource_val": managed_policy_dict["policy_document"]}],
-            }
-        )
+    session_duration_resources = list()
 
-        if tags := managed_policy_dict.get("tags"):
+    for account_id, permission_set_dict in account_id_to_permissionn_set_map.items():
+        if session_duration := permission_set_dict.get("session_duration"):
+            session_duration_resources.append(
+                {"account_id": account_id, "resources": [{"resource_val": session_duration}]}
+            )
+
+        if managed_policies := permission_set_dict.get("attached_managed_policies"):
+            managed_policy_resources.append(
+                {
+                    "account_id": account_id,
+                    "resources": [{"resource_val": mp["arn"]} for mp in managed_policies],
+                }
+            )
+
+        if customer_managed_policy_refs := permission_set_dict.get("customer_managed_policy_references"):
+            customer_managed_policy_ref_resources.append(
+                {
+                    "account_id": account_id,
+                    "resources": [
+                        {"resource_val": customer_managed_policy_ref}
+                        for customer_managed_policy_ref in customer_managed_policy_refs
+                    ],
+                }
+            )
+
+        if permissions_boundary := permission_set_dict.get("permissions_boundary"):
+            permissions_boundary_resources.append(
+                {
+                    "account_id": account_id,
+                    "resources": [{"resource_val": permissions_boundary}],
+                }
+            )
+
+        if tags := permission_set_dict.get("tags"):
             tag_resources.append(
                 {
                     "account_id": account_id,
@@ -120,61 +142,90 @@ async def create_templated_permission_set(  # noqa: C901
                 }
             )
 
-        if description := managed_policy_dict.get("description"):
+        if description := permission_set_dict.get("description"):
             description_resources.append(
                 {"account_id": account_id, "resources": [{"resource_val": description}]}
             )
 
-    if len(managed_policy_refs) != len(aws_account_map):
-        managed_policy_template_params["included_accounts"] = [
-            aws_account_map[managed_policy_ref["account_id"]].account_name
-            for managed_policy_ref in managed_policy_refs
+        if inline_policy := permission_set_dict.get("inline_policy"):
+            inline_policy_resources.append(
+                {"account_id": account_id, "resources": [{"resource_val": inline_policy}]}
+            )
+
+        if relay_state := permission_set_dict.get("relay_state"):
+            relay_state_resources.append(
+                {"account_id": account_id, "resources": [{"resource_val": relay_state}]}
+            )
+
+    if len(permission_set_refs) != len(aws_account_map):
+        role_template_params["included_orgs"] = [
+            aws_account_map[permission_set["account_id"]].org_id
+            for permission_set in permission_set_refs
         ]
 
-    path = await group_int_or_str_attribute(
-        aws_account_map, num_of_accounts, path_resources, "path"
-    )
-    if path != "/":
-        managed_policy_properties["path"] = path
+    if session_duration_resources:
+        permission_set_properties["session_duration"] = await group_int_or_str_attribute(
+            aws_account_map, num_of_accounts, session_duration_resources, "session_duration"
+        )
 
-    managed_policy_properties["policy_document"] = await group_dict_attribute(
-        aws_account_map, num_of_accounts, policy_document_resources, True
-    )
+    if permissions_boundary_resources:
+        permission_set_properties["permissions_boundary"] = await group_dict_attribute(
+            aws_account_map, num_of_accounts, permissions_boundary_resources
+        )
 
     if description_resources:
-        managed_policy_properties["description"] = await group_int_or_str_attribute(
+        permission_set_properties["description"] = await group_int_or_str_attribute(
             aws_account_map, num_of_accounts, description_resources, "description"
         )
 
-    if tag_resources:
-        tags = await group_dict_attribute(
-            aws_account_map, num_of_accounts, tag_resources, True
+    if managed_policy_resources:
+        permission_set_properties["managed_policies"] = await group_dict_attribute(
+            aws_account_map, num_of_accounts, managed_policy_resources, False
         )
-        if isinstance(tags, dict):
-            tags = [tags]
-        managed_policy_properties["tags"] = tags
 
-    try:
-        managed_policy = ManagedPolicyTemplate(
-            file_path=existing_template_map.get(
-                managed_policy_name,
-                get_templated_permission_set_file_path(
-                    managed_policy_dir,
-                    managed_policy_name,
-                    managed_policy_template_params.get("included_accounts"),
-                    aws_account_map,
-                ),
-            ),
-            properties=managed_policy_properties,
-            **managed_policy_template_params,
+    if customer_managed_policy_ref_resources:
+        permission_set_properties["customer_managed_policy_references"] = await group_dict_attribute(
+            aws_account_map, num_of_accounts, customer_managed_policy_ref_resources, False
         )
-        managed_policy.write()
-    except Exception as err:
-        log.info(
-            str(err),
-            managed_policy_params=managed_policy_template_params,
-            managed_policy_properties=managed_policy_properties,
+
+    if tag_resources:
+        permission_set_properties["tags"] = await group_dict_attribute(
+            aws_account_map, num_of_accounts, tag_resources, False
         )
+
+    if inline_policy_resources:
+        permission_set_properties["inline_policy"] = await group_int_or_str_attribute(
+            aws_account_map, num_of_accounts, inline_policy_resources, "inline_policy"
+        )
+
+    if relay_state_resources:
+        permission_set_properties["relay_state"] = await group_int_or_str_attribute(
+            aws_account_map, num_of_accounts, relay_state_resources, "relay_state"
+        )
+
+    # try:
+    #     role = RoleTemplate(
+    #         file_path=existing_template_map.get(
+    #             role_name,
+    #             get_templated_role_file_path(
+    #                 role_dir,
+    #                 role_name,
+    #                 role_template_params.get("included_accounts"),
+    #                 aws_account_map,
+    #             ),
+    #         ),
+    #         properties=permission_set_properties,
+    #         **role_template_params,
+    #     )
+    #     role.write()
+    # except Exception as err:
+    #     log.error(
+    #         "Unable to create role template.",
+    #         error=str(err),
+    #         role_params=role_template_params,
+    #     )
+
+    return permission_set_properties
 
 
 async def generate_aws_permission_set_templates(
@@ -186,6 +237,7 @@ async def generate_aws_permission_set_templates(
     )
     resource_dir = get_permission_set_dir(base_output_dir)
 
+    all_orgs = set(org.org_id for config in configs for org in config.aws.organizations)
     accounts_to_set_sso = []
     for config in configs:
         accounts_to_set_sso.extend([account for account in config.aws_accounts if account.sso_details])
@@ -195,79 +247,78 @@ async def generate_aws_permission_set_templates(
 
     log.info("Generating AWS SSO Permission Set templates.")
     log.info(
-        "Beginning to retrieve AWS IAM SSO Permission Sets.",
+        "Beginning to retrieve AWS SSO Permission Sets.",
         org_accounts=list(aws_account_map.keys()),
     )
 
-    await asyncio.gather(*[account.set_sso_details() for account in accounts_to_set_sso])
+    # await asyncio.gather(*[account.set_sso_details() for account in accounts_to_set_sso])
 
-    messages = []
-    for aws_account in aws_account_map.values():
-        if not aws_account.sso_details:
-            continue
-
-        instance_arn = aws_account.sso_details.instance_arn
-        sso_client = await aws_account.get_boto3_client("sso-admin", region_name=aws_account.sso_details.region)
-
-        for permission_set in aws_account.sso_details.permission_set_map.values():
-            messages.append(
-                dict(
-                    account_id=aws_account.account_id,
-                    sso_client=sso_client,
-                    instance_arn=instance_arn,
-                    permission_set=permission_set,
-                )
-            )
-
-    log.info(
-        "Beginning to enrich AWS IAM SSO Permission Sets.",
-        org_accounts=list(aws_account_map.keys()),
-        permission_set_count=len(messages),
-    )
-    generate_permission_set_resource_file_semaphore = NoqSemaphore(generate_permission_set_resource_file, 30)
-    all_permission_sets = await generate_permission_set_resource_file_semaphore.process(messages)
-
-    log.info(
-        "Finished enriching AWS IAM SSO Permission Sets.",
-        org_accounts=list(aws_account_map.keys()),
-        permission_set_count=len(messages),
-    )
-    # Use these for testing `create_templated_permission_set`
-    all_permission_sets_output = json.dumps(all_permission_sets)
-    with open("all_permission_sets_output.json", "w") as f:
-        f.write(all_permission_sets_output)
-    # with open("all_permission_sets_output.json") as f:
-    #     all_permission_sets = json.loads(f.read())
-
-    log.info("Grouping managed policies")
-    # Move everything to required structure
-    # for account_mp_elem in range(len(account_managed_policies)):
-    #     for mp_elem in range(
-    #         len(account_managed_policies[account_mp_elem]["managed_policies"])
-    #     ):
-    #         policy_name = account_managed_policies[account_mp_elem]["managed_policies"][
-    #             mp_elem
-    #         ].pop("policy_name")
-    #         account_managed_policies[account_mp_elem]["managed_policies"][mp_elem][
-    #             "resource_val"
-    #         ] = policy_name
+    # messages = []
+    # for aws_account in aws_account_map.values():
+    #     if not aws_account.sso_details:
+    #         continue
     #
-    #     account_managed_policies[account_mp_elem][
-    #         "resources"
-    #     ] = account_managed_policies[account_mp_elem].pop("managed_policies", [])
+    #     instance_arn = aws_account.sso_details.instance_arn
+    #     sso_client = await aws_account.get_boto3_client("sso-admin", region_name=aws_account.sso_details.region)
     #
-    # grouped_managed_policy_map = await base_group_str_attribute(
-    #     aws_account_map, account_managed_policies
+    #     for permission_set in aws_account.sso_details.permission_set_map.values():
+    #         messages.append(
+    #             dict(
+    #                 account_id=aws_account.account_id,
+    #                 sso_client=sso_client,
+    #                 instance_arn=instance_arn,
+    #                 permission_set=permission_set,
+    #             )
+    #         )
+    #
+    # log.info(
+    #     "Beginning to enrich AWS IAM SSO Permission Sets.",
+    #     org_accounts=list(aws_account_map.keys()),
+    #     permission_set_count=len(messages),
     # )
+    # generate_permission_set_resource_file_semaphore = NoqSemaphore(generate_permission_set_resource_file, 30)
+    # all_permission_sets = await generate_permission_set_resource_file_semaphore.process(messages)
     #
-    # log.info("Writing templated roles")
-    # for policy_name, policy_refs in grouped_managed_policy_map.items():
-    #     await create_templated_permission_set(
-    #         aws_account_map,
-    #         policy_name,
-    #         policy_refs,
-    #         resource_dir,
-    #         existing_template_map,
-    #     )
+    # log.info(
+    #     "Finished enriching AWS IAM SSO Permission Sets.",
+    #     org_accounts=list(aws_account_map.keys()),
+    #     permission_set_count=len(messages),
+    # )
+    # # Use these for testing `create_templated_permission_set`
+    # all_permission_sets_output = json.dumps(all_permission_sets)
+    # with open("all_permission_sets_output.json", "w") as f:
+    #     f.write(all_permission_sets_output)
+
+    with open("all_permission_sets_output.json") as f:
+        all_permission_sets = json.loads(f.read())
+
+    permission_sets_grouped_by_account = defaultdict(list)
+    # list[dict(account_id:str, resources=list[dict(resource_val: str, **)])]
+
+    for elem in range(len(all_permission_sets)):
+        account_id = all_permission_sets[elem].pop("account_id")
+        all_permission_sets[elem]["resource_val"] = all_permission_sets[elem]["permission_set"]["Name"]
+        permission_sets_grouped_by_account[account_id].append(all_permission_sets[elem])
+
+    all_permission_sets = [
+        dict(account_id=account_id, resources=permission_sets)
+        for account_id, permission_sets in permission_sets_grouped_by_account.items()
+    ]
+
+    grouped_permission_set_map = await base_group_str_attribute(
+        aws_account_map, all_permission_sets
+    )
+
+    log.info("Writing templated AWS SSO Permission Set.")
+    for name, refs in grouped_permission_set_map.items():
+        print(f"Starting on {name}")
+        response = await create_templated_permission_set(
+            aws_account_map,
+            name,
+            refs,
+            resource_dir,
+            existing_template_map,
+        )
+        print(json.dumps(response, indent=2))
 
     log.info("Finished templated managed policy generation")

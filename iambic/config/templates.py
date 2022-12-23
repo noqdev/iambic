@@ -1,6 +1,6 @@
 from iambic.aws.iam.policy.models import ManagedPolicyTemplate
 from iambic.aws.iam.role.models import RoleTemplate
-from iambic.aws.sso.models import AWSSSOPermissionSetTemplate
+from iambic.aws.sso.permission_set.models import AWSSSOPermissionSetTemplate
 from iambic.google.group.models import GroupTemplate
 from iambic.okta.group.models import OktaGroupTemplate
 
