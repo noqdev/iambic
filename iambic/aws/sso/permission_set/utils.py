@@ -260,19 +260,47 @@ async def apply_account_assignments(
     ...
 
 
-async def apply_permission_set_inline_policy():
+async def apply_permission_set_inline_policy(
+    sso_client,
+    instance_arn: str,
+    permission_set_arn: str,
+    template_inline_policy: str,
+    existing_inline_policy: str,
+    log_params: dict,
+    context: ExecutionContext,
+) -> list[ProposedChange]:
     ...
 
 
-async def apply_permission_set_permission_boundary():
+async def apply_permission_set_permission_boundary(
+    sso_client,
+    instance_arn: str,
+    permission_set_arn: str,
+    template_permission_boundary: any,  # TODO: Fix type hint
+    existing_permission_boundary: any,  # TODO: Fix type hint
+    log_params: dict,
+    context: ExecutionContext,
+) -> list[ProposedChange]:
     ...
 
 
-async def create_permission_set():
+async def create_permission_set(
+    sso_client,
+    instance_arn: str,
+    permission_set: dict,
+    log_params: dict,
+    context: ExecutionContext,
+) -> list[ProposedChange]:
     ...
 
 
-async def delete_permission_set():
+async def delete_permission_set(
+    sso_client,
+    instance_arn: str,
+    permission_set: dict,
+    log_params: dict,
+    context: ExecutionContext,
+) -> list[ProposedChange]:
     ...
 
 
