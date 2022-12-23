@@ -27,7 +27,7 @@ from iambic.core.models import (
     TemplateChangeDetails,
     Variable,
 )
-from iambic.core.utils import aio_wrapper
+from iambic.core.utils import aio_wrapper, NoqSemaphore
 
 if TYPE_CHECKING:
     from iambic.config.models import Config
@@ -166,88 +166,16 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         return [region["RegionName"] for region in res["Regions"]]
 
     # @cached(LRUCache(1024))
-    async def discover_sso_settings(
-        self, account_ids: list[str]
-    ) -> Optional[dict[str, str]]:
-        """
-        Discover AWS Single Sign-On (SSO) instances in the active regions.
-
-        Returns:
-            A tuple containing the region name and the SSO instance ID, if found.
-            If no SSO instance is found, returns (None, None).
-        """
-        regions: list[str] = await self.get_active_regions()
-        sso_clients = await asyncio.gather(
-            *[
-                self.get_boto3_client("sso-admin", region_name=region)
-                for region in regions
-            ]
-        )
-
-        sso_instances = await asyncio.gather(
-            *[aio_wrapper(sso.list_instances) for sso in sso_clients],
-            return_exceptions=True,
-        )
-        for sso_instance_res in sso_instances:
-            if isinstance(sso_instance_res, Exception):
-                continue
-            if sso_instance_res:
-                sso_instance_arn = sso_instance_res["Instances"][0]["InstanceArn"]
-                identity_store_id = sso_instance_res["Instances"][0]["IdentityStoreId"]
-                region = regions[sso_instances.index(sso_instance_res)]
-                identity_store = await self.get_boto3_client(
-                    "identitystore", region_name=region
-                )
-                client = sso_clients[regions.index(region)]
-                permission_set_res = await aio_wrapper(
-                    client.list_permission_sets, InstanceArn=sso_instance_arn
-                )
-                permission_sets = permission_set_res["PermissionSets"]
-                assignments = defaultdict(lambda: defaultdict(list))
-                # TODO: Paginate
-                users = await aio_wrapper(
-                    identity_store.list_users,
-                    IdentityStoreId=identity_store_id,
-                )
-
-                groups = await aio_wrapper(
-                    identity_store.list_groups,
-                    IdentityStoreId=identity_store_id,
-                )
-                for group in groups["Groups"]:
-                    group_memberships = await aio_wrapper(
-                        identity_store.list_group_memberships,
-                        IdentityStoreId=identity_store_id,
-                        GroupId=group["GroupId"],
-                    )
-                    group["members"] = group_memberships["GroupMemberships"]
-                # TODO: List group memberships
-                for permission_set in permission_sets:
-                    # TODO: Handle pagination
-                    for account_id in account_ids:
-                        account_assignments = await aio_wrapper(
-                            client.list_account_assignments,
-                            InstanceArn=sso_instance_arn,
-                            AccountId=account_id,
-                            PermissionSetArn=permission_set,
-                            MaxResults=100,
-                        )
-                        assignments[permission_set][account_id] = account_assignments[
-                            "AccountAssignments"
-                        ]
-                # Use https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/identitystore.html
-                return {
-                    "region": region,
-                    "sso_instance_arn": sso_instance_arn,
-                    "permission_sets": permission_sets,
-                    "assignments": assignments,
-                    "users": users,
-                    "groups": groups,
-                }
-
     def __init__(self, **kwargs):
         super(BaseAWSAccountAndOrgModel, self).__init__(**kwargs)
         self.default_region = self.default_region.value
+
+
+class SSODetails(PydanticBaseModel):
+    region: str
+    instance_arn: Optional[str] = None
+    permission_set_map: Optional[Union[dict, None]] = None
+    org_accounts: Optional[list[str]] = None
 
 
 class AWSAccount(BaseAWSAccountAndOrgModel):
@@ -272,6 +200,7 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         description="A list of variables to be used when creating templates",
     )
     org_session_info: Optional[dict] = None
+    sso_details: Optional[Union[SSODetails, None]] = None
 
     async def get_boto3_session(self, region_name: str = None):
         region_name = region_name or self.default_region
@@ -293,6 +222,87 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
                 return boto3_session
 
         return await super(AWSAccount, self).get_boto3_session(region_name)
+
+    async def discover_sso_settings(self):
+        """
+        Discover AWS Single Sign-On (SSO) instances in the active regions.
+
+        Returns:
+            A tuple containing the region name and the SSO instance ID, if found.
+            If no SSO instance is found, returns (None, None).
+        """
+        if not self.sso_details:
+            return None, None
+
+        region = self.sso_details.region
+        sso_client = await self.get_boto3_client("sso-admin", region_name=region)
+        # identity_store = await self.get_boto3_client("identitystore", region_name=region)
+
+        sso_instances = await aio_wrapper(sso_client.list_instances)
+        sso_instance_arn = sso_instances["Instances"][0]["InstanceArn"]
+        permission_set_res = await aio_wrapper(
+            sso_client.list_permission_sets, InstanceArn=sso_instance_arn
+        )
+        permission_sets = permission_set_res["PermissionSets"]
+
+        # identity_store_id = sso_instances["Instances"][0]["IdentityStoreId"]
+        # users = await legacy_paginated_search(
+        #     identity_store.list_users,
+        #     response_key="Users",
+        #     IdentityStoreId=identity_store_id,
+        # )
+        #
+        # groups = await legacy_paginated_search(
+        #     identity_store.list_groups,
+        #     response_key="Groups",
+        #     IdentityStoreId=identity_store_id,
+        # )
+        # for group in groups:
+        #     group_memberships = await aio_wrapper(
+        #         identity_store.list_group_memberships,
+        #         IdentityStoreId=identity_store_id,
+        #         GroupId=group["GroupId"],
+        #     )
+        #     group["members"] = group_memberships["GroupMemberships"]
+
+        # Use https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/identitystore.html
+        return {
+            "region": region,
+            "sso_instance_arn": sso_instance_arn,
+            "permission_sets": permission_sets
+        }
+
+    async def set_sso_details(self, set_sso_map: bool = True):
+        if self.sso_details:
+            region = self.sso_details.region
+            sso_client = await self.get_boto3_client("sso-admin", region_name=region)
+            sso_instances = await aio_wrapper(sso_client.list_instances)
+
+            self.sso_details.instance_arn = sso_instances["Instances"][0]["InstanceArn"]
+            if not set_sso_map:
+                return
+
+            permission_set_arns = await legacy_paginated_search(
+                sso_client.list_permission_sets,
+                response_key="PermissionSets",
+                InstanceArn=self.sso_details.instance_arn,
+            )
+            if permission_set_arns:
+                permission_set_detail_semaphore = NoqSemaphore(
+                    sso_client.describe_permission_set, 35, False
+                )
+                permission_set_details = await permission_set_detail_semaphore.process(
+                    [
+                        {
+                            "InstanceArn": self.sso_details.instance_arn,
+                            "PermissionSetArn": permission_set_arn
+                        } for permission_set_arn in permission_set_arns
+                    ]
+                )
+                self.sso_details.permission_set_map = {
+                    permission_set["PermissionSet"]["Name"]: permission_set["PermissionSet"]
+                    for permission_set in permission_set_details
+                }
 
     def __str__(self):
         return f"{self.account_name} - ({self.account_id})"
@@ -336,12 +346,23 @@ class AWSOrgAccountRule(BaseAWSOrgRule):
     )
 
 
+class AWSSSOAccount(PydanticBaseModel):
+    account_id: constr(min_length=12, max_length=12) = Field(
+        None, description="The AWS Account ID"
+    )
+    region: str
+
+
 class AWSOrganization(BaseAWSAccountAndOrgModel):
     org_id: str = Field(
         None,
         description="A unique identifier designating the identity of the organization",
     )
     org_name: Optional[str] = None
+    sso_account: Optional[AWSSSOAccount] = Field(
+        default=None,
+        description="The AWS Account ID and region of the AWS SSO instance to use for this organization"
+    )
     default_rule: BaseAWSOrgRule = Field(
         description="The rule used to determine how an organization account should be handled if the account was not found in account_rules.",
     )
@@ -370,12 +391,18 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
             return
 
         region_name = str(self.default_region)
+        if getattr(self.sso_account, "account_id", None) == account_id:
+            sso_details = SSODetails(region=self.sso_account.region)
+        else:
+            sso_details = None
+
         aws_account = AWSAccount(
             account_id=account_id,
             account_name=account_name,
             org_id=self.org_id,
             variables=account["variables"],
             read_only=account_rule.read_only,
+            sso_details=sso_details,
         )
         aws_account.boto3_session_map = {}
         assume_role_names = account_rule.assume_role_name
@@ -417,24 +444,18 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         if existing_accounts_map is None:
             existing_accounts_map = {}
 
-        session = boto3.Session(region_name=self.default_region)
-        if self.assume_role_arn:
-            session = await create_assume_role_session(
-                session,
-                self.assume_role_arn,
-                self.default_region,
-                external_id=self.external_id,
-            )
-        client = session.client("organizations")
+        session = await self.get_boto3_session()
+        client = await self.get_boto3_client("organizations")
         org_accounts = await legacy_paginated_search(
             client.list_accounts,
             "Accounts",
         )
+
+        active_accounts = [account for account in org_accounts if account["Status"] == "ACTIVE"]
         org_accounts = await asyncio.gather(
             *[
                 set_org_account_variables(client, account)
-                for account in org_accounts
-                if account["Status"] == "ACTIVE"
+                for account in active_accounts
             ]
         )
         response = list()
@@ -459,6 +480,14 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
             ]
         )
         response.extend([account for account in discovered_accounts if account])
+
+        if self.sso_account:
+            for elem, account in enumerate(response):
+                if account.account_id == self.sso_account.account_id:
+                    response[elem].sso_details.org_accounts = [
+                        account["Id"] for account in active_accounts
+                    ]
+
         return response
 
     def __str__(self):
@@ -512,3 +541,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
             log.debug("No changes detected for resource on any account.", **log_params)
 
         return template_changes
+
+
+class Description(AccessModel):
+    description: Optional[str] = ""

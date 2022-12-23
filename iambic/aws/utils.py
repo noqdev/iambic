@@ -13,12 +13,13 @@ from iambic.core.utils import aio_wrapper, camel_to_snake
 
 
 async def paginated_search(
-    search_fnc, response_key: str, max_results: int = None, **search_kwargs
+    search_fnc, response_key: str, max_results: int = None, retain_key: bool = False, **search_kwargs
 ) -> list:
     """Retrieve and aggregate each paged response, returning a single list of each response object
     :param search_fnc:
     :param response_key:
     :param max_results:
+    :param retain_key: If true, the response_key will be retained in the response
     :return:
     """
     results = []
@@ -41,13 +42,13 @@ async def paginated_search(
         results.extend(response.get(response_key, []))
 
         if not response["IsTruncated"] or (max_results and len(results) >= max_results):
-            return results
+            return {response_key: results} if retain_key else results
         else:
             search_kwargs["Marker"] = response["Marker"]
 
 
 async def legacy_paginated_search(
-    search_fnc, response_key: str, max_results: int = None, **search_kwargs
+    search_fnc, response_key: str, max_results: int = None, retain_key: bool = False, **search_kwargs
 ) -> list:
     """Retrieve and aggregate each paged response, returning a single list of each response object
 
@@ -57,6 +58,7 @@ async def legacy_paginated_search(
     :param search_fnc:
     :param response_key:
     :param max_results:
+    :param retain_key: If true, the response_key will be retained in the response
     :return:
     """
     results = []
@@ -84,7 +86,7 @@ async def legacy_paginated_search(
             or (max_results and len(results) >= max_results)
             or (not results and not is_first_call)
         ):
-            return results
+            return {response_key: results} if retain_key else results
         else:
             is_first_call = False
             search_kwargs["NextToken"] = response["NextToken"]

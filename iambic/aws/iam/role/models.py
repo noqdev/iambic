@@ -6,7 +6,7 @@ from typing import Optional, Union
 import botocore
 from pydantic import Field, constr
 
-from iambic.aws.iam.models import Description, MaxSessionDuration, Path
+from iambic.aws.iam.models import MaxSessionDuration, Path
 from iambic.aws.iam.policy.models import (
     AssumeRolePolicyDocument,
     ManagedPolicyRef,
@@ -26,7 +26,7 @@ from iambic.aws.models import (
     AWSAccount,
     AWSTemplate,
     ExpiryModel,
-    Tag,
+    Tag, Description,
 )
 from iambic.aws.utils import apply_to_account
 from iambic.core.context import ExecutionContext

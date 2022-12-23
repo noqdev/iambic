@@ -3,7 +3,7 @@ from typing import Optional, Union
 
 from pydantic import Field
 
-from iambic.aws.models import AccessModel, AWSTemplate, Tag, Description, AWSAccount
+from iambic.aws.models import AccessModel, AWSTemplate, Tag, Description, AWSAccount, ExpiryModel
 from iambic.aws.utils import evaluate_on_account
 from iambic.config.models import Config
 from iambic.core.context import ExecutionContext
@@ -12,6 +12,25 @@ from iambic.core.models import BaseModel, AccountChangeDetails, TemplateChangeDe
 
 
 AWS_SSO_PERMISSION_SET_TEMPLATE_TYPE = "NOQ::AWS::SSO::PermissionSet"
+
+
+class PermissionSetAccess(ExpiryModel, AccessModel):
+    users: list[str] = Field(
+        [],
+        description="List of users who can assume into the role",
+    )
+    groups: list[str] = Field(
+        [],
+        description="List of groups. Users in one or more of the groups can assume into the role",
+    )
+
+    @property
+    def resource_type(self):
+        return "aws:sso:permission_set_access"
+
+    @property
+    def resource_id(self):
+        return
 
 
 class AWSSSOInstance(BaseModel):
@@ -46,6 +65,19 @@ class ManagedPolicyArn(AccessModel):
         return self.arn
 
 
+class PermissionBoundary(ExpiryModel, AccessModel):
+    customer_managed_policy_reference: Optional[CustomerManagedPolicyReference]
+    managed_policy_arn: Optional[str]
+
+    @property
+    def resource_type(self):
+        return "aws:sso:permission_boundary"
+
+    @property
+    def resource_id(self):
+        return self.customer_managed_policy_reference.name or self.managed_policy_arn
+
+
 class SessionDuration(AccessModel):
     session_duration: str
 
@@ -58,13 +90,23 @@ class AWSSSOPermissionSetProperties(BaseModel):
     name: str
     description: Optional[Union[str, list[Description]]] = Field(
         "",
-        description="Description of the role",
+        description="Description of the permission set",
     )
-    customer_managed_policy_references: list[CustomerManagedPolicyReference]
-    session_duration: Union[str, list[SessionDuration]]
-    inline_policy: Union[str, list[InlinePolicy]]
-    managed_policies: list[Union[str, ManagedPolicyArn]]
-    tags: Optional[list[Tag]]
+    relay_state: Optional[str] = None
+    session_duration: Optional[
+        Union[str, list[SessionDuration]]
+    ] = None
+    permissions_boundary: Optional[
+        Union[PermissionBoundary, list[PermissionBoundary]]
+    ] = None
+    inline_policy: Optional[
+        Union[str, list[InlinePolicy]]
+    ] = None
+    customer_managed_policy_references: Optional[
+        list[CustomerManagedPolicyReference]
+    ] = []
+    managed_policies: Optional[list[ManagedPolicyArn]] = []
+    tags: Optional[list[Tag]] = []
 
     @property
     def resource_type(self) -> str:
@@ -75,10 +117,25 @@ class AWSSSOPermissionSetProperties(BaseModel):
         return self.name
 
 
-class AWSSSOPermissionSetTemplate(AWSTemplate, AccessModel):
+class AWSSSOPermissionSetTemplate(AWSTemplate):
     template_type: str = AWS_SSO_PERMISSION_SET_TEMPLATE_TYPE
     properties: AWSSSOPermissionSetProperties
     identifier: str
+    access_rules: Optional[list[PermissionSetAccess]] = []
+    included_orgs: list[str] = Field(
+        ["*"],
+        description=(
+            "A list of AWS organization ids this statement applies to. "
+            "Org ids can be represented as a regex and string"
+        ),
+    )
+    excluded_orgs: Optional[list[str]] = Field(
+        [],
+        description=(
+            "A list of AWS organization ids this statement explicitly does not apply to. "
+            "Org ids can be represented as a regex and string"
+        ),
+    )
 
     async def _apply_to_account(
         self, aws_account: AWSAccount, context: ExecutionContext
@@ -98,8 +155,6 @@ class AWSSSOPermissionSetTemplate(AWSTemplate, AccessModel):
         sso_client = await aws_account.get_client("sso-admin")
         instance_arn = aws_account.sso_details.instance_arn
         permission_set_arn = aws_account.sso_details.permission_set_map.get(self.properties.name)
-        # If changes made to policies or account scope has changed, you need to call this
-        # provision_permission_set()
 
     async def apply(
         self, config: Config, context: ExecutionContext

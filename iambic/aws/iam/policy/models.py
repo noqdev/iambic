@@ -7,7 +7,7 @@ import botocore
 from jinja2 import BaseLoader, Environment
 from pydantic import Field, constr
 
-from iambic.aws.iam.models import Description, Path
+from iambic.aws.iam.models import Path
 from iambic.aws.iam.policy.utils import (
     apply_managed_policy_tags,
     delete_managed_policy,
@@ -20,7 +20,7 @@ from iambic.aws.models import (
     AWSAccount,
     AWSTemplate,
     ExpiryModel,
-    Tag,
+    Tag, Description,
 )
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log

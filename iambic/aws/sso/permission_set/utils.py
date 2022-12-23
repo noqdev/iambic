@@ -168,7 +168,7 @@ async def apply_permission_set_aws_managed_policies(
     return response
 
 
-async def apply_permission_set_custom_managed_policies(
+async def apply_permission_set_customer_managed_policies(
     sso_client,
     instance_arn: str,
     permission_set_arn: str,
@@ -246,6 +246,18 @@ async def apply_permission_set_custom_managed_policies(
         await asyncio.gather(*tasks)
 
     return response
+
+
+async def apply_account_assignments(
+    sso_client,
+    instance_arn: str,
+    permission_set_arn: str,
+    template_assignments: list[dict],
+    existing_assignments: list[dict],
+    log_params: dict,
+    context: ExecutionContext,
+) -> list[ProposedChange]:
+    ...
 
 
 async def apply_permission_set_inline_policy():
