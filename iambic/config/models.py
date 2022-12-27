@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from slack_bolt import App as SlackBoltApp
 
 from iambic.aws.models import AWSAccount, AWSOrganization
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.models import Variable
 from iambic.core.utils import aio_wrapper, yaml
 
@@ -59,9 +60,9 @@ class GoogleProject(BaseModel):
         [],
         description="A list of variables to be used when creating templates",
     )
-    read_only: Optional[bool] = Field(
-        False,
-        description="If set to True, iambic will only log drift instead of apply changes when drift is detected.",
+    iambic_managed: Optional[IambicManaged] = Field(
+        IambicManaged.UNDEFINED,
+        description="Controls the directionality of iambic changes",
     )
     _service_connection_map: dict = {}
 

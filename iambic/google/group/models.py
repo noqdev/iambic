@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from iambic.config.models import GoogleProject
 from iambic.core.context import ExecutionContext
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -70,7 +71,7 @@ class GroupTemplateProperties(BaseModel):
     who_can_post_message: WhoCanPostMessage = "NONE_CAN_POST"
     who_can_view_group: WhoCanViewGroup = "ALL_MANAGERS_CAN_VIEW"
     who_can_view_membership: WhoCanViewMembership = "ALL_MANAGERS_CAN_VIEW"
-    read_only: bool = False
+    iambic_managed: IambicManaged = IambicManaged.UNDEFINED
     # TODO: who_can_contact_group_members
     # TODO: who_can_view_member_email_addresses
     # TODO: allow_email_posting
@@ -110,7 +111,6 @@ class GroupTemplate(GoogleTemplate):
             resource_id=self.properties.email,
             account=str(self.properties.domain),
         )
-        # read_only = self._is_read_only(google_project)
 
         current_group = await get_group(
             self.properties.email, self.properties.domain, google_project
@@ -229,8 +229,11 @@ class GroupTemplate(GoogleTemplate):
     def resource_type(self):
         return "google:group"
 
-    def _is_read_only(self, google_project: GoogleProject):
-        return google_project.read_only or self.read_only
+    def _is_iambic_import_only(self, google_project: GoogleProject):
+        return (
+            google_project.iambic_managed == IambicManaged.IMPORT_ONLY
+            or self.iambic_managed == IambicManaged.IMPORT_ONLY
+        )
 
 
 async def get_group_template(service, group, domain) -> GroupTemplate:
