@@ -74,6 +74,7 @@ class GroupMemberStatus(Enum):
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
     PENDING = "PENDING"
+    UNDEFINED = "UNDEFINED"
 
 
 class GoogleTemplate(BaseTemplate, ExpiryModel):
