@@ -174,8 +174,11 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
 class SSODetails(PydanticBaseModel):
     region: str
     instance_arn: Optional[str] = None
+    identity_store_id: Optional[str] = None
     permission_set_map: Optional[Union[dict, None]] = None
-    org_accounts: Optional[list[str]] = None
+    user_map: Optional[Union[dict, None]] = None
+    group_map: Optional[Union[dict, None]] = None
+    org_account_map: Optional[Union[dict, None]] = None
 
 
 class AWSAccount(BaseAWSAccountAndOrgModel):
@@ -236,7 +239,6 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
 
         region = self.sso_details.region
         sso_client = await self.get_boto3_client("sso-admin", region_name=region)
-        # identity_store = await self.get_boto3_client("identitystore", region_name=region)
 
         sso_instances = await aio_wrapper(sso_client.list_instances)
         sso_instance_arn = sso_instances["Instances"][0]["InstanceArn"]
@@ -244,26 +246,6 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
             sso_client.list_permission_sets, InstanceArn=sso_instance_arn
         )
         permission_sets = permission_set_res["PermissionSets"]
-
-        # identity_store_id = sso_instances["Instances"][0]["IdentityStoreId"]
-        # users = await legacy_paginated_search(
-        #     identity_store.list_users,
-        #     response_key="Users",
-        #     IdentityStoreId=identity_store_id,
-        # )
-        #
-        # groups = await legacy_paginated_search(
-        #     identity_store.list_groups,
-        #     response_key="Groups",
-        #     IdentityStoreId=identity_store_id,
-        # )
-        # for group in groups:
-        #     group_memberships = await aio_wrapper(
-        #         identity_store.list_group_memberships,
-        #         IdentityStoreId=identity_store_id,
-        #         GroupId=group["GroupId"],
-        #     )
-        #     group["members"] = group_memberships["GroupMemberships"]
 
         # Use https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/identitystore.html
         return {
@@ -276,9 +258,13 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         if self.sso_details:
             region = self.sso_details.region
             sso_client = await self.get_boto3_client("sso-admin", region_name=region)
+            identity_store_client = await self.get_boto3_client("identitystore", region_name=region)
+
             sso_instances = await aio_wrapper(sso_client.list_instances)
 
             self.sso_details.instance_arn = sso_instances["Instances"][0]["InstanceArn"]
+            self.sso_details.identity_store_id = sso_instances["Instances"][0]["IdentityStoreId"]
+
             if not set_sso_map:
                 return
 
@@ -484,9 +470,9 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         if self.sso_account:
             for elem, account in enumerate(response):
                 if account.account_id == self.sso_account.account_id:
-                    response[elem].sso_details.org_accounts = [
-                        account["Id"] for account in active_accounts
-                    ]
+                    response[elem].sso_details.org_account_map = {
+                        account["Id"]: account["Name"] for account in active_accounts
+                    }
 
         return response
 
