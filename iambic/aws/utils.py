@@ -29,7 +29,7 @@ async def paginated_search(
         try:
             response = await aio_wrapper(search_fnc, **search_kwargs)
         except ClientError as err:
-            if err.response["Error"]["Code"] == "Throttling":
+            if "Throttling" in err.response["Error"]["Code"]:
                 if retry_count >= 10:
                     raise
                 retry_count += 1
@@ -69,13 +69,14 @@ async def legacy_paginated_search(
         try:
             response = await aio_wrapper(search_fnc, **search_kwargs)
         except ClientError as err:
-            if err.response["Error"]["Code"] == "Throttling":
+            if "Throttling" in err.response["Error"]["Code"]:
                 if retry_count >= 10:
                     raise
                 retry_count += 1
                 await asyncio.sleep(retry_count * 2)
                 continue
             else:
+                log.warning(err.response["Error"]["Code"])
                 raise
 
         retry_count = 0
@@ -162,7 +163,10 @@ def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> boo
 
     if aws_account.read_only or getattr(resource, "read_only", False):
         return False
-    if not issubclass(type(resource), AccessModel):
+
+    # SSO Models don't inherit from AccessModel and rely only on included/excluded orgs.
+    # hasattr is how we are currently handling this special case.
+    if not issubclass(type(resource), AccessModel) and not hasattr(resource, "included_orgs"):
         return True
 
     if aws_account.org_id:
@@ -172,6 +176,9 @@ def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> boo
             re.match(org_id, aws_account.org_id) for org_id in resource.included_orgs
         ):
             return False
+
+    if not hasattr(resource, "included_accounts"):
+        return True
 
     account_ids = [aws_account.account_id]
     if account_name := aws_account.account_name:

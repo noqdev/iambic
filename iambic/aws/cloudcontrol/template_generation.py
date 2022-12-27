@@ -1,25 +1,17 @@
 import os
-import pathlib
-
-import aiofiles
 
 from iambic.aws.cloudcontrol.utils import list_resources
-from iambic.aws.iam.policy.models import ManagedPolicyTemplate
-from iambic.aws.iam.policy.utils import list_managed_policies
 from iambic.aws.models import AWSAccount
-from iambic.aws.sso.models import (
+from iambic.aws.sso.permission_set.models import (
     AWSSSOPermissionSetProperties,
-    get_aws_sso_permission_set_template,
+    AWSSSOPermissionSetTemplate,
 )
-from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
+from iambic.aws.utils import get_aws_account_map
 from iambic.config.models import Config
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
     base_group_str_attribute,
-    get_existing_template_file_map,
-    group_dict_attribute,
-    group_int_or_str_attribute,
 )
 from iambic.core.utils import NoqSemaphore, aio_wrapper, resource_file_upsert, yaml
 
@@ -83,7 +75,11 @@ async def generate_cloudcontrol_resource_files(
                     "Identifier"
                 ]
                 model = AWSSSOPermissionSetProperties.parse_obj(resource_properties)
-                template = await get_aws_sso_permission_set_template(model)
+                file_name = f"{model.name}.yaml"
+                template = AWSSSOPermissionSetTemplate(
+                    file_path=f"resources/aws/sso/permission_sets/{file_name}",
+                    properties=model,
+                )
                 file_path = os.path.expanduser(template.file_path)
                 path = os.path.join(base_path, file_path)
                 os.makedirs(os.path.dirname(path), exist_ok=True)
