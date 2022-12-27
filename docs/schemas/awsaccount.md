@@ -15,7 +15,7 @@
 - **`variables`** *(array)*: A list of variables to be used when creating templates. Default: `[]`.
   - **Items**: Refer to *[#/definitions/Variable](#definitions/Variable)*.
 - **`boto3_session_map`** *(object)*
-- **`read_only`** *(boolean)*: If set to True, iambic will only log drift instead of apply changes when drift is detected. Default: `false`.
+- **`iambic_managed`** *(IambicManaged)*: Controls the directionality of iambic changes. Default: `READ_AND_WRITE`.
 ## Definitions
 
 - <a id="definitions/RegionName"></a>**`RegionName`**: An enumeration. Must be one of: `["us-east-1", "us-west-1", "us-west-2", "eu-west-1", "eu-west-2", "eu-central-1", "ap-southeast-1", "ap-southeast-2", "ap-northeast-1", "ap-northeast-2", "sa-east-1", "cn-north-1"]`.
