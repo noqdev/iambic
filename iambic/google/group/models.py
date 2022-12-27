@@ -252,7 +252,7 @@ async def get_group_template(service, group, domain) -> GroupTemplate:
             email=member["email"],
             role=GroupMemberRole(member["role"]),
             type=GroupMemberType(member["type"]),
-            status=GroupMemberStatus(member.get("status", "ACTIVE")),
+            status=GroupMemberStatus(member.get("status", GroupMemberStatus.UNDEFINED)),
         )
         for member in member_res.get("members", [])
     ]
