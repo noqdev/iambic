@@ -1,17 +1,18 @@
 import asyncio
 import base64
 from enum import Enum
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import boto3
 import googleapiclient.discovery
+import ujson
 from google.oauth2 import service_account
 from okta.client import Client as OktaClient
-from pydantic import BaseModel, Field
+from pydantic import Field
 from slack_bolt import App as SlackBoltApp
 
 from iambic.aws.models import AWSAccount, AWSOrganization
-from iambic.core.models import Variable
+from iambic.core.models import BaseModel, Variable
 from iambic.core.utils import aio_wrapper, yaml
 
 
@@ -25,7 +26,7 @@ class OktaOrganization(BaseModel):
     org_url: str
     api_token: str
     request_timeout: int = 60
-    client: Optional[OktaClient]
+    client: Optional[Any]
 
     class Config:
         arbitrary_types_allowed = True
@@ -170,6 +171,10 @@ class Config(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+
+    def write(self, path: str):
+        with open(path, "w") as f:
+            f.write(yaml.dump(ujson.loads(self.json(indent=4))))
 
     async def setup_aws_accounts(self):
         for elem, account in enumerate(self.aws_accounts):

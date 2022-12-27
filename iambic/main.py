@@ -5,7 +5,7 @@ import warnings
 import click
 
 from iambic.config.models import Config
-from iambic.config.wizard import configuration_wizard
+from iambic.config.wizard import ConfigurationWizard
 from iambic.core.context import ctx
 from iambic.core.git import clone_git_repos
 from iambic.core.logger import log
@@ -320,7 +320,7 @@ def run_import(config_paths: list[str], repo_dir: str):
     help="The config.yaml file paths. Example: ./prod/config.yaml",
 )
 def configure(config_path: str):
-    asyncio.run(configuration_wizard(config_path))
+    ConfigurationWizard(config_path).configuration_wizard()
 
 
 if __name__ == "__main__":
