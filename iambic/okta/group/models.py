@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from enum import Enum
@@ -282,6 +284,7 @@ async def get_group_template(group: Group) -> OktaGroupTemplate:
 
     file_name = f"{group.name}.yaml"
     group_members = [json.loads(m.json()) for m in group.members]
+    UserSimple.update_forward_refs()
     OktaGroupTemplate.update_forward_refs()
     return OktaGroupTemplate(
         file_path=f"okta/groups/{group.idp_name}/{file_name}",
