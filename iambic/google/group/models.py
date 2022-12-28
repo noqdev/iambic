@@ -19,6 +19,8 @@ from iambic.core.models import (
 from iambic.google.group.utils import (
     create_group,
     get_group,
+    get_group_members,
+    maybe_delete_group,
     update_group_description,
     update_group_domain,
     update_group_email,
@@ -74,13 +76,6 @@ class GroupTemplateProperties(BaseModel):
     who_can_view_group: WhoCanViewGroup = "ALL_MANAGERS_CAN_VIEW"
     who_can_view_membership: WhoCanViewMembership = "ALL_MANAGERS_CAN_VIEW"
     read_only: bool = False
-    # TODO: who_can_contact_group_members
-    # TODO: who_can_view_member_email_addresses
-    # TODO: allow_email_posting
-    # TODO: allow_web_posting
-    # TODO: conversation_history
-    # TODO: There is more. Check google group settings page
-    # google_project?
 
     @property
     def resource_type(self):
@@ -219,6 +214,13 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
         )
 
         changes_made = await asyncio.gather(*tasks)
+        deletion_change = await maybe_delete_group(
+            self,
+            google_project,
+            log_params,
+            context,
+        )
+        changes_made.extend(deletion_change)
         if any(changes_made):
             change_details.proposed_changes.extend(
                 list(chain.from_iterable(changes_made))
@@ -251,17 +253,8 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
 
 
 async def get_group_template(service, group, domain) -> GroupTemplate:
-    member_req = service.members().list(groupKey=group["email"])
-    member_res = member_req.execute() or {}
-    members = [
-        GroupMember(
-            email=member["email"],
-            role=GroupMemberRole(member["role"]),
-            type=GroupMemberType(member["type"]),
-            status=GroupMemberStatus(member.get("status", GroupMemberStatus.UNDEFINED)),
-        )
-        for member in member_res.get("members", [])
-    ]
+    members = await get_group_members(service, group)
+
     file_name = f"{group['email'].split('@')[0]}.yaml"
     return GroupTemplate(
         file_path=f"google/groups/{domain}/{file_name}",

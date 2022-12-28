@@ -31,9 +31,7 @@ ROLE_RESPONSE_DIR = pathlib.Path.home().joinpath(".iambic", "resources", "aws", 
 
 
 def get_role_dir(base_dir: str) -> str:
-    repo_dir = os.path.join(base_dir, "resources", "aws", "roles")
-    os.makedirs(repo_dir, exist_ok=True)
-    return str(repo_dir)
+    return str(os.path.join(base_dir, "resources", "aws", "roles"))
 
 
 def get_templated_role_file_path(

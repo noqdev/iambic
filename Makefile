@@ -24,3 +24,7 @@ push_manifest:
 .PHONY: test
 test:
 	python3.10 -m pytest .
+
+.PHONY: functional_test
+functional_test:
+	pytest --cov-report html --cov iambic functional_tests
