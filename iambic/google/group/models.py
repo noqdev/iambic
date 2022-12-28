@@ -86,7 +86,6 @@ class GroupTemplateProperties(BaseModel):
         return self.email
 
 
-# TODO: Support deleting Google Groups if expired
 class GroupTemplate(GoogleTemplate, ExpiryModel):
     template_type = "NOQ::Google::Group"
     properties: GroupTemplateProperties
