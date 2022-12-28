@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 
 from botocore.exceptions import ClientError
@@ -118,9 +120,9 @@ async def update_managed_policy(
     # DeepDiff will return type changes as actual type functions and not strings,
     # and this will cause json serialization to fail later on when we process
     # the proposed changes. We force type changes to strings here.
-    policy_drift = json.loads(policy_drift.to_json())
 
     if policy_drift:
+        policy_drift = json.loads(policy_drift.to_json())
         log_str = "Changes to the PolicyDocument discovered."
         response.append(
             ProposedChange(
