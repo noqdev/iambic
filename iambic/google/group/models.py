@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from itertools import chain
 from typing import List, Optional
@@ -89,7 +91,8 @@ class GroupTemplateProperties(BaseModel):
         return self.email
 
 
-class GroupTemplate(GoogleTemplate):
+# TODO: Support deleting Google Groups if expired
+class GroupTemplate(GoogleTemplate, ExpiryModel):
     template_type = "NOQ::Google::Group"
     properties: GroupTemplateProperties
 
@@ -227,6 +230,9 @@ class GroupTemplate(GoogleTemplate):
                 changes_made=bool(change_details.proposed_changes),
                 **log_params,
             )
+            if self.deleted:
+                self.delete()
+            self.write()
         else:
             log.debug(
                 "Successfully finished scanning for drift for resource",

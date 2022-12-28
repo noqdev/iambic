@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 
 from iambic.okta.group.models import get_group_template

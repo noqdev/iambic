@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from iambic.config.templates import TEMPLATE_TYPE_MAP
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate

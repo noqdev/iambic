@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 
 from iambic.google.group.utils import list_groups

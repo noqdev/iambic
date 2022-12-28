@@ -261,6 +261,7 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
             # TODO: Check if deleted, remove git commit the change to ratify it
             if self.deleted:
                 self.delete()
+            self.write()
         else:
             log.debug(
                 "Successfully finished scanning for drift for resource",
