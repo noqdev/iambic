@@ -122,9 +122,10 @@ class NoqSemaphore:
 
             return await aio_wrapper(self.callback_function, **kwargs)
 
-    async def process(self, messages: list[dict]):
+    async def process(self, messages: list[dict], return_exceptions=False):
         return await asyncio.gather(
-            *[asyncio.create_task(self.handle_message(**msg)) for msg in messages]
+            *[asyncio.create_task(self.handle_message(**msg)) for msg in messages],
+            return_exceptions=return_exceptions,
         )
 
 
@@ -181,7 +182,7 @@ def sort_dict(original, prioritize=None):
     with optional prioritization of certain elements.
     """
     if prioritize is None:
-        prioritize = ["name", "template_type"]
+        prioritize = ["template_type", "name", "description"]
     if isinstance(original, dict):
         # Make a new "ordered" dictionary. No need for Collections in Python 3.7+
         # Sort the keys in the dictionary
