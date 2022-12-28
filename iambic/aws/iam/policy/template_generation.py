@@ -158,11 +158,13 @@ async def create_templated_managed_policy(  # noqa: C901
                 {"account_id": account_id, "resources": [{"resource_val": description}]}
             )
 
-    if len(managed_policy_refs) != len(aws_account_map):
+    if len(managed_policy_refs) != len(aws_account_map) or len(aws_account_map) < 3:
         managed_policy_template_params["included_accounts"] = [
             aws_account_map[managed_policy_ref["account_id"]].account_name
             for managed_policy_ref in managed_policy_refs
         ]
+    else:
+        managed_policy_template_params["included_accounts"] = ["*"]
 
     path = await group_int_or_str_attribute(
         aws_account_map, num_of_accounts, path_resources, "path"
