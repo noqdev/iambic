@@ -27,4 +27,4 @@ test:
 
 .PHONY: functional_test
 functional_test:
-	pytest --cov-report html --cov iambic functional_tests
+	pytest --cov-report html --cov iambic functional_tests -s
