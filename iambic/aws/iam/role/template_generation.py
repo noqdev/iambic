@@ -40,7 +40,9 @@ def get_templated_role_file_path(
     included_accounts: list[str],
     account_map: dict[str, AWSAccount],
 ) -> str:
-    if included_accounts and len(included_accounts) > 1:
+    if not included_accounts:
+        print("here")
+    if len(included_accounts) > 1:
         separator = "multi_account"
     elif included_accounts == ["*"] or included_accounts is None:
         separator = "all_accounts"
@@ -225,11 +227,13 @@ async def create_templated_role(  # noqa: C901
                 {"account_id": account_id, "resources": [{"resource_val": description}]}
             )
 
-    if len(role_refs) != len(aws_account_map):
+    if len(role_refs) != len(aws_account_map) or len(aws_account_map) < 3:
         role_template_params["included_accounts"] = [
             aws_account_map[role_ref["account_id"]].account_name
             for role_ref in role_refs
         ]
+    else:
+        role_template_params["included_accounts"] = ["*"]
 
     path = await group_int_or_str_attribute(
         aws_account_map, num_of_accounts, path_resources, "path"
