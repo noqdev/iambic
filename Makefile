@@ -23,7 +23,7 @@ push_manifest:
 
 .PHONY: test
 test:
-	python3.10 -m pytest .
+	python3.10 -m pytest test
 
 .PHONY: functional_test
 functional_test:
