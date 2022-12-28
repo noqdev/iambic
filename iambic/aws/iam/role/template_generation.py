@@ -14,7 +14,9 @@ from iambic.aws.models import AWSAccount
 from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
 from iambic.config.models import Config
 from iambic.core import noq_json as json
+from iambic.core.constants import IAMBIC_MANAGED
 from iambic.core.logger import log
+from iambic.core.parser import load_templates
 from iambic.core.template_generation import (
     base_group_dict_attribute,
     base_group_str_attribute,
@@ -40,7 +42,7 @@ def get_templated_role_file_path(
     included_accounts: list[str],
     account_map: dict[str, AWSAccount],
 ) -> str:
-    if len(included_accounts) > 1:
+    if included_accounts is not None and len(included_accounts) > 1:
         separator = "multi_account"
     elif included_accounts == ["*"] or included_accounts is None:
         separator = "all_accounts"
@@ -136,6 +138,17 @@ async def set_role_resource_managed_policies(
     )
 
 
+async def _account_id_to_role_map(role_refs):
+    account_id_to_role_map = {}
+    for role_ref in role_refs:
+        async with aiofiles.open(role_ref["path"], mode="r") as f:
+            content_dict = json.loads(await f.read())
+            account_id_to_role_map[role_ref["account_id"]] = normalize_boto3_resp(
+                content_dict
+            )
+    return account_id_to_role_map
+
+
 async def create_templated_role(  # noqa: C901
     global_config: Config,
     aws_account_map: dict[str, AWSAccount],
@@ -143,15 +156,9 @@ async def create_templated_role(  # noqa: C901
     role_refs: list[dict],
     role_dir: str,
     existing_template_map: dict,
-):
-    account_id_to_role_map = {}
+) -> RoleTemplate:
+    account_id_to_role_map = await _account_id_to_role_map(role_refs)
     num_of_accounts = len(role_refs)
-    for role_ref in role_refs:
-        async with aiofiles.open(role_ref["path"], mode="r") as f:
-            content_dict = json.loads(await f.read())
-            account_id_to_role_map[role_ref["account_id"]] = normalize_boto3_resp(
-                content_dict
-            )
 
     # Generate the params used for attribute creation
     role_template_params = {"identifier": role_name}
@@ -308,6 +315,18 @@ async def create_templated_role(  # noqa: C901
                 ]:
                     role_template_params["role_access"][elem].pop("included_accounts")
 
+    # iambic-specific knowledge requires us to load the existing template
+    # because it will not be reflected by AWS API.
+    existing_template_path = existing_template_map.get(role_name, None)
+    if existing_template_path is not None:
+        # In this juncture, we don't have the template object, only the path.
+        # We have to re-load from filesystem again. Opportunities to reuse
+        # the object because caller already walk through the repos and load the
+        # templates before calling this function.
+        templates = load_templates([existing_template_path])
+        existing_template = templates[0]
+        role_template_params[IAMBIC_MANAGED] = existing_template.iambic_managed
+
     try:
         role = RoleTemplate(
             file_path=existing_template_map.get(
@@ -323,12 +342,14 @@ async def create_templated_role(  # noqa: C901
             **role_template_params,
         )
         role.write()
+        return role
     except Exception as err:
         log.error(
             "Unable to create role template.",
             error=str(err),
             role_params=role_template_params,
         )
+        return None
 
 
 async def generate_aws_role_templates(configs: list[Config], base_output_dir: str):
