@@ -1,7 +1,7 @@
 extends:
   - key: AWS_SECRETS_MANAGER
     value: arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/google-MmAS1o
-    assume_role_arn: arn:aws:iam::759357822767:role/IambicSpokeRole
+    assume_role_arn: arn:aws:iam::759357822767:role/IambicSpokeRole 
 
 aws:
   organizations:
@@ -31,9 +31,11 @@ aws:
       account_name: prod
       assume_role_arn: 'arn:aws:iam::940552945933:role/IambicSpokeRole'
 
+# TODO: Make sure google.groups.enabled = False does what is advertised.
+# TODO: Add permissions permanently to the IAM role.
 google:
   groups:
-    enabled: false
+    enabled: true
 
 slack:
   alert_channel_id: 'C046KESSMQ8'

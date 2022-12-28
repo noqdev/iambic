@@ -26,9 +26,7 @@ MANAGED_POLICY_RESPONSE_DIR = pathlib.Path.home().joinpath(
 
 
 def get_managed_policy_dir(base_dir: str) -> str:
-    repo_dir = os.path.join(base_dir, "resources", "aws", "managed_policies")
-    os.makedirs(repo_dir, exist_ok=True)
-    return str(repo_dir)
+    return str(os.path.join(base_dir, "resources", "aws", "managed_policies"))
 
 
 def get_templated_managed_policy_file_path(
