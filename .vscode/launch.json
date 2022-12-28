@@ -71,7 +71,7 @@
             "args": [
                 "apply",
                 "--template",
-                "../noq-templates/google/groups/noq.dev/dockerhub.yaml",
+                "/tmp/noq-templates/google/groups/noq.dev/iambic_test_group.yaml",
                 "--config",
                 "demo/config.yaml"
             ],
@@ -89,7 +89,7 @@
             "args": [
                 "apply",
                 "--template",
-                "../noq-templates/okta/groups/development/networking2.yaml",
+                "/tmp/noq-templates/okta/groups/development/networking2.yaml",
                 "--config",
                 "demo/config.yaml"
             ],

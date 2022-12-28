@@ -164,6 +164,9 @@ class BaseModel(PydanticBaseModel):
                 await asyncio.gather(
                     *[elem.remove_expired_resources(context) for elem in field_val]
                 )
+                for elem in field_val:
+                    if getattr(elem, "deleted", None) is True:
+                        field_val.remove(elem)
 
             elif not (
                 isinstance(field_val, BaseModel) or isinstance(field_val, ExpiryModel)
@@ -172,6 +175,8 @@ class BaseModel(PydanticBaseModel):
 
             else:
                 await field_val.remove_expired_resources(context)
+                if getattr(field_val, "deleted", None) is True:
+                    setattr(self, field_name, None)
 
     @property
     def exclude_keys(self) -> set:
@@ -358,12 +363,10 @@ class ExpiryModel(PydanticBaseModel):
 
     @validator("expires_at", pre=True)
     def parse_expires_at(cls, value):
-        if (
-            not value
-            or isinstance(value, datetime.datetime)
-            or isinstance(value, datetime.date)
-        ):
+        if not value or isinstance(value, datetime.datetime):
             return value
+        elif isinstance(value, datetime.date):
+            return datetime.datetime.combine(value, datetime.datetime.min.time())
         return dateparser.parse(
             value,
         )

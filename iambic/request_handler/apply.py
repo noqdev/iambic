@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 
 from iambic.aws.utils import remove_expired_resources
