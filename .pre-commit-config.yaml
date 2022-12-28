@@ -1,4 +1,6 @@
 # See https://pre-commit.com/ for usage and config
+default_language_version:
+    python: python3.10
 repos:
 - repo: local
   hooks:
