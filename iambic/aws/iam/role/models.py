@@ -25,8 +25,9 @@ from iambic.aws.models import (
     AccessModel,
     AWSAccount,
     AWSTemplate,
+    Description,
     ExpiryModel,
-    Tag, Description,
+    Tag,
 )
 from iambic.aws.utils import apply_to_account
 from iambic.core.context import ExecutionContext

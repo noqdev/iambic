@@ -7,4 +7,3 @@ class Path(AccessModel):
 
 class MaxSessionDuration(AccessModel):
     max_session_duration: int
-
