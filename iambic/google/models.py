@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from enum import Enum
 
@@ -90,7 +92,7 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
     ) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
-            resource_id=self.email,
+            resource_id=self.properties.email,
             resource_type=self.template_type,
             template_path=self.file_path,
         )
@@ -129,7 +131,7 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
 
     @property
     def resource_id(self) -> str:
-        return self.email
+        return self.properties.email
 
     @property
     def resource_type(self) -> str:

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from typing import Union
@@ -175,6 +177,11 @@ async def update_assume_role_policy(
             ignore_order=True,
         )
 
+        # DeepDiff will return type changes as actual type functions and not strings,
+        # and this will cause json serialization to fail later on when we process
+        # the proposed changes. We force type changes to strings here.
+        policy_drift = json.loads(policy_drift.to_json())
+
     if not existing_policy_document or bool(policy_drift):
         log_str = "Changes to the AssumeRolePolicyDocument discovered."
         if policy_drift:
@@ -337,6 +344,11 @@ async def apply_role_inline_policies(
                 ignore_order=True,
                 report_repetition=True,
             )
+
+            # DeepDiff will return type changes as actual type functions and not strings,
+            # and this will cause json serialization to fail later on when we process
+            # the proposed changes. We force type changes to strings here.
+            policy_drift = json.loads(policy_drift.to_json())
 
         if not existing_policy_doc or policy_drift:
             if policy_drift:

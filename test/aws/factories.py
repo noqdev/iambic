@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pydantic_factories import Ignore, ModelFactory
 
 from iambic.aws.iam.policy import models as policy_models

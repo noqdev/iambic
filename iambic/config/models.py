@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import asyncio
 import base64
+import os
 from enum import Enum
 from typing import List, Optional
 
@@ -80,8 +83,9 @@ class GoogleProject(BaseModel):
     ):
         # sourcery skip: raise-specific-error
         key = f"{domain}:{service_name}:{service_path}"
-        if service_conn := self._service_connection_map.get(key):
-            return service_conn
+        if not os.environ.get("TESTING"):
+            if service_conn := self._service_connection_map.get(key):
+                return service_conn
 
         admin_credentials = service_account.Credentials.from_service_account_info(
             self.dict(
@@ -141,15 +145,24 @@ class ExtendsConfig(BaseModel):
 
 
 class AWSConfig(BaseModel):
-    organizations: Optional[list[AWSOrganization]] = Field(
-        description="A list of AWS Organizations to be managed by iambic"
+    organizations: list[AWSOrganization] = Field(
+        [], description="A list of AWS Organizations to be managed by iambic"
     )
-    accounts: Optional[List[AWSAccount]]
+    accounts: List[AWSAccount] = Field(
+        [], description="A list of AWS Accounts to be managed by iambic"
+    )
+    min_accounts_required_for_wildcard_included_accounts: int = Field(
+        3,
+        description=(
+            "Iambic will set included_accounts=* on imported resources that exist on all accounts if the minimum number of accounts is met."
+        ),
+    )
 
 
 class Config(BaseModel):
-    aws: Optional[AWSConfig] = Field(
-        description="AWS configuration for iambic to use when managing AWS resources"
+    aws: AWSConfig = Field(
+        AWSConfig(),
+        description="AWS configuration for iambic to use when managing AWS resources",
     )
     google_projects: List[GoogleProject] = []
     okta_organizations: List[OktaOrganization] = []
@@ -253,7 +266,7 @@ class Config(BaseModel):
             for extend in self.extends:
                 if extend.key == ExtendsConfigKey.AWS_SECRETS_MANAGER:
                     for k, v in self.get_aws_secret(extend).items():
-                        if not getattr(self, k):
+                        if not getattr(self, k, None):
                             setattr(self, k, v)
 
     async def get_boto_session_from_arn(self, arn: str, region_name: str = None):
