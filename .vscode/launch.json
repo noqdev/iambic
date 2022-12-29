@@ -196,12 +196,12 @@
             "module": "iambic.main",
             "console": "integratedTerminal",
             "env": {
-                "AWS_PROFILE": "staging/IambicHubRole"
+                "AWS_PROFILE": "iambic/admin",
             },
             "args": [
                 "config",
                 "--config",
-                "demo/config.yaml",
+                "demo/config2.yaml",
             ],
             "justMyCode": true
         },

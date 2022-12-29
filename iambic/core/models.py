@@ -6,7 +6,7 @@ import json
 import os
 from enum import Enum
 from types import GenericAlias
-from typing import TYPE_CHECKING, List, Optional, Set, Union, get_args, get_origin
+from typing import TYPE_CHECKING, Any, List, Optional, Set, Union, get_args, get_origin
 
 import dateparser
 from deepdiff.model import PrettyOrderedSet
@@ -47,7 +47,7 @@ class BaseModel(PydanticBaseModel):
         ]
 
     @staticmethod
-    def get_field_type(field: any) -> any:
+    def get_field_type(field: Any) -> Any:
         """
         Resolves the base field type for a model
         """

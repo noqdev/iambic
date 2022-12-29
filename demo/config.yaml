@@ -14,13 +14,9 @@ aws:
             - '*'
           enabled: true
           read_only: false
-        - included_accounts:
-            - '969947703986'
-            - '114567474685'
-          enabled: false
       default_rule:
         enabled: true
-        read_only: true
+        read_only: false
 
 # TODO: Make sure google.groups.enabled = False does what is advertised.
 # TODO: Add permissions permanently to the IAM role.

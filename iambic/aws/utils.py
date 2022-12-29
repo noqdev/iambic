@@ -52,6 +52,18 @@ async def paginated_search(
             search_kwargs["Marker"] = response["Marker"]
 
 
+async def get_current_role_arn(session=boto3.Session()) -> str:
+    arn = (await aio_wrapper(session.client("sts").get_caller_identity)).get("Arn")
+    identity_arn_with_session_name = arn.replace(":sts:", ":iam:").replace(
+        "assumed-role", "role"
+    )
+    return "/".join(identity_arn_with_session_name.split("/")[:2])
+
+
+def get_account_id_from_arn(arn: str) -> str:
+    return arn.split(":")[4]
+
+
 async def legacy_paginated_search(
     search_fnc, response_key: str, max_results: int = None, **search_kwargs
 ) -> list:
@@ -314,7 +326,7 @@ async def create_assume_role_session(
     assume_role_arns: list[AssumeRoleConfiguration],
     region_name: str,
     session_name: str = "iambic",
-) -> boto3.Session:
+) -> Optional[boto3.Session]:
     try:
         for assume_role_arn in assume_role_arns:
             assume_role_kwargs: dict = assume_role_arn.kwargs
