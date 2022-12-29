@@ -6,7 +6,8 @@ extends:
 aws:
   organizations:
     - org_id: 'o-yfdp0r70sq'
-      assume_role_arn: 'arn:aws:iam::259868150464:role/IambicSpokeRole'
+      assume_role_arns:
+        - arn: 'arn:aws:iam::259868150464:role/IambicSpokeRole'
       org_name: 'staging'
       account_rules:
         - included_accounts:
@@ -20,16 +21,6 @@ aws:
       default_rule:
         enabled: true
         read_only: true
-  accounts:
-    - account_id: '759357822767'
-      account_name: dev
-      assume_role_arn: 'arn:aws:iam::759357822767:role/IambicSpokeRole'
-    - account_id: '259868150464'
-      account_name: staging
-      assume_role_arn: 'arn:aws:iam::259868150464:role/IambicSpokeRole'
-    - account_id: '940552945933'
-      account_name: prod
-      assume_role_arn: 'arn:aws:iam::940552945933:role/IambicSpokeRole'
 
 # TODO: Make sure google.groups.enabled = False does what is advertised.
 # TODO: Add permissions permanently to the IAM role.

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import questionary
 
-from iambic.aws.models import AWSOrganization, BaseAWSOrgRule
+from iambic.aws.models import AssumeRoleConfiguration, AWSOrganization, BaseAWSOrgRule
 from iambic.config.models import Config
 from iambic.core.logger import log
 
@@ -20,7 +20,10 @@ class ConfigurationWizard:
         log.debug("Starting configuration wizard", config_path=config_path)
 
     def bootstrap_organization(self):
-        # bootstraps AWS IAM roles and policies for an organizatio
+        # bootstraps AWS IAM roles and policies for an organization
+        # async def _apply_to_account(  # noqa: C901
+        #     self, aws_account: AWSAccount, context: ExecutionContext
+        # )
         pass
 
     def configuration_wizard_aws_accounts(self):
@@ -52,19 +55,22 @@ class ConfigurationWizard:
         org_region = questionary.text(
             "What region is the AWS Organization in? (Such as `us-east-1`)"
         ).ask()
-        # TODO: What if user needs to chain assume roles?
-        # TODO: What if user needs to pass external ID's?
+
+        aws_profile = questionary.text(
+            "Is there an AWS profile name (Configured in ~/.aws/config) that Iambic "
+            "should use when we access the AWS Organization? Note: "
+            "this profile will be used before assuming any subsequent roles. "
+            "(If you are using a role with access to the Organization and don't use "
+            "a profile, you can leave this blank)"
+        ).ask()
         assume_role_arn = questionary.text(
             "What is the role ARN to assume to access the AWS Organization? "
             "(If you are using a role with access to the Organization, you can leave this blank)"
         ).ask()
-        # TODO: Use this
-        aws_profile = questionary.text(
-            "Is there an AWS profile to use when we access the AWS Organization? Note: "
-            "this profile will be used before assuming any credentials."
-        ).ask()
 
         default_rule = BaseAWSOrgRule(enabled=True, read_only=False)
+
+        assume_role_arns = AssumeRoleConfiguration(arn=assume_role_arn)
 
         action = questionary.select(
             "Keep these settings? ",
@@ -79,7 +85,7 @@ class ConfigurationWizard:
                 org_id=org_id,
                 org_name=org_name,
                 region=org_region,
-                assume_role_arn=assume_role_arn,
+                assume_role_arns=assume_role_arn,
                 default_rule=default_rule,
             )
         )

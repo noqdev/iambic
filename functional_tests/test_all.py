@@ -18,7 +18,8 @@ extends:
 aws:
   organizations:
     - org_id: 'o-yfdp0r70sq'
-      assume_role_arn: 'arn:aws:iam::259868150464:role/IambicSpokeRole'
+      assume_role_arns:
+        - arn: 'arn:aws:iam::259868150464:role/IambicSpokeRole'
       org_name: 'staging'
       account_rules:
         - included_accounts:

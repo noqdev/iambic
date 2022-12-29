@@ -87,6 +87,16 @@ class Tag(ExpiryModel, AccessModel):
         return self.key
 
 
+class AssumeRoleConfiguration(PydanticBaseModel):
+    arn: str = Field(
+        description="The role arn to assume into when making calls to the account",
+    )
+    kwargs: dict = Field(
+        {},
+        description="Additional kwargs to pass to the assume_role call",
+    )
+
+
 class BaseAWSAccountAndOrgModel(PydanticBaseModel):
     default_region: Optional[RegionName] = Field(
         RegionName.us_east_1,
@@ -96,45 +106,35 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         None,
         description="The AWS profile used when making calls to the account",
     )
-    assume_role_arn: Optional[str] = Field(
-        None,
-        description="The role arn to assume into when making calls to the account",
-    )
-    external_id: Optional[str] = Field(
-        None,
-        description="The external id to use for assuming into a role when making calls to the account",
+    assume_role_arns: list[AssumeRoleConfiguration] = Field(
+        [],
+        description="The role arns to assume into when making calls to the account",
     )
     boto3_session_map: Optional[dict] = None
 
     async def get_boto3_session(self, region_name: str = None):
         region_name = region_name or self.default_region
+        # Get a boto3 session for this account by using the AWS profile if it exists,
+        # And then assuming into the list of roles if they exist
 
         if self.boto3_session_map is None:
             self.boto3_session_map = {}
         elif boto3_session := self.boto3_session_map.get(region_name):
             return boto3_session
 
+        session = boto3.Session(region_name=region_name)
+
         if self.aws_profile:
             try:
-                self.boto3_session_map[region_name] = boto3.Session(
+                session = boto3.Session(
                     profile_name=self.aws_profile, region_name=region_name
                 )
             except Exception as err:
                 log.exception(err)
-            else:
-                return self.boto3_session_map[region_name]
 
-        session = boto3.Session(region_name=region_name)
-        if self.assume_role_arn:
-            boto3_session = await create_assume_role_session(
-                session,
-                self.assume_role_arn,
-                region_name,
-                external_id=self.external_id,
-            )
-            if boto3_session:
-                self.boto3_session_map[region_name] = boto3_session
-                return boto3_session
+        session = await create_assume_role_session(
+            session, self.assume_role_arns, region_name
+        )
 
         self.boto3_session_map[region_name] = session
         return self.boto3_session_map[region_name]
@@ -183,9 +183,8 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         if self.org_session_info:
             boto3_session = await create_assume_role_session(
                 self.org_session_info["boto3_session"],
-                self.assume_role_arn,
+                self.assume_role_arns,
                 region_name,
-                external_id=self.external_id,
             )
             if boto3_session:
                 self.boto3_session_map[region_name] = boto3_session
@@ -286,9 +285,8 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
             assume_role_arn = f"arn:aws:iam::{account_id}:role/{assume_role_name}"
             boto3_session = await create_assume_role_session(
                 session,
-                assume_role_arn,
+                [AssumeRoleConfiguration(arn=assume_role_arn)],
                 region_name,
-                external_id=self.external_id,
             )
             if boto3_session:
                 try:
@@ -316,14 +314,9 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         if existing_accounts_map is None:
             existing_accounts_map = {}
 
-        session = boto3.Session(region_name=self.default_region)
-        if self.assume_role_arn:
-            session = await create_assume_role_session(
-                session,
-                self.assume_role_arn,
-                self.default_region,
-                external_id=self.external_id,
-            )
+        session = await self.get_boto3_session(
+            self.default_region,
+        )
         client = session.client("organizations")
         org_accounts = await legacy_paginated_search(
             client.list_accounts,

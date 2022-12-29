@@ -14,6 +14,7 @@ from iambic.core.logger import log
 from iambic.core.utils import aio_wrapper, camel_to_snake
 
 if TYPE_CHECKING:
+    from iambic.aws.models import AssumeRoleConfiguration
     from iambic.config.models import Config
 
 
@@ -310,29 +311,39 @@ async def get_aws_account_map(configs: list[Config]) -> dict:
 
 async def create_assume_role_session(
     boto3_session,
-    assume_role_arn: str,
+    assume_role_arns: list[AssumeRoleConfiguration],
     region_name: str,
-    external_id: Optional[str] = None,
     session_name: str = "iambic",
 ) -> boto3.Session:
     try:
-        sts = boto3_session.client(
-            "sts",
-            endpoint_url=f"https://sts.{region_name}.amazonaws.com",
-            region_name=region_name,
-        )
-        role_params = dict(RoleArn=assume_role_arn, RoleSessionName=session_name)
-        if external_id:
-            role_params["ExternalId"] = external_id
-        role = await aio_wrapper(sts.assume_role, **role_params)
-        return boto3.Session(
-            region_name=region_name,
-            aws_access_key_id=role["Credentials"]["AccessKeyId"],
-            aws_secret_access_key=role["Credentials"]["SecretAccessKey"],
-            aws_session_token=role["Credentials"]["SessionToken"],
-        )
+        for assume_role_arn in assume_role_arns:
+            assume_role_kwargs: dict = assume_role_arn.kwargs
+            sts = boto3_session.client(
+                "sts",
+                endpoint_url=f"https://sts.{region_name}.amazonaws.com",
+                region_name=region_name,
+            )
+            role_params = dict(
+                RoleArn=assume_role_arn.arn,
+                RoleSessionName=session_name,
+                **assume_role_kwargs,
+            )
+            role = await aio_wrapper(sts.assume_role, **role_params)
+            boto3_session = boto3.Session(
+                region_name=region_name,
+                aws_access_key_id=role["Credentials"]["AccessKeyId"],
+                aws_secret_access_key=role["Credentials"]["SecretAccessKey"],
+                aws_session_token=role["Credentials"]["SessionToken"],
+            )
+        return boto3_session
     except Exception as err:
-        log.debug("Failed to assume role", assume_role_arn=assume_role_arn, error=err)
+        log.debug(
+            "Failed to assume role",
+            assume_role_arns=[
+                assume_role_arn.dict() for assume_role_arn in assume_role_arns
+            ],
+            error=err,
+        )
 
 
 def boto3_retry(f):
