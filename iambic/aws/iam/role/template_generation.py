@@ -145,6 +145,7 @@ async def create_templated_role(  # noqa: C901
     role_refs: list[dict],
     role_dir: str,
     existing_template_map: dict,
+    configs: list[Config],
 ):
     account_id_to_role_map = {}
     num_of_accounts = len(role_refs)
@@ -154,6 +155,13 @@ async def create_templated_role(  # noqa: C901
             account_id_to_role_map[role_ref["account_id"]] = normalize_boto3_resp(
                 content_dict
             )
+
+    min_accounts_required_for_wildcard_included_accounts = max(
+        [
+            config.aws.min_accounts_required_for_wildcard_included_accounts
+            for config in configs
+        ]
+    )
 
     # Generate the params used for attribute creation
     role_template_params = {"identifier": role_name}
@@ -227,7 +235,10 @@ async def create_templated_role(  # noqa: C901
                 {"account_id": account_id, "resources": [{"resource_val": description}]}
             )
 
-    if len(role_refs) != len(aws_account_map) or len(aws_account_map) < 3:
+    if (
+        len(role_refs) != len(aws_account_map)
+        or len(aws_account_map) <= min_accounts_required_for_wildcard_included_accounts
+    ):
         role_template_params["included_accounts"] = [
             aws_account_map[role_ref["account_id"]].account_name
             for role_ref in role_refs
@@ -414,6 +425,7 @@ async def generate_aws_role_templates(configs: list[Config], base_output_dir: st
             role_refs,
             role_dir,
             existing_template_map,
+            configs,
         )
 
     log.info("Finished templated role generation")
