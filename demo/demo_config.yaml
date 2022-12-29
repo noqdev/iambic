@@ -6,14 +6,12 @@ aws:
         - included_accounts:
             - '*'
           enabled: true
-          read_only: false
         - included_accounts:
             - '969947703986'
             - '114567474685'
           enabled: false
       default_rule:
         enabled: true
-        read_only: true
   accounts:
     - account_id: '259868150464'
       account_name: staging
