@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import questionary
 
 from iambic.aws.models import AWSOrganization, BaseAWSOrgRule
@@ -16,6 +18,10 @@ class ConfigurationWizard:
             # If configuration file doesn't exist, start with an empty configuration
             self.config = Config.construct()
         log.debug("Starting configuration wizard", config_path=config_path)
+
+    def bootstrap_organization(self):
+        # bootstraps AWS IAM roles and policies for an organizatio
+        pass
 
     def configuration_wizard_aws_accounts(self):
         return self.config
@@ -46,9 +52,16 @@ class ConfigurationWizard:
         org_region = questionary.text(
             "What region is the AWS Organization in? (Such as `us-east-1`)"
         ).ask()
+        # TODO: What if user needs to chain assume roles?
+        # TODO: What if user needs to pass external ID's?
         assume_role_arn = questionary.text(
             "What is the role ARN to assume to access the AWS Organization? "
             "(If you are using a role with access to the Organization, you can leave this blank)"
+        ).ask()
+        # TODO: Use this
+        aws_profile = questionary.text(
+            "Is there an AWS profile to use when we access the AWS Organization? Note: "
+            "this profile will be used before assuming any credentials."
         ).ask()
 
         default_rule = BaseAWSOrgRule(enabled=True, read_only=False)
