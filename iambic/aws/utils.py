@@ -13,7 +13,11 @@ from iambic.core.utils import aio_wrapper, camel_to_snake
 
 
 async def paginated_search(
-    search_fnc, response_key: str, max_results: int = None, retain_key: bool = False, **search_kwargs
+    search_fnc,
+    response_key: str,
+    max_results: int = None,
+    retain_key: bool = False,
+    **search_kwargs,
 ) -> list:
     """Retrieve and aggregate each paged response, returning a single list of each response object
     :param search_fnc:
@@ -48,7 +52,11 @@ async def paginated_search(
 
 
 async def legacy_paginated_search(
-    search_fnc, response_key: str, max_results: int = None, retain_key: bool = False, **search_kwargs
+    search_fnc,
+    response_key: str,
+    max_results: int = None,
+    retain_key: bool = False,
+    **search_kwargs,
 ) -> list:
     """Retrieve and aggregate each paged response, returning a single list of each response object
 
@@ -166,7 +174,9 @@ def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> boo
 
     # SSO Models don't inherit from AccessModel and rely only on included/excluded orgs.
     # hasattr is how we are currently handling this special case.
-    if not issubclass(type(resource), AccessModel) and not hasattr(resource, "included_orgs"):
+    if not issubclass(type(resource), AccessModel) and not hasattr(
+        resource, "included_orgs"
+    ):
         return True
 
     if aws_account.org_id:

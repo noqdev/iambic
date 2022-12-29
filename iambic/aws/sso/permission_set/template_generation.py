@@ -6,8 +6,14 @@ from collections import defaultdict
 import aiofiles
 
 from iambic.aws.models import AWSAccount
-from iambic.aws.sso.permission_set.models import AWSSSOPermissionSetTemplate, AWS_SSO_PERMISSION_SET_TEMPLATE_TYPE
-from iambic.aws.sso.permission_set.utils import enrich_permission_set_details, get_permission_set_users_and_groups
+from iambic.aws.sso.permission_set.models import (
+    AWS_SSO_PERMISSION_SET_TEMPLATE_TYPE,
+    AWSSSOPermissionSetTemplate,
+)
+from iambic.aws.sso.permission_set.utils import (
+    enrich_permission_set_details,
+    get_permission_set_users_and_groups,
+)
 from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
 from iambic.config.models import Config
 from iambic.core import noq_json as json
@@ -35,15 +41,15 @@ def get_permission_set_dir(base_dir: str) -> str:
 
 
 def get_templated_permission_set_file_path(
-        permission_set_dir: str,
-        permission_set_name: str,
+    permission_set_dir: str,
+    permission_set_name: str,
 ):
     file_name = (
         permission_set_name.replace("{{", "")
-            .replace("}}_", "_")
-            .replace("}}", "_")
-            .replace(".", "_")
-            .lower()
+        .replace("}}_", "_")
+        .replace("}}", "_")
+        .replace(".", "_")
+        .lower()
     )
     return str(os.path.join(permission_set_dir, f"{file_name}.yaml"))
 
@@ -55,39 +61,48 @@ def get_account_permission_set_resource_dir(account_id: str) -> str:
 
 
 async def generate_permission_set_resource_file(
-        sso_client, account_id: str, instance_arn: str, permission_set: dict, user_map: dict, group_map: dict
+    sso_client,
+    account_id: str,
+    instance_arn: str,
+    permission_set: dict,
+    user_map: dict,
+    group_map: dict,
 ) -> dict:
-    permission_set = await enrich_permission_set_details(sso_client, instance_arn, permission_set)
+    permission_set = await enrich_permission_set_details(
+        sso_client, instance_arn, permission_set
+    )
     permission_set["assignments"] = await get_permission_set_users_and_groups(
         sso_client,
         instance_arn,
         permission_set["PermissionSetArn"],
         user_map,
-        group_map
+        group_map,
     )
     account_resource_dir = get_account_permission_set_resource_dir(account_id)
     file_path = os.path.join(account_resource_dir, f'{permission_set["Name"]}.json')
-    response = dict(account_id=account_id, permission_set=permission_set, file_path=file_path)
+    response = dict(
+        account_id=account_id, permission_set=permission_set, file_path=file_path
+    )
     await resource_file_upsert(file_path, permission_set)
 
     return response
 
 
 async def create_templated_permission_set(  # noqa: C901
-        aws_account_map: dict[str, AWSAccount],
-        permission_set_name: str,
-        permission_set_refs: list[dict],
-        permission_set_dir: str,
-        existing_template_map: dict,
+    aws_account_map: dict[str, AWSAccount],
+    permission_set_name: str,
+    permission_set_refs: list[dict],
+    permission_set_dir: str,
+    existing_template_map: dict,
 ):
     account_id_to_permissionn_set_map = {}
     num_of_accounts = len(permission_set_refs)
     for permission_set_ref in permission_set_refs:
         async with aiofiles.open(permission_set_ref["file_path"], mode="r") as f:
             content_dict = json.loads(await f.read())
-            account_id_to_permissionn_set_map[permission_set_ref["account_id"]] = normalize_boto3_resp(
-                content_dict
-            )
+            account_id_to_permissionn_set_map[
+                permission_set_ref["account_id"]
+            ] = normalize_boto3_resp(content_dict)
 
     # Generate the params used for attribute creation
     permission_set_params = {"identifier": permission_set_name, "access_rules": []}
@@ -104,18 +119,25 @@ async def create_templated_permission_set(  # noqa: C901
     for account_id, permission_set_dict in account_id_to_permissionn_set_map.items():
         if session_duration := permission_set_dict.get("session_duration"):
             session_duration_resources.append(
-                {"account_id": account_id, "resources": [{"resource_val": session_duration}]}
+                {
+                    "account_id": account_id,
+                    "resources": [{"resource_val": session_duration}],
+                }
             )
 
         if managed_policies := permission_set_dict.get("attached_managed_policies"):
             managed_policy_resources.append(
                 {
                     "account_id": account_id,
-                    "resources": [{"resource_val": {"arn": mp["arn"]}} for mp in managed_policies],
+                    "resources": [
+                        {"resource_val": {"arn": mp["arn"]}} for mp in managed_policies
+                    ],
                 }
             )
 
-        if customer_managed_policy_refs := permission_set_dict.get("customer_managed_policy_references"):
+        if customer_managed_policy_refs := permission_set_dict.get(
+            "customer_managed_policy_references"
+        ):
             customer_managed_policy_ref_resources.append(
                 {
                     "account_id": account_id,
@@ -149,7 +171,10 @@ async def create_templated_permission_set(  # noqa: C901
 
         if inline_policy := permission_set_dict.get("inline_policy"):
             inline_policy_resources.append(
-                {"account_id": account_id, "resources": [{"resource_val": inline_policy}]}
+                {
+                    "account_id": account_id,
+                    "resources": [{"resource_val": inline_policy}],
+                }
             )
 
         if relay_state := permission_set_dict.get("relay_state"):
@@ -160,24 +185,38 @@ async def create_templated_permission_set(  # noqa: C901
         aws_account = aws_account_map[account_id]
         account_rules = {}
         for assignment_type in ["user", "group"]:
-            for assignment_id, details in permission_set_dict.get("assignments", {}).get(assignment_type, {}).items():
+            for assignment_id, details in (
+                permission_set_dict.get("assignments", {})
+                .get(assignment_type, {})
+                .items()
+            ):
                 accounts = sorted(details["accounts"])
                 account_rule_key = "_".join(accounts)
                 if not account_rules.get(account_rule_key):
-                    if all(account in accounts for account in aws_account.sso_details.org_account_map.keys()):
+                    if all(
+                        account in accounts
+                        for account in aws_account.sso_details.org_account_map.keys()
+                    ):
                         accounts = ["*"]
                     else:
-                        accounts = sorted([aws_account_map[nested_account_id].account_name for nested_account_id in
-                                           details["accounts"]])
+                        accounts = sorted(
+                            [
+                                aws_account.sso_details.org_account_map[
+                                    nested_account_id
+                                ]
+                                for nested_account_id in details["accounts"]
+                            ]
+                        )
                     account_rules[account_rule_key] = {
                         "included_orgs": [aws_account.org_id],
                         "included_accounts": accounts,
                         "users": [],
-                        "groups": []
+                        "groups": [],
                     }
 
                 account_rules[account_rule_key][f"{assignment_type}s"].append(
-                    details.get("user_name", details["display_name"]))
+                    details.get("user_name", details["display_name"])
+                )
 
         if account_rules:
             permission_set_params["access_rules"].extend(list(account_rules.values()))
@@ -189,8 +228,13 @@ async def create_templated_permission_set(  # noqa: C901
         ]
 
     if session_duration_resources:
-        permission_set_properties["session_duration"] = await group_int_or_str_attribute(
-            aws_account_map, num_of_accounts, session_duration_resources, "session_duration"
+        permission_set_properties[
+            "session_duration"
+        ] = await group_int_or_str_attribute(
+            aws_account_map,
+            num_of_accounts,
+            session_duration_resources,
+            "session_duration",
         )
 
     if permissions_boundary_resources:
@@ -209,8 +253,13 @@ async def create_templated_permission_set(  # noqa: C901
         )
 
     if customer_managed_policy_ref_resources:
-        permission_set_properties["customer_managed_policy_references"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, customer_managed_policy_ref_resources, False
+        permission_set_properties[
+            "customer_managed_policy_references"
+        ] = await group_dict_attribute(
+            aws_account_map,
+            num_of_accounts,
+            customer_managed_policy_ref_resources,
+            False,
         )
 
     if tag_resources:
@@ -235,8 +284,7 @@ async def create_templated_permission_set(  # noqa: C901
             file_path=existing_template_map.get(
                 permission_set_name,
                 get_templated_permission_set_file_path(
-                    permission_set_dir,
-                    permission_set_name
+                    permission_set_dir, permission_set_name
                 ),
             ),
             **permission_set_params,
@@ -253,7 +301,7 @@ async def create_templated_permission_set(  # noqa: C901
 
 
 async def generate_aws_permission_set_templates(
-        configs: list[Config], base_output_dir: str
+    configs: list[Config], base_output_dir: str
 ):
     aws_account_map = await get_aws_account_map(configs)
     existing_template_map = await get_existing_template_file_map(
@@ -263,7 +311,9 @@ async def generate_aws_permission_set_templates(
 
     accounts_to_set_sso = []
     for config in configs:
-        accounts_to_set_sso.extend([account for account in config.aws_accounts if account.sso_details])
+        accounts_to_set_sso.extend(
+            [account for account in config.aws_accounts if account.sso_details]
+        )
 
     if not accounts_to_set_sso:
         return
@@ -274,7 +324,9 @@ async def generate_aws_permission_set_templates(
         org_accounts=list(aws_account_map.keys()),
     )
 
-    await asyncio.gather(*[account.set_sso_details() for account in accounts_to_set_sso])
+    await asyncio.gather(
+        *[account.set_sso_details() for account in accounts_to_set_sso]
+    )
 
     messages = []
     for aws_account in aws_account_map.values():
@@ -282,7 +334,9 @@ async def generate_aws_permission_set_templates(
             continue
 
         instance_arn = aws_account.sso_details.instance_arn
-        sso_client = await aws_account.get_boto3_client("sso-admin", region_name=aws_account.sso_details.region)
+        sso_client = await aws_account.get_boto3_client(
+            "sso-admin", region_name=aws_account.sso_details.region
+        )
 
         for permission_set in aws_account.sso_details.permission_set_map.values():
             messages.append(
@@ -301,8 +355,12 @@ async def generate_aws_permission_set_templates(
         org_accounts=list(aws_account_map.keys()),
         permission_set_count=len(messages),
     )
-    generate_permission_set_resource_file_semaphore = NoqSemaphore(generate_permission_set_resource_file, 30)
-    all_permission_sets = await generate_permission_set_resource_file_semaphore.process(messages)
+    generate_permission_set_resource_file_semaphore = NoqSemaphore(
+        generate_permission_set_resource_file, 30
+    )
+    all_permission_sets = await generate_permission_set_resource_file_semaphore.process(
+        messages
+    )
 
     log.info(
         "Finished enriching AWS IAM SSO Permission Sets.",
@@ -321,7 +379,9 @@ async def generate_aws_permission_set_templates(
 
     for elem in range(len(all_permission_sets)):
         account_id = all_permission_sets[elem].pop("account_id")
-        all_permission_sets[elem]["resource_val"] = all_permission_sets[elem]["permission_set"]["Name"]
+        all_permission_sets[elem]["resource_val"] = all_permission_sets[elem][
+            "permission_set"
+        ]["Name"]
         permission_sets_grouped_by_account[account_id].append(all_permission_sets[elem])
 
     all_permission_sets = [
