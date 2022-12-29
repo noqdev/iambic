@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from collections import defaultdict
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Union
 
@@ -27,7 +26,7 @@ from iambic.core.models import (
     TemplateChangeDetails,
     Variable,
 )
-from iambic.core.utils import aio_wrapper, NoqSemaphore
+from iambic.core.utils import NoqSemaphore, aio_wrapper
 
 if TYPE_CHECKING:
     from iambic.config.models import Config
@@ -180,6 +179,12 @@ class SSODetails(PydanticBaseModel):
     group_map: Optional[Union[dict, None]] = None
     org_account_map: Optional[Union[dict, None]] = None
 
+    def get_resource_name(self, resource_type: str, resource_id: str):
+        resource_type = resource_type.lower()
+        name_map = {"user": "UserName", "group": "DisplayName"}
+        resource_map = getattr(self, f"{resource_type.lower()}_map")
+        return resource_map.get(resource_id)[name_map[resource_type]]
+
 
 class AWSAccount(BaseAWSAccountAndOrgModel):
     account_id: constr(min_length=12, max_length=12) = Field(
@@ -251,19 +256,23 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         return {
             "region": region,
             "sso_instance_arn": sso_instance_arn,
-            "permission_sets": permission_sets
+            "permission_sets": permission_sets,
         }
 
     async def set_sso_details(self, set_sso_map: bool = True):
         if self.sso_details:
             region = self.sso_details.region
             sso_client = await self.get_boto3_client("sso-admin", region_name=region)
-            identity_store_client = await self.get_boto3_client("identitystore", region_name=region)
+            identity_store_client = await self.get_boto3_client(
+                "identitystore", region_name=region
+            )
 
             sso_instances = await aio_wrapper(sso_client.list_instances)
 
             self.sso_details.instance_arn = sso_instances["Instances"][0]["InstanceArn"]
-            self.sso_details.identity_store_id = sso_instances["Instances"][0]["IdentityStoreId"]
+            self.sso_details.identity_store_id = sso_instances["Instances"][0][
+                "IdentityStoreId"
+            ]
 
             if not set_sso_map:
                 return
@@ -281,14 +290,43 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
                     [
                         {
                             "InstanceArn": self.sso_details.instance_arn,
-                            "PermissionSetArn": permission_set_arn
-                        } for permission_set_arn in permission_set_arns
+                            "PermissionSetArn": permission_set_arn,
+                        }
+                        for permission_set_arn in permission_set_arns
                     ]
                 )
                 self.sso_details.permission_set_map = {
-                    permission_set["PermissionSet"]["Name"]: permission_set["PermissionSet"]
+                    permission_set["PermissionSet"]["Name"]: permission_set[
+                        "PermissionSet"
+                    ]
                     for permission_set in permission_set_details
                 }
+
+            users_and_groups = await asyncio.gather(
+                *[
+                    legacy_paginated_search(
+                        identity_store_client.list_users,
+                        response_key="Users",
+                        retain_key=True,
+                        IdentityStoreId=self.sso_details.identity_store_id,
+                    ),
+                    legacy_paginated_search(
+                        identity_store_client.list_groups,
+                        response_key="Groups",
+                        retain_key=True,
+                        IdentityStoreId=self.sso_details.identity_store_id,
+                    ),
+                ]
+            )
+            for user_or_group in users_and_groups:
+                if "Users" in user_or_group:
+                    self.sso_details.user_map = {
+                        user["UserId"]: user for user in user_or_group["Users"]
+                    }
+                else:
+                    self.sso_details.group_map = {
+                        group["GroupId"]: group for group in user_or_group["Groups"]
+                    }
 
     def __str__(self):
         return f"{self.account_name} - ({self.account_id})"
@@ -347,7 +385,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
     org_name: Optional[str] = None
     sso_account: Optional[AWSSSOAccount] = Field(
         default=None,
-        description="The AWS Account ID and region of the AWS SSO instance to use for this organization"
+        description="The AWS Account ID and region of the AWS SSO instance to use for this organization",
     )
     default_rule: BaseAWSOrgRule = Field(
         description="The rule used to determine how an organization account should be handled if the account was not found in account_rules.",
@@ -437,12 +475,11 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
             "Accounts",
         )
 
-        active_accounts = [account for account in org_accounts if account["Status"] == "ACTIVE"]
+        active_accounts = [
+            account for account in org_accounts if account["Status"] == "ACTIVE"
+        ]
         org_accounts = await asyncio.gather(
-            *[
-                set_org_account_variables(client, account)
-                for account in active_accounts
-            ]
+            *[set_org_account_variables(client, account) for account in active_accounts]
         )
         response = list()
         discovered_accounts = list()

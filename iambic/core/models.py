@@ -165,6 +165,9 @@ class ProposedChangeType(Enum):
 
 class ProposedChange(PydanticBaseModel):
     change_type: ProposedChangeType
+    account: Optional[
+        str
+    ]  # Used for Org related changes like permission set account assignments
     attribute: Optional[str]
     resource_id: Optional[str]
     resource_type: Optional[str]
@@ -174,6 +177,7 @@ class ProposedChange(PydanticBaseModel):
 
 
 class AccountChangeDetails(PydanticBaseModel):
+    org_id: Optional[str]
     account: Union[str, int]
     resource_id: Union[str, int]
     current_value: Optional[dict]
