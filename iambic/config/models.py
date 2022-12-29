@@ -151,6 +151,12 @@ class AWSConfig(BaseModel):
     accounts: List[AWSAccount] = Field(
         [], description="A list of AWS Accounts to be managed by iambic"
     )
+    min_accounts_required_for_wildcard_included_accounts: int = Field(
+        3,
+        description=(
+            "Iambic will set included_accounts=* on imported resources that exist on all accounts if the minimum number of accounts is met."
+        ),
+    )
 
 
 class Config(BaseModel):

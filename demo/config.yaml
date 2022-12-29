@@ -1,7 +1,7 @@
 extends:
   - key: AWS_SECRETS_MANAGER
     value: arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/google-MmAS1o
-    assume_role_arn: arn:aws:iam::759357822767:role/IambicSpokeRole 
+    assume_role_arn: arn:aws:iam::759357822767:role/IambicSpokeRole
 
 aws:
   organizations:
@@ -42,5 +42,5 @@ slack:
 
 sqs:
   queues:
-    iam_mutation: 
+    iam_mutation:
       arn: arn:aws:sqs:us-east-1:759357822767:noqform-iam-mutation-events

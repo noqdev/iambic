@@ -4,7 +4,7 @@ import asyncio
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import boto3
 from botocore.exceptions import ClientError
@@ -12,6 +12,9 @@ from botocore.exceptions import ClientError
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.utils import aio_wrapper, camel_to_snake
+
+if TYPE_CHECKING:
+    from iambic.config.models import Config
 
 
 async def paginated_search(
@@ -284,7 +287,7 @@ async def set_org_account_variables(client, account: dict) -> dict:
     return account
 
 
-async def get_aws_account_map(configs: list) -> dict:
+async def get_aws_account_map(configs: list[Config]) -> dict:
     """Returns a map containing all account configs across all provided config instances
 
     :param configs:
