@@ -12,14 +12,12 @@ aws:
         - included_accounts:
             - '*'
           enabled: true
-          read_only: false
         - included_accounts:
             - '969947703986'
             - '114567474685'
           enabled: false
       default_rule:
         enabled: true
-        read_only: true
   accounts:
     - account_id: '759357822767'
       account_name: dev

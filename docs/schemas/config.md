@@ -35,7 +35,7 @@
   - **`variables`** *(array)*: A list of variables to be used when creating templates. Default: `[]`.
     - **Items**: Refer to *[#/definitions/Variable](#definitions/Variable)*.
   - **`boto3_session_map`** *(object)*
-  - **`read_only`** *(boolean)*: If set to True, iambic will only log drift instead of apply changes when drift is detected. Default: `false`.
+  - **`iambic_managed`** *(IambicManaged)*: Controls the directionality of iambic changes. Default: `READ_AND_WRITE`.
 - <a id="definitions/GoogleSubjects"></a>**`GoogleSubjects`** *(object)*
   - **`domain`** *(string)*
   - **`service_account`** *(string)*
@@ -55,7 +55,7 @@
   - **`client_x509_cert_url`** *(string)*
   - **`variables`** *(array)*: A list of variables to be used when creating templates. Default: `[]`.
     - **Items**: Refer to *[#/definitions/Variable](#definitions/Variable)*.
-  - **`read_only`** *(boolean)*: If set to True, iambic will only log drift instead of apply changes when drift is detected. Default: `false`.
+  - **`iambic_managed`** *(IambicManaged)*: Controls the directionality of iambic changes. Default: `READ_AND_WRITE`.
 - <a id="definitions/ExtendsConfigKey"></a>**`ExtendsConfigKey`**: An enumeration. Must be one of: `["AWS_SECRETS_MANAGER"]`.
 - <a id="definitions/ExtendsConfig"></a>**`ExtendsConfig`** *(object)*
   - **`key`**: Refer to *[#/definitions/ExtendsConfigKey](#definitions/ExtendsConfigKey)*.

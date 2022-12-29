@@ -5,6 +5,7 @@ import os
 import shutil
 import tempfile
 
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.parser import load_templates
 from iambic.main import run_apply, run_import
 
@@ -82,6 +83,36 @@ properties:
     )
     group_template = load_templates([test_group_fp])[0]
     assert len(group_template.properties.members) == 2
+
+    # set the template to import_only
+    proposed_changes_yaml_path = "{0}/proposed_changes.yaml".format(os.getcwd())
+    if os.path.isfile(proposed_changes_yaml_path):
+        os.remove(proposed_changes_yaml_path)
+    else:
+        assert (
+            False  # Previous changes are not being written out to proposed_changes.yaml
+        )
+    group_template.iambic_managed = IambicManaged.IMPORT_ONLY
+    orig_username = group_template.properties.members[0].username
+    group_template.properties.members[
+        0
+    ].username = "this_user_should_not_exist@example.com"
+    group_template.write()
+    run_apply(
+        True,
+        temp_config_filename,
+        [test_group_fp],
+        temp_templates_directory,
+    )
+    if os.path.isfile(proposed_changes_yaml_path):
+        assert os.path.getsize(proposed_changes_yaml_path) == 0
+    else:
+        # this is acceptable as well because there are no changes to be made.
+        pass
+    group_template.iambic_managed = IambicManaged.UNDEFINED
+    group_template.properties.members[0].username = orig_username
+    group_template.write()
+
     # Set expiry for the entire group
     group_template.expires_at = datetime.datetime.now() - datetime.timedelta(days=1)
     group_template.write()

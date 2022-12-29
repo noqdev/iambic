@@ -17,6 +17,7 @@ from iambic.aws.utils import (
     set_org_account_variables,
 )
 from iambic.core.context import ExecutionContext
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -162,9 +163,9 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         None,
         description="The key of the tag used to store users and groups that can assume into the role the tag is on",
     )
-    read_only: Optional[bool] = Field(
-        False,
-        description="If set to True, iambic will only log drift instead of apply changes when drift is detected.",
+    iambic_managed: Optional[IambicManaged] = Field(
+        IambicManaged.UNDEFINED,
+        description="Controls the directionality of iambic changes",
     )
     variables: Optional[List[Variable]] = Field(
         [],
@@ -207,9 +208,9 @@ class BaseAWSOrgRule(BaseModel):
         True,
         description="If set to False, iambic will ignore the included accounts.",
     )
-    read_only: Optional[bool] = Field(
-        False,
-        description="If set to True, iambic will only log drift instead of apply changes when drift is detected.",
+    iambic_managed: Optional[IambicManaged] = Field(
+        IambicManaged.UNDEFINED,
+        description="Controls the directionality of iambic changes",
     )
     assume_role_name: Optional[Union[str, list[str]]] = Field(
         default=["OrganizationAccountAccessRole", "AWSControlTowerExecution"],
@@ -274,7 +275,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
             account_name=account_name,
             org_id=self.org_id,
             variables=account["variables"],
-            read_only=account_rule.read_only,
+            iambic_managed=account_rule.iambic_managed,
         )
         aws_account.boto3_session_map = {}
         assume_role_names = account_rule.assume_role_name

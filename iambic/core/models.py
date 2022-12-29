@@ -18,6 +18,7 @@ from pydantic.fields import ModelField
 
 from iambic.aws.utils import apply_to_account
 from iambic.core.context import ExecutionContext
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.utils import snake_to_camelcap, sort_dict, yaml
 
@@ -265,9 +266,9 @@ class BaseTemplate(
 ):
     template_type: str
     file_path: str
-    read_only: Optional[bool] = Field(
-        False,
-        description="If set to True, iambic will only log drift instead of apply changes when drift is detected.",
+    iambic_managed: Optional[IambicManaged] = Field(
+        IambicManaged.UNDEFINED,
+        description="Controls the directionality of Iambic changes",
     )
 
     def dict(
