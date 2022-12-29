@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import asyncio
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import boto3
 from botocore.exceptions import ClientError
@@ -11,6 +13,9 @@ from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.utils import aio_wrapper, camel_to_snake
+
+if TYPE_CHECKING:
+    from iambic.config.models import Config
 
 
 async def paginated_search(
@@ -251,6 +256,7 @@ async def remove_expired_resources(
         log_params["parent_resource_id"] = template_resource_id
 
     if hasattr(resource, "expires_at") and resource.expires_at:
+
         if resource.expires_at < datetime.utcnow():
             resource.deleted = True
             log.info("Expired resource found, marking for deletion", **log_params)
@@ -285,7 +291,7 @@ async def set_org_account_variables(client, account: dict) -> dict:
     return account
 
 
-async def get_aws_account_map(configs: list) -> dict:
+async def get_aws_account_map(configs: list[Config]) -> dict:
     """Returns a map containing all account configs across all provided config instances
 
     :param configs:

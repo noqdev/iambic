@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import glob
@@ -120,9 +122,10 @@ class NoqSemaphore:
 
             return await aio_wrapper(self.callback_function, **kwargs)
 
-    async def process(self, messages: list[dict]):
+    async def process(self, messages: list[dict], return_exceptions=False):
         return await asyncio.gather(
-            *[asyncio.create_task(self.handle_message(**msg)) for msg in messages]
+            *[asyncio.create_task(self.handle_message(**msg)) for msg in messages],
+            return_exceptions=return_exceptions,
         )
 
 
@@ -173,12 +176,22 @@ def un_wrap_json_and_dump_values(json_obj: Any) -> Any:
     return json_obj
 
 
-# lifted from cloudumi's repo common.lib.generic import sort_dict
-def sort_dict(original):
-    """Recursively sorts dictionary keys and dictionary values in alphabetical order"""
+# lifted from cloudumi's repo common.lib.generic import sort_dict, and modified to support prioritization
+def sort_dict(original, prioritize=None):
+    """Recursively sorts dictionary keys and dictionary values in alphabetical order,
+    with optional prioritization of certain elements.
+    """
+    if prioritize is None:
+        prioritize = ["template_type", "name", "description"]
     if isinstance(original, dict):
         # Make a new "ordered" dictionary. No need for Collections in Python 3.7+
-        d = {k: v for k, v in sorted(original.items())}
+        # Sort the keys in the dictionary
+        keys = sorted(original.keys())
+        # Move the keys in the prioritized list to the front
+        keys = [k for k in prioritize if k in keys] + [
+            k for k in keys if k not in prioritize
+        ]
+        d = {k: v for k, v in [(k, original[k]) for k in keys]}
     else:
         d = original
     for k in d:
@@ -187,10 +200,10 @@ def sort_dict(original):
         if isinstance(d[k], list) and len(d[k]) > 1 and isinstance(d[k][0], str):
             d[k] = sorted(d[k])
         if isinstance(d[k], dict):
-            d[k] = sort_dict(d[k])
+            d[k] = sort_dict(d[k], prioritize)
         if isinstance(d[k], list) and len(d[k]) >= 1 and isinstance(d[k][0], dict):
             for i in range(len(d[k])):
-                d[k][i] = sort_dict(d[k][i])
+                d[k][i] = sort_dict(d[k][i], prioritize)
     return d
 
 

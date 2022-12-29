@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import pathlib
 
@@ -31,9 +33,7 @@ ROLE_RESPONSE_DIR = pathlib.Path.home().joinpath(".iambic", "resources", "aws", 
 
 
 def get_role_dir(base_dir: str) -> str:
-    repo_dir = os.path.join(base_dir, "resources", "aws", "roles")
-    os.makedirs(repo_dir, exist_ok=True)
-    return str(repo_dir)
+    return str(os.path.join(base_dir, "resources", "aws", "roles"))
 
 
 def get_templated_role_file_path(
@@ -156,9 +156,17 @@ async def create_templated_role(  # noqa: C901
     role_refs: list[dict],
     role_dir: str,
     existing_template_map: dict,
+    configs: list[Config],
 ) -> RoleTemplate:
     account_id_to_role_map = await _account_id_to_role_map(role_refs)
     num_of_accounts = len(role_refs)
+
+    min_accounts_required_for_wildcard_included_accounts = max(
+        [
+            config.aws.min_accounts_required_for_wildcard_included_accounts
+            for config in configs
+        ]
+    )
 
     # Generate the params used for attribute creation
     role_template_params = {"identifier": role_name}
@@ -205,6 +213,10 @@ async def create_templated_role(  # noqa: C901
             )
 
         if inline_policies := role_dict.get("inline_policies"):
+            # Normalize the inline policy statements to be a list
+            for inline_policy in inline_policies:
+                if isinstance(inline_policy.get("statement"), dict):
+                    inline_policy["statement"] = [inline_policy["statement"]]
             inline_policy_document_resources.append(
                 {
                     "account_id": account_id,
@@ -228,11 +240,16 @@ async def create_templated_role(  # noqa: C901
                 {"account_id": account_id, "resources": [{"resource_val": description}]}
             )
 
-    if len(role_refs) != len(aws_account_map):
+    if (
+        len(role_refs) != len(aws_account_map)
+        or len(aws_account_map) <= min_accounts_required_for_wildcard_included_accounts
+    ):
         role_template_params["included_accounts"] = [
             aws_account_map[role_ref["account_id"]].account_name
             for role_ref in role_refs
         ]
+    else:
+        role_template_params["included_accounts"] = ["*"]
 
     path = await group_int_or_str_attribute(
         aws_account_map, num_of_accounts, path_resources, "path"
@@ -344,7 +361,7 @@ async def create_templated_role(  # noqa: C901
         role.write()
         return role
     except Exception as err:
-        log.error(
+        log.exception(
             "Unable to create role template.",
             error=str(err),
             role_params=role_template_params,
@@ -427,6 +444,7 @@ async def generate_aws_role_templates(configs: list[Config], base_output_dir: st
             role_refs,
             role_dir,
             existing_template_map,
+            configs,
         )
 
     log.info("Finished templated role generation")

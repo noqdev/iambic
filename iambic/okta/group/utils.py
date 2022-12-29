@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 import okta.models as models
 
@@ -136,7 +136,7 @@ async def list_all_groups(okta_organization: OktaOrganization) -> List[Group]:
 
 async def get_group(
     group_id: str, group_name: str, okta_organization: OktaOrganization
-) -> Group:
+) -> Optional[Group]:
     """
     Get a group from Okta using the okta library.
 
@@ -151,6 +151,25 @@ async def get_group(
     # Get a group from Okta using the okta library
     client = await okta_organization.get_okta_client()
     group, resp, err = await client.get_group(group_id)
+    if not group:
+        # Try to get group by name
+        groups, resp, err = await client.list_groups(query_params={"q": group_name})
+        if err:
+            log.error(
+                "Error encountered when getting group by name",
+                group_id=group_id,
+                group_name=group_name,
+                error=str(err),
+            )
+            return None
+        matching_group = None
+        for matching_group in groups:
+            if matching_group.profile.name == group_name:
+                group = matching_group
+                break
+
+        if not group:
+            return None
     if err:
         log.error(
             "Error encountered when getting group",
@@ -160,8 +179,6 @@ async def get_group(
         )
         return None
 
-    if err:
-        return None
     group = Group(
         idp_name=okta_organization.idp_name,
         name=group.profile.name,
@@ -182,7 +199,8 @@ async def create_group(
     idp_name: str,
     description: str,
     okta_organization: OktaOrganization,
-) -> Group:
+    context: ExecutionContext,
+) -> Optional[Group]:
     """
     Create a new group in Okta.
 
@@ -202,26 +220,29 @@ async def create_group(
     group_profile = models.GroupProfile(
         {
             "name": group_name,
+            "description": description,
         }
     )
 
     # Create the group
     group_model = models.Group({"profile": group_profile})
-    group, resp, err = await client.create_group(group_model)
-    if err:
-        raise Exception("Error creating group")
-    group = Group(
-        idp_name=idp_name,
-        name=group_name,
-        description=description,
-        group_id=group.id,
-        attributes=dict(),
-        extra=dict(
-            okta_group_id=group.id,
-            created=group.created,
-        ),
-    )
-    return group
+    if context.execute:
+        group, resp, err = await client.create_group(group_model)
+        if err:
+            raise Exception("Error creating group")
+        group = Group(
+            idp_name=idp_name,
+            name=group_name,
+            description=description,
+            group_id=group.id,
+            attributes=dict(),
+            extra=dict(
+                okta_group_id=group.id,
+                created=group.created,
+            ),
+        )
+        return group
+    return None
 
 
 async def update_group_name(
@@ -443,4 +464,43 @@ async def update_group_members(
                     **log_params,
                 )
                 continue
+    return response
+
+
+async def maybe_delete_group(
+    delete: bool,
+    group: Group,
+    okta_organization: OktaOrganization,
+    log_params: dict[str, str],
+    context: ExecutionContext,
+) -> List[ProposedChange]:
+    """
+    Delete a group in Okta.
+
+    Args:
+        group (Group): The group to delete.
+        okta_organization (OktaOrganization): The Okta organization to delete the group from.
+        log_params (dict): Logging parameters.
+        context (object): The context object containing the execution flag.
+
+    Returns:
+        List[ProposedChange]: A list of proposed changes to be applied.
+    """
+    response: list[ProposedChange] = []
+    client = await okta_organization.get_okta_client()
+    if not delete:
+        return response
+    response.append(
+        ProposedChange(
+            change_type=ProposedChangeType.DELETE,
+            resource_id=group.group_id,
+            resource_type=group.resource_type,
+            attribute="group",
+            change_summary={"group": group.name},
+        )
+    )
+    if context.execute:
+        _, err = await client.delete_group(group.extra["okta_group_id"])
+        if err:
+            raise Exception("Error deleting group")
     return response
