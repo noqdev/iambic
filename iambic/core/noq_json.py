@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from datetime import datetime
 from decimal import Decimal
@@ -30,7 +32,7 @@ def dumps(
     escape_forward_slashes: bool = False,
     sort_keys: bool = False,
     indent: int = 0,
-    **kwargs
+    **kwargs,
 ) -> str:
     # Try fast "ujson is 3x faster than the standard json library" first
     try:
@@ -42,7 +44,7 @@ def dumps(
             escape_forward_slashes=escape_forward_slashes,
             sort_keys=sort_keys,
             indent=indent,
-            **kwargs
+            **kwargs,
         )
     except TypeError:
         result = json.dumps(
@@ -51,7 +53,7 @@ def dumps(
             ensure_ascii=ensure_ascii,
             sort_keys=sort_keys,
             indent=indent,
-            **kwargs
+            **kwargs,
         )
     return result
 

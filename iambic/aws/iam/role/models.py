@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from itertools import chain
@@ -20,20 +22,14 @@ from iambic.aws.iam.role.utils import (
     get_role,
     update_assume_role_policy,
 )
-from iambic.aws.models import (
-    ARN_RE,
-    AccessModel,
-    AWSAccount,
-    AWSTemplate,
-    ExpiryModel,
-    Tag,
-)
+from iambic.aws.models import ARN_RE, AccessModel, AWSAccount, AWSTemplate, Tag
 from iambic.aws.utils import apply_to_account
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
     BaseModel,
+    ExpiryModel,
     ProposedChange,
     ProposedChangeType,
 )
