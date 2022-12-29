@@ -193,7 +193,7 @@ class ConfigurationWizard:
             "you can leave this blank)"
         ).ask()
 
-        default_rule = BaseAWSOrgRule(enabled=True, read_only=False)
+        default_rule = BaseAWSOrgRule(enabled=True, iambic_managed="read_write")
         if assume_role_arn:
             assume_role_arns = [AssumeRoleConfiguration(arn=assume_role_arn)]
 

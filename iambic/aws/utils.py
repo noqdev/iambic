@@ -10,6 +10,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 from iambic.core.context import ExecutionContext
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.utils import aio_wrapper, camel_to_snake
 
@@ -184,7 +185,10 @@ def is_regex_match(regex, test_string):
 def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> bool:
     from iambic.aws.models import AccessModel
 
-    if aws_account.read_only or getattr(resource, "read_only", False):
+    if (
+        aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
+        or getattr(resource, "iambic_managed", None) == IambicManaged.IMPORT_ONLY
+    ):
         return False
     if not issubclass(type(resource), AccessModel):
         return True

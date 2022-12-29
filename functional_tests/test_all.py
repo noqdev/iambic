@@ -25,10 +25,8 @@ aws:
         - included_accounts:
             - '*'
           enabled: true
-          read_only: false
       default_rule:
         enabled: true
-        read_only: false
 """
 
 

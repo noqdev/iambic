@@ -10,6 +10,7 @@ from pydantic import Field
 
 from iambic.config.models import Config, OktaOrganization
 from iambic.core.context import ExecutionContext
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -104,6 +105,13 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
             resource_type=self.resource_type,
             resource_name=self.properties.name,
         )
+
+        if self.iambic_managed == IambicManaged.IMPORT_ONLY:
+            log_str = "Resource is marked as import only."
+            log.info(log_str, **log_params)
+            template_changes.proposed_changes = []
+            return template_changes
+
         for okta_organization in config.okta_organizations:
             # if evaluate_on_google_account(self, account):
             if context.execute:
