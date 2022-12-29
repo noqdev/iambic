@@ -1,0 +1,34 @@
+template_type: NOQ::AWS::IAM::Role
+identifier: IambicSpokeRole
+included_accounts:
+  - "*"
+properties:
+  assume_role_policy_document:
+    statement:
+      # Default deny policy. Please adjust to allow your IambicHubRole to assume
+      - action: sts:AssumeRole
+        effect: Deny
+        principal:
+          service: ec2.amazonaws.com
+    version: '2012-10-17'
+  inline_policies:
+    - included_accounts:
+        - '*'
+      policy_name: base_permissions
+      statement:
+        - action:
+            - ec2:Describe*
+            - identitystore:*
+            - organizations:describe*
+            - organizations:list*
+            - iam:*
+            - sso:*
+          effect: Allow
+          resource:
+            - '*'
+      version: '2012-10-17'
+  managed_policies:
+    - included_accounts:
+        - '*'
+      policy_arn: arn:aws:iam::aws:policy/ReadOnlyAccess
+  role_name: IambicSpokeRole
