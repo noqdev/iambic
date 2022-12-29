@@ -19,8 +19,9 @@ from iambic.aws.models import (
     AccessModel,
     AWSAccount,
     AWSTemplate,
+    Description,
     ExpiryModel,
-    Tag, Description,
+    Tag,
 )
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log

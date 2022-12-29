@@ -5,11 +5,11 @@ from iambic.google.group.models import GroupTemplate
 from iambic.okta.group.models import OktaGroupTemplate
 
 TEMPLATES = [
+    AWSSSOPermissionSetTemplate,
     RoleTemplate,
     GroupTemplate,
     OktaGroupTemplate,
     ManagedPolicyTemplate,
-    AWSSSOPermissionSetTemplate,
 ]
 TEMPLATE_TYPE_MAP = {
     template.__fields__["template_type"].default: template for template in TEMPLATES
