@@ -22,7 +22,7 @@ async def get_resource(
         )
         del resource_details["ResponseMetadata"]
         return resource_details
-    except ClientError as err:
+    except ClientError:
         raise
 
 
