@@ -31,14 +31,16 @@ aws:
       account_name: prod
       assume_role_arn: 'arn:aws:iam::940552945933:role/IambicSpokeRole'
 
+# TODO: Make sure google.groups.enabled = False does what is advertised.
+# TODO: Add permissions permanently to the IAM role.
 google:
   groups:
-    enabled: false
+    enabled: true
 
 slack:
   alert_channel_id: 'C046KESSMQ8'
 
 sqs:
   queues:
-    iam_mutation: 
+    iam_mutation:
       arn: arn:aws:sqs:us-east-1:759357822767:noqform-iam-mutation-events

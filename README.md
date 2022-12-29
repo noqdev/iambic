@@ -3,7 +3,7 @@
 > IAM-better-in-code
 The python package used to generate, parse, and execute IAMbic yaml templates.
 
-Features: 
+Features:
 |     |     |
 | --- | --- |
 | Multi-Account Aware <br>(Automatically recognizes and populates<br>new accounts with default resources and identities) | X   |
