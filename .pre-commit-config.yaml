@@ -1,5 +1,16 @@
 # See https://pre-commit.com/ for usage and config
+default_language_version:
+    python: python3.10
 repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.1.0 # Use the ref you want to point at
+  hooks:
+    - id: trailing-whitespace
+    - id: check-ast
+    - id: check-case-conflict
+    - id: debug-statements
+    - id: check-yaml
+      args: [--allow-multiple-documents]
 - repo: local
   hooks:
   - id: isort

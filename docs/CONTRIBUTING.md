@@ -16,23 +16,23 @@ class RoleTemplate(NoqTemplate, AccessModel):
 ```
 
 NEVER use dict to represent an attribute unless absolutely necessary due to the attributes dynamic nature.
-An example of this would be `PolicyStatement.condition` where key is the condition statement making representing the attribute too difficult. 
- 
+An example of this would be `PolicyStatement.condition` where key is the condition statement making representing the attribute too difficult.
+
 
 ## Adding a new resource model
-This section is applies to any type of model class include `NoqTemplate` classes. 
+This section is applies to any type of model class include `NoqTemplate` classes.
 
 ### Implement `resource_type(self) -> str:`
-A unique representation of the resource's type. 
+A unique representation of the resource's type.
 For AWS resources this would be `aws:${service}:${resource}` e.g. aws:iam:role.
 There is no strict standard at the time this was written so use your best judgement.
 Be sure that it is named in such a way that no model in iambic will ever collide.
 
 ### Implement `resource_id(self) -> str:`
-The unique value for the resource.  
+The unique value for the resource.
 For a role this would be the role name. For a tag it would be the key. For an inline policy, the policy name.
 
-### Optionally overwrite `exclude_keys(self) -> set` 
+### Optionally overwrite `exclude_keys(self) -> set`
 Used to specify attributes in a model that are not part of the API request to the related service e.g. AWS/boto3.
 
 This method only extends the following set of attributes which are already ignored:
@@ -51,8 +51,8 @@ exclude_keys = {
 ```
 
 ## Adding a new Noq template
-A Noq template defines 1 or more resources. 
-A template will typically only have 1 resource attributed to it. 
+A Noq template defines 1 or more resources.
+A template will typically only have 1 resource attributed to it.
 For example, a template that defines a managed policy.
 This managed policy will be applied to the accounts defined by included/exclude accounts and included/excluded orgs.
 
@@ -68,10 +68,10 @@ This is the string value used to identify a template's type.
 The value is unique across all NoqTemplate classes in iambic.
 This value MUST be prefixed with `NOQ::`.
 
-### Implement `async def _apply_to_account(self, account_config: AccountConfig) -> bool:`  
+### Implement `async def _apply_to_account(self, account_config: AccountConfig) -> bool:`
 This method is responsible for conditionally updating, creating, or deleting the resources the template represents.
 For example, the AWS role template also carries with it tag resources, inline policy resources, instances profiles, etc.
-This method will not only upsert or delete the role but also these related resources. 
+This method will not only upsert or delete the role but also these related resources.
 
 ### Add the class to `iambic.config.templates.TEMPLATES`
 This list is used for validation and resolving the template type of a yaml file.
@@ -86,7 +86,7 @@ This list is used for validation and resolving the template type of a yaml file.
 * Add the function to import existing resources to `iambic.request_handler.generate.generate_templates`
 
 #### Use the helper functions
-There are a number of functions in `iambic.core.template_generation.py` to simplify a lot of the import process. 
+There are a number of functions in `iambic.core.template_generation.py` to simplify a lot of the import process.
 
 ##### `group_int_or_str_attribute(account_config_map: dict[str, AccountConfig], number_of_accounts_resource_on: int, account_resources: Union[dict , list[dict]], key: Union[int , str]) -> Union[int , str , list[dict]]:`
 Groups an attribute by accounts, formats the attribute and normalizes the included accounts.
@@ -142,7 +142,7 @@ While `generate_aws_role_templates` is somewhat complex what it's doing can be b
 1. Retrieve the primary resource and write it into a file and create a map where {resource_id: file_path}
 2. Retrieve related resources and update the file created in step 1
 3. Format the resource file map to the structure expected by `base_group_str_attribute`
-4. Now that the resources have been grouped by their id group the attributes for the resource across accounts and write the template. 
+4. Now that the resources have been grouped by their id group the attributes for the resource across accounts and write the template.
    1. Use `create_templated_role` as an example. The way it works should translate for any other template.
 
 ## Testing
