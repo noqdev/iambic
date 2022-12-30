@@ -6,7 +6,7 @@ If you've seen how permission sets are implemented you're probably wondering why
 
 
 ### IAMbic design
-Due to limitations with the AWS API (see below for more details) permission sets are handled differently than other resources. 
+Due to limitations with the AWS API (see below for more details) permission sets are handled differently than other resources.
 
 After the full list of templates have been collected and all aws accounts have been set in the config `AWSAccount.sso_details.set_sso_details` is called.
 
@@ -20,18 +20,18 @@ There is also a method `AWSAccount.sso_details.set_sso_details` that is called l
 
 ### Why are SSO resources referenced as part of the account the org is in instead of the actual org in app code?
 
-IAMbic is designed so that every AWS resource belongs to an account.  
-Think of SSO resources almost like a sub-resource. 
+IAMbic is designed so that every AWS resource belongs to an account.
+Think of SSO resources almost like a sub-resource.
 They belong to an org which is a resource on an account.
 
 Otherwise, we'd need to have to different flows for AWS resources (one for org and one for account) depending on the resource type.
 
-TLDR; we're treating org as an attribute of the account it is on, which it is; instead of treating an org as way to manage a series of accounts (which it also is). 
+TLDR; we're treating org as an attribute of the account it is on, which it is; instead of treating an org as way to manage a series of accounts (which it also is).
 
 
 ### AWS API Limitation
 While the name of a permission set is unique to the org it is not used by the AWS API for any operation.
-All operations require the permission set ARN and instance ARN. 
+All operations require the permission set ARN and instance ARN.
 
 The problem with the permission set ARN is that it is simply a random alphanumeric string.
 As a result we have no way to templatize the attribute AWS SSO uses to identify the permission set.
@@ -48,9 +48,9 @@ It's a better UX but the flow is a little backwards.
 
 ### Performance considerations
 SSO resource templates are going to take more time to process than other resources.
-For reasons I can't explain, per AWS' documentation: 
-"IAM Identity Center APIs have a collective throttle maximum of 20 transactions per second (TPS). 
-The CreateAccountAssignment has a maximum rate of 10 outstanding async calls. 
+For reasons I can't explain, per AWS' documentation:
+"IAM Identity Center APIs have a collective throttle maximum of 20 transactions per second (TPS).
+The CreateAccountAssignment has a maximum rate of 10 outstanding async calls.
 These quotas cannot be changed."
 
 As a result we will likely have to process SSO resources templates synchronously to avoid throttling.

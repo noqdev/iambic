@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from enum import Enum
@@ -6,14 +8,15 @@ from typing import Any, List, Optional
 
 from pydantic import Field
 
-from iambic.aws.models import ExpiryModel
 from iambic.config.models import Config, OktaOrganization
 from iambic.core.context import ExecutionContext
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
     BaseModel,
     BaseTemplate,
+    ExpiryModel,
     ProposedChange,
     ProposedChangeType,
     TemplateChangeDetails,
@@ -21,6 +24,7 @@ from iambic.core.models import (
 from iambic.okta.group.utils import (
     create_group,
     get_group,
+    maybe_delete_group,
     update_group_description,
     update_group_members,
     update_group_name,
@@ -34,9 +38,17 @@ class UserStatus(Enum):
     deprovisioned = "deprovisioned"
 
 
-class UserSimple(ExpiryModel):
+class UserSimple(BaseModel, ExpiryModel):
     username: str
     status: Optional[UserStatus] = UserStatus.active
+
+    @property
+    def resource_type(self) -> str:
+        return "okta:user"
+
+    @property
+    def resource_id(self) -> str:
+        return self.username
 
 
 class User(UserSimple):
@@ -51,7 +63,7 @@ class User(UserSimple):
     extra: Any = Field(None, description=("Extra attributes to store"))
 
 
-class OktaGroupTemplateProperties(BaseModel):
+class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the group")
     owner: Optional[str] = Field(None, description="Owner of the group")
     idp_name: str = Field(
@@ -67,10 +79,14 @@ class OktaGroupTemplateProperties(BaseModel):
 
     @property
     def resource_type(self) -> str:
-        return "google:group"
+        return "okta:group"
+
+    @property
+    def resource_id(self) -> str:
+        return self.group_id
 
 
-class OktaGroupTemplate(BaseTemplate):
+class OktaGroupTemplate(BaseTemplate, ExpiryModel):
     template_type = "NOQ::Okta::Group"
     properties: OktaGroupTemplateProperties = Field(
         ..., description="Properties for the Okta Group"
@@ -89,6 +105,13 @@ class OktaGroupTemplate(BaseTemplate):
             resource_type=self.resource_type,
             resource_name=self.properties.name,
         )
+
+        if self.iambic_managed == IambicManaged.IMPORT_ONLY:
+            log_str = "Resource is marked as import only."
+            log.info(log_str, **log_params)
+            template_changes.proposed_changes = []
+            return template_changes
+
         for okta_organization in config.okta_organizations:
             # if evaluate_on_google_account(self, account):
             if context.execute:
@@ -153,7 +176,7 @@ class OktaGroupTemplate(BaseTemplate):
             organization=str(self.properties.idp_name),
         )
 
-        current_group = await get_group(
+        current_group: Optional[Group] = await get_group(
             self.properties.group_id, self.properties.name, okta_organization
         )
         if current_group:
@@ -162,7 +185,9 @@ class OktaGroupTemplate(BaseTemplate):
         group_exists = bool(current_group)
         tasks = []
 
-        if not group_exists:
+        await self.remove_expired_resources(context)
+
+        if not group_exists and not self.deleted:
             change_details.proposed_changes.append(
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
@@ -179,14 +204,12 @@ class OktaGroupTemplate(BaseTemplate):
             log_str = f"{log_str} Creating resource..."
             log.info(log_str, **log_params)
 
-            await create_group(
+            current_group: Group = await create_group(
                 group_name=self.properties.name,
                 idp_name=self.properties.idp_name,
                 description=self.properties.description,
                 okta_organization=okta_organization,
-            )
-            current_group = await get_group(
-                self.properties.name, self.properties.idp_name, okta_organization
+                context=context,
             )
             if current_group:
                 change_details.current_value = current_group
@@ -210,7 +233,18 @@ class OktaGroupTemplate(BaseTemplate):
                 ),
                 update_group_members(
                     current_group,
-                    self.properties.members,
+                    [
+                        member
+                        for member in self.properties.members
+                        if not member.deleted
+                    ],
+                    okta_organization,
+                    log_params,
+                    context,
+                ),
+                maybe_delete_group(
+                    self.deleted,
+                    current_group,
                     okta_organization,
                     log_params,
                     context,
@@ -232,6 +266,10 @@ class OktaGroupTemplate(BaseTemplate):
                 changes_made=bool(change_details.proposed_changes),
                 **log_params,
             )
+            # TODO: Check if deleted, remove git commit the change to ratify it
+            if self.deleted:
+                self.delete()
+            self.write()
         else:
             log.debug(
                 "Successfully finished scanning for drift for resource",
@@ -255,6 +293,8 @@ async def get_group_template(group: Group) -> OktaGroupTemplate:
 
     file_name = f"{group.name}.yaml"
     group_members = [json.loads(m.json()) for m in group.members]
+    UserSimple.update_forward_refs()
+    OktaGroupTemplate.update_forward_refs()
     return OktaGroupTemplate(
         file_path=f"okta/groups/{group.idp_name}/{file_name}",
         properties=dict(

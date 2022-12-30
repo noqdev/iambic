@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import os
 import pathlib
@@ -311,9 +313,10 @@ async def generate_aws_permission_set_templates(
 
     accounts_to_set_sso = []
     for config in configs:
-        accounts_to_set_sso.extend(
-            [account for account in config.aws_accounts if account.sso_details]
-        )
+        if config.aws and config.aws.accounts:
+            accounts_to_set_sso.extend(
+                [account for account in config.aws.accounts if account.sso_details]
+            )
 
     if not accounts_to_set_sso:
         return

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 
 from iambic.aws.sso.permission_set.utils import generate_permission_set_map

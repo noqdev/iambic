@@ -10,7 +10,7 @@
       - **Items**: Refer to *[#/definitions/Deleted](#definitions/Deleted)*.
 - **`template_type`** *(string)*: Default: `"NOQ::Google::Group"`.
 - **`file_path`** *(string)*
-- **`read_only`** *(boolean)*: Default: `false`.
+- **`iambic_managed`** *(IambicManaged)*: Controls the directionality of iambic changes. Default: `READ_AND_WRITE`.
 - **`name`** *(string)*
 - **`domain`** *(string)*
 - **`email`** *(string)*

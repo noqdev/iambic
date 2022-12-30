@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from itertools import chain
@@ -20,14 +22,15 @@ from iambic.aws.models import (
     AWSAccount,
     AWSTemplate,
     Description,
-    ExpiryModel,
     Tag,
 )
 from iambic.core.context import ExecutionContext
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
     BaseModel,
+    ExpiryModel,
     ProposedChange,
     ProposedChangeType,
 )
@@ -257,8 +260,14 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
         description="The properties of the managed policy",
     )
 
-    def _is_read_only(self, aws_account: AWSAccount, context: ExecutionContext):
-        return aws_account.read_only or self.read_only or context.eval_only
+    def _is_iambic_import_only(
+        self, aws_account: AWSAccount, context: ExecutionContext
+    ):
+        return (
+            aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
+            or self.iambic_managed == IambicManaged.IMPORT_ONLY
+            or context.eval_only
+        )
 
     def _apply_resource_dict(
         self, aws_account: AWSAccount = None, context: ExecutionContext = None
@@ -289,7 +298,7 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
             resource_id=policy_name,
             account=str(aws_account),
         )
-        read_only = self._is_read_only(aws_account, context)
+        is_iambic_import_only = self._is_iambic_import_only(aws_account, context)
         policy_arn = account_policy.pop("Arn")
         current_policy = await get_managed_policy(policy_arn, client)
         if current_policy:
@@ -310,11 +319,11 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
                     )
                 )
                 log_str = "Active resource found with deleted=false."
-                if not read_only:
+                if not is_iambic_import_only:
                     log_str = f"{log_str} Deleting resource..."
                 log.info(log_str, **log_params)
 
-                if not read_only:
+                if not is_iambic_import_only:
                     await delete_managed_policy(policy_arn, client)
 
             return account_change_details
@@ -326,7 +335,7 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
                     client,
                     json.loads(account_policy["PolicyDocument"]),
                     current_policy["PolicyDocument"],
-                    read_only,
+                    is_iambic_import_only,
                     log_params,
                     context,
                 ),
@@ -335,7 +344,7 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
                     client,
                     account_policy.get("Tags", []),
                     current_policy.get("Tags", []),
-                    read_only,
+                    is_iambic_import_only,
                     log_params,
                     context,
                 ),
@@ -353,12 +362,12 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
                 )
             )
             log_str = "New resource found in code."
-            if not read_only:
+            if not is_iambic_import_only:
                 log_str = f"{log_str} Creating resource..."
                 await aio_wrapper(client.create_policy, **account_policy)
             log.info(log_str, **log_params)
 
-        if not read_only:
+        if not is_iambic_import_only:
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),

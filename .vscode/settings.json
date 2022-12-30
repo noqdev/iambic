@@ -1,4 +1,8 @@
 {
-    "python.linting.mypyEnabled": true,
-    "python.linting.enabled": true
+    "python.testing.pytestArgs": [
+        "test",
+        "functional_tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }

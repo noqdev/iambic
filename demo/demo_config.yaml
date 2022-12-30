@@ -2,28 +2,29 @@ aws:
   organizations:
     - org_id: 'o-yfdp0r70sq'
       org_name: 'staging'
+      aws_profile: 'staging/staging_admin'
+      sso_account:
+        account_id: '259868150464'
+        region: 'us-east-1'
       account_rules:
         - included_accounts:
             - '*'
           enabled: true
-          read_only: false
         - included_accounts:
             - '969947703986'
             - '114567474685'
           enabled: false
       default_rule:
         enabled: true
-        read_only: true
-
-aws_accounts:
-  - account_id: '259868150464'
-    account_name: staging
-  - account_id: '972417093400'
-    account_name: 'demo-1'
-    aws_profile: demo_1
-  - account_id: '694815895589'
-    account_name: 'demo-2'
-    aws_profile: demo_2
-  - account_id: '518317429440'
-    account_name: 'demo-3'
-    aws_profile: demo_3
+#  accounts:
+#    - account_id: '259868150464'
+#      account_name: staging
+#    - account_id: '972417093400'
+#      account_name: 'demo-1'
+#      aws_profile: demo_1
+#    - account_id: '694815895589'
+#      account_name: 'demo-2'
+#      aws_profile: demo_2
+#    - account_id: '518317429440'
+#      account_name: 'demo-3'
+#      aws_profile: demo_3

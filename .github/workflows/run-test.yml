@@ -1,0 +1,18 @@
+name: Run test
+on:
+  pull_request:
+jobs:
+  run-test:
+    runs-on: ubuntu-latest
+    name: Run test
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v3
+      - name: run-test
+        id: run-test
+        run: |
+          python3.10 -m venv env
+          . env/bin/activate && pip install poetry && poetry install && make test
