@@ -15,7 +15,12 @@ from iambic.aws.models import (
     AWSOrganization,
     BaseAWSOrgRule,
 )
-from iambic.aws.utils import get_account_id_from_arn, get_current_role_arn
+from iambic.aws.utils import (
+    auto_detect_roles_from_org_accounts,
+    get_account_id_from_arn,
+    get_current_role_arn,
+    get_organization_accounts,
+)
 from iambic.config.models import Config
 from iambic.core.context import ctx
 from iambic.core.logger import log
@@ -96,7 +101,7 @@ class ConfigurationWizard:
         ).ask()
 
         account_name = questionary.text(
-            "What is the name of the AWS Account?", default=self.curent_account_name
+            "What is the name of the AWS Account?", default=self.current_account_name
         ).ask()
 
         aws_profile = questionary.text(
@@ -134,9 +139,10 @@ class ConfigurationWizard:
             assume_role_arns=assume_role_arns,
         )
         self.config.aws.accounts.append(account)
+        self.config.write(self.config_path)
 
         action = questionary.select(
-            "Bootstrap an Iambic Spoke Role on this accoun?",
+            "Bootstrap an Iambic Spoke Role on this account and all subaccounts?",
             choices=["Yes", "No"],
         ).ask()
 
@@ -229,7 +235,7 @@ class ConfigurationWizard:
             org_role_arn = asyncio.run(get_current_role_arn(session))
             org_account_id = get_account_id_from_arn(org_role_arn)
             action = questionary.select(
-                "Bootstrap an Iambic Spoke Role on this accoun?",
+                "Bootstrap an Iambic Spoke Role on this account?",
                 choices=["Yes", "No"],
             ).ask()
 
@@ -245,6 +251,35 @@ class ConfigurationWizard:
             )
 
             asyncio.run(SPOKE_ROLE_TEMPLATE._apply_to_account(account, ctx))
+
+            action = questionary.select(
+                "Bootstrap an Iambic Spoke Role on all other accounts in the org?",
+                choices=["Yes", "No"],
+            ).ask()
+
+            if action == "No":
+                return
+            roles_across_accounts = asyncio.run(
+                auto_detect_roles_from_org_accounts(
+                    session, aws_org.default_rule.assume_role_names
+                )
+            )
+            accounts = get_organization_accounts(session)
+            for role in roles_across_accounts:
+                assume_role_setting = [AssumeRoleConfiguration(arn=role)]
+                account_id = get_account_id_from_arn(role)
+                account = AWSAccount(
+                    account_id=account_id,
+                    org_id=org_id,
+                    account_name=accounts.get(account_id, account_id),
+                    aws_profile=aws_profile,
+                    assume_role_arns=assume_role_setting,
+                )
+                asyncio.run(SPOKE_ROLE_TEMPLATE._apply_to_account(account, ctx))
+                spoke_role_arn = f"arn:aws:iam::{account_id}:role/{SPOKE_ROLE_TEMPLATE.properties.role_name}"
+                account.assume_role_arns = [AssumeRoleConfiguration(arn=spoke_role_arn)]
+                self.config.aws.accounts.append(account)
+                self.config.write(self.config_path)
 
     def generate_secrets_policy(self):
         # Generates a policy that allows access to secrets

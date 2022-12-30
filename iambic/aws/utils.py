@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import re
 from datetime import datetime
 from enum import Enum
@@ -328,7 +329,7 @@ async def get_aws_account_map(configs: list[Config]) -> dict:
 async def create_assume_role_session(
     boto3_session,
     assume_role_arns: list[AssumeRoleConfiguration],
-    region_name: str,
+    region_name: str = "us-east-1",
     session_name: str = "iambic",
 ) -> Optional[boto3.Session]:
     try:
@@ -378,3 +379,77 @@ def boto3_retry(f):
                     raise
 
     return wrapper
+
+
+async def get_role_arns_from_org_roles(
+    session: boto3.Session, org_roles: list[str]
+) -> list[str]:
+    from iambic.aws.models import AssumeRoleConfiguration
+
+    role_arns: list[str] = []
+    all_org_accounts = set()
+    successfully_assumed_accounts = set()
+    for role in org_roles:
+        account_id = role.split(":")[4]
+        all_org_accounts.add(account_id)
+        if account_id in successfully_assumed_accounts:
+            continue
+        with contextlib.suppress(ClientError):
+            if await create_assume_role_session(
+                session, [AssumeRoleConfiguration(arn=role)]
+            ):
+                log.info(f"Successfully assumed role: {role}")
+                role_arns.append(role)
+                successfully_assumed_accounts.add(role.split(":")[4])
+    unsuccessful_accounts_str = ", ".join(
+        [x for x in all_org_accounts if x not in successfully_assumed_accounts]
+    )
+    log.warning(
+        f"Unable to determine the right role to assume for these accounts: {unsuccessful_accounts_str}. "
+        f"Please specify all role names we should attempt to assume in your configuration."
+    )
+
+    return role_arns
+
+
+def get_organization_accounts(session: boto3.Session) -> dict[str, str]:
+    account_id_to_name: dict[str, str] = {}
+    org = session.client("organizations", region_name="us-east-1")
+    try:
+        paginator = org.get_paginator("list_accounts")
+        for page in paginator.paginate():
+            for account in page.get("Accounts"):
+                account_id_to_name[account["Id"]] = account["Name"]
+    except Exception as e:
+        log.error(
+            f"Unable to retrieve roles from AWS Organizations: {e}", exc_info=True
+        )
+    return account_id_to_name
+
+
+async def get_organization_roles(
+    session: boto3.Session, aws_organizations_role_names: list[str], partition="aws"
+):
+    roles: list[str] = []
+    org = session.client("organizations", region_name="us-east-1")
+    try:
+        paginator = org.get_paginator("list_accounts")
+        for page in paginator.paginate():
+            for account in page.get("Accounts"):
+                roles.extend(
+                    f'arn:{partition}:iam::{account["Id"]}:role/{aws_organizations_role_name}'
+                    for aws_organizations_role_name in aws_organizations_role_names
+                )
+
+    except Exception as e:
+        log.error(
+            f"Unable to retrieve roles from AWS Organizations: {e}", exc_info=True
+        )
+    return roles
+
+
+async def auto_detect_roles_from_org_accounts(
+    org_session, aws_org_role_names
+) -> list[str]:
+    org_roles = await get_organization_roles(org_session, aws_org_role_names)
+    return await get_role_arns_from_org_roles(org_session, org_roles)

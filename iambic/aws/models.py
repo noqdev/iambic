@@ -176,6 +176,9 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
     )
     org_session_info: Optional[dict] = None
 
+    class Config:
+        fields = {"org_session_info": {"exclude": True}}
+
     async def get_boto3_session(self, region_name: str = None):
         region_name = region_name or self.default_region
 

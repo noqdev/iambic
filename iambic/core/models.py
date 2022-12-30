@@ -32,7 +32,7 @@ class BaseModel(PydanticBaseModel):
     def update_forward_refs(cls, **kwargs):
         from iambic.aws.models import Deleted
 
-        kwargs.update({"Union": Union, "Deleted": Deleted})
+        kwargs.update({"Union": Union, "Deleted": Deleted, "List": List, "Set": Set})
         super().update_forward_refs(**kwargs)
 
     class Config:
