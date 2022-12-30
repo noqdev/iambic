@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import asyncio
 import base64
+import os
 from enum import Enum
 from typing import List, Optional
 
@@ -11,6 +14,7 @@ from pydantic import BaseModel, Field
 from slack_bolt import App as SlackBoltApp
 
 from iambic.aws.models import AWSAccount, AWSOrganization
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.models import Variable
 from iambic.core.utils import aio_wrapper, yaml
 
@@ -59,9 +63,9 @@ class GoogleProject(BaseModel):
         [],
         description="A list of variables to be used when creating templates",
     )
-    read_only: Optional[bool] = Field(
-        False,
-        description="If set to True, iambic will only log drift instead of apply changes when drift is detected.",
+    iambic_managed: Optional[IambicManaged] = Field(
+        IambicManaged.UNDEFINED,
+        description="Controls the directionality of iambic changes",
     )
     _service_connection_map: dict = {}
 
@@ -80,8 +84,9 @@ class GoogleProject(BaseModel):
     ):
         # sourcery skip: raise-specific-error
         key = f"{domain}:{service_name}:{service_path}"
-        if service_conn := self._service_connection_map.get(key):
-            return service_conn
+        if not os.environ.get("TESTING"):
+            if service_conn := self._service_connection_map.get(key):
+                return service_conn
 
         admin_credentials = service_account.Credentials.from_service_account_info(
             self.dict(
@@ -141,19 +146,28 @@ class ExtendsConfig(BaseModel):
 
 
 class AWSConfig(BaseModel):
-    organizations: Optional[list[AWSOrganization]] = Field(
-        description="A list of AWS Organizations to be managed by iambic"
+    organizations: list[AWSOrganization] = Field(
+        [], description="A list of AWS Organizations to be managed by iambic"
+    )
+    accounts: List[AWSAccount] = Field(
+        [], description="A list of AWS Accounts to be managed by iambic"
+    )
+    min_accounts_required_for_wildcard_included_accounts: int = Field(
+        3,
+        description=(
+            "Iambic will set included_accounts=* on imported resources that exist on all accounts if the minimum number of accounts is met."
+        ),
     )
 
 
 class Config(BaseModel):
-    aws: Optional[AWSConfig] = Field(
-        description="AWS configuration for iambic to use when managing AWS resources"
+    aws: AWSConfig = Field(
+        AWSConfig(),
+        description="AWS configuration for iambic to use when managing AWS resources",
     )
-    aws_accounts: Optional[list[AWSAccount]] = []
-    google_projects: Optional[List[GoogleProject]] = []
-    okta_organizations: Optional[List[OktaOrganization]] = []
-    extends: Optional[List[ExtendsConfig]] = []
+    google_projects: List[GoogleProject] = []
+    okta_organizations: List[OktaOrganization] = []
+    extends: List[ExtendsConfig] = []
     secrets: Optional[dict] = None
     role_access_tag: Optional[str] = Field(
         "noq-authorized",
@@ -172,17 +186,17 @@ class Config(BaseModel):
         arbitrary_types_allowed = True
 
     async def setup_aws_accounts(self):
-        for elem, account in enumerate(self.aws_accounts):
+        for elem, account in enumerate(self.aws.accounts):
             if not account.role_access_tag:
-                self.aws_accounts[elem].role_access_tag = self.role_access_tag
+                self.aws.accounts[elem].role_access_tag = self.role_access_tag
 
             for variable in self.variables:
                 if variable.key not in [av.key for av in account.variables]:
-                    self.aws_accounts[elem].variables.append(variable)
+                    self.aws.accounts[elem].variables.append(variable)
 
-        account_map = {account.account_id: account for account in self.aws_accounts}
+        account_map = {account.account_id: account for account in self.aws.accounts}
         config_account_idx_map = {
-            account.account_id: idx for idx, account in enumerate(self.aws_accounts)
+            account.account_id: idx for idx, account in enumerate(self.aws.accounts)
         }
 
         if self.aws and self.aws.organizations:
@@ -191,12 +205,14 @@ class Config(BaseModel):
             )
             for org_accounts in orgs_accounts:
                 for account in org_accounts:
+                    if not account.role_access_tag:
+                        account.role_access_tag = self.role_access_tag
                     if (
                         account_elem := config_account_idx_map.get(account.account_id)
                     ) is not None:
-                        self.aws_accounts[account_elem] = account
+                        self.aws.accounts[account_elem] = account
                     else:
-                        self.aws_accounts.append(account)
+                        self.aws.accounts.append(account)
 
     def get_aws_secret(self, extend: ExtendsConfig) -> dict:
         """TODO: Secrets should be moved to the account to prevent an anti-pattern
@@ -251,13 +267,13 @@ class Config(BaseModel):
             for extend in self.extends:
                 if extend.key == ExtendsConfigKey.AWS_SECRETS_MANAGER:
                     for k, v in self.get_aws_secret(extend).items():
-                        if not getattr(self, k):
+                        if not getattr(self, k, None):
                             setattr(self, k, v)
 
     async def get_boto_session_from_arn(self, arn: str, region_name: str = None):
         region_name = region_name or arn.split(":")[3]
         account_id = arn.split(":")[4]
-        aws_account_map = {account.account_id: account for account in self.aws_accounts}
+        aws_account_map = {account.account_id: account for account in self.aws.accounts}
         aws_account = aws_account_map[account_id]
         return await aws_account.get_boto3_session(region_name)
 

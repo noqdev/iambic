@@ -1,15 +1,21 @@
+from __future__ import annotations
+
 import asyncio
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import boto3
 from botocore.exceptions import ClientError
 
 from iambic.core.context import ExecutionContext
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.utils import aio_wrapper, camel_to_snake
+
+if TYPE_CHECKING:
+    from iambic.config.models import Config
 
 
 async def paginated_search(
@@ -166,10 +172,21 @@ def get_account_value(matching_values: list, account_id: str, account_name: str 
             return cur_val
 
 
+def is_regex_match(regex, test_string):
+    if "*" in regex:
+        return re.match(regex.lower(), test_string)
+    else:
+        # it is not an actual regex string, just string comparison
+        return regex.lower() == test_string.lower()
+
+
 def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> bool:
     from iambic.aws.models import AccessModel
 
-    if aws_account.read_only or getattr(resource, "read_only", False):
+    if (
+        aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
+        or getattr(resource, "iambic_managed", None) == IambicManaged.IMPORT_ONLY
+    ):
         return False
 
     # SSO Models don't inherit from AccessModel and rely only on included/excluded orgs.
@@ -207,7 +224,7 @@ def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> boo
         ):
             return True
         elif any(
-            re.match(resource_account.lower(), account_id)
+            is_regex_match(resource_account.lower(), account_id)
             for resource_account in resource.included_accounts
         ):
             return True
@@ -258,6 +275,7 @@ async def remove_expired_resources(
         log_params["parent_resource_id"] = template_resource_id
 
     if hasattr(resource, "expires_at") and resource.expires_at:
+
         if resource.expires_at < datetime.utcnow():
             resource.deleted = True
             log.info("Expired resource found, marking for deletion", **log_params)
@@ -292,7 +310,7 @@ async def set_org_account_variables(client, account: dict) -> dict:
     return account
 
 
-async def get_aws_account_map(configs: list) -> dict:
+async def get_aws_account_map(configs: list[Config]) -> dict:
     """Returns a map containing all account configs across all provided config instances
 
     :param configs:
@@ -300,7 +318,7 @@ async def get_aws_account_map(configs: list) -> dict:
     """
     aws_account_map = dict()
     for config in configs:
-        for aws_account in config.aws_accounts:
+        for aws_account in config.aws.accounts:
             if aws_account_map.get(aws_account.account_id):
                 log.critical(
                     "Account definition found in multiple configs",

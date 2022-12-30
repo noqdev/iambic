@@ -1,12 +1,11 @@
+from __future__ import annotations
+
 from enum import Enum
 from typing import Any, List, Optional, Union
 
 from pydantic import Field
 
-from iambic.aws.models import ExpiryModel
-from iambic.config.models import OktaOrganization
-from iambic.core.context import ExecutionContext
-from iambic.core.models import AccountChangeDetails, BaseModel, BaseTemplate
+from iambic.core.models import BaseModel, ExpiryModel
 
 # Reference: https://www.guidodiepen.nl/2019/02/implementing-a-simple-plugin-framework-in-python/
 
@@ -21,7 +20,7 @@ class UserStatus(Enum):
     deprovisioned = "deprovisioned"
 
 
-class User(BaseModel):
+class User(BaseModel, ExpiryModel):
     idp_name: str
     username: str
     user_id: Optional[str]
@@ -159,12 +158,3 @@ class GroupRequestsTable(BaseModel):
     Expires: Optional[str]
     Status: str
     Last_Updated: str
-
-
-class OktaTemplate(BaseTemplate, ExpiryModel):
-    async def _apply_to_account(
-        self,
-        okta_account: OktaOrganization,
-        context: ExecutionContext,
-    ) -> AccountChangeDetails:
-        raise NotImplementedError

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from iambic.aws.iam.policy.models import ManagedPolicyTemplate
 from iambic.aws.iam.role.models import RoleTemplate
 from iambic.aws.sso.permission_set.models import AWSSSOPermissionSetTemplate

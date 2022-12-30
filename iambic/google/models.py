@@ -1,11 +1,17 @@
+from __future__ import annotations
+
 import asyncio
 from enum import Enum
 
-from iambic.aws.models import ExpiryModel
 from iambic.config.models import Config, GoogleProject
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
-from iambic.core.models import AccountChangeDetails, BaseTemplate, TemplateChangeDetails
+from iambic.core.models import (
+    AccountChangeDetails,
+    BaseTemplate,
+    ExpiryModel,
+    TemplateChangeDetails,
+)
 
 
 class WhoCanInvite(Enum):
@@ -70,6 +76,7 @@ class GroupMemberStatus(Enum):
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
     PENDING = "PENDING"
+    UNDEFINED = "UNDEFINED"
 
 
 class GoogleTemplate(BaseTemplate, ExpiryModel):
@@ -85,7 +92,7 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
     ) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
-            resource_id=self.email,
+            resource_id=self.properties.email,
             resource_type=self.template_type,
             template_path=self.file_path,
         )
@@ -124,7 +131,7 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
 
     @property
     def resource_id(self) -> str:
-        return self.email
+        return self.properties.email
 
     @property
     def resource_type(self) -> str:

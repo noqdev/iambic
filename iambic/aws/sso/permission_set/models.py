@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import re
 from itertools import chain
@@ -27,6 +29,7 @@ from iambic.aws.sso.permission_set.utils import (
 from iambic.aws.utils import evaluate_on_account
 from iambic.config.models import Config
 from iambic.core.context import ExecutionContext
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -323,7 +326,10 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
         return response
 
     def _is_read_only(self, aws_account: AWSAccount):
-        return aws_account.read_only or self.read_only
+        return bool(
+            aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
+            or self.iambic_managed == IambicManaged.IMPORT_ONLY
+        )
 
     async def _apply_to_account(  # noqa: C901
         self, aws_account: AWSAccount, context: ExecutionContext
@@ -626,7 +632,11 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
         log_params = dict(
             resource_type=self.resource_type, resource_id=self.resource_id
         )
-        for account in config.aws_accounts:
+
+        if not config.aws or not config.aws.accounts:
+            return
+
+        for account in config.aws.accounts:
             if not account.sso_details:
                 continue
 
@@ -646,12 +656,12 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
         ]
         if account_changes and context.execute:
             log.info(
-                "Successfully applied resource changes to all aws_accounts.",
+                "Successfully applied resource changes to all AWS accounts.",
                 **log_params,
             )
         elif account_changes and not context.execute:
             log.info(
-                "Successfully detected required resource changes on all aws_accounts.",
+                "Successfully detected required resource changes on all AWS accounts.",
                 **log_params,
             )
         else:

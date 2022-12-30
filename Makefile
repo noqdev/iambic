@@ -20,3 +20,11 @@ create_manifest:
 .PHONY: push_manifest
 push_manifest:
 	docker manifest push public.ecr.aws/s2p9s3r8/iambic
+
+.PHONY: test
+test:
+	python3.10 -m pytest test
+
+.PHONY: functional_test
+functional_test:
+	pytest --cov-report html --cov iambic functional_tests -s

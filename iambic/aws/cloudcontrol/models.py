@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 from iambic.core.models import BaseTemplate

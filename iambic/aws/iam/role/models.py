@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from itertools import chain
@@ -26,15 +28,16 @@ from iambic.aws.models import (
     AWSAccount,
     AWSTemplate,
     Description,
-    ExpiryModel,
     Tag,
 )
 from iambic.aws.utils import apply_to_account
 from iambic.core.context import ExecutionContext
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
     BaseModel,
+    ExpiryModel,
     ProposedChange,
     ProposedChangeType,
 )
@@ -163,11 +166,11 @@ class RoleTemplate(AWSTemplate, AccessModel):
 
         return response
 
-    def _is_read_only(self, aws_account: AWSAccount):
+    def _is_iambic_import_only(self, aws_account: AWSAccount):
         return (
             "aws-service-role" in self.properties.path
-            or aws_account.read_only
-            or self.read_only
+            or aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
+            or self.iambic_managed == IambicManaged.IMPORT_ONLY
         )
 
     async def _apply_to_account(  # noqa: C901
@@ -190,7 +193,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
             resource_id=role_name,
             account=str(aws_account),
         )
-        read_only = self._is_read_only(aws_account)
+        iambic_import_only = self._is_iambic_import_only(aws_account)
 
         current_role = await get_role(role_name, client)
         if current_role:
@@ -211,7 +214,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                     )
                 )
                 log_str = "Active resource found with deleted=false."
-                if context.execute and not read_only:
+                if context.execute and not iambic_import_only:
                     log_str = f"{log_str} Deleting resource..."
                 log.info(log_str, **log_params)
 
