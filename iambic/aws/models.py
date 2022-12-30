@@ -476,6 +476,8 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
             account_id = org_account["Id"]
             if account := existing_accounts_map.get(account_id):
                 account.org_id = self.org_id
+                if org_account.sso_details:
+                    account.sso_details = org_account.sso_details
                 existing_vars = {var["key"] for var in account.variables}
                 for org_var in org_account["variables"]:
                     if org_var["key"] not in existing_vars:

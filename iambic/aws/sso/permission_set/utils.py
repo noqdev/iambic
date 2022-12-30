@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
+from botocore.exceptions import ClientError
 from deepdiff import DeepDiff
 
 from iambic.aws.models import AWSAccount
@@ -762,11 +763,20 @@ async def delete_permission_set(
     )
     await async_batch_processor(tasks, 10, 1)
 
-    # Wait for the detached resources to be deleted so that the permission set can be deleted.
-    await asyncio.sleep(5)
-
-    await aio_wrapper(
-        sso_client.delete_permission_set,
-        InstanceArn=instance_arn,
-        PermissionSetArn=permission_set_arn,
-    )
+    while True:
+        try:
+            await aio_wrapper(
+                sso_client.delete_permission_set,
+                InstanceArn=instance_arn,
+                PermissionSetArn=permission_set_arn,
+            )
+        except ClientError as err:
+            err_response = err.response["Error"]
+            if "PermissionSet has ApplicationProfile associated with it." in err_response["Message"]:
+                # Wait for the detached resources to be deleted so that the permission set can be deleted.
+                log.info("Waiting for resources to be detached from the permission set.", **log_params)
+                await asyncio.sleep(5)
+            elif err_response["Code"] == "ResourceNotFoundException":
+                return
+            else:
+                raise
