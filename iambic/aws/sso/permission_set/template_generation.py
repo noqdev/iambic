@@ -398,14 +398,12 @@ async def generate_aws_permission_set_templates(
 
     log.info("Writing templated AWS SSO Permission Set.")
     for name, refs in grouped_permission_set_map.items():
-        print(f"Starting on {name}")
-        response = await create_templated_permission_set(
+        await create_templated_permission_set(
             aws_account_map,
             name,
             refs,
             resource_dir,
             existing_template_map,
         )
-        print(json.dumps(response, indent=2))
 
     log.info("Finished templated AWS SSO Permission Set generation")

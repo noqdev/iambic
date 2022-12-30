@@ -186,6 +186,9 @@ class Config(BaseModel):
         arbitrary_types_allowed = True
 
     async def setup_aws_accounts(self):
+        if not self.aws:
+            return
+
         for elem, account in enumerate(self.aws.accounts):
             if not account.role_access_tag:
                 self.aws.accounts[elem].role_access_tag = self.role_access_tag
