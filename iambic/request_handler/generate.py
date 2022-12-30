@@ -13,10 +13,10 @@ from iambic.aws.sso.permission_set.template_generation import (
 from iambic.config.models import Config
 
 # TODO: This is a plugin anti-pattern. We need to make a real plugin architecture.
-# from iambic.google.group.template_generation import generate_group_templates
-# from iambic.okta.group.template_generation import (
-#     generate_group_templates as generate_okta_group_templates,
-# )
+from iambic.google.group.template_generation import generate_group_templates
+from iambic.okta.group.template_generation import (
+    generate_group_templates as generate_okta_group_templates,
+)
 
 
 async def generate_templates(configs: list[Config], output_dir: str):
@@ -25,17 +25,17 @@ async def generate_templates(configs: list[Config], output_dir: str):
         generate_aws_managed_policy_templates(configs, output_dir),
         generate_aws_permission_set_templates(configs, output_dir),
     ]
-    # for config in configs:
-    #     for project in config.google_projects:
-    #         for subject in project.subjects:
-    #             tasks.append(
-    #                 generate_group_templates(
-    #                     config, subject.domain, output_dir, project
-    #                 )
-    #             )
-    #     for okta_organization in config.okta_organizations:
-    #         tasks.append(
-    #             generate_okta_group_templates(config, output_dir, okta_organization)
-    #         )
+    for config in configs:
+        for project in config.google_projects:
+            for subject in project.subjects:
+                tasks.append(
+                    generate_group_templates(
+                        config, subject.domain, output_dir, project
+                    )
+                )
+        for okta_organization in config.okta_organizations:
+            tasks.append(
+                generate_okta_group_templates(config, output_dir, okta_organization)
+            )
 
     await asyncio.gather(*tasks)

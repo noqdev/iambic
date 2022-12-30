@@ -20,6 +20,9 @@ aws:
     - org_id: 'o-yfdp0r70sq'
       assume_role_arn: 'arn:aws:iam::259868150464:role/IambicSpokeRole'
       org_name: 'staging'
+      sso_account:
+        account_id: '259868150464'
+        region: 'us-east-1'
       account_rules:
         - included_accounts:
             - '*'

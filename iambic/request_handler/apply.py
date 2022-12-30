@@ -16,7 +16,8 @@ async def apply_changes(
 ) -> list[TemplateChangeDetails]:
 
     templates = load_templates(template_paths)
-    await generate_permission_set_map(config.aws_accounts, templates)
+    if config.aws and config.aws.accounts:
+        await generate_permission_set_map(config.aws.accounts, templates)
 
     template_changes = await asyncio.gather(
         *[template.apply(config, context) for template in templates]

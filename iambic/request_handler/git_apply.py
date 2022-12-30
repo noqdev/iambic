@@ -63,7 +63,8 @@ async def apply_git_changes(
         create_templates_for_modified_files(config, file_changes["modified_files"])
     )
 
-    await generate_permission_set_map(config.aws_accounts, templates)
+    if config.aws and config.aws.accounts:
+        await generate_permission_set_map(config.aws.accounts, templates)
 
     template_changes = await asyncio.gather(
         *[template.apply(config, context) for template in templates]
