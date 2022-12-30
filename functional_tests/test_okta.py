@@ -2,38 +2,16 @@ from __future__ import annotations
 
 import datetime
 import os
-import shutil
-import tempfile
 
+from functional_tests.conftest import IAMBIC_TEST_PATHS
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.parser import load_templates
-from iambic.main import run_apply, run_import
-
-os.environ["AWS_PROFILE"] = "staging/IambicHubRole"
-os.environ["TESTING"] = "true"
-
-okta_config = """
-extends:
-  - key: AWS_SECRETS_MANAGER
-    value: arn:aws:secretsmanager:us-west-2:759357822767:secret:test/okta-only-secret-4XZ2TL
-    assume_role_arn: arn:aws:iam::759357822767:role/IambicSpokeRole
-"""
+from iambic.main import run_apply
 
 
 def test_okta():
-    fd, temp_config_filename = tempfile.mkstemp(
-        prefix="iambic_test_temp_config_filename"
-    )
-    temp_templates_directory = tempfile.mkdtemp(
-        prefix="iambic_test_temp_templates_directory"
-    )
-    with open(temp_config_filename, "w") as temp_file:
-        temp_file.write(okta_config)
-
-    run_import(
-        [temp_config_filename],
-        temp_templates_directory,
-    )
+    temp_config_filename = IAMBIC_TEST_PATHS.config_path
+    temp_templates_directory = IAMBIC_TEST_PATHS.template_dir_path
 
     iambic_functional_test_group_yaml = """template_type: NOQ::Okta::Group
 properties:
@@ -125,6 +103,3 @@ properties:
 
     group_template = load_templates([test_group_fp])[0]
     assert group_template.deleted is True
-    os.close(fd)
-    os.unlink(temp_config_filename)
-    shutil.rmtree(temp_templates_directory)
