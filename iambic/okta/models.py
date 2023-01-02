@@ -105,6 +105,23 @@ class Group(BaseModel):
         return "okta:group"
 
 
+class App(BaseModel):
+    id: str = Field(..., description="ID of the app")
+    name: str = Field(..., description="Name of the app")
+    label: str = Field(..., description="Label of the app")
+    status: Optional[str] = Field(None, description="Status of the app")
+    created: Optional[str] = Field(None, description="Date the app was created")
+    last_updated: Optional[str] = Field(
+        None, description="Date the app was last updated"
+    )
+    accessibility: Optional[dict] = Field(None, description="Accessibility settings")
+    visibility: Optional[dict] = Field(None, description="Visibility settings")
+    features: Optional[list] = Field(None, description="Features settings")
+    sign_on_mode: Optional[str] = Field(None, description="Sign-on mode")
+    credentials: Optional[dict] = Field(None, description="Credentials settings")
+    settings: Optional[dict] = Field(None, description="Settings")
+
+
 class ActionStatus(Enum):
     success = "success"
     error = "error"
