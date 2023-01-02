@@ -6,7 +6,8 @@ import sys
 
 from github import Github
 
-lambda_app = __import__("iambic.lambda.app", globals(), locals(), [], 0)
+iambic_app = __import__("iambic.lambda.app", globals(), locals(), [], 0)
+lambda_run_handler = getattr(iambic_app, "lambda").app.run_handler
 
 MERGEABLE_STATE_CLEAN = "clean"
 MERGEABLE_STATE_BLOCKED = "blocked"
@@ -35,7 +36,7 @@ def handle_issue_comment(github_client, context):
         )
         return
     try:
-        lambda_app.run_handler(None, {"command": "git_apply"})
+        lambda_run_handler(None, {"command": "git_apply"})
     except Exception as e:
         print(e)
         pull_request.create_issue_comment(
