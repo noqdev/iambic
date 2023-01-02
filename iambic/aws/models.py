@@ -445,16 +445,12 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
                     )
                     continue
 
-    async def get_accounts(
-        self, existing_accounts_map: dict[str, AWSAccount] = None
-    ) -> list[AWSAccount]:
+    async def get_accounts(self) -> list[AWSAccount]:
         """Get all accounts in an AWS Organization
 
         Also extends variables for accounts that are already in the config.
         Does not overwrite variables.
         """
-        if existing_accounts_map is None:
-            existing_accounts_map = {}
 
         session = await self.get_boto3_session()
         client = await self.get_boto3_client("organizations")
@@ -469,22 +465,9 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         org_accounts = await asyncio.gather(
             *[set_org_account_variables(client, account) for account in active_accounts]
         )
-        response = list()
-        discovered_accounts = list()
-
-        for org_account in org_accounts:
-            account_id = org_account["Id"]
-            if account := existing_accounts_map.get(account_id):
-                account.org_id = self.org_id
-                if org_account.sso_details:
-                    account.sso_details = org_account.sso_details
-                existing_vars = {var["key"] for var in account.variables}
-                for org_var in org_account["variables"]:
-                    if org_var["key"] not in existing_vars:
-                        account.variables.append(org_var)
-                response.append(account)
-            else:
-                discovered_accounts.append(org_account)
+        discovered_accounts = [
+            org_account for org_account in org_accounts if org_account
+        ]
 
         discovered_accounts = await asyncio.gather(
             *[
@@ -492,7 +475,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
                 for account in discovered_accounts
             ]
         )
-        response.extend([account for account in discovered_accounts if account])
+        response = [account for account in discovered_accounts if account]
 
         if self.sso_account:
             for elem, account in enumerate(response):

@@ -772,9 +772,15 @@ async def delete_permission_set(
             )
         except ClientError as err:
             err_response = err.response["Error"]
-            if "PermissionSet has ApplicationProfile associated with it." in err_response["Message"]:
+            if (
+                "PermissionSet has ApplicationProfile associated with it."
+                in err_response["Message"]
+            ):
                 # Wait for the detached resources to be deleted so that the permission set can be deleted.
-                log.info("Waiting for resources to be detached from the permission set.", **log_params)
+                log.info(
+                    "Waiting for resources to be detached from the permission set.",
+                    **log_params,
+                )
                 await asyncio.sleep(5)
             elif err_response["Code"] == "ResourceNotFoundException":
                 return
