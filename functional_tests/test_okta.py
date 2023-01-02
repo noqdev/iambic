@@ -3,15 +3,15 @@ from __future__ import annotations
 import datetime
 import os
 
-from functional_tests.conftest import IAMBIC_TEST_PATHS
+from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.parser import load_templates
 from iambic.main import run_apply
 
 
 def test_okta():
-    temp_config_filename = IAMBIC_TEST_PATHS.config_path
-    temp_templates_directory = IAMBIC_TEST_PATHS.template_dir_path
+    temp_config_filename = IAMBIC_TEST_DETAILS.config_path
+    temp_templates_directory = IAMBIC_TEST_DETAILS.template_dir_path
 
     iambic_functional_test_group_yaml = """template_type: NOQ::Okta::Group
 properties:
