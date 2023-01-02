@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import os
 
-from functional_tests.conftest import IAMBIC_TEST_PATHS
+from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.parser import load_templates
 from iambic.main import run_apply
 
@@ -22,7 +22,7 @@ properties:
     - email: fakeuser@example.com
 """
     test_group_fp = os.path.join(
-        IAMBIC_TEST_PATHS.template_dir_path,
+        IAMBIC_TEST_DETAILS.template_dir_path,
         "google/groups/noq.dev/iambic_functional_test_group.yaml",
     )
 
@@ -32,9 +32,9 @@ properties:
     # Create group
     run_apply(
         True,
-        IAMBIC_TEST_PATHS.config_path,
+        IAMBIC_TEST_DETAILS.config_path,
         [test_group_fp],
-        IAMBIC_TEST_PATHS.template_dir_path,
+        IAMBIC_TEST_DETAILS.template_dir_path,
     )
 
     # Test Reading Template
@@ -53,9 +53,9 @@ properties:
     group_template.write()
     run_apply(
         True,
-        IAMBIC_TEST_PATHS.config_path,
+        IAMBIC_TEST_DETAILS.config_path,
         [test_group_fp],
-        IAMBIC_TEST_PATHS.template_dir_path,
+        IAMBIC_TEST_DETAILS.template_dir_path,
     )
     group_template = load_templates([test_group_fp])[0]
     assert len(group_template.properties.members) == 2
@@ -64,9 +64,9 @@ properties:
     group_template.write()
     run_apply(
         True,
-        IAMBIC_TEST_PATHS.config_path,
+        IAMBIC_TEST_DETAILS.config_path,
         [test_group_fp],
-        IAMBIC_TEST_PATHS.template_dir_path,
+        IAMBIC_TEST_DETAILS.template_dir_path,
     )
 
     group_template = load_templates([test_group_fp])[0]
