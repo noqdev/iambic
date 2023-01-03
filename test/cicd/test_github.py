@@ -7,6 +7,7 @@ import pytest
 from iambic.cicd.github import (
     MERGEABLE_STATE_BLOCKED,
     MERGEABLE_STATE_CLEAN,
+    format_github_url,
     handle_issue_comment,
 )
 
@@ -20,12 +21,17 @@ def mock_github_client():
 @pytest.fixture
 def issue_comment_context():
     return {
+        "token": "fake-token",
+        "sha": "fake-sha",
         "repository": "example.com/iambic-templates",
         "event_name": "issue_comment",
         "event": {
             "issue": {
                 "number": 1,
-            }
+            },
+            "repository": {
+                "clone_url": "https://github.com/example-org/iambic-templates.git",
+            },
         },
     }
 
@@ -36,6 +42,12 @@ def mock_lambda_run_handler():
         "iambic.cicd.github.lambda_run_handler", autospec=True
     ) as _mock_lambda_run_handler:
         yield _mock_lambda_run_handler
+
+
+@pytest.fixture
+def mock_repository():
+    with patch("iambic.core.git.Repo", autospec=True) as _mock_repository:
+        yield _mock_repository
 
 
 def test_issue_comment_with_non_clean_mergeable_state(
@@ -49,10 +61,22 @@ def test_issue_comment_with_non_clean_mergeable_state(
 
 
 def test_issue_comment_with_clean_mergeable_state(
-    mock_github_client, issue_comment_context, mock_lambda_run_handler
+    mock_github_client, issue_comment_context, mock_lambda_run_handler, mock_repository
 ):
     mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
     mock_pull_request.mergeable_state = MERGEABLE_STATE_CLEAN
+    mock_pull_request.head.sha = issue_comment_context["sha"]
+    mock_repository.clone_from.return_value.head.commit.hexsha = issue_comment_context[
+        "sha"
+    ]
     handle_issue_comment(mock_github_client, issue_comment_context)
     assert mock_lambda_run_handler.called
     assert mock_pull_request.merge.called
+
+
+def test_format_github_url():
+    pr_url = "https://github.com/example-org/iambic-templates.git"
+    fake_token = "foobar"
+    expected_url = "https://oauth2:foobar@github.com/example-org/iambic-templates.git"
+    url = format_github_url(pr_url, fake_token)
+    assert url == expected_url
