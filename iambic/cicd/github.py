@@ -27,7 +27,7 @@ class HandleIssueCommentReturnCode(Enum):
 
 
 def run_handler(context=None):
-    github_token = os.environ.get("GITHUB_TOKEN", None)
+    github_token = context["token"]
     print("event_name: {0}".format(context["event_name"]))
     github_client = Github(github_token)
     # TODO Support Github Enterprise with custom hostname
