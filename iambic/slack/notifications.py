@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from iambic.config.models import Config
 
 

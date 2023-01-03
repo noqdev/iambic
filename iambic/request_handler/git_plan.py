@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from iambic.core.context import ExecutionContext
 from iambic.core.models import TemplateChangeDetails
 from iambic.request_handler.git_apply import apply_git_changes

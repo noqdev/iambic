@@ -1,28 +1,42 @@
+from __future__ import annotations
+
+import asyncio
+import datetime
 import json
+import os
 from enum import Enum
 from types import GenericAlias
-from typing import List, Optional, Set, Union, get_args, get_origin
+from typing import TYPE_CHECKING, List, Optional, Set, Union, get_args, get_origin
 
+import dateparser
 from deepdiff.model import PrettyOrderedSet
+from git import Repo
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field
+from pydantic import Field, validator
 from pydantic.fields import ModelField
 
 from iambic.aws.utils import apply_to_account
-from iambic.config.models import AWSAccount, Config
 from iambic.core.context import ExecutionContext
-from iambic.core.utils import snake_to_camelcap, yaml
+from iambic.core.iambic_enum import IambicManaged
+from iambic.core.logger import log
+from iambic.core.utils import snake_to_camelcap, sort_dict, yaml
 
-
-def to_camel(string):
-    """Convert a snake_case string to CamelCase"""
-    return "".join(word.capitalize() for word in string.split("_"))
+if TYPE_CHECKING:
+    from iambic.aws.models import AWSAccount, Deleted
+    from iambic.config.models import Config
 
 
 class BaseModel(PydanticBaseModel):
+    @classmethod
+    def update_forward_refs(cls, **kwargs):
+        from iambic.aws.models import Deleted
+
+        kwargs.update({"Union": Union, "Deleted": Deleted})
+        super().update_forward_refs(**kwargs)
+
     class Config:
-        alias_generator = to_camel
+        alias_generator = snake_to_camelcap
         allow_population_by_field_name = True
 
     @classmethod
@@ -57,7 +71,10 @@ class BaseModel(PydanticBaseModel):
         as_boto_dict: bool = True,
         context: ExecutionContext = None,
     ):
-        attr_val = getattr(self, attr)
+        # Support for nested attributes via dot notation. Example: properties.tags
+        attr_val = self
+        for attr_key in attr.split("."):
+            attr_val = getattr(attr_val, attr_key)
 
         if as_boto_dict and hasattr(attr_val, "_apply_resource_dict"):
             return attr_val._apply_resource_dict(aws_account, context)
@@ -69,7 +86,12 @@ class BaseModel(PydanticBaseModel):
         ]
         if len(matching_definitions) == 0:
             # Fallback to the default definition
-            return self.__fields__[attr].default
+            field = self
+            split_key = attr.split(".")
+            if len(split_key) > 1:
+                for key in split_key[:-1]:
+                    field = getattr(field, key)
+            return field.__fields__[split_key[-1]].default
         elif as_boto_dict:
             return [
                 match._apply_resource_dict(aws_account, context)
@@ -95,16 +117,21 @@ class BaseModel(PydanticBaseModel):
             "file_path",
         }
         exclude_keys.update(self.exclude_keys)
-
+        has_properties = hasattr(self, "properties")
+        properties = getattr(self, "properties", self)
         if aws_account:
             resource_dict = {
-                k: self.get_attribute_val_for_account(aws_account, k, context=context)
-                for k in self.__dict__.keys()
+                k: self.get_attribute_val_for_account(
+                    aws_account,
+                    f"properties.{k}" if has_properties else k,
+                    context=context,
+                )
+                for k in properties.__dict__.keys()
                 if k not in exclude_keys
             }
             resource_dict = {k: v for k, v in resource_dict.items() if bool(v)}
         else:
-            resource_dict = self.dict(
+            resource_dict = properties.dict(
                 exclude=exclude_keys, exclude_none=True, exclude_unset=False
             )
 
@@ -123,6 +150,34 @@ class BaseModel(PydanticBaseModel):
         rtemplate = Environment(loader=BaseLoader()).from_string(json.dumps(response))
         data = rtemplate.render(**variables)
         return json.loads(data)
+
+    async def remove_expired_resources(self, context: ExecutionContext):
+        # Look at current model and recurse through submodules to see if it is a subclass of ExpiryModel
+        # If it is, then call the remove_expired_resources method
+        if issubclass(type(self), ExpiryModel):
+            if hasattr(self, "expires_at") and self.expires_at:
+                if self.expires_at < datetime.datetime.utcnow():
+                    self.deleted = True
+                    return self
+        for field_name in self.__fields__.keys():
+            field_val = getattr(self, field_name)
+            if isinstance(field_val, list):
+                await asyncio.gather(
+                    *[elem.remove_expired_resources(context) for elem in field_val]
+                )
+                for elem in field_val:
+                    if getattr(elem, "deleted", None) is True:
+                        field_val.remove(elem)
+
+            elif not (
+                isinstance(field_val, BaseModel) or isinstance(field_val, ExpiryModel)
+            ):
+                continue
+
+            else:
+                await field_val.remove_expired_resources(context)
+                if getattr(field_val, "deleted", None) is True:
+                    setattr(self, field_name, None)
 
     @property
     def exclude_keys(self) -> set:
@@ -206,12 +261,14 @@ class TemplateChangeDetails(PydanticBaseModel):
         return json.loads(response)
 
 
-class BaseTemplate(BaseModel):
+class BaseTemplate(
+    BaseModel,
+):
     template_type: str
     file_path: str
-    read_only: Optional[bool] = Field(
-        False,
-        description="If set to True, iambic will only log drift instead of apply changes when drift is detected.",
+    iambic_managed: Optional[IambicManaged] = Field(
+        IambicManaged.UNDEFINED,
+        description="Controls the directionality of Iambic changes",
     )
 
     def dict(
@@ -248,20 +305,35 @@ class BaseTemplate(BaseModel):
         return template_dict
 
     def write(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
-        as_yaml = yaml.dump(
-            self.dict(
-                exclude_none=exclude_none,
-                exclude_unset=exclude_unset,
-                exclude_defaults=exclude_defaults,
-            )
+        input_dict = self.dict(
+            exclude_none=exclude_none,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude={"file_path"},
         )
+        sorted_input_dict = sort_dict(input_dict)
+        as_yaml = yaml.dump(sorted_input_dict)
         # Force template_type to be at the top of the yaml
         template_type_str = f"template_type: {self.template_type}"
         as_yaml = as_yaml.replace(f"{template_type_str}\n", "")
         as_yaml = as_yaml.replace(f"\n{template_type_str}", "")
         as_yaml = f"{template_type_str}\n{as_yaml}"
+        os.makedirs(os.path.dirname(os.path.expanduser(self.file_path)), exist_ok=True)
         with open(self.file_path, "w") as f:
             f.write(as_yaml)
+
+    def delete(self):
+        log.info("Deleting template file", file_path=self.file_path)
+        try:
+            repo = Repo(self.file_path, search_parent_directories=True)
+            repo.index.remove([self.file_path], working_tree=True)
+        except Exception as e:
+            log.error(
+                "Unable to remove file from local Git repo. Deleting manually",
+                error=e,
+                file_path=self.file_path,
+            )
+            os.remove(self.file_path)
 
     async def apply(
         self, config: Config, context: ExecutionContext
@@ -271,3 +343,31 @@ class BaseTemplate(BaseModel):
     @classmethod
     def load(cls, file_path: str):
         return cls(file_path=file_path, **yaml.load(open(file_path)))
+
+
+class Variable(PydanticBaseModel):
+    key: str
+    value: str
+
+
+class ExpiryModel(PydanticBaseModel):
+    expires_at: Optional[Union[str, datetime.datetime, datetime.date]] = Field(
+        None, description="The date and time the resource will be/was set to deleted."
+    )
+    deleted: Optional[Union[bool, List[Deleted]]] = Field(
+        False,
+        description=(
+            "Denotes whether the resource has been removed from AWS."
+            "Upon being set to true, the resource will be deleted the next time iambic is ran."
+        ),
+    )
+
+    @validator("expires_at", pre=True)
+    def parse_expires_at(cls, value):
+        if not value or isinstance(value, datetime.datetime):
+            return value
+        elif isinstance(value, datetime.date):
+            return datetime.datetime.combine(value, datetime.datetime.min.time())
+        return dateparser.parse(
+            value,
+        )

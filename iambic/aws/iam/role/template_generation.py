@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import pathlib
 
@@ -10,10 +12,13 @@ from iambic.aws.iam.role.utils import (
     list_role_tags,
     list_roles,
 )
+from iambic.aws.models import AWSAccount
 from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
-from iambic.config.models import AWSAccount, Config
+from iambic.config.models import Config
 from iambic.core import noq_json as json
+from iambic.core.constants import IAMBIC_MANAGED
 from iambic.core.logger import log
+from iambic.core.parser import load_templates
 from iambic.core.template_generation import (
     base_group_dict_attribute,
     base_group_str_attribute,
@@ -28,12 +33,22 @@ ROLE_RESPONSE_DIR = pathlib.Path.home().joinpath(".iambic", "resources", "aws", 
 
 
 def get_role_dir(base_dir: str) -> str:
-    repo_dir = os.path.join(base_dir, "resources", "aws", "roles")
-    os.makedirs(repo_dir, exist_ok=True)
-    return str(repo_dir)
+    return str(os.path.join(base_dir, "resources", "aws", "roles"))
 
 
-def get_templated_role_file_path(role_dir: str, role_name: str):
+def get_templated_role_file_path(
+    role_dir: str,
+    role_name: str,
+    included_accounts: list[str],
+    account_map: dict[str, AWSAccount],
+) -> str:
+    if included_accounts is not None and len(included_accounts) > 1:
+        separator = "multi_account"
+    elif included_accounts == ["*"] or included_accounts is None:
+        separator = "all_accounts"
+    else:
+        separator = included_accounts[0]
+
     file_name = (
         role_name.replace("{{", "")
         .replace("}}_", "_")
@@ -41,7 +56,7 @@ def get_templated_role_file_path(role_dir: str, role_name: str):
         .replace(".", "_")
         .lower()
     )
-    return str(os.path.join(role_dir, f"{file_name}.yaml"))
+    return str(os.path.join(role_dir, separator, f"{file_name}.yaml"))
 
 
 def get_account_role_resource_dir(account_id: str) -> str:
@@ -56,7 +71,7 @@ async def generate_account_role_resource_files(aws_account: AWSAccount) -> dict:
     messages = []
 
     response = dict(account_id=aws_account.account_id, roles=[])
-    iam_client = aws_account.get_boto3_client("iam")
+    iam_client = await aws_account.get_boto3_client("iam")
     account_roles = await list_roles(iam_client)
 
     log.info(
@@ -94,7 +109,7 @@ async def generate_account_role_resource_files(aws_account: AWSAccount) -> dict:
 async def set_role_resource_tags(
     role_name: str, role_resource_path: str, aws_account: AWSAccount
 ):
-    iam_client = aws_account.get_boto3_client("iam")
+    iam_client = await aws_account.get_boto3_client("iam")
     role_tags = await list_role_tags(role_name, iam_client)
     await resource_file_upsert(role_resource_path, {"Tags": role_tags}, False)
 
@@ -102,7 +117,7 @@ async def set_role_resource_tags(
 async def set_role_resource_inline_policies(
     role_name: str, role_resource_path: str, aws_account: AWSAccount
 ):
-    iam_client = aws_account.get_boto3_client("iam")
+    iam_client = await aws_account.get_boto3_client("iam")
     role_inline_policies = await get_role_inline_policies(role_name, iam_client)
     for k in role_inline_policies.keys():
         role_inline_policies[k]["policy_name"] = k
@@ -116,11 +131,22 @@ async def set_role_resource_inline_policies(
 async def set_role_resource_managed_policies(
     role_name: str, role_resource_path: str, aws_account: AWSAccount
 ):
-    iam_client = aws_account.get_boto3_client("iam")
+    iam_client = await aws_account.get_boto3_client("iam")
     role_managed_policies = await get_role_managed_policies(role_name, iam_client)
     await resource_file_upsert(
         role_resource_path, {"ManagedPolicies": role_managed_policies}, False
     )
+
+
+async def _account_id_to_role_map(role_refs):
+    account_id_to_role_map = {}
+    for role_ref in role_refs:
+        async with aiofiles.open(role_ref["path"], mode="r") as f:
+            content_dict = json.loads(await f.read())
+            account_id_to_role_map[role_ref["account_id"]] = normalize_boto3_resp(
+                content_dict
+            )
+    return account_id_to_role_map
 
 
 async def create_templated_role(  # noqa: C901
@@ -130,18 +156,21 @@ async def create_templated_role(  # noqa: C901
     role_refs: list[dict],
     role_dir: str,
     existing_template_map: dict,
-):
-    account_id_to_role_map = {}
+    configs: list[Config],
+) -> RoleTemplate:
+    account_id_to_role_map = await _account_id_to_role_map(role_refs)
     num_of_accounts = len(role_refs)
-    for role_ref in role_refs:
-        async with aiofiles.open(role_ref["path"], mode="r") as f:
-            content_dict = json.loads(await f.read())
-            account_id_to_role_map[role_ref["account_id"]] = normalize_boto3_resp(
-                content_dict
-            )
+
+    min_accounts_required_for_wildcard_included_accounts = max(
+        [
+            config.aws.min_accounts_required_for_wildcard_included_accounts
+            for config in configs
+        ]
+    )
 
     # Generate the params used for attribute creation
-    role_template_params = {"role_name": role_name}
+    role_template_params = {"identifier": role_name}
+    role_template_properties = {"role_name": role_name}
     path_resources = list()
     description_resources = list()
     managed_policy_resources = list()
@@ -184,6 +213,10 @@ async def create_templated_role(  # noqa: C901
             )
 
         if inline_policies := role_dict.get("inline_policies"):
+            # Normalize the inline policy statements to be a list
+            for inline_policy in inline_policies:
+                if isinstance(inline_policy.get("statement"), dict):
+                    inline_policy["statement"] = [inline_policy["statement"]]
             inline_policy_document_resources.append(
                 {
                     "account_id": account_id,
@@ -207,17 +240,22 @@ async def create_templated_role(  # noqa: C901
                 {"account_id": account_id, "resources": [{"resource_val": description}]}
             )
 
-    if len(role_refs) != len(aws_account_map):
+    if (
+        len(role_refs) != len(aws_account_map)
+        or len(aws_account_map) <= min_accounts_required_for_wildcard_included_accounts
+    ):
         role_template_params["included_accounts"] = [
             aws_account_map[role_ref["account_id"]].account_name
             for role_ref in role_refs
         ]
+    else:
+        role_template_params["included_accounts"] = ["*"]
 
     path = await group_int_or_str_attribute(
         aws_account_map, num_of_accounts, path_resources, "path"
     )
     if path != "/":
-        role_template_params["path"] = path
+        role_template_properties["path"] = path
 
     max_session_duration = await group_int_or_str_attribute(
         aws_account_map,
@@ -226,32 +264,32 @@ async def create_templated_role(  # noqa: C901
         "max_session_duration",
     )
     if max_session_duration != 3600:
-        role_template_params["max_session_duration"] = max_session_duration
+        role_template_properties["max_session_duration"] = max_session_duration
 
     if assume_role_policy_document_resources:
-        role_template_params[
+        role_template_properties[
             "assume_role_policy_document"
         ] = await group_dict_attribute(
             aws_account_map, num_of_accounts, assume_role_policy_document_resources
         )
 
     if permissions_boundary_resources:
-        role_template_params["permissions_boundary"] = await group_dict_attribute(
+        role_template_properties["permissions_boundary"] = await group_dict_attribute(
             aws_account_map, num_of_accounts, permissions_boundary_resources
         )
 
     if description_resources:
-        role_template_params["description"] = await group_int_or_str_attribute(
+        role_template_properties["description"] = await group_int_or_str_attribute(
             aws_account_map, num_of_accounts, description_resources, "description"
         )
 
     if managed_policy_resources:
-        role_template_params["managed_policies"] = await group_dict_attribute(
+        role_template_properties["managed_policies"] = await group_dict_attribute(
             aws_account_map, num_of_accounts, managed_policy_resources, False
         )
 
     if inline_policy_document_resources:
-        role_template_params["inline_policies"] = await group_dict_attribute(
+        role_template_properties["inline_policies"] = await group_dict_attribute(
             aws_account_map, num_of_accounts, inline_policy_document_resources, False
         )
 
@@ -273,14 +311,14 @@ async def create_templated_role(  # noqa: C901
                 tags.append({"included_accounts": included_accounts, **tag})
 
         if tags:
-            role_template_params[
+            role_template_properties[
                 "tags"
             ] = await set_included_accounts_for_grouped_attribute(
                 aws_account_map, num_of_accounts, tags
             )
-            for elem in range(len(role_template_params["tags"])):
-                if role_template_params["tags"][elem]["included_accounts"] == ["*"]:
-                    role_template_params["tags"][elem].pop("included_accounts")
+            for elem in range(len(role_template_properties["tags"])):
+                if role_template_properties["tags"][elem]["included_accounts"] == ["*"]:
+                    role_template_properties["tags"][elem].pop("included_accounts")
 
         if role_access:
             role_template_params[
@@ -294,20 +332,45 @@ async def create_templated_role(  # noqa: C901
                 ]:
                     role_template_params["role_access"][elem].pop("included_accounts")
 
+    # iambic-specific knowledge requires us to load the existing template
+    # because it will not be reflected by AWS API.
+    existing_template_path = existing_template_map.get(role_name, None)
+    if existing_template_path is not None:
+        # In this juncture, we don't have the template object, only the path.
+        # We have to re-load from filesystem again. Opportunities to reuse
+        # the object because caller already walk through the repos and load the
+        # templates before calling this function.
+        templates = load_templates([existing_template_path])
+        existing_template = templates[0]
+        role_template_params[IAMBIC_MANAGED] = existing_template.iambic_managed
+
     try:
         role = RoleTemplate(
             file_path=existing_template_map.get(
-                role_name, get_templated_role_file_path(role_dir, role_name)
+                role_name,
+                get_templated_role_file_path(
+                    role_dir,
+                    role_name,
+                    role_template_params.get("included_accounts"),
+                    aws_account_map,
+                ),
             ),
+            properties=role_template_properties,
             **role_template_params,
         )
         role.write()
+        return role
     except Exception as err:
-        log.info(str(err), role_params=role_template_params)
+        log.exception(
+            "Unable to create role template.",
+            error=str(err),
+            role_params=role_template_params,
+        )
+        return None
 
 
 async def generate_aws_role_templates(configs: list[Config], base_output_dir: str):
-    aws_account_map = get_aws_account_map(configs)
+    aws_account_map = await get_aws_account_map(configs)
     existing_template_map = await get_existing_template_file_map(
         base_output_dir, "AWS::IAM::Role"
     )
@@ -381,6 +444,7 @@ async def generate_aws_role_templates(configs: list[Config], base_output_dir: st
             role_refs,
             role_dir,
             existing_template_map,
+            configs,
         )
 
     log.info("Finished templated role generation")

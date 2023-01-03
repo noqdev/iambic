@@ -2,25 +2,43 @@ extends:
   - key: AWS_SECRETS_MANAGER
     value: arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/google-MmAS1o
     assume_role_arn: arn:aws:iam::759357822767:role/IambicSpokeRole
-aws_accounts:
-  - account_id: '759357822767'
-    account_name: dev
-    assume_role_arn: 'arn:aws:iam::759357822767:role/IambicSpokeRole'
-  - account_id: '259868150464'
-    account_name: staging
-    assume_role_arn: 'arn:aws:iam::259868150464:role/IambicSpokeRole'
-  - account_id: '940552945933'
-    account_name: prod
-    assume_role_arn: 'arn:aws:iam::940552945933:role/IambicSpokeRole'
 
+aws:
+  organizations:
+    - org_id: 'o-yfdp0r70sq'
+      assume_role_arn: 'arn:aws:iam::259868150464:role/IambicSpokeRole'
+      org_name: 'staging'
+      account_rules:
+        - included_accounts:
+            - '*'
+          enabled: true
+        - included_accounts:
+            - '969947703986'
+            - '114567474685'
+          enabled: false
+      default_rule:
+        enabled: true
+  accounts:
+    - account_id: '759357822767'
+      account_name: dev
+      assume_role_arn: 'arn:aws:iam::759357822767:role/IambicSpokeRole'
+    - account_id: '259868150464'
+      account_name: staging
+      assume_role_arn: 'arn:aws:iam::259868150464:role/IambicSpokeRole'
+    - account_id: '940552945933'
+      account_name: prod
+      assume_role_arn: 'arn:aws:iam::940552945933:role/IambicSpokeRole'
+
+# TODO: Make sure google.groups.enabled = False does what is advertised.
+# TODO: Add permissions permanently to the IAM role.
 google:
   groups:
-    enabled: false
+    enabled: true
 
 slack:
   alert_channel_id: 'C046KESSMQ8'
 
 sqs:
   queues:
-    iam_mutation: 
+    iam_mutation:
       arn: arn:aws:sqs:us-east-1:759357822767:noqform-iam-mutation-events

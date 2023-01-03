@@ -1,122 +1,49 @@
+from __future__ import annotations
+
+import asyncio
 import base64
+import os
 from enum import Enum
 from typing import List, Optional
 
 import boto3
-import botocore
 import googleapiclient.discovery
 from google.oauth2 import service_account
-from pydantic import BaseModel, Field, constr
+from okta.client import Client as OktaClient
+from pydantic import BaseModel, Field
 from slack_bolt import App as SlackBoltApp
 
-from iambic.aws.utils import RegionName
-from iambic.core.logger import log
+from iambic.aws.models import AWSAccount, AWSOrganization
+from iambic.core.iambic_enum import IambicManaged
+from iambic.core.models import Variable
 from iambic.core.utils import aio_wrapper, yaml
-
-
-class Variable(BaseModel):
-    key: str
-    value: str
-
-
-class AWSAccount(BaseModel):
-    account_id: constr(min_length=12, max_length=12) = Field(
-        None, description="The AWS Account ID"
-    )
-    org_id: Optional[str] = Field(
-        None,
-        description="A unique identifier designating the identity of the organization",
-    )
-    account_name: Optional[str] = None
-    default_region: Optional[RegionName] = Field(
-        RegionName.us_east_1,
-        description="Default region to use when making AWS requests",
-    )
-    aws_profile: Optional[str] = Field(
-        None,
-        description="The AWS profile used when making calls to the account",
-    )
-    assume_role_arn: Optional[str] = Field(
-        None,
-        description="The role arn to assume into when making calls to the account",
-    )
-    external_id: Optional[str] = Field(
-        None,
-        description="The external id to use for assuming into a role when making calls to the account",
-    )
-    role_access_tag: Optional[str] = Field(
-        None,
-        description="The key of the tag used to store users and groups that can assume into the role the tag is on",
-    )
-    variables: Optional[List[Variable]] = Field(
-        [],
-        description="A list of variables to be used when creating templates",
-    )
-    boto3_session_map: Optional[dict] = None
-    read_only: Optional[bool] = Field(
-        False,
-        description="If set to True, iambic will only log drift instead of apply changes when drift is detected.",
-    )
-
-    def get_boto3_session(self, region_name: str = None):
-        region_name = region_name or self.default_region
-
-        if self.boto3_session_map is None:
-            self.boto3_session_map = {}
-        elif boto3_session := self.boto3_session_map.get(region_name):
-            return boto3_session
-
-        if self.aws_profile:
-            try:
-                self.boto3_session_map[region_name] = boto3.Session(
-                    profile_name=self.aws_profile, region_name=region_name
-                )
-            except Exception as err:
-                log.exception(err)
-            else:
-                return self.boto3_session_map[region_name]
-
-        session = boto3.Session(region_name=region_name)
-        if self.assume_role_arn:
-            try:
-                sts = session.client("sts")
-                role_params = dict(
-                    RoleArn=self.assume_role_arn,
-                    RoleSessionName="iambic",
-                )
-                if self.external_id:
-                    role_params["ExternalId"] = self.external_id
-                role = sts.assume_role(**role_params)
-                self.boto3_session_map[region_name] = boto3.Session(
-                    region_name=region_name,
-                    aws_access_key_id=role["Credentials"]["AccessKeyId"],
-                    aws_secret_access_key=role["Credentials"]["SecretAccessKey"],
-                    aws_session_token=role["Credentials"]["SessionToken"],
-                )
-            except Exception as err:
-                log.exception(err)
-            else:
-                return self.boto3_session_map[region_name]
-
-        self.boto3_session_map[region_name] = session
-        return self.boto3_session_map[region_name]
-
-    def get_boto3_client(self, service: str, region_name: str = None):
-        return self.get_boto3_session(region_name).client(
-            service, config=botocore.client.Config(max_pool_connections=50)
-        )
-
-    def __str__(self):
-        return f"{self.account_name} - ({self.account_id})"
-
-    def __init__(self, **kwargs):
-        super(AWSAccount, self).__init__(**kwargs)
-        self.default_region = self.default_region.value
 
 
 class GoogleSubjects(BaseModel):
     domain: str
     service_account: str
+
+
+class OktaOrganization(BaseModel):
+    idp_name: str
+    org_url: str
+    api_token: str
+    request_timeout: int = 60
+    client: Optional[OktaClient]
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    async def get_okta_client(self):
+        if not self.client:
+            self.client = OktaClient(
+                {
+                    "orgUrl": self.org_url,
+                    "token": self.api_token,
+                    "requestTimeout": self.request_timeout,
+                }
+            )
+        return self.client
 
 
 class GoogleProject(BaseModel):
@@ -136,9 +63,9 @@ class GoogleProject(BaseModel):
         [],
         description="A list of variables to be used when creating templates",
     )
-    read_only: Optional[bool] = Field(
-        False,
-        description="If set to True, iambic will only log drift instead of apply changes when drift is detected.",
+    iambic_managed: Optional[IambicManaged] = Field(
+        IambicManaged.UNDEFINED,
+        description="Controls the directionality of iambic changes",
     )
     _service_connection_map: dict = {}
 
@@ -157,8 +84,9 @@ class GoogleProject(BaseModel):
     ):
         # sourcery skip: raise-specific-error
         key = f"{domain}:{service_name}:{service_path}"
-        if service_conn := self._service_connection_map.get(key):
-            return service_conn
+        if not os.environ.get("TESTING"):
+            if service_conn := self._service_connection_map.get(key):
+                return service_conn
 
         admin_credentials = service_account.Credentials.from_service_account_info(
             self.dict(
@@ -217,9 +145,28 @@ class ExtendsConfig(BaseModel):
     external_id: Optional[str]
 
 
+class AWSConfig(BaseModel):
+    organizations: list[AWSOrganization] = Field(
+        [], description="A list of AWS Organizations to be managed by iambic"
+    )
+    accounts: List[AWSAccount] = Field(
+        [], description="A list of AWS Accounts to be managed by iambic"
+    )
+    min_accounts_required_for_wildcard_included_accounts: int = Field(
+        3,
+        description=(
+            "Iambic will set included_accounts=* on imported resources that exist on all accounts if the minimum number of accounts is met."
+        ),
+    )
+
+
 class Config(BaseModel):
-    aws_accounts: List[AWSAccount]
+    aws: AWSConfig = Field(
+        AWSConfig(),
+        description="AWS configuration for iambic to use when managing AWS resources",
+    )
     google_projects: List[GoogleProject] = []
+    okta_organizations: List[OktaOrganization] = []
     extends: List[ExtendsConfig] = []
     secrets: Optional[dict] = None
     role_access_tag: Optional[str] = Field(
@@ -238,14 +185,34 @@ class Config(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def set_account_defaults(self):
-        for elem, account in enumerate(self.aws_accounts):
+    async def setup_aws_accounts(self):
+        for elem, account in enumerate(self.aws.accounts):
             if not account.role_access_tag:
-                self.aws_accounts[elem].role_access_tag = self.role_access_tag
+                self.aws.accounts[elem].role_access_tag = self.role_access_tag
 
             for variable in self.variables:
                 if variable.key not in [av.key for av in account.variables]:
-                    self.aws_accounts[elem].variables.append(variable)
+                    self.aws.accounts[elem].variables.append(variable)
+
+        account_map = {account.account_id: account for account in self.aws.accounts}
+        config_account_idx_map = {
+            account.account_id: idx for idx, account in enumerate(self.aws.accounts)
+        }
+
+        if self.aws and self.aws.organizations:
+            orgs_accounts = await asyncio.gather(
+                *[org.get_accounts(account_map) for org in self.aws.organizations]
+            )
+            for org_accounts in orgs_accounts:
+                for account in org_accounts:
+                    if not account.role_access_tag:
+                        account.role_access_tag = self.role_access_tag
+                    if (
+                        account_elem := config_account_idx_map.get(account.account_id)
+                    ) is not None:
+                        self.aws.accounts[account_elem] = account
+                    else:
+                        self.aws.accounts.append(account)
 
     def get_aws_secret(self, extend: ExtendsConfig) -> dict:
         """TODO: Secrets should be moved to the account to prevent an anti-pattern
@@ -291,20 +258,24 @@ class Config(BaseModel):
         if self.secrets and (google_secrets := self.secrets.get("google")):
             self.google_projects = [GoogleProject(**x) for x in google_secrets]
 
+    def configure_okta(self):
+        if self.secrets and (okta_secrets := self.secrets.get("okta")):
+            self.okta_organizations = [OktaOrganization(**x) for x in okta_secrets]
+
     def combine_extended_configs(self):
         if self.extends:
             for extend in self.extends:
                 if extend.key == ExtendsConfigKey.AWS_SECRETS_MANAGER:
                     for k, v in self.get_aws_secret(extend).items():
-                        if not getattr(self, k):
+                        if not getattr(self, k, None):
                             setattr(self, k, v)
 
-    def get_boto_session_from_arn(self, arn: str, region_name: str = None):
+    async def get_boto_session_from_arn(self, arn: str, region_name: str = None):
         region_name = region_name or arn.split(":")[3]
         account_id = arn.split(":")[4]
-        aws_account_map = {account.account_id: account for account in self.aws_accounts}
+        aws_account_map = {account.account_id: account for account in self.aws.accounts}
         aws_account = aws_account_map[account_id]
-        return aws_account.get_boto3_session(region_name)
+        return await aws_account.get_boto3_session(region_name)
 
     @classmethod
     def load(cls, file_path: str):
@@ -312,6 +283,7 @@ class Config(BaseModel):
         c.combine_extended_configs()
         c.configure_slack()
         c.configure_google()
+        c.configure_okta()
         return c
 
     @classmethod

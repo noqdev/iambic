@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from itertools import chain
@@ -20,12 +22,18 @@ from iambic.aws.iam.role.utils import (
     get_role,
     update_assume_role_policy,
 )
-from iambic.aws.models import ARN_RE, AccessModel, AWSTemplate, ExpiryModel, Tag
+from iambic.aws.models import ARN_RE, AccessModel, AWSAccount, AWSTemplate, Tag
 from iambic.aws.utils import apply_to_account
-from iambic.config.models import AWSAccount
 from iambic.core.context import ExecutionContext
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
-from iambic.core.models import AccountChangeDetails, ProposedChange, ProposedChangeType
+from iambic.core.models import (
+    AccountChangeDetails,
+    BaseModel,
+    ExpiryModel,
+    ProposedChange,
+    ProposedChangeType,
+)
 from iambic.core.utils import aio_wrapper
 
 
@@ -61,8 +69,7 @@ class PermissionBoundary(ExpiryModel, AccessModel):
         return self.permissions_boundary_arn
 
 
-class RoleTemplate(AWSTemplate, AccessModel):
-    template_type = "NOQ::AWS::IAM::Role"
+class RoleProperties(BaseModel):
     role_name: str = Field(
         description="Name of the role",
     )
@@ -76,13 +83,12 @@ class RoleTemplate(AWSTemplate, AccessModel):
     permissions_boundary: Optional[
         Union[None, PermissionBoundary, list[PermissionBoundary]]
     ] = None
-    role_access: Optional[list[RoleAccess]] = Field(
-        [],
-        description="List of users and groups who can assume into the role",
-    )
     assume_role_policy_document: Optional[
-        Union[None, AssumeRolePolicyDocument, list[AssumeRolePolicyDocument]]
-    ] = None
+        Union[None, list[AssumeRolePolicyDocument], AssumeRolePolicyDocument]
+    ] = Field(
+        [],
+        description="Who can assume the Role",
+    )
     tags: Optional[list[Tag]] = Field(
         [],
         description="List of tags attached to the role",
@@ -94,6 +100,18 @@ class RoleTemplate(AWSTemplate, AccessModel):
     inline_policies: Optional[list[PolicyDocument]] = Field(
         [],
         description="List of the role's inline policies",
+    )
+
+
+class RoleTemplate(AWSTemplate, AccessModel):
+    template_type = "NOQ::AWS::IAM::Role"
+    identifier: str
+    properties: RoleProperties = Field(
+        description="Properties of the role",
+    )
+    role_access: Optional[list[RoleAccess]] = Field(
+        [],
+        description="List of users and groups who can assume into the role",
     )
 
     def _apply_resource_dict(
@@ -141,15 +159,17 @@ class RoleTemplate(AWSTemplate, AccessModel):
 
         return response
 
-    def _is_read_only(self, aws_account: AWSAccount):
+    def _is_iambic_import_only(self, aws_account: AWSAccount):
         return (
-            "aws-service-role" in self.path or aws_account.read_only or self.read_only
+            "aws-service-role" in self.properties.path
+            or aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
+            or self.iambic_managed == IambicManaged.IMPORT_ONLY
         )
 
     async def _apply_to_account(  # noqa: C901
         self, aws_account: AWSAccount, context: ExecutionContext
     ) -> AccountChangeDetails:
-        boto3_session = aws_account.get_boto3_session()
+        boto3_session = await aws_account.get_boto3_session()
         client = boto3_session.client(
             "iam", config=botocore.client.Config(max_pool_connections=50)
         )
@@ -166,7 +186,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
             resource_id=role_name,
             account=str(aws_account),
         )
-        read_only = self._is_read_only(aws_account)
+        iambic_import_only = self._is_iambic_import_only(aws_account)
 
         current_role = await get_role(role_name, client)
         if current_role:
@@ -187,7 +207,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                     )
                 )
                 log_str = "Active resource found with deleted=false."
-                if context.execute and not read_only:
+                if context.execute and not iambic_import_only:
                     log_str = f"{log_str} Deleting resource..."
                 log.info(log_str, **log_params)
 
@@ -338,4 +358,4 @@ class RoleTemplate(AWSTemplate, AccessModel):
 
     @property
     def resource_id(self):
-        return self.role_name
+        return self.properties.role_name

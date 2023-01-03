@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import re
 from io import StringIO
@@ -43,7 +45,10 @@ async def clone_git_repos(config, repo_base_path: str) -> None:
 
 
 async def retrieve_git_changes(
-    repo_dir: str, allow_dirty: bool = False
+    repo_dir: str,
+    allow_dirty: bool = False,
+    from_sha=None,
+    to_sha=None,
 ) -> dict[str, list[GitDiff]]:
     repo = Repo(repo_dir)
     if repo.is_dirty():
@@ -52,15 +57,28 @@ async def retrieve_git_changes(
             "Refusing to proceed",
             file_path=repo_dir,
         )
-    # Fetch latest
-    for remote in repo.remotes:
-        remote.fetch()
-    # Last commit of the current branch
-    commit_feature = repo.head.commit.tree
-    # Comparing against main
-    commit_origin_main = repo.commit("origin/main")
-    # TODO: We should consider if the default branch is named other than `main`
-    diff_index = commit_origin_main.diff(commit_feature)
+
+    from_sha_obj = None
+    to_sha_obj = None
+
+    if from_sha is None:
+        # Fetch latest
+        for remote in repo.remotes:
+            remote.fetch()
+        # Comparing against main
+        commit_origin_main = repo.commit("origin/main")
+        # TODO: We should consider if the default branch is named other than `main`
+        from_sha_obj = commit_origin_main
+    else:
+        from_sha_obj = repo.commit(from_sha)
+    if to_sha is None:
+        # Last commit of the current branch
+        commit_feature = repo.head.commit.tree
+        to_sha_obj = commit_feature
+    else:
+        to_sha_obj = repo.commit(to_sha)
+
+    diff_index = from_sha_obj.diff(to_sha_obj)
     files = {
         "new_files": [],
         "deleted_files": [],
@@ -187,10 +205,10 @@ def create_templates_for_modified_files(
                         - staging
                         - dev
 
-                If config.aws_accounts included prod, staging, and dev this will catch that prod is no longer included.
+                If config.aws.accounts included prod, staging, and dev this will catch that prod is no longer included.
                     This means marking prod for deletion as it has been implicitly deleted.
                 """
-                for aws_account in config.aws_accounts:
+                for aws_account in config.aws.accounts:
                     account_regex = (
                         rf"({aws_account.account_id}|{aws_account.account_name})"
                     )
@@ -258,7 +276,7 @@ def create_templates_for_modified_files(
             current commit excluded_accounts:
                 - prod
 
-        If config.aws_accounts included prod, staging, and dev this will catch that prod is no longer included.
+        If config.aws.accounts included prod, staging, and dev this will catch that prod is no longer included.
             This means marking prod for deletion as it has been implicitly deleted.
         """
         for account in template.excluded_accounts:

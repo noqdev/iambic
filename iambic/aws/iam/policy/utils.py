@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 
 from botocore.exceptions import ClientError
@@ -101,7 +103,7 @@ async def update_managed_policy(
     iam_client,
     template_policy_document: dict,
     existing_policy_document: dict,
-    read_only: bool,
+    iambic_import_only: bool,
     log_params: dict,
     context: ExecutionContext,
 ) -> list[ProposedChange]:
@@ -115,8 +117,12 @@ async def update_managed_policy(
         ignore_order=True,
         report_repetition=True,
     )
+    # DeepDiff will return type changes as actual type functions and not strings,
+    # and this will cause json serialization to fail later on when we process
+    # the proposed changes. We force type changes to strings here.
 
     if policy_drift:
+        policy_drift = json.loads(policy_drift.to_json())
         log_str = "Changes to the PolicyDocument discovered."
         response.append(
             ProposedChange(
@@ -128,7 +134,7 @@ async def update_managed_policy(
             )
         )
 
-        if not read_only:
+        if not iambic_import_only:
             if policy_drift:
                 policy_versions = await list_managed_policy_versions(
                     policy_arn, iam_client
@@ -156,7 +162,7 @@ async def apply_managed_policy_tags(
     iam_client,
     template_tags: list[dict],
     existing_tags: list[dict],
-    read_only: bool,
+    iambic_import_only: bool,
     log_params: dict,
     context: ExecutionContext,
 ) -> list[ProposedChange]:
@@ -179,7 +185,7 @@ async def apply_managed_policy_tags(
                 change_summary={"TagKeys": tags_to_remove},
             )
         )
-        if not read_only:
+        if not iambic_import_only:
             log_str = f"{log_str} Removing tags..."
             tasks.append(
                 aio_wrapper(

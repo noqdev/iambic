@@ -71,7 +71,25 @@
             "args": [
                 "apply",
                 "--template",
-                "../noq-templates/google_groups/noq.dev/dockerhub.yaml",
+                "/tmp/noq-templates/google/groups/noq.dev/iambic_test_group.yaml",
+                "--config",
+                "demo/config.yaml"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "Iambic Apply Okta Template",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "env": {
+                "AWS_PROFILE": "staging/IambicHubRole"
+            },
+            "args": [
+                "apply",
+                "--template",
+                "/tmp/noq-templates/okta/groups/development/networking2.yaml",
                 "--config",
                 "demo/config.yaml"
             ],
@@ -110,6 +128,28 @@
                 "../noq-templates/",
                 "--config",
                 "demo/config.yaml"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "Iambic Git-Apply from sha to sha",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "env": {
+                "AWS_PROFILE": "staging/IambicHubRole"
+            },
+            "args": [
+                "git-apply",
+                "--repo-dir",
+                "../noq-templates/",
+                "--config",
+                "demo/config.yaml",
+                "--from-sha",
+                "1267dca837c0b3fa50d9d2aa926b386b1344501c",
+                "--to-sha",
+                "aa38e4dac35e4bf9eae22fe47d638fc134fd1f00",
             ],
             "justMyCode": true
         },

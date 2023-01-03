@@ -1,13 +1,21 @@
+from __future__ import annotations
+
 import asyncio
 import re
 from datetime import datetime
 from enum import Enum
+from typing import TYPE_CHECKING, Optional
 
+import boto3
 from botocore.exceptions import ClientError
 
 from iambic.core.context import ExecutionContext
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.utils import aio_wrapper, camel_to_snake
+
+if TYPE_CHECKING:
+    from iambic.config.models import Config
 
 
 async def paginated_search(
@@ -44,6 +52,50 @@ async def paginated_search(
             search_kwargs["Marker"] = response["Marker"]
 
 
+async def legacy_paginated_search(
+    search_fnc, response_key: str, max_results: int = None, **search_kwargs
+) -> list:
+    """Retrieve and aggregate each paged response, returning a single list of each response object
+
+    Why is there 2 paginated searches? - AWS has 2 ways of paginating results
+    This one seems to be the older way which is why it's called legacy
+
+    :param search_fnc:
+    :param response_key:
+    :param max_results:
+    :return:
+    """
+    results = []
+    retry_count = 0
+    is_first_call = True
+
+    while True:
+        try:
+            response = await aio_wrapper(search_fnc, **search_kwargs)
+        except ClientError as err:
+            if err.response["Error"]["Code"] == "Throttling":
+                if retry_count >= 10:
+                    raise
+                retry_count += 1
+                await asyncio.sleep(retry_count * 2)
+                continue
+            else:
+                raise
+
+        retry_count = 0
+        results.extend(response.get(response_key, []))
+
+        if (
+            not response.get("NextToken")
+            or (max_results and len(results) >= max_results)
+            or (not results and not is_first_call)
+        ):
+            return results
+        else:
+            is_first_call = False
+            search_kwargs["NextToken"] = response["NextToken"]
+
+
 class RegionName(Enum):
     us_east_1 = "us-east-1"
     us_west_1 = "us-west-1"
@@ -78,39 +130,51 @@ def normalize_boto3_resp(obj):
         return obj
 
 
-def get_closest_value(matching_values: list, aws_account):
-    if len(matching_values) == 1:
-        return matching_values[0]
+def get_account_value(matching_values: list, account_id: str, account_name: str = None):
+    account_reprs = [account_id]
+    if account_name:
+        account_reprs.append(account_name.lower())
 
-    account_value_hit = dict(returns=None, specificty=0)
+    included_account_map = dict()
+    included_account_lists = list()
 
-    account_ids = [aws_account.account_id]
-    if account_name := aws_account.account_name:
-        account_ids.append(account_name.lower())
+    for matching_val in matching_values:
+        for included_account in matching_val.included_accounts:
+            included_account_map[included_account] = matching_val
+            included_account_lists.append(included_account)
 
-    for matching_value in matching_values:
-        resource_accounts = sorted(matching_value.included_accounts, key=len)
-        for resource_account in resource_accounts:
-            for account_id in account_ids:
-                if resource_account == "*" and account_value_hit["specificty"] == 0:
-                    account_value_hit = {"returns": matching_value, "specificty": 1}
-                elif re.match(resource_account.lower(), account_id) and len(
-                    resource_account
-                ) > account_value_hit.get("specificty", 0):
-                    account_value_hit = {
-                        "returns": matching_value,
-                        "specificty": len(resource_account),
-                    }
-                    break
+    for included_account in sorted(included_account_lists, key=len, reverse=True):
+        cur_val = included_account_map[included_account]
+        if any(
+            any(
+                re.match(excluded_account.lower(), account_repr)
+                for account_repr in account_reprs
+            )
+            for excluded_account in cur_val.excluded_accounts
+        ):
+            log.debug("Hit an excluded account rule", account_id=account_id)
+            continue
+        elif included_account == "*" or any(
+            re.match(included_account.lower(), account_repr)
+            for account_repr in account_reprs
+        ):
+            return cur_val
 
-    return account_value_hit["returns"]
+
+def is_regex_match(regex, test_string):
+    if "*" in regex:
+        return re.match(regex.lower(), test_string)
+    else:
+        # it is not an actual regex string, just string comparison
+        return regex.lower() == test_string.lower()
 
 
 def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> bool:
     from iambic.aws.models import AccessModel
 
-    if context.execute and (
-        aws_account.read_only or getattr(resource, "read_only", False)
+    if (
+        aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
+        or getattr(resource, "iambic_managed", None) == IambicManaged.IMPORT_ONLY
     ):
         return False
     if not issubclass(type(resource), AccessModel):
@@ -119,7 +183,7 @@ def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> boo
     if aws_account.org_id:
         if aws_account.org_id in resource.excluded_orgs:
             return False
-        elif not any(
+        elif "*" not in resource.included_orgs and not any(
             re.match(org_id, aws_account.org_id) for org_id in resource.included_orgs
         ):
             return False
@@ -141,7 +205,7 @@ def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> boo
         ):
             return True
         elif any(
-            re.match(resource_account.lower(), account_id)
+            is_regex_match(resource_account.lower(), account_id)
             for resource_account in resource.included_accounts
         ):
             return True
@@ -160,7 +224,9 @@ def apply_to_account(resource, aws_account, context: ExecutionContext) -> bool:
                 return False
         else:
             deleted_obj = resource.get_attribute_val_for_account(aws_account, "deleted")
-            deleted_obj = get_closest_value(deleted_obj, aws_account)
+            deleted_obj = get_account_value(
+                deleted_obj, aws_account.account_id, aws_account.account_name
+            )
             if deleted_obj and deleted_obj.deleted and not deleted_resource_type:
                 return False
 
@@ -190,6 +256,7 @@ async def remove_expired_resources(
         log_params["parent_resource_id"] = template_resource_id
 
     if hasattr(resource, "expires_at") and resource.expires_at:
+
         if resource.expires_at < datetime.utcnow():
             resource.deleted = True
             log.info("Expired resource found, marking for deletion", **log_params)
@@ -216,7 +283,15 @@ async def remove_expired_resources(
     return resource
 
 
-def get_aws_account_map(configs: list) -> dict:
+async def set_org_account_variables(client, account: dict) -> dict:
+    tags = await legacy_paginated_search(
+        client.list_tags_for_resource, "Tags", ResourceId=account["Id"]
+    )
+    account["variables"] = [{"key": tag["Key"], "value": tag["Value"]} for tag in tags]
+    return account
+
+
+async def get_aws_account_map(configs: list[Config]) -> dict:
     """Returns a map containing all account configs across all provided config instances
 
     :param configs:
@@ -224,8 +299,7 @@ def get_aws_account_map(configs: list) -> dict:
     """
     aws_account_map = dict()
     for config in configs:
-        config.set_account_defaults()
-        for aws_account in config.aws_accounts:
+        for aws_account in config.aws.accounts:
             if aws_account_map.get(aws_account.account_id):
                 log.critical(
                     "Account definition found in multiple configs",
@@ -236,6 +310,33 @@ def get_aws_account_map(configs: list) -> dict:
             aws_account_map[aws_account.account_id] = aws_account
 
     return aws_account_map
+
+
+async def create_assume_role_session(
+    boto3_session,
+    assume_role_arn: str,
+    region_name: str,
+    external_id: Optional[str] = None,
+    session_name: str = "iambic",
+) -> boto3.Session:
+    try:
+        sts = boto3_session.client(
+            "sts",
+            endpoint_url=f"https://sts.{region_name}.amazonaws.com",
+            region_name=region_name,
+        )
+        role_params = dict(RoleArn=assume_role_arn, RoleSessionName=session_name)
+        if external_id:
+            role_params["ExternalId"] = external_id
+        role = await aio_wrapper(sts.assume_role, **role_params)
+        return boto3.Session(
+            region_name=region_name,
+            aws_access_key_id=role["Credentials"]["AccessKeyId"],
+            aws_secret_access_key=role["Credentials"]["SecretAccessKey"],
+            aws_session_token=role["Credentials"]["SessionToken"],
+        )
+    except Exception as err:
+        log.debug("Failed to assume role", assume_role_arn=assume_role_arn, error=err)
 
 
 def boto3_retry(f):

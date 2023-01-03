@@ -1,4 +1,6 @@
 # Intentionally hacky for demo
+from __future__ import annotations
+
 import json
 
 from iambic.config.models import Config
@@ -14,7 +16,7 @@ async def detect_changes(config: Config) -> bool:
 
     queue_name = queue_arn.split(":")[-1]
     region_name = queue_arn.split(":")[3]
-    session = config.get_boto_session_from_arn(queue_arn, region_name)
+    session = await config.get_boto_session_from_arn(queue_arn, region_name)
     identity = session.client("sts").get_caller_identity()
     identity_arn_with_session_name = (
         identity["Arn"].replace(":sts:", ":iam:").replace("assumed-role", "role")

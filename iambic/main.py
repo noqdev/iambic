@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import pathlib
 import warnings
@@ -5,12 +7,11 @@ import warnings
 import click
 
 from iambic.config.models import Config
-from iambic.core import noq_json as json
 from iambic.core.context import ctx
 from iambic.core.git import clone_git_repos
 from iambic.core.logger import log
 from iambic.core.models import TemplateChangeDetails
-from iambic.core.utils import gather_templates
+from iambic.core.utils import gather_templates, yaml
 from iambic.request_handler.apply import apply_changes, flag_expired_resources
 from iambic.request_handler.detect import detect_changes
 from iambic.request_handler.generate import generate_templates
@@ -24,15 +25,14 @@ def output_proposed_changes(
     template_changes: list[TemplateChangeDetails], output_path: str = None
 ):
     if output_path is None:
-        output_path = "proposed_changes.json"
+        output_path = "proposed_changes.yaml"
     if template_changes:
         log.info(f"A detailed summary of descriptions was saved to {output_path}")
 
         with open(output_path, "w") as f:
             f.write(
-                json.dumps(
+                yaml.dump(
                     [template_change.dict() for template_change in template_changes],
-                    indent=2,
                 )
             )
 
@@ -78,7 +78,7 @@ def run_plan(config_path: str, templates: list[str], repo_dir: str):
     asyncio.run(flag_expired_resources(templates))
 
     config = Config.load(config_path)
-    config.set_account_defaults()
+    asyncio.run(config.setup_aws_accounts())
     ctx.eval_only = True
     output_proposed_changes(asyncio.run(apply_changes(config, templates, ctx)))
 
@@ -97,7 +97,7 @@ def detect(config_path: str):
 
 def run_detect(config_path: str):
     config = Config.load(config_path)
-    config.set_account_defaults()
+    asyncio.run(config.setup_aws_accounts())
     asyncio.run(detect_changes(config))
 
 
@@ -123,7 +123,7 @@ def clone_repos(config_path: str, repo_base_path: str):
 
 def run_clone_repos(config_path: str, repo_base_path: str):
     config = Config.load(config_path)
-    config.set_account_defaults()
+    asyncio.run(config.setup_aws_accounts())
     asyncio.run(clone_git_repos(config, repo_base_path))
 
 
@@ -168,8 +168,9 @@ def run_apply(force: bool, config_path: str, templates: list[str], repo_dir: str
         templates = asyncio.run(gather_templates(repo_dir or str(pathlib.Path.cwd())))
 
     config = Config.load(config_path)
-    config.set_account_defaults()
+    asyncio.run(config.setup_aws_accounts())
     ctx.eval_only = not force
+
     template_changes = asyncio.run(apply_changes(config, templates, ctx))
     output_proposed_changes(template_changes)
 
@@ -201,14 +202,36 @@ def run_apply(force: bool, config_path: str, templates: list[str], repo_dir: str
     show_default=True,
     help="Allow applying changes from a dirty git repo",
 )
-def git_apply(config_path: str, repo_dir: str, allow_dirty: bool):
-    run_git_apply(config_path, repo_dir, allow_dirty)
+@click.option(
+    "--from-sha",
+    "from_sha",
+    required=False,
+    type=str,
+    help="The from_sha to calculate diff",
+)
+@click.option(
+    "--to-sha",
+    "to_sha",
+    required=False,
+    type=str,
+    help="The to_sha to calculate diff",
+)
+def git_apply(
+    config_path: str, repo_dir: str, allow_dirty: bool, from_sha: str, to_sha: str
+):
+    run_git_apply(config_path, repo_dir, allow_dirty, from_sha, to_sha)
 
 
-def run_git_apply(config_path: str, repo_dir: str, allow_dirty: bool):
+def run_git_apply(
+    config_path: str, repo_dir: str, allow_dirty: bool, from_sha: str, to_sha: str
+):
     template_changes = asyncio.run(
         apply_git_changes(
-            config_path, repo_dir or str(pathlib.Path.cwd()), allow_dirty=allow_dirty
+            config_path,
+            repo_dir or str(pathlib.Path.cwd()),
+            allow_dirty=allow_dirty,
+            from_sha=from_sha,
+            to_sha=to_sha,
         )
     )
     output_proposed_changes(template_changes)
@@ -284,7 +307,7 @@ def run_import(config_paths: list[str], repo_dir: str):
     configs = []
     for config_path in config_paths:
         config = Config.load(config_path)
-        config.set_account_defaults()
+        asyncio.run(config.setup_aws_accounts())
         configs.append(config)
     asyncio.run(generate_templates(configs, repo_dir or str(pathlib.Path.cwd())))
 

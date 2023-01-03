@@ -18,7 +18,7 @@
       - **Items**: Refer to *[#/definitions/Deleted](#definitions/Deleted)*.
 - **`template_type`** *(string)*: Default: `"NOQ::IAM::ManagedPolicy"`.
 - **`file_path`** *(string)*
-- **`read_only`** *(boolean)*: If set to True, iambic will only log drift instead of apply changes when drift is detected. Default: `false`.
+- **`iambic_managed`** *(IambicManaged)*: Controls the directionality of iambic changes. Default: `READ_AND_WRITE`.
 - **`policy_name`** *(string)*: The name of the policy.
 - **`path`**: Default: `"/"`.
   - **Any of**
