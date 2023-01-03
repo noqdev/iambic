@@ -313,3 +313,8 @@ class Config(BaseModel):
         c.configure_slack()
         c.configure_google()
         return c
+
+    @classmethod
+    def noq_load(cls, file_path: str):
+        c = cls(file_path=file_path, **yaml.load(open(file_path)))
+        return c
