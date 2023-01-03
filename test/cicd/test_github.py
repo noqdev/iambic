@@ -7,6 +7,7 @@ import pytest
 from iambic.cicd.github import (
     MERGEABLE_STATE_BLOCKED,
     MERGEABLE_STATE_CLEAN,
+    HandleIssueCommentReturnCode,
     format_github_url,
     handle_issue_comment,
 )
@@ -26,6 +27,9 @@ def issue_comment_context():
         "repository": "example.com/iambic-templates",
         "event_name": "issue_comment",
         "event": {
+            "comment": {
+                "body": "iambic git-apply",
+            },
             "issue": {
                 "number": 1,
             },
@@ -58,6 +62,14 @@ def test_issue_comment_with_non_clean_mergeable_state(
     handle_issue_comment(mock_github_client, issue_comment_context)
     assert mock_lambda_run_handler.called is False
     assert mock_pull_request.merge.called is False
+
+
+def test_issue_comment_with_not_applicable_comment_body(
+    mock_github_client, issue_comment_context, mock_lambda_run_handler
+):
+    issue_comment_context["event"]["comment"]["body"] = "foo"
+    return_code = handle_issue_comment(mock_github_client, issue_comment_context)
+    assert return_code == HandleIssueCommentReturnCode.NO_MATCHING_BODY
 
 
 def test_issue_comment_with_clean_mergeable_state(
