@@ -3,9 +3,11 @@ from __future__ import annotations
 import datetime
 import os
 import shutil
+import subprocess
 import tempfile
 import time
 
+import pytest
 from github import Github
 
 from iambic.config.models import Config
@@ -22,8 +24,8 @@ extends:
 """
 
 
-def test_github_cicd():
-
+@pytest.fixture
+def filesystem():
     fd, temp_config_filename = tempfile.mkstemp(
         prefix="iambic_test_temp_config_filename"
     )
@@ -33,6 +35,25 @@ def test_github_cicd():
 
     with open(fd, "w") as temp_file:
         temp_file.write(github_config)
+
+    try:
+        yield (temp_config_filename, temp_templates_directory)
+    finally:
+        os.close(fd)
+        os.unlink(temp_config_filename)
+        shutil.rmtree(temp_templates_directory)
+
+
+# Opens a PR on noqdev/iambic-templates-test. The workflow on the repo will
+# pull container with "test label". It will then approve the PR and trigger
+# the "iambic git-apply" command on the PR. If the flow is successful, the PR
+# will be merged and we will check the workflow to be completed state.
+def test_github_cicd(filesystem):
+
+    subprocess.run("make -f Makefile.itest build_docker_itest", shell=True, check=True)
+    subprocess.run("make -f Makefile.itest build_docker_itest", shell=True, check=True)
+
+    temp_config_filename, temp_templates_directory = filesystem
 
     config = Config.load(temp_config_filename)
     github_token = config.secrets["github-token-iambic-templates-itest"]
@@ -62,6 +83,7 @@ def test_github_cicd():
     pr = github_repo.create_pull(
         title="itest", body=pull_request_body, head=new_branch, base="main"
     )
+    pr_number = pr.number
     pr.create_issue_comment("approve")
     pr.create_issue_comment("iambic git-apply")
     is_workflow_run_successful = False
@@ -70,16 +92,15 @@ def test_github_cicd():
         runs = github_repo.get_workflow_runs(event="issue_comment", branch="main")
         runs = [run for run in runs if run.created_at >= utc_obj]
         runs = [run for run in runs if run.head_sha == head_sha]
+        runs = [run for run in runs if run.conclusion == "success"]
         if len(runs) != 2:
             time.sleep(10)
             print("sleeping")
             continue
         else:
             is_workflow_run_successful = True
-
-        os.close(fd)
-        os.unlink(temp_config_filename)
-        shutil.rmtree(temp_templates_directory)
-        break
+            break
 
     assert is_workflow_run_successful
+    check_pull_request = github_repo.get_pull(pr_number)
+    assert check_pull_request.merged
