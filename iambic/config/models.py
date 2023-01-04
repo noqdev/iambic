@@ -287,6 +287,6 @@ class Config(BaseModel):
         return c
 
     @classmethod
-    def noq_load(cls, file_path: str):
-        c = cls(file_path=file_path, **yaml.load(open(file_path)))
+    def noq_load(cls, aws_config: AWSConfig, file_path: str):
+        c = cls(aws=aws_config, file_path=file_path, **yaml.load(open(file_path)))
         return c
