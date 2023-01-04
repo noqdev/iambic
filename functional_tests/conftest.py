@@ -15,6 +15,9 @@ from iambic.main import run_import
 
 os.environ["AWS_PROFILE"] = "staging/IambicHubRole"
 os.environ["TESTING"] = "true"
+FUNCTIONAL_TEST_TEMPLATE_DIR = os.getenv("FUNCTIONAL_TEST_TEMPLATE_DIR", None)
+
+log.warning("TEMPLATE DIR", FUNCTIONAL_TEST_TEMPLATE_DIR=FUNCTIONAL_TEST_TEMPLATE_DIR)
 
 all_config = """
 extends:
@@ -59,21 +62,25 @@ def generate_templates_fixture(request):
     fd, IAMBIC_TEST_DETAILS.config_path = tempfile.mkstemp(
         prefix="iambic_test_temp_config_filename", suffix=".yaml"
     )
-    IAMBIC_TEST_DETAILS.template_dir_path = tempfile.mkdtemp(
-        prefix="iambic_test_temp_templates_directory"
-    )
+
+    if FUNCTIONAL_TEST_TEMPLATE_DIR:
+        IAMBIC_TEST_DETAILS.template_dir_path = FUNCTIONAL_TEST_TEMPLATE_DIR
+    else:
+        IAMBIC_TEST_DETAILS.template_dir_path = tempfile.mkdtemp(
+            prefix="iambic_test_temp_templates_directory"
+        )
 
     with open(IAMBIC_TEST_DETAILS.config_path, "w") as temp_file:
         temp_file.write(all_config)
 
-    run_import(
-        [IAMBIC_TEST_DETAILS.config_path],
-        IAMBIC_TEST_DETAILS.template_dir_path,
-    )
+    if not FUNCTIONAL_TEST_TEMPLATE_DIR:
+        run_import(
+            [IAMBIC_TEST_DETAILS.config_path],
+            IAMBIC_TEST_DETAILS.template_dir_path,
+        )
+        log.info("Finished generating templates for testing")
 
-    log.info("Finished generating templates for testing")
     log.info("Setting up config for testing")
-
     IAMBIC_TEST_DETAILS.config = Config.load(IAMBIC_TEST_DETAILS.config_path)
     asyncio.run(IAMBIC_TEST_DETAILS.config.setup_aws_accounts())
 
@@ -86,13 +93,16 @@ def generate_templates_fixture(request):
     log.info("Config setup complete")
 
     def teardown():
-        log.info(
-            "Removing temp files",
-            template_dir=IAMBIC_TEST_DETAILS.template_dir_path,
-            config_file=IAMBIC_TEST_DETAILS.config_path,
-        )
+        log_params = {
+            "config_path": IAMBIC_TEST_DETAILS.config_path,
+        }
+        if not FUNCTIONAL_TEST_TEMPLATE_DIR:
+            log_params["template_dir_path"] = IAMBIC_TEST_DETAILS.template_dir_path
+        log.info("Removing temp files", **log_params)
         os.close(fd)
         os.unlink(IAMBIC_TEST_DETAILS.config_path)
-        shutil.rmtree(IAMBIC_TEST_DETAILS.template_dir_path)
+
+        if not FUNCTIONAL_TEST_TEMPLATE_DIR:
+            shutil.rmtree(IAMBIC_TEST_DETAILS.template_dir_path)
 
     request.addfinalizer(teardown)

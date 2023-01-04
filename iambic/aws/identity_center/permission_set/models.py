@@ -15,7 +15,7 @@ from iambic.aws.models import (
     ExpiryModel,
     Tag,
 )
-from iambic.aws.sso.permission_set.utils import (
+from iambic.aws.identity_center.permission_set.utils import (
     apply_account_assignments,
     apply_permission_set_aws_managed_policies,
     apply_permission_set_customer_managed_policies,
@@ -40,31 +40,31 @@ from iambic.core.models import (
 )
 from iambic.core.utils import aio_wrapper
 
-AWS_SSO_PERMISSION_SET_TEMPLATE_TYPE = "NOQ::AWS::SSO::PermissionSet"
+AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE = "NOQ::AWS::IdentityCenter::PermissionSet"
 
-# TODO: Add true support for defining multiple orgs with SSO rules
+# TODO: Add true support for defining multiple orgs with IdentityCenter rules
 
 
 class PermissionSetAccess(ExpiryModel, AccessModel):
     users: list[str] = Field(
         [],
-        description="List of users who can assume into the role",
+        description="List of users who can access the role",
     )
     groups: list[str] = Field(
         [],
-        description="List of groups. Users in one or more of the groups can assume into the role",
+        description="List of groups. Users in one or more of the groups can access the role",
     )
 
     @property
     def resource_type(self):
-        return "aws:sso:permission_set_access"
+        return "aws:identity_center:permission_set_access"
 
     @property
     def resource_id(self):
         return ""
 
 
-class AWSSSOInstance(BaseModel):
+class AWSIdentityCenterInstance(BaseModel):
     arn: str
     region: str
     access_portal_url: str
@@ -102,7 +102,7 @@ class PermissionBoundary(BaseModel):
 
     @property
     def resource_type(self):
-        return "aws:sso:permission_boundary"
+        return "aws:identity_center:permission_boundary"
 
     @property
     def resource_id(self):
@@ -117,7 +117,7 @@ class InlinePolicy(BaseModel):
     inline_policy: str
 
 
-class AWSSSOPermissionSetProperties(BaseModel):
+class AWSIdentityCenterPermissionSetProperties(BaseModel):
     name: str
     description: Optional[Union[str, list[Description]]] = Field(
         "",
@@ -137,16 +137,16 @@ class AWSSSOPermissionSetProperties(BaseModel):
 
     @property
     def resource_type(self) -> str:
-        return "aws:sso:permission_set"
+        return "aws:identity_center:permission_set"
 
     @property
     def resource_id(self) -> str:
         return self.name
 
 
-class AWSSSOPermissionSetTemplate(AWSTemplate):
-    template_type: str = AWS_SSO_PERMISSION_SET_TEMPLATE_TYPE
-    properties: AWSSSOPermissionSetProperties
+class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
+    template_type: str = AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
+    properties: AWSIdentityCenterPermissionSetProperties
     identifier: str
     access_rules: Optional[list[PermissionSetAccess]] = []
     included_orgs: list[str] = Field(
@@ -283,11 +283,11 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
         response = []
         reverse_user_map = {
             details["UserName"]: user_id
-            for user_id, details in aws_account.sso_details.user_map.items()
+            for user_id, details in aws_account.identity_center_details.user_map.items()
         }
         reverse_group_map = {
             details["DisplayName"]: group_id
-            for group_id, details in aws_account.sso_details.group_map.items()
+            for group_id, details in aws_account.identity_center_details.group_map.items()
         }
 
         account_assignments = await asyncio.gather(
@@ -299,7 +299,7 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
                     reverse_user_map,
                     reverse_group_map,
                 )
-                for account_id, account_name in aws_account.sso_details.org_account_map.items()
+                for account_id, account_name in aws_account.identity_center_details.org_account_map.items()
             ]
         )
 
@@ -316,10 +316,10 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
                             "account_id": a_account_id,
                             "resource_id": assignment,
                             "resource_type": resource_type,
-                            "resource_name": aws_account.sso_details.get_resource_name(
+                            "resource_name": aws_account.identity_center_details.get_resource_name(
                                 resource_type, assignment
                             ),
-                            "account_name": f"{a_account_id} ({aws_account.sso_details.org_account_map[a_account_id]})",
+                            "account_name": f"{a_account_id} ({aws_account.identity_center_details.org_account_map[a_account_id]})",
                         }
                     )
 
@@ -341,10 +341,10 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
         :return:
         """
 
-        sso_client = await aws_account.get_boto3_client(
-            "sso-admin", region_name=aws_account.sso_details.region
+        identity_center_client = await aws_account.get_boto3_client(
+            "sso-admin", region_name=aws_account.identity_center_details.region
         )
-        instance_arn = aws_account.sso_details.instance_arn
+        instance_arn = aws_account.identity_center_details.instance_arn
         permission_set_arn = None
 
         template_permission_set = self.apply_resource_dict(aws_account, context)
@@ -369,14 +369,14 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
         read_only = self._is_read_only(aws_account)
 
         current_account_assignments = {}
-        current_permission_set = aws_account.sso_details.permission_set_map.get(
+        current_permission_set = aws_account.identity_center_details.permission_set_map.get(
             name, {}
         )
         if current_permission_set:
             exclude_keys = ["CreatedDate", "PermissionSetArn"]
             permission_set_arn = current_permission_set["PermissionSetArn"]
             current_permission_set = await enrich_permission_set_details(
-                sso_client, instance_arn, current_permission_set
+                identity_center_client, instance_arn, current_permission_set
             )
             if managed_policies := current_permission_set.pop(
                 "AttachedManagedPolicies", None
@@ -385,12 +385,12 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
 
             current_account_assignments = (
                 await get_permission_set_users_and_groups_as_access_rules(
-                    sso_client,
+                    identity_center_client,
                     instance_arn,
                     permission_set_arn,
-                    aws_account.sso_details.user_map,
-                    aws_account.sso_details.group_map,
-                    aws_account.sso_details.org_account_map,
+                    aws_account.identity_center_details.user_map,
+                    aws_account.identity_center_details.group_map,
+                    aws_account.identity_center_details.org_account_map,
                 )
             )
             account_change_details.current_value = {
@@ -421,7 +421,7 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
 
                 if context.execute:
                     await delete_permission_set(
-                        sso_client,
+                        identity_center_client,
                         instance_arn,
                         permission_set_arn,
                         current_permission_set,
@@ -437,7 +437,7 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
             if permission_set_exists:
                 tasks.append(
                     apply_permission_set_tags(
-                        sso_client,
+                        identity_center_client,
                         instance_arn,
                         permission_set_arn,
                         template_permission_set.get("Tags", []),
@@ -473,7 +473,7 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
                         )
                         tasks.append(
                             aio_wrapper(
-                                sso_client.update_permission_set,
+                                identity_center_client.update_permission_set,
                                 InstanceArn=instance_arn,
                                 PermissionSetArn=permission_set_arn,
                                 **update_resource_params,
@@ -506,7 +506,7 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
                 log.info(log_str, **log_params)
 
                 permission_set = await aio_wrapper(
-                    sso_client.create_permission_set,
+                    identity_center_client.create_permission_set,
                     Name=name,
                     InstanceArn=instance_arn,
                     **{
@@ -529,7 +529,7 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
         tasks.extend(
             [
                 apply_permission_set_aws_managed_policies(
-                    sso_client,
+                    identity_center_client,
                     instance_arn,
                     permission_set_arn,
                     [
@@ -544,7 +544,7 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
                     context,
                 ),
                 apply_permission_set_customer_managed_policies(
-                    sso_client,
+                    identity_center_client,
                     instance_arn,
                     permission_set_arn,
                     template_permission_set.get("CustomerManagedPolicyReferences", []),
@@ -553,7 +553,7 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
                     context,
                 ),
                 apply_permission_set_inline_policy(
-                    sso_client,
+                    identity_center_client,
                     instance_arn,
                     permission_set_arn,
                     template_permission_set.get("InlinePolicy", "{}"),
@@ -562,7 +562,7 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
                     context,
                 ),
                 apply_permission_set_permission_boundary(
-                    sso_client,
+                    identity_center_client,
                     instance_arn,
                     permission_set_arn,
                     template_permission_set.get("PermissionsBoundary", {}),
@@ -578,7 +578,7 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
             #   per https://docs.aws.amazon.com/singlesignon/latest/userguide/limits.html
             changes_made.append(
                 await apply_account_assignments(
-                    sso_client,
+                    identity_center_client,
                     instance_arn,
                     permission_set_arn,
                     template_account_assignments,
@@ -599,7 +599,7 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
         if context.execute:
             if any(changes_made):
                 res = await aio_wrapper(
-                    sso_client.provision_permission_set,
+                    identity_center_client.provision_permission_set,
                     InstanceArn=instance_arn,
                     PermissionSetArn=permission_set_arn,
                     TargetType="ALL_PROVISIONED_ACCOUNTS",
@@ -608,19 +608,16 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
                 request_id = res["PermissionSetProvisioningStatus"]["RequestId"]
 
                 for _ in range(20):
-                    provision_statuses = await legacy_paginated_search(
-                        sso_client.list_permission_set_provisioning_status,
-                        response_key="PermissionSetsProvisioningStatus",
-                        retain_key=False,
+                    provision_status = await aio_wrapper(
+                        identity_center_client.describe_permission_set_provisioning_status,
                         InstanceArn=instance_arn,
+                        ProvisionPermissionSetRequestId=request_id,
                     )
 
-                    for status in provision_statuses:
-                        if status["RequestId"] != request_id:
-                            continue
-                        if status == "IN_PROGRESS":
-                            await asyncio.sleep(1)
-                            continue
+                    if provision_status["PermissionSetProvisioningStatus"]["Status"] == "IN_PROGRESS":
+                        await asyncio.sleep(1)
+                        continue
+                    else:
                         break
 
             log.debug(
@@ -655,7 +652,7 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
             return
 
         for account in config.aws.accounts:
-            if not account.sso_details:
+            if not account.identity_center_details:
                 continue
 
             if evaluate_on_account(self, account, context):
@@ -689,7 +686,7 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
 
     @property
     def resource_type(self) -> str:
-        return "aws:sso:permission_set"
+        return "aws:identity_center:permission_set"
 
     @property
     def resource_id(self) -> str:
