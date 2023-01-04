@@ -26,7 +26,7 @@ from iambic.aws.sso.permission_set.utils import (
     enrich_permission_set_details,
     get_permission_set_users_and_groups_as_access_rules,
 )
-from iambic.aws.utils import evaluate_on_account
+from iambic.aws.utils import evaluate_on_account, legacy_paginated_search
 from iambic.config.models import Config
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
@@ -598,12 +598,30 @@ class AWSSSOPermissionSetTemplate(AWSTemplate):
 
         if context.execute:
             if any(changes_made):
-                await aio_wrapper(
+                res = await aio_wrapper(
                     sso_client.provision_permission_set,
                     InstanceArn=instance_arn,
                     PermissionSetArn=permission_set_arn,
                     TargetType="ALL_PROVISIONED_ACCOUNTS",
                 )
+
+                request_id = res["PermissionSetProvisioningStatus"]["RequestId"]
+
+                for _ in range(20):
+                    provision_statuses = await legacy_paginated_search(
+                        sso_client.list_permission_set_provisioning_status,
+                        response_key="PermissionSetsProvisioningStatus",
+                        retain_key=False,
+                        InstanceArn=instance_arn,
+                    )
+
+                    for status in provision_statuses:
+                        if status["RequestId"] != request_id:
+                            continue
+                        if status == "IN_PROGRESS":
+                            await asyncio.sleep(1)
+                            continue
+                        break
 
             log.debug(
                 "Successfully finished execution on account for resource",
