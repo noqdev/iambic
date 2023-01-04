@@ -7,14 +7,6 @@ from typing import Optional, Union
 
 from pydantic import Field
 
-from iambic.aws.models import (
-    AccessModel,
-    AWSAccount,
-    AWSTemplate,
-    Description,
-    ExpiryModel,
-    Tag,
-)
 from iambic.aws.identity_center.permission_set.utils import (
     apply_account_assignments,
     apply_permission_set_aws_managed_policies,
@@ -26,7 +18,15 @@ from iambic.aws.identity_center.permission_set.utils import (
     enrich_permission_set_details,
     get_permission_set_users_and_groups_as_access_rules,
 )
-from iambic.aws.utils import evaluate_on_account, legacy_paginated_search
+from iambic.aws.models import (
+    AccessModel,
+    AWSAccount,
+    AWSTemplate,
+    Description,
+    ExpiryModel,
+    Tag,
+)
+from iambic.aws.utils import evaluate_on_account
 from iambic.config.models import Config
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
@@ -40,7 +40,9 @@ from iambic.core.models import (
 )
 from iambic.core.utils import aio_wrapper
 
-AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE = "NOQ::AWS::IdentityCenter::PermissionSet"
+AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE = (
+    "NOQ::AWS::IdentityCenter::PermissionSet"
+)
 
 # TODO: Add true support for defining multiple orgs with IdentityCenter rules
 
@@ -369,8 +371,8 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
         read_only = self._is_read_only(aws_account)
 
         current_account_assignments = {}
-        current_permission_set = aws_account.identity_center_details.permission_set_map.get(
-            name, {}
+        current_permission_set = (
+            aws_account.identity_center_details.permission_set_map.get(name, {})
         )
         if current_permission_set:
             exclude_keys = ["CreatedDate", "PermissionSetArn"]
@@ -614,7 +616,10 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
                         ProvisionPermissionSetRequestId=request_id,
                     )
 
-                    if provision_status["PermissionSetProvisioningStatus"]["Status"] == "IN_PROGRESS":
+                    if (
+                        provision_status["PermissionSetProvisioningStatus"]["Status"]
+                        == "IN_PROGRESS"
+                    ):
                         await asyncio.sleep(1)
                         continue
                     else:

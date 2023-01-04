@@ -47,7 +47,10 @@ async def generate_permission_set_map(aws_accounts: list[AWSAccount], templates:
             accounts_to_set_identity_center.append(aws_account)
 
     await asyncio.gather(
-        *[account.set_identity_center_details() for account in accounts_to_set_identity_center]
+        *[
+            account.set_identity_center_details()
+            for account in accounts_to_set_identity_center
+        ]
     )
 
 
@@ -135,9 +138,12 @@ async def enrich_permission_set_details(
     permission_set_arn = permission_set_details["PermissionSetArn"]
     query_params = dict(InstanceArn=instance_arn, PermissionSetArn=permission_set_arn)
     tasks = [
-        aio_wrapper(identity_center_client.get_inline_policy_for_permission_set, **query_params),
         aio_wrapper(
-            identity_center_client.get_permissions_boundary_for_permission_set, **query_params
+            identity_center_client.get_inline_policy_for_permission_set, **query_params
+        ),
+        aio_wrapper(
+            identity_center_client.get_permissions_boundary_for_permission_set,
+            **query_params,
         ),
         legacy_paginated_search(
             identity_center_client.list_customer_managed_policy_references_in_permission_set,
@@ -250,10 +256,7 @@ async def apply_permission_set_aws_managed_policies(
 
 
 async def detach_customer_managed_policy_ref(
-    identity_center_client,
-    instance_arn: str,
-    permission_set_arn: str,
-    policy: dict
+    identity_center_client, instance_arn: str, permission_set_arn: str, policy: dict
 ):
     try:
         await aio_wrapper(
@@ -285,12 +288,10 @@ async def apply_permission_set_customer_managed_policies(
     )
 
     template_policy_map = {
-        f"{policy['Path']}{policy['Name']}": policy
-        for policy in template_policies
+        f"{policy['Path']}{policy['Name']}": policy for policy in template_policies
     }
     existing_policy_map = {
-        f"{policy['Path']}{policy['Name']}": policy
-        for policy in existing_policies
+        f"{policy['Path']}{policy['Name']}": policy for policy in existing_policies
     }
 
     # Create new managed policies
@@ -390,7 +391,7 @@ async def create_account_assignment(
     creation_status = status.get("AccountAssignmentCreationStatus", {})
 
     while creation_status.get("Status") == "IN_PROGRESS":
-        await asyncio.sleep(.5)
+        await asyncio.sleep(0.5)
         status = await aio_wrapper(
             identity_center_client.describe_account_assignment_creation_status,
             InstanceArn=instance_arn,
@@ -401,14 +402,14 @@ async def create_account_assignment(
         if creation_status.get("Status") == "FAILED":
             log_params = {
                 **log_params,
-                "resource_type": f"aws:identity_center:account_assignment:{resource_type.lower()}"
+                "resource_type": f"aws:identity_center:account_assignment:{resource_type.lower()}",
             }
             log.error(
                 "Unable to delete account assignment.",
                 reason=creation_status.get("FailureReason"),
                 assigned_account_id=account_id,
                 resource_name=resource_name,
-                **log_params
+                **log_params,
             )
             return
 
@@ -436,7 +437,7 @@ async def delete_account_assignment(
     deletion_status = status.get("AccountAssignmentDeletionStatus", {})
 
     while deletion_status.get("Status") == "IN_PROGRESS":
-        await asyncio.sleep(.5)
+        await asyncio.sleep(0.5)
         status = await aio_wrapper(
             identity_center_client.describe_account_assignment_deletion_status,
             InstanceArn=instance_arn,
@@ -447,14 +448,14 @@ async def delete_account_assignment(
         if deletion_status.get("Status") == "FAILED":
             log_params = {
                 **log_params,
-                "resource_type": f"aws:identity_center:account_assignment:{resource_type.lower()}"
+                "resource_type": f"aws:identity_center:account_assignment:{resource_type.lower()}",
             }
             log.error(
                 "Unable to delete account assignment.",
                 reason=deletion_status.get("FailureReason"),
                 assigned_account_id=account_id,
                 resource_name=resource_name,
-                **log_params
+                **log_params,
             )
             return
 

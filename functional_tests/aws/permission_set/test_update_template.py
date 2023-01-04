@@ -21,12 +21,16 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
         )
         asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config, ctx))
         sleep(5)
-        asyncio.run(IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details())
+        asyncio.run(
+            IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
+        )
 
     @classmethod
     def tearDownClass(cls):
         sleep(5)
-        asyncio.run(IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details())
+        asyncio.run(
+            IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
+        )
         cls.template.deleted = True
         asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config, ctx))
 
@@ -39,5 +43,7 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
             self.template.properties.description,
             IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.permission_set_map[
                 self.template.identifier
-            ]["Description"],
+            ][
+                "Description"
+            ],
         )

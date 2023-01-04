@@ -18,7 +18,10 @@ async def multi_config_loader(config_paths: list[str]) -> list[Config]:
     for config in configs:
         if config.aws and config.aws.accounts:
             identity_center_detail_set_tasks.extend(
-                [account.set_identity_center_details() for account in config.aws.accounts]
+                [
+                    account.set_identity_center_details()
+                    for account in config.aws.accounts
+                ]
             )
     await asyncio.gather(*identity_center_detail_set_tasks)
 

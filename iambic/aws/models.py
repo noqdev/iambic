@@ -216,23 +216,31 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
 
         return await super(AWSAccount, self).get_boto3_session(region_name)
 
-    async def set_identity_center_details(self, set_identity_center_map: bool = True) -> None:
+    async def set_identity_center_details(
+        self, set_identity_center_map: bool = True
+    ) -> None:
         if self.identity_center_details:
             region = self.identity_center_details.region
-            identity_center_client = await self.get_boto3_client("sso-admin", region_name=region)
+            identity_center_client = await self.get_boto3_client(
+                "sso-admin", region_name=region
+            )
             identity_store_client = await self.get_boto3_client(
                 "identitystore", region_name=region
             )
 
-            identity_center_instances = await aio_wrapper(identity_center_client.list_instances)
+            identity_center_instances = await aio_wrapper(
+                identity_center_client.list_instances
+            )
 
             if not identity_center_instances.get("Instances"):
                 raise ValueError("No Identity Center instances found")
 
-            self.identity_center_details.instance_arn = identity_center_instances["Instances"][0]["InstanceArn"]
-            self.identity_center_details.identity_store_id = identity_center_instances["Instances"][0][
-                "IdentityStoreId"
-            ]
+            self.identity_center_details.instance_arn = identity_center_instances[
+                "Instances"
+            ][0]["InstanceArn"]
+            self.identity_center_details.identity_store_id = identity_center_instances[
+                "Instances"
+            ][0]["IdentityStoreId"]
 
             if not set_identity_center_map:
                 return
@@ -376,7 +384,9 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
 
         region_name = str(self.default_region)
         if getattr(self.identity_center_account, "account_id", None) == account_id:
-            identity_center_details = IdentityCenterDetails(region=self.identity_center_account.region)
+            identity_center_details = IdentityCenterDetails(
+                region=self.identity_center_account.region
+            )
         else:
             identity_center_details = None
 
