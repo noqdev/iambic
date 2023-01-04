@@ -7,7 +7,7 @@ from iambic.aws.iam.policy.template_generation import (
     generate_aws_managed_policy_templates,
 )
 from iambic.aws.iam.role.template_generation import generate_aws_role_templates
-from iambic.aws.sso.permission_set.template_generation import (
+from iambic.aws.identity_center.permission_set.template_generation import (
     generate_aws_permission_set_templates,
 )
 from iambic.config.models import Config
