@@ -763,6 +763,7 @@ async def delete_permission_set(
     )
     await async_batch_processor(tasks, 10, 1)
 
+    retry_count = 0
     while True:
         try:
             await aio_wrapper(
@@ -775,12 +776,13 @@ async def delete_permission_set(
             if (
                 "PermissionSet has ApplicationProfile associated with it."
                 in err_response["Message"]
-            ):
+            ) and retry_count < 10:
                 # Wait for the detached resources to be deleted so that the permission set can be deleted.
                 log.info(
                     "Waiting for resources to be detached from the permission set.",
                     **log_params,
                 )
+                retry_count += 1
                 await asyncio.sleep(5)
             elif err_response["Code"] == "ResourceNotFoundException":
                 return

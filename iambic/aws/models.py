@@ -216,35 +216,7 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
 
         return await super(AWSAccount, self).get_boto3_session(region_name)
 
-    async def discover_identity_center_settings(self):
-        """
-        Discover AWS Identity Center instances in the active regions.
-
-        Returns:
-            A tuple containing the region name and the Identity Center instance ID, if found.
-            If no Identity Center instance is found, returns (None, None).
-        """
-        if not self.identity_center_details:
-            return None, None
-
-        region = self.identity_center_details.region
-        identity_center_client = await self.get_boto3_client("sso-admin", region_name=region)
-
-        identity_center_instances = await aio_wrapper(identity_center_client.list_instances)
-        identity_center_instance_arn = identity_center_instances["Instances"][0]["InstanceArn"]
-        permission_set_res = await aio_wrapper(
-            identity_center_client.list_permission_sets, InstanceArn=identity_center_instance_arn
-        )
-        permission_sets = permission_set_res["PermissionSets"]
-
-        # Use https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/identitystore.html
-        return {
-            "region": region,
-            "identity_center_instance_arn": identity_center_instance_arn,
-            "permission_sets": permission_sets,
-        }
-
-    async def set_identity_center_details(self, set_identity_center_map: bool = True):
+    async def set_identity_center_details(self, set_identity_center_map: bool = True) -> None:
         if self.identity_center_details:
             region = self.identity_center_details.region
             identity_center_client = await self.get_boto3_client("sso-admin", region_name=region)
@@ -253,6 +225,9 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
             )
 
             identity_center_instances = await aio_wrapper(identity_center_client.list_instances)
+
+            if not identity_center_instances.get("Instances"):
+                raise ValueError("No Identity Center instances found")
 
             self.identity_center_details.instance_arn = identity_center_instances["Instances"][0]["InstanceArn"]
             self.identity_center_details.identity_store_id = identity_center_instances["Instances"][0][

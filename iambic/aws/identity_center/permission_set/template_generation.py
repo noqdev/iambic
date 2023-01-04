@@ -28,6 +28,7 @@ from iambic.core.template_generation import (
 )
 from iambic.core.utils import NoqSemaphore, resource_file_upsert
 
+# The dir to write the boto response to a file to prevent keeping too much in memory
 IDENTITY_CENTER_PERMISSION_SET_RESPONSE_DIR = pathlib.Path.home().joinpath(
     ".iambic", "resources", "aws", "identity_center", "permission_sets"
 )
@@ -396,7 +397,10 @@ async def generate_aws_permission_set_templates(
         aws_account_map, all_permission_sets
     )
 
-    log.info("Writing templated AWS Identity Center Permission Set.")
+    log.info(
+        "Writing templated AWS Identity Center Permission Set.",
+        unique_identities=len(grouped_permission_set_map)
+    )
     for name, refs in grouped_permission_set_map.items():
         await create_templated_permission_set(
             aws_account_map,
