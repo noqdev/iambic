@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 
-# from iambic.aws.cloudcontrol.template_generation import generate_cloudcontrol_templates
 from iambic.aws.iam.policy.template_generation import (
     generate_aws_managed_policy_templates,
 )
