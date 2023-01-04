@@ -7,7 +7,6 @@ from collections import defaultdict
 
 import aiofiles
 
-from iambic.aws.models import AWSAccount
 from iambic.aws.identity_center.permission_set.models import (
     AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
     AWSIdentityCenterPermissionSetTemplate,
@@ -16,6 +15,7 @@ from iambic.aws.identity_center.permission_set.utils import (
     enrich_permission_set_details,
     get_permission_set_users_and_groups,
 )
+from iambic.aws.models import AWSAccount
 from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
 from iambic.config.models import Config
 from iambic.core import noq_json as json
@@ -38,7 +38,9 @@ IDENTITY_CENTER_PERMISSION_SET_RESPONSE_DIR = pathlib.Path.home().joinpath(
 
 
 def get_permission_set_dir(base_dir: str) -> str:
-    repo_dir = os.path.join(base_dir, "resources", "aws", "identity_center", "permission_sets")
+    repo_dir = os.path.join(
+        base_dir, "resources", "aws", "identity_center", "permission_sets"
+    )
     os.makedirs(repo_dir, exist_ok=True)
     return str(repo_dir)
 
@@ -58,7 +60,9 @@ def get_templated_permission_set_file_path(
 
 
 def get_account_permission_set_resource_dir(account_id: str) -> str:
-    account_resource_dir = os.path.join(IDENTITY_CENTER_PERMISSION_SET_RESPONSE_DIR, account_id)
+    account_resource_dir = os.path.join(
+        IDENTITY_CENTER_PERMISSION_SET_RESPONSE_DIR, account_id
+    )
     os.makedirs(account_resource_dir, exist_ok=True)
     return account_resource_dir
 
@@ -316,7 +320,11 @@ async def generate_aws_permission_set_templates(
     for config in configs:
         if config.aws and config.aws.accounts:
             accounts_to_set_identity_center.extend(
-                [account for account in config.aws.accounts if account.identity_center_details]
+                [
+                    account
+                    for account in config.aws.accounts
+                    if account.identity_center_details
+                ]
             )
 
     if not accounts_to_set_identity_center:
@@ -329,7 +337,10 @@ async def generate_aws_permission_set_templates(
     )
 
     await asyncio.gather(
-        *[account.set_identity_center_details() for account in accounts_to_set_identity_center]
+        *[
+            account.set_identity_center_details()
+            for account in accounts_to_set_identity_center
+        ]
     )
 
     messages = []
@@ -342,7 +353,9 @@ async def generate_aws_permission_set_templates(
             "sso-admin", region_name=aws_account.identity_center_details.region
         )
 
-        for permission_set in aws_account.identity_center_details.permission_set_map.values():
+        for (
+            permission_set
+        ) in aws_account.identity_center_details.permission_set_map.values():
             messages.append(
                 dict(
                     account_id=aws_account.account_id,
@@ -399,7 +412,7 @@ async def generate_aws_permission_set_templates(
 
     log.info(
         "Writing templated AWS Identity Center Permission Set.",
-        unique_identities=len(grouped_permission_set_map)
+        unique_identities=len(grouped_permission_set_map),
     )
     for name, refs in grouped_permission_set_map.items():
         await create_templated_permission_set(

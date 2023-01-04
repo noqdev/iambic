@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import random
 
-from iambic.aws.models import AWSAccount
 from iambic.aws.identity_center.permission_set.models import (
     AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
     AWSIdentityCenterPermissionSetTemplate,
     PermissionSetAccess,
 )
-from iambic.aws.identity_center.permission_set.template_generation import get_permission_set_dir
+from iambic.aws.identity_center.permission_set.template_generation import (
+    get_permission_set_dir,
+)
+from iambic.aws.models import AWSAccount
 from iambic.core.logger import log
 from iambic.core.utils import gather_templates
 
@@ -19,10 +21,12 @@ def attach_access_rule(
     exclude_accounts: int = 0,
 ) -> AWSIdentityCenterPermissionSetTemplate:
     users = [
-        details["UserName"] for details in aws_account.identity_center_details.user_map.values()
+        details["UserName"]
+        for details in aws_account.identity_center_details.user_map.values()
     ]
     groups = [
-        details["DisplayName"] for details in aws_account.identity_center_details.user_map.values()
+        details["DisplayName"]
+        for details in aws_account.identity_center_details.user_map.values()
     ]
     org_accounts = list(aws_account.identity_center_details.org_account_map.values())
     if exclude_accounts:
@@ -57,7 +61,10 @@ async def generate_permission_set_template_from_base(
     permission_set_template = AWSIdentityCenterPermissionSetTemplate.load(
         random.choice(permission_sets)
     )
-    log.info("Using permission set as base", permission_set=permission_set_template.identifier)
+    log.info(
+        "Using permission set as base",
+        permission_set=permission_set_template.identifier,
+    )
 
     permission_set_template.identifier = f"iambic_test_{random.randint(0, 10000)}"
     permission_set_template.file_path = (
