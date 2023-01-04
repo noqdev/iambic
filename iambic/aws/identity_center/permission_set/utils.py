@@ -249,6 +249,23 @@ async def apply_permission_set_aws_managed_policies(
     return response
 
 
+async def detach_customer_managed_policy_ref(
+    identity_center_client,
+    instance_arn: str,
+    permission_set_arn: str,
+    policy: dict
+):
+    try:
+        await aio_wrapper(
+            identity_center_client.detach_customer_managed_policy_reference_from_permission_set,
+            InstanceArn=instance_arn,
+            PermissionSetArn=permission_set_arn,
+            CustomerManagedPolicyReference=policy,
+        )
+    except identity_center_client.exceptions.ConflictException:
+        return
+
+
 async def apply_permission_set_customer_managed_policies(
     identity_center_client,
     instance_arn: str,
@@ -260,12 +277,19 @@ async def apply_permission_set_customer_managed_policies(
 ) -> list[ProposedChange]:
     tasks = []
     response = []
+
+    log.warning(
+        "Customer Managed Policies",
+        template_policies=template_policies,
+        existing_policies=existing_policies,
+    )
+
     template_policy_map = {
-        f"{policy['Path']}{policy['PolicyName']}": policy
+        f"{policy['Path']}{policy['Name']}": policy
         for policy in template_policies
     }
     existing_policy_map = {
-        f"{policy['Path']}{policy['PolicyName']}": policy
+        f"{policy['Path']}{policy['Name']}": policy
         for policy in existing_policies
     }
 
@@ -281,7 +305,7 @@ async def apply_permission_set_customer_managed_policies(
             response.append(
                 ProposedChange(
                     change_type=ProposedChangeType.ATTACH,
-                    resource_id=f"{policy['Path']}{policy['PolicyName']}",
+                    resource_id=f"{policy['Path']}{policy['Name']}",
                     attribute="customer_managed_policies",
                 )
             )
@@ -314,7 +338,7 @@ async def apply_permission_set_customer_managed_policies(
             response.append(
                 ProposedChange(
                     change_type=ProposedChangeType.DETACH,
-                    resource_id=f"{policy['Path']}{policy['PolicyName']}",
+                    resource_id=f"{policy['Path']}{policy['Name']}",
                     attribute="customer_managed_policies",
                 )
             )
@@ -322,11 +346,11 @@ async def apply_permission_set_customer_managed_policies(
             log_str = f"{log_str} Detaching customer managed policies..."
             tasks.extend(
                 [
-                    aio_wrapper(
-                        identity_center_client.detach_customer_managed_policy_reference_from_permission_set,
-                        InstanceArn=instance_arn,
-                        PermissionSetArn=permission_set_arn,
-                        CustomerManagedPolicyReference=policy,
+                    detach_customer_managed_policy_ref(
+                        identity_center_client,
+                        instance_arn=instance_arn,
+                        permission_set_arn=permission_set_arn,
+                        policy=policy,
                     )
                     for policy in existing_customer_managed_policy_references
                 ]
@@ -341,6 +365,98 @@ async def apply_permission_set_customer_managed_policies(
         await asyncio.gather(*tasks)
 
     return response
+
+
+async def create_account_assignment(
+    identity_center_client,
+    account_id: str,
+    instance_arn: str,
+    permission_set_arn: str,
+    resource_type: str,
+    resource_id: str,
+    resource_name: str,
+    log_params: dict,
+):
+    status = await aio_wrapper(
+        identity_center_client.create_account_assignment,
+        InstanceArn=instance_arn,
+        TargetId=account_id,
+        TargetType="AWS_ACCOUNT",
+        PermissionSetArn=permission_set_arn,
+        PrincipalType=resource_type,
+        PrincipalId=resource_id,
+    )
+    request_id = status.get("AccountAssignmentCreationStatus", {}).get("RequestId")
+    creation_status = status.get("AccountAssignmentCreationStatus", {})
+
+    while creation_status.get("Status") == "IN_PROGRESS":
+        await asyncio.sleep(.5)
+        status = await aio_wrapper(
+            identity_center_client.describe_account_assignment_creation_status,
+            InstanceArn=instance_arn,
+            AccountAssignmentCreationRequestId=request_id,
+        )
+        creation_status = status.get("AccountAssignmentCreationStatus", {})
+
+        if creation_status.get("Status") == "FAILED":
+            log_params = {
+                **log_params,
+                "resource_type": f"aws:identity_center:account_assignment:{resource_type.lower()}"
+            }
+            log.error(
+                "Unable to delete account assignment.",
+                reason=creation_status.get("FailureReason"),
+                assigned_account_id=account_id,
+                resource_name=resource_name,
+                **log_params
+            )
+            return
+
+
+async def delete_account_assignment(
+    identity_center_client,
+    account_id: str,
+    instance_arn: str,
+    permission_set_arn: str,
+    resource_type: str,
+    resource_id: str,
+    resource_name: str,
+    log_params: dict,
+):
+    status = await aio_wrapper(
+        identity_center_client.delete_account_assignment,
+        InstanceArn=instance_arn,
+        TargetId=account_id,
+        TargetType="AWS_ACCOUNT",
+        PermissionSetArn=permission_set_arn,
+        PrincipalType=resource_type,
+        PrincipalId=resource_id,
+    )
+    request_id = status.get("AccountAssignmentDeletionStatus", {}).get("RequestId")
+    deletion_status = status.get("AccountAssignmentDeletionStatus", {})
+
+    while deletion_status.get("Status") == "IN_PROGRESS":
+        await asyncio.sleep(.5)
+        status = await aio_wrapper(
+            identity_center_client.describe_account_assignment_deletion_status,
+            InstanceArn=instance_arn,
+            AccountAssignmentDeletionRequestId=request_id,
+        )
+        deletion_status = status.get("AccountAssignmentDeletionStatus", {})
+
+        if deletion_status.get("Status") == "FAILED":
+            log_params = {
+                **log_params,
+                "resource_type": f"aws:identity_center:account_assignment:{resource_type.lower()}"
+            }
+            log.error(
+                "Unable to delete account assignment.",
+                reason=deletion_status.get("FailureReason"),
+                assigned_account_id=account_id,
+                resource_name=resource_name,
+                **log_params
+            )
+            return
 
 
 async def apply_account_assignments(
@@ -395,14 +511,15 @@ async def apply_account_assignments(
                     )
                 )
                 tasks.append(
-                    aio_wrapper(
-                        identity_center_client.delete_account_assignment,
-                        InstanceArn=instance_arn,
-                        TargetId=assignment["account_id"],
-                        TargetType="AWS_ACCOUNT",
-                        PermissionSetArn=permission_set_arn,
-                        PrincipalType=assignment["resource_type"],
-                        PrincipalId=assignment["resource_id"],
+                    delete_account_assignment(
+                        identity_center_client,
+                        account_id=assignment["account_id"],
+                        instance_arn=instance_arn,
+                        permission_set_arn=permission_set_arn,
+                        resource_type=assignment["resource_type"],
+                        resource_id=assignment["resource_id"],
+                        resource_name=assignment["resource_name"],
+                        log_params=log_params,
                     )
                 )
             log.info(log_str, details=assignment, **log_params)
@@ -423,14 +540,15 @@ async def apply_account_assignments(
             if context.execute:
                 log_str = f"{log_str} Creating account assignment..."
                 tasks.append(
-                    aio_wrapper(
-                        identity_center_client.create_account_assignment,
-                        InstanceArn=instance_arn,
-                        TargetId=assignment["account_id"],
-                        TargetType="AWS_ACCOUNT",
-                        PermissionSetArn=permission_set_arn,
-                        PrincipalType=assignment["resource_type"],
-                        PrincipalId=assignment["resource_id"],
+                    create_account_assignment(
+                        identity_center_client,
+                        account_id=assignment["account_id"],
+                        instance_arn=instance_arn,
+                        permission_set_arn=permission_set_arn,
+                        resource_type=assignment["resource_type"],
+                        resource_id=assignment["resource_id"],
+                        resource_name=assignment["resource_name"],
+                        log_params=log_params,
                     )
                 )
             log.info(log_str, details=assignment, **log_params)
@@ -687,14 +805,15 @@ async def delete_permission_set(
         log_params["account_assignments"] = account_assignments
         for assignment in account_assignments:
             tasks.append(
-                aio_wrapper(
-                    identity_center_client.delete_account_assignment,
-                    InstanceArn=instance_arn,
-                    TargetId=assignment["account_id"],
-                    TargetType="AWS_ACCOUNT",
-                    PermissionSetArn=permission_set_arn,
-                    PrincipalType=assignment["resource_type"],
-                    PrincipalId=assignment["resource_id"],
+                delete_account_assignment(
+                    identity_center_client,
+                    account_id=assignment["account_id"],
+                    instance_arn=instance_arn,
+                    permission_set_arn=permission_set_arn,
+                    resource_type=assignment["resource_type"],
+                    resource_id=assignment["resource_id"],
+                    resource_name=assignment["resource_name"],
+                    log_params=log_params,
                 )
             )
 
@@ -717,11 +836,11 @@ async def delete_permission_set(
         ] = customer_managed_policy_references
         tasks.extend(
             [
-                aio_wrapper(
-                    identity_center_client.detach_customer_managed_policy_reference_from_permission_set,
-                    InstanceArn=instance_arn,
-                    PermissionSetArn=permission_set_arn,
-                    CustomerManagedPolicyReference=policy,
+                detach_customer_managed_policy_ref(
+                    identity_center_client,
+                    instance_arn=instance_arn,
+                    permission_set_arn=permission_set_arn,
+                    policy=policy,
                 )
                 for policy in customer_managed_policy_references
             ]
