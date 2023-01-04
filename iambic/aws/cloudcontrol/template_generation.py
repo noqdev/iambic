@@ -2,7 +2,7 @@
 #
 # from iambic.aws.cloudcontrol.utils import list_resources
 # from iambic.aws.models import AWSAccount
-# from iambic.aws.sso.permission_set.models import (
+# from iambic.aws.identity_center.permission_set.models import (
 #     AWSSSOPermissionSetProperties,
 #     AWSSSOPermissionSetTemplate,
 # )
@@ -32,7 +32,7 @@
 #         return {}
 #     # TODO: We need to parse all active regions, not just the default one
 #     account_ids = list(aws_account_map.keys())
-#     sso_settings = await aws_account.discover_sso_settings(account_ids)
+#     sso_settings = await aws_account.discover_identity_center_settings(account_ids)
 #
 #     cloudcontrol_client = await aws_account.get_boto3_client(
 #         "cloudcontrol", region_name=aws_account.default_region
@@ -75,7 +75,7 @@
 #                 model = AWSSSOPermissionSetProperties.parse_obj(resource_properties)
 #                 file_name = f"{model.name}.yaml"
 #                 template = AWSSSOPermissionSetTemplate(
-#                     file_path=f"resources/aws/sso/permission_sets/{file_name}",
+#                     file_path=f"resources/aws/identity_center/permission_sets/{file_name}",
 #                     properties=model,
 #                 )
 #                 file_path = os.path.expanduser(template.file_path)

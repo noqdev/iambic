@@ -14,12 +14,12 @@ async def multi_config_loader(config_paths: list[str]) -> list[Config]:
 
     await asyncio.gather(*[config.setup_aws_accounts() for config in configs])
 
-    sso_detail_set_tasks = []
+    identity_center_detail_set_tasks = []
     for config in configs:
         if config.aws and config.aws.accounts:
-            sso_detail_set_tasks.extend(
-                [account.set_sso_details() for account in config.aws.accounts]
+            identity_center_detail_set_tasks.extend(
+                [account.set_identity_center_details() for account in config.aws.accounts]
             )
-    await asyncio.gather(*sso_detail_set_tasks)
+    await asyncio.gather(*identity_center_detail_set_tasks)
 
     return configs

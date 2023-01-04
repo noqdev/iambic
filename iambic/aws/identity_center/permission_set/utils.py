@@ -21,16 +21,16 @@ async def generate_permission_set_map(aws_accounts: list[AWSAccount], templates:
     :param templates:
     :return:
     """
-    from iambic.aws.sso.permission_set.models import (
-        AWS_SSO_PERMISSION_SET_TEMPLATE_TYPE,
+    from iambic.aws.identity_center.permission_set.models import (
+        AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
     )
 
     org_include_set = set()
     include_all = False
-    accounts_to_set_sso = []
+    accounts_to_set_identity_center = []
 
     for template in templates:
-        if template.template_type == AWS_SSO_PERMISSION_SET_TEMPLATE_TYPE:
+        if template.template_type == AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE:
             for org in template.included_orgs:
                 if org == "*":
                     include_all = True
@@ -43,16 +43,16 @@ async def generate_permission_set_map(aws_accounts: list[AWSAccount], templates:
     for aws_account in aws_accounts:
         if (
             include_all or aws_account.org_id in org_include_set
-        ) and aws_account.sso_details:
-            accounts_to_set_sso.append(aws_account)
+        ) and aws_account.identity_center_details:
+            accounts_to_set_identity_center.append(aws_account)
 
     await asyncio.gather(
-        *[account.set_sso_details() for account in accounts_to_set_sso]
+        *[account.set_identity_center_details() for account in accounts_to_set_identity_center]
     )
 
 
 async def get_permission_set_users_and_groups(
-    sso_client,
+    identity_center_client,
     instance_arn: str,
     permission_set_arn: str,
     user_map: dict,
@@ -65,14 +65,14 @@ async def get_permission_set_users_and_groups(
 
     query_params = dict(InstanceArn=instance_arn, PermissionSetArn=permission_set_arn)
     instance_accounts = await legacy_paginated_search(
-        sso_client.list_accounts_for_provisioned_permission_set,
+        identity_center_client.list_accounts_for_provisioned_permission_set,
         response_key="AccountIds",
         **query_params,
     )
     all_account_assignments = await async_batch_processor(
         [
             legacy_paginated_search(
-                sso_client.list_account_assignments,
+                identity_center_client.list_account_assignments,
                 response_key="AccountAssignments",
                 AccountId=account_id,
                 **query_params,
@@ -95,7 +95,7 @@ async def get_permission_set_users_and_groups(
 
 
 async def get_permission_set_users_and_groups_as_access_rules(
-    sso_client,
+    identity_center_client,
     instance_arn: str,
     permission_set_arn: str,
     user_map: dict,
@@ -104,7 +104,7 @@ async def get_permission_set_users_and_groups_as_access_rules(
 ) -> list[dict]:
     name_map = {"user": "UserName", "group": "DisplayName"}
     permission_set_users_and_groups = await get_permission_set_users_and_groups(
-        sso_client, instance_arn, permission_set_arn, user_map, group_map
+        identity_center_client, instance_arn, permission_set_arn, user_map, group_map
     )
     response = []
 
@@ -130,29 +130,29 @@ async def get_permission_set_users_and_groups_as_access_rules(
 
 
 async def enrich_permission_set_details(
-    sso_client, instance_arn: str, permission_set_details: dict
+    identity_center_client, instance_arn: str, permission_set_details: dict
 ):
     permission_set_arn = permission_set_details["PermissionSetArn"]
     query_params = dict(InstanceArn=instance_arn, PermissionSetArn=permission_set_arn)
     tasks = [
-        aio_wrapper(sso_client.get_inline_policy_for_permission_set, **query_params),
+        aio_wrapper(identity_center_client.get_inline_policy_for_permission_set, **query_params),
         aio_wrapper(
-            sso_client.get_permissions_boundary_for_permission_set, **query_params
+            identity_center_client.get_permissions_boundary_for_permission_set, **query_params
         ),
         legacy_paginated_search(
-            sso_client.list_customer_managed_policy_references_in_permission_set,
+            identity_center_client.list_customer_managed_policy_references_in_permission_set,
             response_key="CustomerManagedPolicyReferences",
             retain_key=True,
             **query_params,
         ),
         legacy_paginated_search(
-            sso_client.list_managed_policies_in_permission_set,
+            identity_center_client.list_managed_policies_in_permission_set,
             response_key="AttachedManagedPolicies",
             retain_key=True,
             **query_params,
         ),
         legacy_paginated_search(
-            sso_client.list_tags_for_resource,
+            identity_center_client.list_tags_for_resource,
             response_key="Tags",
             retain_key=True,
             InstanceArn=instance_arn,
@@ -172,7 +172,7 @@ async def enrich_permission_set_details(
 
 
 async def apply_permission_set_aws_managed_policies(
-    sso_client,
+    identity_center_client,
     instance_arn: str,
     permission_set_arn: str,
     template_policy_arns: list[str],
@@ -203,7 +203,7 @@ async def apply_permission_set_aws_managed_policies(
             log_str = f"{log_str} Attaching AWS managed policies..."
             tasks = [
                 aio_wrapper(
-                    sso_client.attach_managed_policy_to_permission_set,
+                    identity_center_client.attach_managed_policy_to_permission_set,
                     InstanceArn=instance_arn,
                     PermissionSetArn=permission_set_arn,
                     ManagedPolicyArn=policy_arn,
@@ -233,7 +233,7 @@ async def apply_permission_set_aws_managed_policies(
             tasks.extend(
                 [
                     aio_wrapper(
-                        sso_client.detach_managed_policy_from_permission_set,
+                        identity_center_client.detach_managed_policy_from_permission_set,
                         InstanceArn=instance_arn,
                         PermissionSetArn=permission_set_arn,
                         ManagedPolicyArn=policy_arn,
@@ -250,7 +250,7 @@ async def apply_permission_set_aws_managed_policies(
 
 
 async def apply_permission_set_customer_managed_policies(
-    sso_client,
+    identity_center_client,
     instance_arn: str,
     permission_set_arn: str,
     template_policies: list[dict],
@@ -289,7 +289,7 @@ async def apply_permission_set_customer_managed_policies(
             log_str = f"{log_str} Attaching customer managed policies..."
             tasks = [
                 aio_wrapper(
-                    sso_client.attach_customer_managed_policy_reference_to_permission_set,
+                    identity_center_client.attach_customer_managed_policy_reference_to_permission_set,
                     InstanceArn=instance_arn,
                     PermissionSetArn=permission_set_arn,
                     CustomerManagedPolicyReference=policy,
@@ -323,7 +323,7 @@ async def apply_permission_set_customer_managed_policies(
             tasks.extend(
                 [
                     aio_wrapper(
-                        sso_client.detach_customer_managed_policy_reference_from_permission_set,
+                        identity_center_client.detach_customer_managed_policy_reference_from_permission_set,
                         InstanceArn=instance_arn,
                         PermissionSetArn=permission_set_arn,
                         CustomerManagedPolicyReference=policy,
@@ -344,7 +344,7 @@ async def apply_permission_set_customer_managed_policies(
 
 
 async def apply_account_assignments(
-    sso_client,
+    identity_center_client,
     instance_arn: str,
     permission_set_arn: str,
     template_assignments: list[dict],
@@ -361,7 +361,7 @@ async def apply_account_assignments(
         resource_type: USER | GROUP
     )
 
-    sso_client: boto3 client
+    identity_center_client: boto3 client
     instance_arn: str
     permission_set_arn: str
     template_assignments: list[dict]
@@ -396,7 +396,7 @@ async def apply_account_assignments(
                 )
                 tasks.append(
                     aio_wrapper(
-                        sso_client.delete_account_assignment,
+                        identity_center_client.delete_account_assignment,
                         InstanceArn=instance_arn,
                         TargetId=assignment["account_id"],
                         TargetType="AWS_ACCOUNT",
@@ -424,7 +424,7 @@ async def apply_account_assignments(
                 log_str = f"{log_str} Creating account assignment..."
                 tasks.append(
                     aio_wrapper(
-                        sso_client.create_account_assignment,
+                        identity_center_client.create_account_assignment,
                         InstanceArn=instance_arn,
                         TargetId=assignment["account_id"],
                         TargetType="AWS_ACCOUNT",
@@ -442,7 +442,7 @@ async def apply_account_assignments(
 
 
 async def apply_permission_set_inline_policy(
-    sso_client,
+    identity_center_client,
     instance_arn: str,
     permission_set_arn: str,
     template_inline_policy: str,
@@ -493,7 +493,7 @@ async def apply_permission_set_inline_policy(
             boto_action = "Creating" if not existing_inline_policy else "Updating"
             log_str = f"{log_str} {boto_action} InlinePolicyDocument..."
             await aio_wrapper(
-                sso_client.put_inline_policy_to_permission_set,
+                identity_center_client.put_inline_policy_to_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
                 InlinePolicy=json.dumps(template_inline_policy),
@@ -511,7 +511,7 @@ async def apply_permission_set_inline_policy(
         if context.execute:
             log_str = f"{log_str} Removing InlinePolicyDocument..."
             await aio_wrapper(
-                sso_client.delete_inline_policy_from_permission_set,
+                identity_center_client.delete_inline_policy_from_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
             )
@@ -521,7 +521,7 @@ async def apply_permission_set_inline_policy(
 
 
 async def apply_permission_set_permission_boundary(
-    sso_client,
+    identity_center_client,
     instance_arn: str,
     permission_set_arn: str,
     template_permission_boundary: dict,
@@ -568,7 +568,7 @@ async def apply_permission_set_permission_boundary(
             boto_action = "Creating" if not existing_permission_boundary else "Updating"
             log_str = f"{log_str} {boto_action} PermissionsBoundary..."
             await aio_wrapper(
-                sso_client.put_permissions_boundary_to_permission_set,
+                identity_center_client.put_permissions_boundary_to_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
                 PermissionsBoundary=template_permission_boundary,
@@ -587,7 +587,7 @@ async def apply_permission_set_permission_boundary(
         if context.execute:
             log_str = f"{log_str} Deleting PermissionsBoundary..."
             await aio_wrapper(
-                sso_client.delete_permissions_boundary_from_permission_set,
+                identity_center_client.delete_permissions_boundary_from_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
             )
@@ -597,7 +597,7 @@ async def apply_permission_set_permission_boundary(
 
 
 async def apply_permission_set_tags(
-    sso_client,
+    identity_center_client,
     instance_arn: str,
     permission_set_arn: str,
     template_tags: list[dict],
@@ -628,7 +628,7 @@ async def apply_permission_set_tags(
             log_str = f"{log_str} Removing tags..."
             tasks.append(
                 aio_wrapper(
-                    sso_client.untag_resource,
+                    identity_center_client.untag_resource,
                     InstanceArn=instance_arn,
                     ResourceArn=permission_set_arn,
                     TagKeys=tags_to_remove,
@@ -650,7 +650,7 @@ async def apply_permission_set_tags(
             log_str = f"{log_str} Adding tags..."
             tasks.append(
                 aio_wrapper(
-                    sso_client.tag_resource,
+                    identity_center_client.tag_resource,
                     InstanceArn=instance_arn,
                     ResourceArn=permission_set_arn,
                     Tags=tags_to_apply,
@@ -665,7 +665,7 @@ async def apply_permission_set_tags(
 
 
 async def delete_permission_set(
-    sso_client,
+    identity_center_client,
     instance_arn: str,
     permission_set_arn: str,
     current_permission_set: dict,
@@ -688,7 +688,7 @@ async def delete_permission_set(
         for assignment in account_assignments:
             tasks.append(
                 aio_wrapper(
-                    sso_client.delete_account_assignment,
+                    identity_center_client.delete_account_assignment,
                     InstanceArn=instance_arn,
                     TargetId=assignment["account_id"],
                     TargetType="AWS_ACCOUNT",
@@ -703,7 +703,7 @@ async def delete_permission_set(
         tasks.extend(
             [
                 aio_wrapper(
-                    sso_client.detach_managed_policy_from_permission_set,
+                    identity_center_client.detach_managed_policy_from_permission_set,
                     InstanceArn=instance_arn,
                     PermissionSetArn=permission_set_arn,
                     ManagedPolicyArn=policy_arn,
@@ -718,7 +718,7 @@ async def delete_permission_set(
         tasks.extend(
             [
                 aio_wrapper(
-                    sso_client.detach_customer_managed_policy_reference_from_permission_set,
+                    identity_center_client.detach_customer_managed_policy_reference_from_permission_set,
                     InstanceArn=instance_arn,
                     PermissionSetArn=permission_set_arn,
                     CustomerManagedPolicyReference=policy,
@@ -730,7 +730,7 @@ async def delete_permission_set(
         log_params["permissions_boundary"] = permissions_boundary
         tasks.append(
             aio_wrapper(
-                sso_client.delete_permissions_boundary_from_permission_set,
+                identity_center_client.delete_permissions_boundary_from_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
             )
@@ -739,7 +739,7 @@ async def delete_permission_set(
         log_params["inline_policy"] = inline_policy
         tasks.append(
             aio_wrapper(
-                sso_client.delete_inline_policy_from_permission_set,
+                identity_center_client.delete_inline_policy_from_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
             )
@@ -749,7 +749,7 @@ async def delete_permission_set(
         tags_to_remove = [tag["Key"] for tag in tags]
         tasks.append(
             aio_wrapper(
-                sso_client.untag_resource,
+                identity_center_client.untag_resource,
                 InstanceArn=instance_arn,
                 ResourceArn=permission_set_arn,
                 TagKeys=tags_to_remove,
@@ -766,7 +766,7 @@ async def delete_permission_set(
     while True:
         try:
             await aio_wrapper(
-                sso_client.delete_permission_set,
+                identity_center_client.delete_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
             )

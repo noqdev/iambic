@@ -27,7 +27,7 @@ aws:
     - org_id: 'o-yfdp0r70sq'
       assume_role_arn: 'arn:aws:iam::259868150464:role/IambicSpokeRole'
       org_name: 'staging'
-      sso_account:
+      identity_center_account:
         account_id: '259868150464'
         region: 'us-east-1'
       account_rules:
@@ -45,7 +45,7 @@ class IambicTestDetails:
     config_path: str = None
     template_dir_path: str = None
     config: Config = None
-    sso_account: AWSAccount = None
+    identity_center_account: AWSAccount = None
 
 
 IAMBIC_TEST_DETAILS = IambicTestDetails()
@@ -78,9 +78,9 @@ def generate_templates_fixture(request):
     asyncio.run(IAMBIC_TEST_DETAILS.config.setup_aws_accounts())
 
     for aws_account in IAMBIC_TEST_DETAILS.config.aws.accounts:
-        if aws_account.sso_details:
-            IAMBIC_TEST_DETAILS.sso_account = aws_account
-            asyncio.run(aws_account.set_sso_details())
+        if aws_account.identity_center_details:
+            IAMBIC_TEST_DETAILS.identity_center_account = aws_account
+            asyncio.run(aws_account.set_identity_center_details())
             break
 
     log.info("Config setup complete")

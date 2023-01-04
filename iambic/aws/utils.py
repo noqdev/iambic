@@ -189,7 +189,7 @@ def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> boo
     ):
         return False
 
-    # SSO Models don't inherit from AccessModel and rely only on included/excluded orgs.
+    # IdentityCenter Models don't inherit from AccessModel and rely only on included/excluded orgs.
     # hasattr is how we are currently handling this special case.
     if not issubclass(type(resource), AccessModel) and not hasattr(
         resource, "included_orgs"

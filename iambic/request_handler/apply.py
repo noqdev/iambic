@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
-from iambic.aws.sso.permission_set.utils import generate_permission_set_map
+from iambic.aws.identity_center.permission_set.utils import generate_permission_set_map
 from iambic.aws.utils import remove_expired_resources
 from iambic.config.models import Config
 from iambic.core.context import ExecutionContext

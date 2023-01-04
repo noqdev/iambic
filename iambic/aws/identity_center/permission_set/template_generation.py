@@ -8,11 +8,11 @@ from collections import defaultdict
 import aiofiles
 
 from iambic.aws.models import AWSAccount
-from iambic.aws.sso.permission_set.models import (
-    AWS_SSO_PERMISSION_SET_TEMPLATE_TYPE,
-    AWSSSOPermissionSetTemplate,
+from iambic.aws.identity_center.permission_set.models import (
+    AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
+    AWSIdentityCenterPermissionSetTemplate,
 )
-from iambic.aws.sso.permission_set.utils import (
+from iambic.aws.identity_center.permission_set.utils import (
     enrich_permission_set_details,
     get_permission_set_users_and_groups,
 )
@@ -28,16 +28,16 @@ from iambic.core.template_generation import (
 )
 from iambic.core.utils import NoqSemaphore, resource_file_upsert
 
-SSO_PERMISSION_SET_RESPONSE_DIR = pathlib.Path.home().joinpath(
-    ".iambic", "resources", "aws", "sso", "permission_sets"
+IDENTITY_CENTER_PERMISSION_SET_RESPONSE_DIR = pathlib.Path.home().joinpath(
+    ".iambic", "resources", "aws", "identity_center", "permission_sets"
 )
 
 
-# TODO: Update all grouping functions to support org grouping once multiple orgs with SSO is functional
+# TODO: Update all grouping functions to support org grouping once multiple orgs with IdentityCenter is functional
 
 
 def get_permission_set_dir(base_dir: str) -> str:
-    repo_dir = os.path.join(base_dir, "resources", "aws", "sso", "permission_sets")
+    repo_dir = os.path.join(base_dir, "resources", "aws", "identity_center", "permission_sets")
     os.makedirs(repo_dir, exist_ok=True)
     return str(repo_dir)
 
@@ -57,13 +57,13 @@ def get_templated_permission_set_file_path(
 
 
 def get_account_permission_set_resource_dir(account_id: str) -> str:
-    account_resource_dir = os.path.join(SSO_PERMISSION_SET_RESPONSE_DIR, account_id)
+    account_resource_dir = os.path.join(IDENTITY_CENTER_PERMISSION_SET_RESPONSE_DIR, account_id)
     os.makedirs(account_resource_dir, exist_ok=True)
     return account_resource_dir
 
 
 async def generate_permission_set_resource_file(
-    sso_client,
+    identity_center_client,
     account_id: str,
     instance_arn: str,
     permission_set: dict,
@@ -71,10 +71,10 @@ async def generate_permission_set_resource_file(
     group_map: dict,
 ) -> dict:
     permission_set = await enrich_permission_set_details(
-        sso_client, instance_arn, permission_set
+        identity_center_client, instance_arn, permission_set
     )
     permission_set["assignments"] = await get_permission_set_users_and_groups(
-        sso_client,
+        identity_center_client,
         instance_arn,
         permission_set["PermissionSetArn"],
         user_map,
@@ -197,13 +197,13 @@ async def create_templated_permission_set(  # noqa: C901
                 if not account_rules.get(account_rule_key):
                     if all(
                         account in accounts
-                        for account in aws_account.sso_details.org_account_map.keys()
+                        for account in aws_account.identity_center_details.org_account_map.keys()
                     ):
                         accounts = ["*"]
                     else:
                         accounts = sorted(
                             [
-                                aws_account.sso_details.org_account_map[
+                                aws_account.identity_center_details.org_account_map[
                                     nested_account_id
                                 ]
                                 for nested_account_id in details["accounts"]
@@ -282,7 +282,7 @@ async def create_templated_permission_set(  # noqa: C901
     permission_set_params["properties"] = permission_set_properties
 
     try:
-        permission_set = AWSSSOPermissionSetTemplate(
+        permission_set = AWSIdentityCenterPermissionSetTemplate(
             file_path=existing_template_map.get(
                 permission_set_name,
                 get_templated_permission_set_file_path(
@@ -307,54 +307,54 @@ async def generate_aws_permission_set_templates(
 ):
     aws_account_map = await get_aws_account_map(configs)
     existing_template_map = await get_existing_template_file_map(
-        base_output_dir, AWS_SSO_PERMISSION_SET_TEMPLATE_TYPE
+        base_output_dir, AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
     )
     resource_dir = get_permission_set_dir(base_output_dir)
 
-    accounts_to_set_sso = []
+    accounts_to_set_identity_center = []
     for config in configs:
         if config.aws and config.aws.accounts:
-            accounts_to_set_sso.extend(
-                [account for account in config.aws.accounts if account.sso_details]
+            accounts_to_set_identity_center.extend(
+                [account for account in config.aws.accounts if account.identity_center_details]
             )
 
-    if not accounts_to_set_sso:
+    if not accounts_to_set_identity_center:
         return
 
-    log.info("Generating AWS SSO Permission Set templates.")
+    log.info("Generating AWS Identity Center Permission Set templates.")
     log.info(
-        "Beginning to retrieve AWS SSO Permission Sets.",
+        "Beginning to retrieve AWS Identity Center Permission Sets.",
         org_accounts=list(aws_account_map.keys()),
     )
 
     await asyncio.gather(
-        *[account.set_sso_details() for account in accounts_to_set_sso]
+        *[account.set_identity_center_details() for account in accounts_to_set_identity_center]
     )
 
     messages = []
     for aws_account in aws_account_map.values():
-        if not aws_account.sso_details:
+        if not aws_account.identity_center_details:
             continue
 
-        instance_arn = aws_account.sso_details.instance_arn
-        sso_client = await aws_account.get_boto3_client(
-            "sso-admin", region_name=aws_account.sso_details.region
+        instance_arn = aws_account.identity_center_details.instance_arn
+        identity_center_client = await aws_account.get_boto3_client(
+            "sso-admin", region_name=aws_account.identity_center_details.region
         )
 
-        for permission_set in aws_account.sso_details.permission_set_map.values():
+        for permission_set in aws_account.identity_center_details.permission_set_map.values():
             messages.append(
                 dict(
                     account_id=aws_account.account_id,
-                    sso_client=sso_client,
+                    identity_center_client=identity_center_client,
                     instance_arn=instance_arn,
                     permission_set=permission_set,
-                    user_map=aws_account.sso_details.user_map,
-                    group_map=aws_account.sso_details.group_map,
+                    user_map=aws_account.identity_center_details.user_map,
+                    group_map=aws_account.identity_center_details.group_map,
                 )
             )
 
     log.info(
-        "Beginning to enrich AWS IAM SSO Permission Sets.",
+        "Beginning to enrich AWS IAM Identity Center Permission Sets.",
         org_accounts=list(aws_account_map.keys()),
         permission_set_count=len(messages),
     )
@@ -366,7 +366,7 @@ async def generate_aws_permission_set_templates(
     )
 
     log.info(
-        "Finished enriching AWS IAM SSO Permission Sets.",
+        "Finished enriching AWS IAM Identity Center Permission Sets.",
         org_accounts=list(aws_account_map.keys()),
         permission_set_count=len(messages),
     )
@@ -396,7 +396,7 @@ async def generate_aws_permission_set_templates(
         aws_account_map, all_permission_sets
     )
 
-    log.info("Writing templated AWS SSO Permission Set.")
+    log.info("Writing templated AWS Identity Center Permission Set.")
     for name, refs in grouped_permission_set_map.items():
         await create_templated_permission_set(
             aws_account_map,
@@ -406,4 +406,4 @@ async def generate_aws_permission_set_templates(
             existing_template_map,
         )
 
-    log.info("Finished templated AWS SSO Permission Set generation")
+    log.info("Finished templated AWS Identity Center Permission Set generation")
