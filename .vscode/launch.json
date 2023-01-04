@@ -299,7 +299,7 @@
                 "AWS_PROFILE": "staging/IambicHubRole",
                 "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
                 "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full",
-                "PLAN_OUTPUT_PATH": "../proposed_changes.json",
+                "PLAN_OUTPUT_PATH": "../proposed_changes.yaml",
             },
         },
         {
