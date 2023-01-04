@@ -138,6 +138,11 @@ async def async_batch_processor(
     """
     Batches up tasks in an effort to prevent rate limiting
     """
+    if len(tasks) <= batch_size:
+        return await asyncio.gather(
+            *tasks, return_exceptions=return_exceptions
+        )
+
     response = []
     for min_elem in range(0, len(tasks), batch_size):
         response.extend(
