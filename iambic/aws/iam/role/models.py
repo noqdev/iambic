@@ -56,7 +56,7 @@ class RoleAccess(ExpiryModel, AccessModel):
 
     @property
     def resource_type(self):
-        return "aws:iam:role_access"
+        return "aws:iam:role:access_rule"
 
     @property
     def resource_id(self):
@@ -116,7 +116,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
     properties: RoleProperties = Field(
         description="Properties of the role",
     )
-    role_access: Optional[list[RoleAccess]] = Field(
+    access_rules: Optional[list[RoleAccess]] = Field(
         [],
         description="List of users and groups who can assume into the role",
     )
@@ -132,7 +132,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
         # Add RoleAccess Tag to role tags
         role_access = [
             ra._apply_resource_dict(aws_account, context)
-            for ra in self.role_access
+            for ra in self.access_rules
             if apply_to_account(ra, aws_account, context)
         ]
         if role_access:

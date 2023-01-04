@@ -17,8 +17,6 @@ os.environ["AWS_PROFILE"] = "staging/IambicHubRole"
 os.environ["TESTING"] = "true"
 FUNCTIONAL_TEST_TEMPLATE_DIR = os.getenv("FUNCTIONAL_TEST_TEMPLATE_DIR", None)
 
-log.warning("TEMPLATE DIR", FUNCTIONAL_TEST_TEMPLATE_DIR=FUNCTIONAL_TEST_TEMPLATE_DIR)
-
 all_config = """
 extends:
   - key: AWS_SECRETS_MANAGER
