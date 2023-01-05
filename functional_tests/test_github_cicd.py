@@ -23,6 +23,22 @@ extends:
     assume_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
 """
 
+iambic_role_yaml = """template_type: NOQ::AWS::IAM::Role
+identifier: iambic_itest_for_github_cicd
+included_accounts:
+  - dev
+properties:
+  assume_role_policy_document:
+    statement:
+      - action: sts:AssumeRole
+        effect: Deny
+        principal:
+          service: ec2.amazonaws.com
+    version: '2012-10-17'
+  description: {new_description}
+  role_name: iambic_itest_for_github_cicd
+"""
+
 
 @pytest.fixture
 def filesystem():
@@ -74,6 +90,17 @@ def test_github_cicd(filesystem):
     current.checkout()
     with open(f"{temp_templates_directory}/last_touched.md", "wb") as f:
         f.write(date_string.encode("utf-8"))
+    test_role_path = os.path.join(
+        temp_templates_directory,
+        "resources/aws/roles/dev/iambic_itest_github_cicd.yaml",
+    )
+
+    with open(test_role_path, "w") as temp_role_file:
+        utc_obj = datetime.datetime.utcnow()
+        date_isoformat = utc_obj.isoformat()
+        date_string = date_isoformat.replace(":", "_")
+        temp_role_file.write(iambic_role_yaml.format(new_description=date_string))
+
     if repo.index.diff(None) or repo.untracked_files:
         repo.git.add(A=True)
         repo.git.commit(m="msg")
