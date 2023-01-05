@@ -69,10 +69,21 @@ GIT_APPLY_COMMENT_TEMPLATE = """iambic git-applied ran with:
 ```yaml
 {plan}
 ```
+
+<a href="{run_url}">Run</a>
 """
 
 
-def post_result_as_pr_comment(pull_request, repo_file_path):
+def post_result_as_pr_comment(pull_request, context):
+    run_url = (
+        context.get("server_url")
+        + "/"
+        + context.get("repository")
+        + "/actions/runs/"
+        + context.get("run_id")
+        + "/attempts/"
+        + context.get("run_attempt")
+    )
     lines = []
     cwd = os.getcwd()
     filepath = f"{cwd}/proposed_changes.yaml"
@@ -80,7 +91,7 @@ def post_result_as_pr_comment(pull_request, repo_file_path):
         with open(filepath) as f:
             lines = f.readlines()
     plan = "".join(lines) if lines else "no changes"
-    body = GIT_APPLY_COMMENT_TEMPLATE.format(plan=plan)
+    body = GIT_APPLY_COMMENT_TEMPLATE.format(plan=plan, run_url=run_url)
     if len(body) > 65000:
         body = body[0:65000]
     pull_request.create_issue_comment(body)
@@ -114,7 +125,7 @@ def handle_issue_comment(github_client, context) -> HandleIssueCommentReturnCode
     try:
         prepare_local_repo(repo_url, lambda_repo_path, pull_request_branch_name)
         lambda_run_handler(None, {"command": "git_apply"})
-        post_result_as_pr_comment(pull_request, lambda_repo_path)
+        post_result_as_pr_comment(pull_request, context)
         pull_request.merge()
         return HandleIssueCommentReturnCode.MERGED
     except Exception as e:

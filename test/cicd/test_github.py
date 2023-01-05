@@ -24,6 +24,9 @@ def mock_github_client():
 @pytest.fixture
 def issue_comment_context():
     return {
+        "server_url": "https://github.com",
+        "run_id": "12345",
+        "run_attempt": "1",
         "token": "fake-token",
         "sha": "fake-sha",
         "repository": "example.com/iambic-templates",
