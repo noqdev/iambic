@@ -64,14 +64,26 @@ def format_proposed_changes(changes):
     pass
 
 
+GIT_APPLY_COMMENT_TEMPLATE = """iambic git-applied ran with:
+
+```yaml
+{plan}
+```
+"""
+
+
 def post_result_as_pr_comment(pull_request, repo_file_path):
     lines = []
-    filepath = f"{repo_file_path}/proposed_changes.yaml"
+    cwd = os.getcwd()
+    filepath = f"{cwd}/proposed_changes.yaml"
     if os.path.exists(filepath):
         with open(filepath) as f:
             lines = f.readlines()
-    body = "\n".join(lines) if lines else "no changes"
-    pull_request.create_issue_comment(f"iambic git-applied ran with\n```{body}```")
+    plan = "".join(lines) if lines else "no changes"
+    body = GIT_APPLY_COMMENT_TEMPLATE.format(plan=plan)
+    if len(body) > 65000:
+        body = body[0:65000]
+    pull_request.create_issue_comment(body)
 
 
 def handle_issue_comment(github_client, context) -> HandleIssueCommentReturnCode:
