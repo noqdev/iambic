@@ -43,6 +43,8 @@ from iambic.core.models import (
 )
 from iambic.core.utils import aio_wrapper
 
+AWS_IAM_ROLE_TEMPLATE_TYPE = "NOQ::AWS::IAM::Role"
+
 
 class RoleAccess(ExpiryModel, AccessModel):
     users: list[str] = Field(
@@ -111,14 +113,14 @@ class RoleProperties(BaseModel):
 
 
 class RoleTemplate(AWSTemplate, AccessModel):
-    template_type = "NOQ::AWS::IAM::Role"
+    template_type = AWS_IAM_ROLE_TEMPLATE_TYPE
     identifier: str
     properties: RoleProperties = Field(
         description="Properties of the role",
     )
     access_rules: Optional[list[RoleAccess]] = Field(
         [],
-        description="List of users and groups who can assume into the role",
+        description="Used to define users and groups who can access the role via Noq credential brokering",
     )
 
     def _apply_resource_dict(
