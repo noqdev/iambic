@@ -42,6 +42,16 @@ def format_github_url(repository_url, github_token):
     ).geturl()
 
 
+def prepare_local_repo(repo_url, repo_path, pull_request_branch_name):
+    cloned_repo = clone_git_repo(repo_url, repo_path, None)
+    for remote in cloned_repo.remotes:
+        remote.fetch()
+    cloned_repo.git.checkout("-b", "attempt/git-apply")
+    cloned_repo.git.merge(f"origin/{pull_request_branch_name}")
+    print("last commit message: {0}".format(cloned_repo.head.commit.message))
+    return cloned_repo
+
+
 def handle_issue_comment(github_client, context) -> HandleIssueCommentReturnCode:
 
     comment_body = context.get("event", {}).get("comment", {}).get("body")
@@ -68,13 +78,7 @@ def handle_issue_comment(github_client, context) -> HandleIssueCommentReturnCode
         )
         return HandleIssueCommentReturnCode.MERGEABLE_STATE_NOT_CLEAN
     try:
-        cloned_repo = clone_git_repo(
-            repo_url, lambda_repo_path, pull_request_branch_name
-        )
-        print("closed_repo head: {}".format(cloned_repo.head.commit.hexsha))
-        # This is for fail safe, just in case.
-        assert cloned_repo.head.commit.hexsha == pull_request.head.sha
-
+        prepare_local_repo(repo_url, lambda_repo_path, pull_request_branch_name)
         lambda_run_handler(None, {"command": "git_apply"})
     except Exception as e:
         print(e)

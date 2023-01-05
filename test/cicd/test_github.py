@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tempfile
 from unittest.mock import patch
 
 import pytest
@@ -10,6 +11,7 @@ from iambic.cicd.github import (
     HandleIssueCommentReturnCode,
     format_github_url,
     handle_issue_comment,
+    prepare_local_repo,
 )
 
 
@@ -92,3 +94,12 @@ def test_format_github_url():
     expected_url = "https://oauth2:foobar@github.com/example-org/iambic-templates.git"
     url = format_github_url(pr_url, fake_token)
     assert url == expected_url
+
+
+def test_prepare_local_repo():
+    temp_templates_directory = tempfile.mkdtemp(
+        prefix="iambic_test_temp_templates_directory"
+    )
+    prepare_local_repo(
+        "https://github.com/noqdev/consoleme", temp_templates_directory, "master"
+    )
