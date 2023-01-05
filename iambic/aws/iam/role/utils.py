@@ -78,17 +78,18 @@ async def get_role_managed_policies(role_name: str, iam_client) -> list[dict[str
     return policies
 
 
-async def get_role(role_name: str, iam_client):
+async def get_role(role_name: str, iam_client, include_policies: bool = True) -> dict:
     try:
         current_role = (await aio_wrapper(iam_client.get_role, RoleName=role_name))[
             "Role"
         ]
-        current_role["ManagedPolicies"] = await get_role_managed_policies(
-            role_name, iam_client
-        )
-        current_role["InlinePolicies"] = await get_role_inline_policies(
-            role_name, iam_client, as_dict=False
-        )
+        if include_policies:
+            current_role["ManagedPolicies"] = await get_role_managed_policies(
+                role_name, iam_client
+            )
+            current_role["InlinePolicies"] = await get_role_inline_policies(
+                role_name, iam_client, as_dict=False
+            )
     except iam_client.exceptions.NoSuchEntityException:
         current_role = {}
 

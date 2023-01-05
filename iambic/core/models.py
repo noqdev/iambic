@@ -23,16 +23,14 @@ from iambic.core.logger import log
 from iambic.core.utils import snake_to_camelcap, sort_dict, yaml
 
 if TYPE_CHECKING:
-    from iambic.aws.models import AWSAccount, Deleted
+    from iambic.aws.models import AWSAccount
     from iambic.config.models import Config
 
 
 class BaseModel(PydanticBaseModel):
     @classmethod
     def update_forward_refs(cls, **kwargs):
-        from iambic.aws.models import Deleted
-
-        kwargs.update({"Union": Union, "Deleted": Deleted})
+        kwargs.update({"Union": Union})
         super().update_forward_refs(**kwargs)
 
     class Config:
@@ -358,7 +356,7 @@ class ExpiryModel(PydanticBaseModel):
     expires_at: Optional[Union[str, datetime.datetime, datetime.date]] = Field(
         None, description="The date and time the resource will be/was set to deleted."
     )
-    deleted: Optional[Union[bool, List[Deleted]]] = Field(
+    deleted: Optional[bool] = Field(
         False,
         description=(
             "Denotes whether the resource has been removed from AWS."
