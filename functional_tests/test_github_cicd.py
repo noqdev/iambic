@@ -39,9 +39,12 @@ def filesystem():
     try:
         yield (temp_config_filename, temp_templates_directory)
     finally:
-        os.close(fd)
-        os.unlink(temp_config_filename)
-        shutil.rmtree(temp_templates_directory)
+        try:
+            os.close(fd)
+            os.unlink(temp_config_filename)
+            shutil.rmtree(temp_templates_directory)
+        except Exception as e:
+            print(e)
 
 
 # Opens a PR on noqdev/iambic-templates-test. The workflow on the repo will
@@ -51,7 +54,7 @@ def filesystem():
 def test_github_cicd(filesystem):
 
     subprocess.run("make -f Makefile.itest build_docker_itest", shell=True, check=True)
-    subprocess.run("make -f Makefile.itest build_docker_itest", shell=True, check=True)
+    subprocess.run("make -f Makefile.itest upload_docker_itest", shell=True, check=True)
 
     temp_config_filename, temp_templates_directory = filesystem
 
