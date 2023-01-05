@@ -88,6 +88,22 @@ def test_issue_comment_with_clean_mergeable_state(
     assert mock_pull_request.merge.called
 
 
+# invariant: PR is only merged if and only if git-apply is successful
+def test_issue_comment_with_clean_mergeable_state_and_lambda_handler_crashed(
+    mock_github_client, issue_comment_context, mock_lambda_run_handler, mock_repository
+):
+    mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
+    mock_pull_request.mergeable_state = MERGEABLE_STATE_CLEAN
+    mock_pull_request.head.sha = issue_comment_context["sha"]
+    mock_repository.clone_from.return_value.head.commit.hexsha = issue_comment_context[
+        "sha"
+    ]
+    mock_lambda_run_handler.side_effect = Exception("unexpected failure")
+    handle_issue_comment(mock_github_client, issue_comment_context)
+    assert mock_lambda_run_handler.called
+    assert not mock_pull_request.merge.called
+
+
 def test_format_github_url():
     pr_url = "https://github.com/example-org/iambic-templates.git"
     fake_token = "foobar"

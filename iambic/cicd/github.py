@@ -6,6 +6,7 @@ import sys
 from enum import Enum
 from urllib.parse import urlparse
 
+import yaml
 from github import Github
 
 from iambic.core.git import clone_git_repo
@@ -52,6 +53,27 @@ def prepare_local_repo(repo_url, repo_path, pull_request_branch_name):
     return cloned_repo
 
 
+def load_proposed_changes(filepath):
+    if not os.path.exists(filepath):
+        return {}
+    with open(filepath, "r") as f:
+        return yaml.load(f)
+
+
+def format_proposed_changes(changes):
+    pass
+
+
+def post_result_as_pr_comment(pull_request, repo_file_path):
+    lines = []
+    filepath = f"{repo_file_path}/proposed_changes.yaml"
+    if os.path.exists(filepath):
+        with open(filepath) as f:
+            lines = f.readlines()
+    body = "\n".join(lines) if lines else "no changes"
+    pull_request.create_issue_comment(f"iambic git-applied ran with\n```{body}```")
+
+
 def handle_issue_comment(github_client, context) -> HandleIssueCommentReturnCode:
 
     comment_body = context.get("event", {}).get("comment", {}).get("body")
@@ -80,6 +102,9 @@ def handle_issue_comment(github_client, context) -> HandleIssueCommentReturnCode
     try:
         prepare_local_repo(repo_url, lambda_repo_path, pull_request_branch_name)
         lambda_run_handler(None, {"command": "git_apply"})
+        post_result_as_pr_comment(pull_request, lambda_repo_path)
+        pull_request.merge()
+        return HandleIssueCommentReturnCode.MERGED
     except Exception as e:
         print(e)
         pull_request.create_issue_comment(
@@ -88,8 +113,6 @@ def handle_issue_comment(github_client, context) -> HandleIssueCommentReturnCode
             )
         )
         return HandleIssueCommentReturnCode.UNDEFINED
-    pull_request.merge()
-    return HandleIssueCommentReturnCode.MERGED
 
 
 if __name__ == "__main__":
