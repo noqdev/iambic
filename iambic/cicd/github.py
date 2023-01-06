@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sys
 from enum import Enum
 from urllib.parse import urlparse
@@ -97,6 +98,16 @@ def post_result_as_pr_comment(pull_request, context):
     pull_request.create_issue_comment(body)
 
 
+def copy_data_to_data_directory():
+    cwd = os.getcwd()
+    filepath = f"{cwd}/proposed_changes.yaml"
+    dest_dir = "/root/data/"
+    if not os.path.exists(dest_dir):
+        os.makedirs(dest_dir)
+    if os.path.exists(filepath):
+        shutil.copy(filepath, "/root/data/proposed_changes.yaml")
+
+
 def handle_issue_comment(github_client, context) -> HandleIssueCommentReturnCode:
 
     comment_body = context.get("event", {}).get("comment", {}).get("body")
@@ -126,6 +137,7 @@ def handle_issue_comment(github_client, context) -> HandleIssueCommentReturnCode
         prepare_local_repo(repo_url, lambda_repo_path, pull_request_branch_name)
         lambda_run_handler(None, {"command": "git_apply"})
         post_result_as_pr_comment(pull_request, context)
+        copy_data_to_data_directory()
         pull_request.merge()
         return HandleIssueCommentReturnCode.MERGED
     except Exception as e:
