@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import re
 from io import StringIO
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from deepdiff import DeepDiff
 from git import Repo
@@ -11,10 +11,12 @@ from git.exc import GitCommandError
 from pydantic import BaseModel as PydanticBaseModel
 
 from iambic.aws.models import Deleted
-from iambic.config.models import Config
 from iambic.config.templates import TEMPLATE_TYPE_MAP
 from iambic.core.logger import log
 from iambic.core.utils import NOQ_TEMPLATE_REGEX, file_regex_search, yaml
+
+if TYPE_CHECKING:
+    from iambic.config.models import Config
 
 
 class GitDiff(PydanticBaseModel):
