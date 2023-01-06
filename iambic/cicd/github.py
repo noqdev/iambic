@@ -21,6 +21,9 @@ MERGEABLE_STATE_CLEAN = "clean"
 MERGEABLE_STATE_BLOCKED = "blocked"
 
 
+SHARED_CONTAINER_GITHUB_DIRECTORY = "/root/data"
+
+
 class HandleIssueCommentReturnCode(Enum):
     UNDEFINED = 1
     NO_MATCHING_BODY = 2
@@ -101,11 +104,11 @@ def post_result_as_pr_comment(pull_request, context):
 def copy_data_to_data_directory():
     cwd = os.getcwd()
     filepath = f"{cwd}/proposed_changes.yaml"
-    dest_dir = "/root/data/"
+    dest_dir = SHARED_CONTAINER_GITHUB_DIRECTORY
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
     if os.path.exists(filepath):
-        shutil.copy(filepath, "/root/data/proposed_changes.yaml")
+        shutil.copy(filepath, f"{dest_dir}/proposed_changes.yaml")
 
 
 def handle_issue_comment(github_client, context) -> HandleIssueCommentReturnCode:
