@@ -65,19 +65,6 @@ def config(repo_path):
     return test_config
 
 
-# @pytest.mark.asyncio
-# async def test_load_store_templated_config(mocker, config, repo_path):
-#     config.slack_app = "test_canary"
-#     main_or_master_result = AsyncMock(return_value="main")
-#     mocker.patch("iambic.core.git.main_or_master", side_effect=main_or_master_result)
-#     clone_git_repos_result = AsyncMock(return_value={"test_repo": {}})
-#     with mocker.patch("iambic.core.git.clone_git_repos", side_effect=clone_git_repos_result):
-#         await store_template(config, repo_path, "test_repo")
-#         assert iambic.core.git.clone_git_repos.called()
-#         assert iambic.core.git.main_or_master.called()
-#     test_config = await load_template(repo_path)
-#     assert test_config.slack_app == "test_canary"
-
 @pytest.mark.asyncio
 async def test_load_store_templated_config(mocker, config, repo_path):
     config.slack_app = "test_canary"
