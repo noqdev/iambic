@@ -14,11 +14,9 @@ from pydantic import BaseModel, Field
 from slack_bolt import App as SlackBoltApp
 
 from iambic.aws.models import AWSAccount, AWSOrganization
-from iambic.core.git import clone_git_repos, main_or_master
 from iambic.core.iambic_enum import IambicManaged
-from iambic.core.logger import log
 from iambic.core.models import Variable
-from iambic.core.utils import aio_wrapper, gather_templates, yaml
+from iambic.core.utils import aio_wrapper, yaml
 
 
 class GoogleSubjects(BaseModel):
@@ -183,6 +181,7 @@ class Config(BaseModel):
     slack_app: Optional[str] = None
     sqs: Optional[dict] = {}
     slack: Optional[dict] = {}
+    template_type: str = "NOQ::Core::Config"
 
     class Config:
         arbitrary_types_allowed = True
@@ -290,29 +289,3 @@ class Config(BaseModel):
         c = cls(file_path=file_path, **yaml.load(open(file_path)))
         c.configure_plugins()
         return c
-
-    @classmethod
-    async def load_template(cls, repo_dir: str, plugins_configured: bool = False):
-        config_template_file_path = await gather_templates(repo_dir, "Core::Config")
-        if len(config_template_file_path) > 1 or len(config_template_file_path) == 0:
-            raise RuntimeError(f"Invalid number of NOQ::Core::Config templates found ({len(config_template_file_path)}), currently only support 1")
-        c = cls(file_path=config_template_file_path[0], **yaml.load(open(config_template_file_path[0])))
-        if plugins_configured:
-            c.configure_plugins()
-        return c
-
-    async def store_template(self, repos_dir: str, repo_name: str):
-        # clone_git_repos will pull if repos exist versus cloning
-        repos = await clone_git_repos(repos_dir)
-        if repo_name in repos.keys():
-            repo = repos[repo_name]
-            previous_head = repo.head
-            main_branch = main_or_master(repo)
-            if previous_head != main_branch:
-                repo.git.checkout(main_branch)
-            with open(self.file_path, 'w') as fp:
-                yaml.dump(self, fp)
-            # TODO: Setup a PR request
-            repo.git.checkout(previous_head)
-        else:
-            log.error(f"Cannot find {repo_name} in repos: {list(repos.keys())}")
