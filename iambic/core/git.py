@@ -23,7 +23,16 @@ class GitDiff(PydanticBaseModel):
     is_deleted: Optional[bool] = False
 
 
-async def clone_git_repos(config, repo_base_path: str) -> None:
+def main_or_master(repo: Repo) -> bool:
+    if any(x.name for x in repo.heads if x.name == "main"):
+        return "main"
+    elif any(x.name for x in repo.heads if x.name == "master"):
+        return "master"
+    else:
+        raise ValueError(f"Repository with branches {repo.heads} does not contain main or master")
+
+
+async def clone_git_repos(config: Config, repo_base_path: str) -> None:
     # TODO: Formalize the model for secrets
     repos = {}
     for repository in config.secrets.get("git", {}).get("repositories", []):
