@@ -61,6 +61,8 @@ def format_github_url(repository_url: str, github_token: str) -> str:
 def prepare_local_repo(
     repo_url: str, repo_path: str, pull_request_branch_name: str
 ) -> Repo:
+    if len(os.listdir(repo_path)) > 0:
+        raise Exception(f"{repo_path} already exists. This is unexpected.")
     cloned_repo = clone_git_repo(repo_url, repo_path, None)
     for remote in cloned_repo.remotes:
         remote.fetch()

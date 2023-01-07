@@ -51,7 +51,9 @@ def mock_lambda_run_handler():
         "iambic.cicd.github.lambda_run_handler", autospec=True
     ) as _mock_lambda_run_handler:
         with patch("iambic.cicd.github.SHARED_CONTAINER_GITHUB_DIRECTORY", "/tmp") as _:
-            yield _mock_lambda_run_handler
+            with tempfile.TemporaryDirectory() as tmpdirname:
+                with patch("iambic.cicd.github.lambda_repo_path", tmpdirname):
+                    yield _mock_lambda_run_handler
 
 
 @pytest.fixture
