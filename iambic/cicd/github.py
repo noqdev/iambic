@@ -68,7 +68,8 @@ def prepare_local_repo(
         remote.fetch()
     cloned_repo.git.checkout("-b", "attempt/git-apply")
     cloned_repo.git.merge(f"origin/{pull_request_branch_name}")
-    print("last commit message: {0}".format(cloned_repo.head.commit.message))
+    log_params = {"last_commit_message": cloned_repo.head.commit.message}
+    log.info(cloned_repo.head.commit.message, **log_params)
     return cloned_repo
 
 
@@ -149,7 +150,8 @@ def handle_issue_comment(
     templates_repo = github_client.get_repo(repo_name)
     pull_request = templates_repo.get_pull(pull_number)
     pull_request_branch_name = pull_request.head.ref
-    print("pull_request branch name is {0}".format(pull_request_branch_name))
+    log_params = {"pull_request_branch_name": pull_request_branch_name}
+    log.info("PR remote branch name", **log_params)
 
     if pull_request.mergeable_state != MERGEABLE_STATE_CLEAN:
         # TODO log error and also make a comment to PR
@@ -165,7 +167,7 @@ def handle_issue_comment(
         pull_request.merge()
         return HandleIssueCommentReturnCode.MERGED
     except Exception as e:
-        print(e)
+        log.error("fault", exception=str(e))
         pull_request.create_issue_comment(
             "exception during git-apply is {0} \n {1}".format(
                 pull_request.mergeable_state, e
