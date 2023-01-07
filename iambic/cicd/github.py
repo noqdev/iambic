@@ -85,6 +85,11 @@ def format_proposed_changes(changes: dict) -> str:
     pass
 
 
+TRUNCATED_WARNING = (
+    "Plan is too large and truncated. View Run link to check the entire plan."
+)
+BODY_MAX_LENGTH = 65000
+TRUNCATED_BODY_MAX_LENGTH = BODY_MAX_LENGTH - len(TRUNCATED_WARNING)
 GIT_APPLY_COMMENT_TEMPLATE = """iambic git-applied ran with:
 
 ```yaml
@@ -93,6 +98,12 @@ GIT_APPLY_COMMENT_TEMPLATE = """iambic git-applied ran with:
 
 <a href="{run_url}">Run</a>
 """
+
+
+def ensure_body_length_fits_github_spec(body: str) -> str:
+    if len(body) > BODY_MAX_LENGTH:
+        body = TRUNCATED_WARNING + body[-TRUNCATED_BODY_MAX_LENGTH:-1]
+    return body
 
 
 def post_result_as_pr_comment(
@@ -115,8 +126,7 @@ def post_result_as_pr_comment(
             lines = f.readlines()
     plan = "".join(lines) if lines else "no changes"
     body = GIT_APPLY_COMMENT_TEMPLATE.format(plan=plan, run_url=run_url)
-    if len(body) > 65000:
-        body = body[0:65000]
+    body = ensure_body_length_fits_github_spec(body)
     pull_request.create_issue_comment(body)
 
 
