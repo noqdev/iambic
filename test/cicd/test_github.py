@@ -6,9 +6,11 @@ from unittest.mock import patch
 import pytest
 
 from iambic.cicd.github import (
+    BODY_MAX_LENGTH,
     MERGEABLE_STATE_BLOCKED,
     MERGEABLE_STATE_CLEAN,
     HandleIssueCommentReturnCode,
+    ensure_body_length_fits_github_spec,
     format_github_url,
     handle_issue_comment,
     prepare_local_repo,
@@ -125,3 +127,10 @@ def test_prepare_local_repo():
     prepare_local_repo(
         "https://github.com/noqdev/consoleme", temp_templates_directory, "master"
     )
+
+
+def test_ensure_body_length_fits_github_spec():
+    body = "m" * (BODY_MAX_LENGTH + 1)
+    assert len(body) > BODY_MAX_LENGTH
+    new_body = ensure_body_length_fits_github_spec(body)
+    assert len(new_body) <= BODY_MAX_LENGTH
