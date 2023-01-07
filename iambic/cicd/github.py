@@ -99,13 +99,13 @@ def post_result_as_pr_comment(
     pull_request: PullRequest, context: dict[str, Any]
 ) -> None:
     run_url = (
-        context.get("server_url")
+        context["server_url"]
         + "/"
-        + context.get("repository")
+        + context["repository"]
         + "/actions/runs/"
-        + context.get("run_id")
+        + context["run_id"]
         + "/attempts/"
-        + context.get("run_attempt")
+        + context["run_attempt"]
     )
     lines = []
     cwd = os.getcwd()
@@ -134,17 +134,17 @@ def handle_issue_comment(
     github_client: Github, context: dict[str, Any]
 ) -> HandleIssueCommentReturnCode:
 
-    comment_body = context.get("event", {}).get("comment", {}).get("body")
+    comment_body = context["event"]["comment"]["body"]
     if comment_body != "iambic git-apply":
         log_params = {"comment_body": comment_body}
         log.info("no op", **log_params)
         return HandleIssueCommentReturnCode.NO_MATCHING_BODY
 
-    github_token = context.get("token", None)
+    github_token = context["token"]
     # repo_name is already in the format {repo_owner}/{repo_short_name}
-    repo_name = context.get("repository", None)
-    pull_number = context.get("event", {}).get("issue", {}).get("number")
-    repository_url = context.get("event", {}).get("repository", {}).get("clone_url")
+    repo_name = context["repository"]
+    pull_number = context["event"]["issue"]["number"]
+    repository_url = context["event"]["repository"]["clone_url"]
     repo_url = format_github_url(repository_url, github_token)
     # repository_url_token
     templates_repo = github_client.get_repo(repo_name)
