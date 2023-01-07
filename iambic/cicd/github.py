@@ -183,7 +183,7 @@ def handle_issue_comment(
                 pull_request.mergeable_state, e
             )
         )
-        return HandleIssueCommentReturnCode.UNDEFINED
+        raise e
 
 
 EVENT_DISPATCH_MAP: dict[str, Callable] = {

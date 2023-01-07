@@ -107,7 +107,8 @@ def test_issue_comment_with_clean_mergeable_state_and_lambda_handler_crashed(
         "sha"
     ]
     mock_lambda_run_handler.side_effect = Exception("unexpected failure")
-    handle_issue_comment(mock_github_client, issue_comment_context)
+    with pytest.raises(Exception):
+        handle_issue_comment(mock_github_client, issue_comment_context)
     assert mock_lambda_run_handler.called
     assert not mock_pull_request.merge.called
 
