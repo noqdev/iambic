@@ -19,12 +19,17 @@ if TYPE_CHECKING:
 
 
 async def paginated_search(
-    search_fnc, response_key: str, max_results: int = None, **search_kwargs
+    search_fnc,
+    response_key: str,
+    max_results: int = None,
+    retain_key: bool = False,
+    **search_kwargs,
 ) -> list:
     """Retrieve and aggregate each paged response, returning a single list of each response object
     :param search_fnc:
     :param response_key:
     :param max_results:
+    :param retain_key: If true, the response_key will be retained in the response
     :return:
     """
     results = []
@@ -34,7 +39,7 @@ async def paginated_search(
         try:
             response = await aio_wrapper(search_fnc, **search_kwargs)
         except ClientError as err:
-            if err.response["Error"]["Code"] == "Throttling":
+            if "Throttling" in err.response["Error"]["Code"]:
                 if retry_count >= 10:
                     raise
                 retry_count += 1
@@ -47,13 +52,17 @@ async def paginated_search(
         results.extend(response.get(response_key, []))
 
         if not response["IsTruncated"] or (max_results and len(results) >= max_results):
-            return results
+            return {response_key: results} if retain_key else results
         else:
             search_kwargs["Marker"] = response["Marker"]
 
 
 async def legacy_paginated_search(
-    search_fnc, response_key: str, max_results: int = None, **search_kwargs
+    search_fnc,
+    response_key: str,
+    max_results: int = None,
+    retain_key: bool = False,
+    **search_kwargs,
 ) -> list:
     """Retrieve and aggregate each paged response, returning a single list of each response object
 
@@ -63,6 +72,7 @@ async def legacy_paginated_search(
     :param search_fnc:
     :param response_key:
     :param max_results:
+    :param retain_key: If true, the response_key will be retained in the response
     :return:
     """
     results = []
@@ -73,13 +83,14 @@ async def legacy_paginated_search(
         try:
             response = await aio_wrapper(search_fnc, **search_kwargs)
         except ClientError as err:
-            if err.response["Error"]["Code"] == "Throttling":
+            if "Throttling" in err.response["Error"]["Code"]:
                 if retry_count >= 10:
                     raise
                 retry_count += 1
                 await asyncio.sleep(retry_count * 2)
                 continue
             else:
+                log.warning(err.response["Error"]["Code"])
                 raise
 
         retry_count = 0
@@ -90,7 +101,7 @@ async def legacy_paginated_search(
             or (max_results and len(results) >= max_results)
             or (not results and not is_first_call)
         ):
-            return results
+            return {response_key: results} if retain_key else results
         else:
             is_first_call = False
             search_kwargs["NextToken"] = response["NextToken"]
@@ -177,7 +188,12 @@ def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> boo
         or getattr(resource, "iambic_managed", None) == IambicManaged.IMPORT_ONLY
     ):
         return False
-    if not issubclass(type(resource), AccessModel):
+
+    # IdentityCenter Models don't inherit from AccessModel and rely only on included/excluded orgs.
+    # hasattr is how we are currently handling this special case.
+    if not issubclass(type(resource), AccessModel) and not hasattr(
+        resource, "included_orgs"
+    ):
         return True
 
     if aws_account.org_id:
@@ -187,6 +203,9 @@ def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> boo
             re.match(org_id, aws_account.org_id) for org_id in resource.included_orgs
         ):
             return False
+
+    if not hasattr(resource, "included_accounts"):
+        return True
 
     account_ids = [aws_account.account_id]
     if account_name := aws_account.account_name:
@@ -234,26 +253,30 @@ def apply_to_account(resource, aws_account, context: ExecutionContext) -> bool:
 
 
 async def remove_expired_resources(
-    resource, template_resource_type: str, template_resource_id: str
+    resource,
+    template_resource_type: str,
+    template_resource_id: str,
+    delete_resource_if_expired: bool = True,
 ):
     from iambic.core.models import BaseModel
 
-    if (
-        not issubclass(type(resource), BaseModel)
-        or not hasattr(resource, "expires_at")
-        or getattr(resource, "deleted", None)
-    ):
+    if not isinstance(resource, BaseModel):
         return resource
 
-    log_params = dict(
-        resource_type=resource.resource_type, resource_id=resource.resource_id
-    )
-    if (
-        template_resource_type != resource.resource_type
-        or template_resource_id != resource.resource_id
-    ):
+    log_params = {}
+    if hasattr(resource, "resource_type"):
+        log_params["resource_type"] = resource.resource_type
+    if hasattr(resource, "resource_id"):
+        log_params["resource_id"] = resource.resource_id
+    if template_resource_type != log_params.get(
+        "resource_type"
+    ) or template_resource_id != log_params.get("resource_id"):
         log_params["parent_resource_type"] = template_resource_type
         log_params["parent_resource_id"] = template_resource_id
+
+    if issubclass(type(resource), BaseModel) and hasattr(resource, "expires_at"):
+        if resource.expires_at and resource.expires_at < datetime.utcnow():
+            resource.deleted = True
 
     if hasattr(resource, "expires_at") and resource.expires_at:
 
@@ -274,11 +297,19 @@ async def remove_expired_resources(
                 ]
             )
             setattr(resource, field_name, new_value)
+            if delete_resource_if_expired:
+                for elem in new_value:
+                    if getattr(elem, "deleted", None) is True:
+                        new_value.remove(elem)
+                        setattr(resource, field_name, new_value)
         else:
             new_value = await remove_expired_resources(
                 field_val, template_resource_type, template_resource_id
             )
-            setattr(resource, field_name, new_value)
+            if getattr(new_value, "deleted", None) is True:
+                setattr(resource, field_name, None)
+            else:
+                setattr(resource, field_name, new_value)
 
     return resource
 
@@ -336,7 +367,7 @@ async def create_assume_role_session(
             aws_session_token=role["Credentials"]["SessionToken"],
         )
     except Exception as err:
-        log.debug("Failed to assume role", assume_role_arn=assume_role_arn, error=err)
+        log.error("Failed to assume role", assume_role_arn=assume_role_arn, error=err)
 
 
 def boto3_retry(f):

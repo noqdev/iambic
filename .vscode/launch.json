@@ -71,7 +71,7 @@
             "args": [
                 "apply",
                 "--template",
-                "/tmp/noq-templates/google/groups/noq.dev/iambic_test_group.yaml",
+                "../noq-templates/google/groups/noq.dev/iambic_test_group.yaml",
                 "--config",
                 "demo/config.yaml"
             ],
@@ -89,7 +89,7 @@
             "args": [
                 "apply",
                 "--template",
-                "/tmp/noq-templates/okta/groups/development/networking2.yaml",
+                "../noq-templates/okta/groups/development/networking2.yaml",
                 "--config",
                 "demo/config.yaml"
             ],
@@ -299,7 +299,7 @@
                 "AWS_PROFILE": "staging/IambicHubRole",
                 "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
                 "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full",
-                "PLAN_OUTPUT_PATH": "/tmp/proposed_changes.json",
+                "PLAN_OUTPUT_PATH": "../proposed_changes.yaml",
             },
         },
         {

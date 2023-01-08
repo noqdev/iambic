@@ -23,7 +23,7 @@ class GitDiff(PydanticBaseModel):
     is_deleted: Optional[bool] = False
 
 
-async def clone_git_repos(config, repo_base_path: str) -> None:
+async def clone_git_repos(config, repo_base_path: str) -> dict[str, Repo]:
     # TODO: Formalize the model for secrets
     repos = {}
     for repository in config.secrets.get("git", {}).get("repositories", []):

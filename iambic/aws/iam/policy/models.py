@@ -9,14 +9,21 @@ import botocore
 from jinja2 import BaseLoader, Environment
 from pydantic import Field, constr
 
-from iambic.aws.iam.models import Description, Path
+from iambic.aws.iam.models import Path
 from iambic.aws.iam.policy.utils import (
     apply_managed_policy_tags,
     delete_managed_policy,
     get_managed_policy,
     update_managed_policy,
 )
-from iambic.aws.models import ARN_RE, AccessModel, AWSAccount, AWSTemplate, Tag
+from iambic.aws.models import (
+    ARN_RE,
+    AccessModel,
+    AWSAccount,
+    AWSTemplate,
+    Description,
+    Tag,
+)
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log

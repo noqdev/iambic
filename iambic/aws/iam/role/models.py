@@ -8,7 +8,7 @@ from typing import Optional, Union
 import botocore
 from pydantic import Field, constr
 
-from iambic.aws.iam.models import Description, MaxSessionDuration, Path
+from iambic.aws.iam.models import MaxSessionDuration, Path
 from iambic.aws.iam.policy.models import (
     AssumeRolePolicyDocument,
     ManagedPolicyRef,
@@ -22,7 +22,14 @@ from iambic.aws.iam.role.utils import (
     get_role,
     update_assume_role_policy,
 )
-from iambic.aws.models import ARN_RE, AccessModel, AWSAccount, AWSTemplate, Tag
+from iambic.aws.models import (
+    ARN_RE,
+    AccessModel,
+    AWSAccount,
+    AWSTemplate,
+    Description,
+    Tag,
+)
 from iambic.aws.utils import apply_to_account
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
@@ -49,7 +56,7 @@ class RoleAccess(ExpiryModel, AccessModel):
 
     @property
     def resource_type(self):
-        return "aws:iam:role_access"
+        return "aws:iam:role:access_rule"
 
     @property
     def resource_id(self):
@@ -109,7 +116,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
     properties: RoleProperties = Field(
         description="Properties of the role",
     )
-    role_access: Optional[list[RoleAccess]] = Field(
+    access_rules: Optional[list[RoleAccess]] = Field(
         [],
         description="List of users and groups who can assume into the role",
     )
@@ -125,7 +132,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
         # Add RoleAccess Tag to role tags
         role_access = [
             ra._apply_resource_dict(aws_account, context)
-            for ra in self.role_access
+            for ra in self.access_rules
             if apply_to_account(ra, aws_account, context)
         ]
         if role_access:
