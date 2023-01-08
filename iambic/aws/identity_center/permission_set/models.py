@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import re
 from itertools import chain
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 from pydantic import Field
 
+from iambic.aws.iam.policy.models import PolicyStatement
 from iambic.aws.identity_center.permission_set.utils import (
     apply_account_assignments,
     apply_permission_set_aws_managed_policies,
@@ -26,7 +27,7 @@ from iambic.aws.models import (
     ExpiryModel,
     Tag,
 )
-from iambic.aws.utils import evaluate_on_account
+from iambic.aws.utils import evaluate_on_account, remove_expired_resources
 from iambic.config.models import Config
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
@@ -47,7 +48,7 @@ AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE = (
 # TODO: Add true support for defining multiple orgs with IdentityCenter rules
 
 
-class PermissionSetAccess(ExpiryModel, AccessModel):
+class PermissionSetAccess(AccessModel, ExpiryModel):
     users: list[str] = Field(
         [],
         description="List of users who can access the role",
@@ -73,7 +74,7 @@ class AWSIdentityCenterInstance(BaseModel):
     identity_store_id: str
 
 
-class CustomerManagedPolicyReference(BaseModel):
+class CustomerManagedPolicyReference(BaseModel, ExpiryModel):
     path: str
     name: str
 
@@ -86,7 +87,7 @@ class CustomerManagedPolicyReference(BaseModel):
         return f"{self.path}{self.name}"
 
 
-class ManagedPolicyArn(BaseModel):
+class ManagedPolicyArn(BaseModel, ExpiryModel):
     arn: str
 
     @property
@@ -98,7 +99,7 @@ class ManagedPolicyArn(BaseModel):
         return self.arn
 
 
-class PermissionBoundary(BaseModel):
+class PermissionBoundary(BaseModel, ExpiryModel):
     customer_managed_policy_reference: Optional[CustomerManagedPolicyReference]
     managed_policy_arn: Optional[str]
 
@@ -115,8 +116,20 @@ class SessionDuration(BaseModel):
     session_duration: str
 
 
-class InlinePolicy(BaseModel):
-    inline_policy: str
+class InlinePolicy(BaseModel, ExpiryModel):
+    version: Optional[str] = None
+    statement: Optional[List[PolicyStatement]] = Field(
+        None,
+        description="List of policy statements",
+    )
+
+    @property
+    def resource_type(self) -> str:
+        return "aws:identity_center:inline_policy"
+
+    @property
+    def resource_id(self) -> str:
+        return str(self.statement)
 
 
 class AWSIdentityCenterPermissionSetProperties(BaseModel):
@@ -127,10 +140,8 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
     )
     relay_state: Optional[str] = None
     session_duration: Optional[Union[str, list[SessionDuration]]] = None
-    permissions_boundary: Optional[
-        Union[PermissionBoundary, list[PermissionBoundary]]
-    ] = None
-    inline_policy: Optional[Union[str, list[InlinePolicy]]] = None
+    permissions_boundary: Optional[PermissionBoundary] = None
+    inline_policy: Optional[InlinePolicy] = None
     customer_managed_policy_references: Optional[
         list[CustomerManagedPolicyReference]
     ] = []
@@ -146,7 +157,7 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
         return self.name
 
 
-class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
+class AWSIdentityCenterPermissionSetTemplate(AWSTemplate, ExpiryModel):
     template_type: str = AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
     properties: AWSIdentityCenterPermissionSetProperties
     identifier: str
@@ -189,6 +200,9 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
 
         for rule in self.access_rules:
             rule_hit = None
+
+            if rule.deleted:
+                continue
 
             # If the account's org is excluded or not included, skip
             if aws_account.org_id in rule.excluded_orgs:
@@ -348,7 +362,9 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
         )
         instance_arn = aws_account.identity_center_details.instance_arn
         permission_set_arn = None
-
+        self = await remove_expired_resources(
+            self, self.resource_type, self.resource_id
+        )
         template_permission_set = self.apply_resource_dict(aws_account, context)
         name = template_permission_set["Name"]
         template_account_assignments = await self._verbose_access_rules(aws_account)
@@ -401,7 +417,6 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
             account_change_details.current_value[
                 "AccountAssignments"
             ] = current_account_assignments
-
         deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
         if isinstance(deleted, list):
             deleted = deleted[0].deleted
@@ -430,6 +445,7 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
                         current_account_assignments,
                         log_params,
                     )
+                    self.delete()
 
             return account_change_details
 
@@ -618,13 +634,15 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
 
                     if (
                         provision_status["PermissionSetProvisioningStatus"]["Status"]
-                        == "IN_PROGRESS"
+                        != "IN_PROGRESS"
                     ):
-                        await asyncio.sleep(1)
-                        continue
-                    else:
                         break
 
+                    await asyncio.sleep(1)
+                    continue
+            if self.deleted:
+                self.delete()
+            self.write()
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),
