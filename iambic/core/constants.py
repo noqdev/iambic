@@ -4,4 +4,6 @@
 # sense if you are using "reflect" like techniques to
 # examine an instance.
 
+from __future__ import annotations
+
 IAMBIC_MANAGED = "iambic_managed"
