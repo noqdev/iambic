@@ -23,16 +23,14 @@ from iambic.core.logger import log
 from iambic.core.utils import snake_to_camelcap, sort_dict, yaml
 
 if TYPE_CHECKING:
-    from iambic.aws.models import AWSAccount, Deleted
+    from iambic.aws.models import AWSAccount
     from iambic.config.models import Config
 
 
 class BaseModel(PydanticBaseModel):
     @classmethod
     def update_forward_refs(cls, **kwargs):
-        from iambic.aws.models import Deleted
-
-        kwargs.update({"Union": Union, "Deleted": Deleted})
+        kwargs.update({"Union": Union})
         super().update_forward_refs(**kwargs)
 
     class Config:
@@ -154,16 +152,22 @@ class BaseModel(PydanticBaseModel):
     async def remove_expired_resources(self, context: ExecutionContext):
         # Look at current model and recurse through submodules to see if it is a subclass of ExpiryModel
         # If it is, then call the remove_expired_resources method
+
         if issubclass(type(self), ExpiryModel):
             if hasattr(self, "expires_at") and self.expires_at:
                 if self.expires_at < datetime.datetime.utcnow():
                     self.deleted = True
+                    log.info("Expired resource found, marking for deletion")
                     return self
         for field_name in self.__fields__.keys():
             field_val = getattr(self, field_name)
             if isinstance(field_val, list):
                 await asyncio.gather(
-                    *[elem.remove_expired_resources(context) for elem in field_val]
+                    *[
+                        elem.remove_expired_resources(context)
+                        for elem in field_val
+                        if isinstance(elem, BaseModel)
+                    ]
                 )
                 for elem in field_val:
                     if getattr(elem, "deleted", None) is True:
@@ -175,9 +179,10 @@ class BaseModel(PydanticBaseModel):
                 continue
 
             else:
-                await field_val.remove_expired_resources(context)
-                if getattr(field_val, "deleted", None) is True:
-                    setattr(self, field_name, None)
+                if isinstance(field_val, BaseModel):
+                    await field_val.remove_expired_resources(context)
+                    if getattr(field_val, "deleted", None) is True:
+                        setattr(self, field_name, None)
 
     @property
     def exclude_keys(self) -> set:
@@ -358,7 +363,7 @@ class ExpiryModel(PydanticBaseModel):
     expires_at: Optional[Union[str, datetime.datetime, datetime.date]] = Field(
         None, description="The date and time the resource will be/was set to deleted."
     )
-    deleted: Optional[Union[bool, List[Deleted]]] = Field(
+    deleted: Optional[bool] = Field(
         False,
         description=(
             "Denotes whether the resource has been removed from AWS."
