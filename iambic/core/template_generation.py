@@ -184,7 +184,7 @@ async def base_group_dict_attribute(
     """Groups an attribute that is a dict or list of dicts with matching aws_accounts
 
     Call group_dict_attribute instead unless you need to transform this response.
-    An example would be tags which also contain role_access.
+    An example would be tags which also contain access_rules.
 
     :param aws_account_map: dict(account_id:str = AWSAccount)
     :param account_resources: list[dict(account_id:str, resources=list[dict])]

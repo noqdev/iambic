@@ -322,15 +322,15 @@ async def create_templated_role(  # noqa: C901
 
         if role_access:
             role_template_params[
-                "role_access"
+                "access_rules"
             ] = await set_included_accounts_for_grouped_attribute(
                 aws_account_map, num_of_accounts, role_access
             )
-            for elem in range(len(role_template_params["role_access"])):
-                if role_template_params["role_access"][elem]["included_accounts"] == [
+            for elem in range(len(role_template_params["access_rules"])):
+                if role_template_params["access_rules"][elem]["included_accounts"] == [
                     "*"
                 ]:
-                    role_template_params["role_access"][elem].pop("included_accounts")
+                    role_template_params["access_rules"][elem].pop("included_accounts")
 
     # iambic-specific knowledge requires us to load the existing template
     # because it will not be reflected by AWS API.
