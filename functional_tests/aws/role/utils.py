@@ -11,6 +11,7 @@ from iambic.aws.iam.role.models import (
 from iambic.aws.iam.role.template_generation import get_role_dir
 from iambic.aws.iam.role.utils import get_role, list_roles
 from iambic.aws.models import AWSAccount
+from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.utils import gather_templates
 
@@ -74,6 +75,19 @@ async def generate_role_template_from_base(
     role_template.properties.role_name = role_template.identifier
     role_template.properties.description = "This was created by a functional test."
     role_template.properties.max_session_duration = 3600
+
+    role_template.properties.assume_role_policy_document = json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Deny",
+                    "Principal": {"Service": "ec2.amazonaws.com"},
+                    "Action": "sts:AssumeRole",
+                }
+            ],
+        }
+    )
 
     if isinstance(role_template.properties.assume_role_policy_document, list):
         policy_doc = role_template.properties.assume_role_policy_document[0]
