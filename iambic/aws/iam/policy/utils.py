@@ -13,20 +13,20 @@ from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import NoqSemaphore, aio_wrapper
 
 
-async def list_managed_policy_versions(policy_arn: str, iam_client) -> list[dict]:
+async def list_managed_policy_versions(iam_client, policy_arn: str) -> list[dict]:
     return (
         await aio_wrapper(iam_client.list_policy_versions, PolicyArn=policy_arn)
     ).get("Versions", [])
 
 
-async def list_managed_policy_tags(managed_policy_arn: str, iam_client) -> list[dict]:
+async def list_managed_policy_tags(iam_client, managed_policy_arn: str) -> list[dict]:
     return await paginated_search(
         iam_client.list_policy_tags, "Tags", PolicyArn=managed_policy_arn
     )
 
 
 async def get_managed_policy_version_doc(
-    managed_policy_arn: str, version_id: str, iam_client, **kwargs
+    iam_client, managed_policy_arn: str, version_id: str, **kwargs
 ) -> dict:
     return (
         (
@@ -41,14 +41,32 @@ async def get_managed_policy_version_doc(
     )
 
 
-async def get_managed_policy(managed_policy_arn: str, iam_client, **kwargs) -> dict:
+async def get_managed_policy_attachments(iam_client, managed_policy_arn: str):
+    """
+    Get a list of all entities that have the managed policy attached.
+
+    return:
+        {
+            'PolicyGroups': [{'GroupName': 'string', 'GroupId': 'string'}],
+            'PolicyUsers': [{'UserName': 'string', 'UserId': 'string'}],
+            'PolicyRoles': [{'RoleName': 'string', 'RoleId': 'string'}]
+        }
+    """
+    return await paginated_search(
+        iam_client.list_entities_for_policy,
+        response_keys=["PolicyGroups", "PolicyRoles", "PolicyUsers"],
+        PolicyArn=managed_policy_arn,
+    )
+
+
+async def get_managed_policy(iam_client, managed_policy_arn: str, **kwargs) -> dict:
     try:
         response = (
             await aio_wrapper(iam_client.get_policy, PolicyArn=managed_policy_arn)
         ).get("Policy", {})
         if response:
             response["PolicyDocument"] = await get_managed_policy_version_doc(
-                managed_policy_arn, response.pop("DefaultVersionId"), iam_client
+                iam_client, managed_policy_arn, response.pop("DefaultVersionId")
             )
     except ClientError as err:
         if err.response["Error"]["Code"] == "NoSuchEntity":
@@ -88,19 +106,38 @@ async def list_managed_policies(
     )
     return await get_managed_policy_semaphore.process(
         [
-            {"managed_policy_arn": policy["Arn"], "iam_client": iam_client}
+            {"iam_client": iam_client, "managed_policy_arn": policy["Arn"]}
             for policy in managed_policies
         ]
     )
 
 
-async def delete_managed_policy(policy_arn: str, iam_client):
+async def delete_managed_policy(iam_client, policy_arn: str, log_params: dict):
+    policy_attachments = await get_managed_policy_attachments(iam_client, policy_arn)
+    tasks = []
+
+    for detachment_type in ["User", "Role", "Group"]:
+        for entity in policy_attachments[f"Policy{detachment_type}s"]:
+            tasks.append(
+                aio_wrapper(
+                    getattr(iam_client, f"detach_{detachment_type.lower()}_policy"),
+                    PolicyArn=policy_arn,
+                    **{f"{detachment_type}Name": entity[f"{detachment_type}Name"]},
+                )
+            )
+
+    log.info(
+        "Detaching managed policy from resources.",
+        managed_policy_arn=policy_arn,
+        **log_params,
+    )
+    await asyncio.gather(*tasks)
     await aio_wrapper(iam_client.delete_policy, PolicyArn=policy_arn)
 
 
 async def update_managed_policy(
-    policy_arn: str,
     iam_client,
+    policy_arn: str,
     template_policy_document: dict,
     existing_policy_document: dict,
     iambic_import_only: bool,
@@ -137,7 +174,7 @@ async def update_managed_policy(
         if not iambic_import_only:
             if policy_drift:
                 policy_versions = await list_managed_policy_versions(
-                    policy_arn, iam_client
+                    iam_client, policy_arn
                 )
                 if len(policy_versions) == 5:
                     await aio_wrapper(
@@ -158,8 +195,8 @@ async def update_managed_policy(
 
 
 async def apply_managed_policy_tags(
-    policy_arn: str,
     iam_client,
+    policy_arn: str,
     template_tags: list[dict],
     existing_tags: list[dict],
     iambic_import_only: bool,
