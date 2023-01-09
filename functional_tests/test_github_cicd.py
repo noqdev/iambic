@@ -123,6 +123,25 @@ def test_github_cicd(filesystem, mock_aws_profile):
         title="itest", body=pull_request_body, head=new_branch, base="main"
     )
     pr_number = pr.number
+
+    # test git-plan
+    is_workflow_run_successful = False
+    datetime_since_comment_issued = datetime.datetime.utcnow()
+    while (datetime.datetime.utcnow() - datetime_since_comment_issued).seconds < 120:
+        runs = github_repo.get_workflow_runs(event="pull_request", branch=new_branch)
+        runs = [run for run in runs if run.created_at >= utc_obj]
+        runs = [run for run in runs if run.conclusion == "success"]
+        if len(runs) != 1:
+            time.sleep(10)
+            print("sleeping")
+            continue
+        else:
+            is_workflow_run_successful = True
+            break
+
+    assert is_workflow_run_successful
+
+    # test git-apply
     pr.create_issue_comment("approve")
     pr.create_issue_comment("iambic git-apply")
     is_workflow_run_successful = False
