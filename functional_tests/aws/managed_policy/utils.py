@@ -52,6 +52,7 @@ async def generate_managed_policy_template_from_base(
         }
     )
 
+    managed_policy_template.write()
     return managed_policy_template
 
 

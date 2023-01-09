@@ -246,8 +246,8 @@ def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> boo
 
 
 def apply_to_account(resource, aws_account, context: ExecutionContext) -> bool:
-    if hasattr(resource, "deleted"):
-        return resource.deleted
+    if hasattr(resource, "deleted") and resource.deleted:
+        return False
 
     return evaluate_on_account(resource, aws_account, context)
 
