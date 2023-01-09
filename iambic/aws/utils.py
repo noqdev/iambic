@@ -66,23 +66,9 @@ async def paginated_search(
         response_keys = [response_key]
 
     results = {key: [] for key in response_keys}
-    retry_count = 0
 
     while True:
-        try:
-            response = await aio_wrapper(search_fnc, **search_kwargs)
-        except ClientError as err:
-            if "Throttling" in err.response["Error"]["Code"]:
-                if retry_count >= 10:
-                    raise
-                retry_count += 1
-                await asyncio.sleep(retry_count * 2)
-                continue
-            else:
-                raise
-
-        retry_count = 0
-
+        response = await boto_crud_call(search_fnc, **search_kwargs)
         for response_key in response_keys:
             results[response_key].extend(response.get(response_key, []))
 
@@ -111,24 +97,10 @@ async def legacy_paginated_search(
     :return:
     """
     results = []
-    retry_count = 0
     is_first_call = True
 
     while True:
-        try:
-            response = await aio_wrapper(search_fnc, **search_kwargs)
-        except ClientError as err:
-            if "Throttling" in err.response["Error"]["Code"]:
-                if retry_count >= 10:
-                    raise
-                retry_count += 1
-                await asyncio.sleep(retry_count * 2)
-                continue
-            else:
-                log.warning(err.response["Error"]["Code"])
-                raise
-
-        retry_count = 0
+        response = await boto_crud_call(search_fnc, **search_kwargs)
         results.extend(response.get(response_key, []))
 
         if (

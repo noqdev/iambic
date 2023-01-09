@@ -30,7 +30,7 @@ from iambic.aws.models import (
     Description,
     Tag,
 )
-from iambic.aws.utils import apply_to_account
+from iambic.aws.utils import apply_to_account, boto_crud_call
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -41,7 +41,6 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
-from iambic.core.utils import aio_wrapper
 
 AWS_IAM_ROLE_TEMPLATE_TYPE = "NOQ::AWS::IAM::Role"
 
@@ -273,7 +272,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                             **update_resource_log_params,
                         )
                         tasks.append(
-                            aio_wrapper(
+                            boto_crud_call(
                                 client.update_role,
                                 RoleName=role_name,
                                 **{
@@ -310,7 +309,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                 account_role["AssumeRolePolicyDocument"] = json.dumps(
                     account_role["AssumeRolePolicyDocument"]
                 )
-                await aio_wrapper(client.create_role, **account_role)
+                await boto_crud_call(client.create_role, **account_role)
         except Exception as e:
             log.error("Unable to generate tasks for resource", error=e, **log_params)
             return account_change_details

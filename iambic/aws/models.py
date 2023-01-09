@@ -11,6 +11,7 @@ from pydantic import Field, constr
 
 from iambic.aws.utils import (
     RegionName,
+    boto_crud_call,
     create_assume_role_session,
     evaluate_on_account,
     get_account_value,
@@ -145,7 +146,7 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
 
     async def get_active_regions(self) -> list[str]:
         client = await self.get_boto3_client("ec2")
-        res = await aio_wrapper(client.describe_regions)
+        res = await boto_crud_call(client.describe_regions)
         return [region["RegionName"] for region in res["Regions"]]
 
     def __init__(self, **kwargs):
@@ -230,7 +231,7 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
                 "identitystore", region_name=region
             )
 
-            identity_center_instances = await aio_wrapper(
+            identity_center_instances = await boto_crud_call(
                 identity_center_client.list_instances
             )
 

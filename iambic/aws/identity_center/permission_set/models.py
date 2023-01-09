@@ -27,7 +27,11 @@ from iambic.aws.models import (
     ExpiryModel,
     Tag,
 )
-from iambic.aws.utils import evaluate_on_account, remove_expired_resources
+from iambic.aws.utils import (
+    boto_crud_call,
+    evaluate_on_account,
+    remove_expired_resources,
+)
 from iambic.config.models import Config
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
@@ -489,7 +493,7 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate, ExpiryModel):
                             **update_resource_log_params,
                         )
                         tasks.append(
-                            aio_wrapper(
+                            boto_crud_call(
                                 identity_center_client.update_permission_set,
                                 InstanceArn=instance_arn,
                                 PermissionSetArn=permission_set_arn,
@@ -522,7 +526,7 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate, ExpiryModel):
                 log_str = f"{log_str} Creating resource..."
                 log.info(log_str, **log_params)
 
-                permission_set = await aio_wrapper(
+                permission_set = await boto_crud_call(
                     identity_center_client.create_permission_set,
                     Name=name,
                     InstanceArn=instance_arn,
@@ -615,7 +619,7 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate, ExpiryModel):
 
         if context.execute:
             if any(changes_made):
-                res = await aio_wrapper(
+                res = await boto_crud_call(
                     identity_center_client.provision_permission_set,
                     InstanceArn=instance_arn,
                     PermissionSetArn=permission_set_arn,
@@ -625,7 +629,7 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate, ExpiryModel):
                 request_id = res["PermissionSetProvisioningStatus"]["RequestId"]
 
                 for _ in range(20):
-                    provision_status = await aio_wrapper(
+                    provision_status = await boto_crud_call(
                         identity_center_client.describe_permission_set_provisioning_status,
                         InstanceArn=instance_arn,
                         ProvisionPermissionSetRequestId=request_id,
