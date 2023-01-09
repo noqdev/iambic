@@ -62,13 +62,21 @@ def filesystem():
             print(e)
 
 
+@pytest.fixture
+def mock_aws_profile():
+    # this has to be a fixture and restore the previous environment.
+    # because other functional tests depend on it.
+    original_profile = os.environ["AWS_PROFILE"]
+    os.environ["AWS_PROFILE"] = "iambic_test_org_account/IambicHubRole"
+    yield
+    os.environ["AWS_PROFILE"] = original_profile
+
+
 # Opens a PR on noqdev/iambic-templates-test. The workflow on the repo will
 # pull container with "test label". It will then approve the PR and trigger
 # the "iambic git-apply" command on the PR. If the flow is successful, the PR
 # will be merged and we will check the workflow to be completed state.
-def test_github_cicd(filesystem):
-
-    os.environ["AWS_PROFILE"] = "iambic_test_org_account/IambicHubRole"
+def test_github_cicd(filesystem, mock_aws_profile):
 
     subprocess.run("make -f Makefile.itest build_docker_itest", shell=True, check=True)
     subprocess.run("make -f Makefile.itest upload_docker_itest", shell=True, check=True)
