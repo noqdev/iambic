@@ -4,7 +4,7 @@ import asyncio
 import re
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 import boto3
 from botocore.exceptions import ClientError
@@ -20,19 +20,30 @@ if TYPE_CHECKING:
 
 async def paginated_search(
     search_fnc,
-    response_key: str,
+    response_key: str = None,
+    response_keys: list[str] = None,
     max_results: int = None,
     retain_key: bool = False,
     **search_kwargs,
-) -> list:
+) -> Union[list, dict]:
     """Retrieve and aggregate each paged response, returning a single list of each response object
     :param search_fnc:
     :param response_key:
+    :param response_keys:
     :param max_results:
     :param retain_key: If true, the response_key will be retained in the response
     :return:
     """
-    results = []
+    assert bool(response_key) ^ bool(response_keys)  # XOR
+
+    if response_keys and not retain_key:
+        log.warning("retain_key must be true if response_keys is provided")
+        retain_key = True
+
+    if response_key:
+        response_keys = [response_key]
+
+    results = {key: [] for key in response_keys}
     retry_count = 0
 
     while True:
@@ -49,10 +60,12 @@ async def paginated_search(
                 raise
 
         retry_count = 0
-        results.extend(response.get(response_key, []))
+
+        for response_key in response_keys:
+            results[response_key].extend(response.get(response_key, []))
 
         if not response["IsTruncated"] or (max_results and len(results) >= max_results):
-            return {response_key: results} if retain_key else results
+            return results if retain_key else results[response_key]
         else:
             search_kwargs["Marker"] = response["Marker"]
 
@@ -233,21 +246,8 @@ def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> boo
 
 
 def apply_to_account(resource, aws_account, context: ExecutionContext) -> bool:
-    from iambic.aws.models import Deleted
-
-    if hasattr(resource, "deleted"):
-        deleted_resource_type = isinstance(resource, Deleted)
-
-        if isinstance(resource.deleted, bool):
-            if resource.deleted and not deleted_resource_type:
-                return False
-        else:
-            deleted_obj = resource.get_attribute_val_for_account(aws_account, "deleted")
-            deleted_obj = get_account_value(
-                deleted_obj, aws_account.account_id, aws_account.account_name
-            )
-            if deleted_obj and deleted_obj.deleted and not deleted_resource_type:
-                return False
+    if hasattr(resource, "deleted") and resource.deleted:
+        return False
 
     return evaluate_on_account(resource, aws_account, context)
 
