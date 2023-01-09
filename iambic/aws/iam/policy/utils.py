@@ -5,7 +5,7 @@ import asyncio
 from botocore.exceptions import ClientError
 from deepdiff import DeepDiff
 
-from iambic.aws.utils import paginated_search
+from iambic.aws.utils import boto_crud_call, paginated_search
 from iambic.core import noq_json as json
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
@@ -15,7 +15,7 @@ from iambic.core.utils import NoqSemaphore, aio_wrapper
 
 async def list_managed_policy_versions(iam_client, policy_arn: str) -> list[dict]:
     return (
-        await aio_wrapper(iam_client.list_policy_versions, PolicyArn=policy_arn)
+        await boto_crud_call(iam_client.list_policy_versions, PolicyArn=policy_arn)
     ).get("Versions", [])
 
 
@@ -30,7 +30,7 @@ async def get_managed_policy_version_doc(
 ) -> dict:
     return (
         (
-            await aio_wrapper(
+            await boto_crud_call(
                 iam_client.get_policy_version,
                 PolicyArn=managed_policy_arn,
                 VersionId=version_id,
@@ -62,7 +62,7 @@ async def get_managed_policy_attachments(iam_client, managed_policy_arn: str):
 async def get_managed_policy(iam_client, managed_policy_arn: str, **kwargs) -> dict:
     try:
         response = (
-            await aio_wrapper(iam_client.get_policy, PolicyArn=managed_policy_arn)
+            await boto_crud_call(iam_client.get_policy, PolicyArn=managed_policy_arn)
         ).get("Policy", {})
         if response:
             response["PolicyDocument"] = await get_managed_policy_version_doc(
@@ -119,7 +119,7 @@ async def delete_managed_policy(iam_client, policy_arn: str, log_params: dict):
     for detachment_type in ["User", "Role", "Group"]:
         for entity in policy_attachments[f"Policy{detachment_type}s"]:
             tasks.append(
-                aio_wrapper(
+                boto_crud_call(
                     getattr(iam_client, f"detach_{detachment_type.lower()}_policy"),
                     PolicyArn=policy_arn,
                     **{f"{detachment_type}Name": entity[f"{detachment_type}Name"]},
@@ -132,7 +132,7 @@ async def delete_managed_policy(iam_client, policy_arn: str, log_params: dict):
         **log_params,
     )
     await asyncio.gather(*tasks)
-    await aio_wrapper(iam_client.delete_policy, PolicyArn=policy_arn)
+    await boto_crud_call(iam_client.delete_policy, PolicyArn=policy_arn)
 
 
 async def update_managed_policy(
@@ -177,14 +177,14 @@ async def update_managed_policy(
                     iam_client, policy_arn
                 )
                 if len(policy_versions) == 5:
-                    await aio_wrapper(
+                    await boto_crud_call(
                         iam_client.delete_policy_version,
                         PolicyArn=policy_arn,
                         VersionId=get_oldest_policy_version_id(policy_versions),
                     )
 
             log_str = f"{log_str} Updating PolicyDocument..."
-            await aio_wrapper(
+            await boto_crud_call(
                 iam_client.create_policy_version,
                 PolicyArn=policy_arn,
                 PolicyDocument=json.dumps(template_policy_document),
@@ -225,7 +225,7 @@ async def apply_managed_policy_tags(
         if not iambic_import_only:
             log_str = f"{log_str} Removing tags..."
             tasks.append(
-                aio_wrapper(
+                boto_crud_call(
                     iam_client.untag_policy,
                     PolicyArn=policy_arn,
                     TagKeys=tags_to_remove,
@@ -246,7 +246,7 @@ async def apply_managed_policy_tags(
         if context.execute:
             log_str = f"{log_str} Adding tags..."
             tasks.append(
-                aio_wrapper(
+                boto_crud_call(
                     iam_client.tag_policy, PolicyArn=policy_arn, Tags=tags_to_apply
                 )
             )
