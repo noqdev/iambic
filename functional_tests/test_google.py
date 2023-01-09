@@ -2,38 +2,13 @@ from __future__ import annotations
 
 import datetime
 import os
-import shutil
-import tempfile
 
+from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.parser import load_templates
-from iambic.main import run_apply, run_import
-
-os.environ["AWS_PROFILE"] = "staging/IambicHubRole"
-os.environ["TESTING"] = "true"
-
-google_config = """
-extends:
-  - key: AWS_SECRETS_MANAGER
-    value: arn:aws:secretsmanager:us-west-2:759357822767:secret:test/google-only-secret-VQ71qF
-    assume_role_arn: arn:aws:iam::759357822767:role/IambicSpokeRole
-"""
+from iambic.main import run_apply
 
 
 def test_google():
-    fd, temp_config_filename = tempfile.mkstemp(
-        prefix="iambic_test_temp_config_filename"
-    )
-    temp_templates_directory = tempfile.mkdtemp(
-        prefix="iambic_test_temp_templates_directory"
-    )
-    with open(temp_config_filename, "w") as temp_file:
-        temp_file.write(google_config)
-
-    run_import(
-        [temp_config_filename],
-        temp_templates_directory,
-    )
-
     iambic_functional_test_group_yaml = """template_type: NOQ::Google::Group
 properties:
   name: iambic_functional_test_temp_group
@@ -47,7 +22,7 @@ properties:
     - email: fakeuser@example.com
 """
     test_group_fp = os.path.join(
-        temp_templates_directory,
+        IAMBIC_TEST_DETAILS.template_dir_path,
         "google/groups/noq.dev/iambic_functional_test_group.yaml",
     )
 
@@ -57,9 +32,9 @@ properties:
     # Create group
     run_apply(
         True,
-        temp_config_filename,
+        IAMBIC_TEST_DETAILS.config_path,
         [test_group_fp],
-        temp_templates_directory,
+        IAMBIC_TEST_DETAILS.template_dir_path,
     )
 
     # Test Reading Template
@@ -78,9 +53,9 @@ properties:
     group_template.write()
     run_apply(
         True,
-        temp_config_filename,
+        IAMBIC_TEST_DETAILS.config_path,
         [test_group_fp],
-        temp_templates_directory,
+        IAMBIC_TEST_DETAILS.template_dir_path,
     )
     group_template = load_templates([test_group_fp])[0]
     assert len(group_template.properties.members) == 2
@@ -89,13 +64,10 @@ properties:
     group_template.write()
     run_apply(
         True,
-        temp_config_filename,
+        IAMBIC_TEST_DETAILS.config_path,
         [test_group_fp],
-        temp_templates_directory,
+        IAMBIC_TEST_DETAILS.template_dir_path,
     )
 
     group_template = load_templates([test_group_fp])[0]
     assert group_template.deleted is True
-    os.close(fd)
-    os.unlink(temp_config_filename)
-    shutil.rmtree(temp_templates_directory)
