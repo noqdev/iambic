@@ -149,7 +149,6 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
 class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
     template_type: str = AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
     properties: AWSIdentityCenterPermissionSetProperties
-    identifier: str
     access_rules: Optional[list[PermissionSetAccess]] = []
     included_orgs: list[str] = Field(
         ["*"],
@@ -688,10 +687,6 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
             log.debug("No changes detected for resource on any account.", **log_params)
 
         return template_changes
-
-    @property
-    def resource_type(self) -> str:
-        return "aws:identity_center:permission_set"
 
     @property
     def resource_id(self) -> str:

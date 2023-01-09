@@ -18,6 +18,28 @@ if TYPE_CHECKING:
     from iambic.config.models import Config
 
 
+async def boto_crud_call(boto_fnc, **kwargs) -> Union[list, dict]:
+    """Responsible for calls to boto. Adds async support and error handling
+    :param boto_fnc:
+    :param kwargs: The params to pass to the boto fnc
+    :return:
+    """
+    retry_count = 0
+
+    while True:
+        try:
+            return await aio_wrapper(boto_fnc, **kwargs)
+        except ClientError as err:
+            if "Throttling" in err.response["Error"]["Code"]:
+                if retry_count >= 10:
+                    raise
+                retry_count += 1
+                await asyncio.sleep(retry_count / 2)
+                continue
+            else:
+                raise
+
+
 async def paginated_search(
     search_fnc,
     response_key: str = None,
