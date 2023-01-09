@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import boto3
 import botocore
@@ -27,7 +27,7 @@ from iambic.core.models import (
     TemplateChangeDetails,
     Variable,
 )
-from iambic.core.utils import aio_wrapper
+from iambic.core.utils import NoqSemaphore, aio_wrapper
 
 if TYPE_CHECKING:
     from iambic.config.models import Config
@@ -116,7 +116,7 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
     class Config:
         fields = {"boto3_session_map": {"exclude": True}}
 
-    async def get_boto3_session(self, region_name: str = None):
+    async def get_boto3_session(self, region_name: Optional[str] = None):
         region_name = region_name or self.default_region
         # Get a boto3 session for this account by using the AWS profile if it exists,
         # And then assuming into the list of roles if they exist
@@ -143,14 +143,35 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         self.boto3_session_map[region_name] = session
         return self.boto3_session_map[region_name]
 
-    async def get_boto3_client(self, service: str, region_name: str = None):
+    async def get_boto3_client(self, service: str, region_name: Optional[str] = None):
         return (await self.get_boto3_session(region_name)).client(
             service, config=botocore.client.Config(max_pool_connections=50)
         )
 
+    async def get_active_regions(self) -> list[str]:
+        client = await self.get_boto3_client("ec2")
+        res = await aio_wrapper(client.describe_regions)
+        return [region["RegionName"] for region in res["Regions"]]
+
     def __init__(self, **kwargs):
         super(BaseAWSAccountAndOrgModel, self).__init__(**kwargs)
         self.default_region = self.default_region.value
+
+
+class IdentityCenterDetails(PydanticBaseModel):
+    region: str
+    instance_arn: Optional[str] = None
+    identity_store_id: Optional[str] = None
+    permission_set_map: Optional[Union[dict, None]] = None
+    user_map: Optional[Union[dict, None]] = None
+    group_map: Optional[Union[dict, None]] = None
+    org_account_map: Optional[Union[dict, None]] = None
+
+    def get_resource_name(self, resource_type: str, resource_id: str):
+        resource_type = resource_type.lower()
+        name_map = {"user": "UserName", "group": "DisplayName"}
+        resource_map = getattr(self, f"{resource_type.lower()}_map")
+        return resource_map.get(resource_id)[name_map[resource_type]]
 
 
 class AWSAccount(BaseAWSAccountAndOrgModel):
@@ -175,6 +196,7 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         description="A list of variables to be used when creating templates",
     )
     org_session_info: Optional[dict] = None
+    identity_center_details: Optional[Union[IdentityCenterDetails, None]] = None
 
     class Config:
         fields = {"org_session_info": {"exclude": True}}
@@ -198,6 +220,86 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
                 return boto3_session
 
         return await super(AWSAccount, self).get_boto3_session(region_name)
+
+    async def set_identity_center_details(
+        self, set_identity_center_map: bool = True
+    ) -> None:
+        if self.identity_center_details:
+            region = self.identity_center_details.region
+            identity_center_client = await self.get_boto3_client(
+                "sso-admin", region_name=region
+            )
+            identity_store_client = await self.get_boto3_client(
+                "identitystore", region_name=region
+            )
+
+            identity_center_instances = await aio_wrapper(
+                identity_center_client.list_instances
+            )
+
+            if not identity_center_instances.get("Instances"):
+                raise ValueError("No Identity Center instances found")
+
+            self.identity_center_details.instance_arn = identity_center_instances[
+                "Instances"
+            ][0]["InstanceArn"]
+            self.identity_center_details.identity_store_id = identity_center_instances[
+                "Instances"
+            ][0]["IdentityStoreId"]
+
+            if not set_identity_center_map:
+                return
+
+            permission_set_arns = await legacy_paginated_search(
+                identity_center_client.list_permission_sets,
+                response_key="PermissionSets",
+                InstanceArn=self.identity_center_details.instance_arn,
+            )
+            if permission_set_arns:
+                permission_set_detail_semaphore = NoqSemaphore(
+                    identity_center_client.describe_permission_set, 35, False
+                )
+                permission_set_details = await permission_set_detail_semaphore.process(
+                    [
+                        {
+                            "InstanceArn": self.identity_center_details.instance_arn,
+                            "PermissionSetArn": permission_set_arn,
+                        }
+                        for permission_set_arn in permission_set_arns
+                    ]
+                )
+                self.identity_center_details.permission_set_map = {
+                    permission_set["PermissionSet"]["Name"]: permission_set[
+                        "PermissionSet"
+                    ]
+                    for permission_set in permission_set_details
+                }
+
+            users_and_groups = await asyncio.gather(
+                *[
+                    legacy_paginated_search(
+                        identity_store_client.list_users,
+                        response_key="Users",
+                        retain_key=True,
+                        IdentityStoreId=self.identity_center_details.identity_store_id,
+                    ),
+                    legacy_paginated_search(
+                        identity_store_client.list_groups,
+                        response_key="Groups",
+                        retain_key=True,
+                        IdentityStoreId=self.identity_center_details.identity_store_id,
+                    ),
+                ]
+            )
+            for user_or_group in users_and_groups:
+                if "Users" in user_or_group:
+                    self.identity_center_details.user_map = {
+                        user["UserId"]: user for user in user_or_group["Users"]
+                    }
+                else:
+                    self.identity_center_details.group_map = {
+                        group["GroupId"]: group for group in user_or_group["Groups"]
+                    }
 
     def __str__(self):
         return f"{self.account_name} - ({self.account_id})"
@@ -241,12 +343,23 @@ class AWSOrgAccountRule(BaseAWSOrgRule):
     )
 
 
+class AWSIdentityCenterAccount(PydanticBaseModel):
+    account_id: constr(min_length=12, max_length=12) = Field(
+        None, description="The AWS Account ID"
+    )
+    region: str
+
+
 class AWSOrganization(BaseAWSAccountAndOrgModel):
     org_id: str = Field(
         None,
         description="A unique identifier designating the identity of the organization",
     )
     org_name: Optional[str] = None
+    identity_center_account: Optional[AWSIdentityCenterAccount] = Field(
+        default=None,
+        description="The AWS Account ID and region of the AWS Identity Center instance to use for this organization",
+    )
     default_rule: BaseAWSOrgRule = Field(
         description="The rule used to determine how an organization account should be handled if the account was not found in account_rules.",
     )
@@ -275,11 +388,19 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
             return None
 
         region_name = str(self.default_region)
+        if getattr(self.identity_center_account, "account_id", None) == account_id:
+            identity_center_details = IdentityCenterDetails(
+                region=self.identity_center_account.region
+            )
+        else:
+            identity_center_details = None
+
         aws_account = AWSAccount(
             account_id=account_id,
             account_name=account_name,
             org_id=self.org_id,
             variables=account["variables"],
+            identity_center_details=identity_center_details,
             iambic_managed=account_rule.iambic_managed,
         )
         aws_account.boto3_session_map = {}
@@ -309,16 +430,12 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
                     )
                     continue
 
-    async def get_accounts(
-        self, existing_accounts_map: dict[str, AWSAccount] = None
-    ) -> list[AWSAccount]:
+    async def get_accounts(self) -> list[AWSAccount]:
         """Get all accounts in an AWS Organization
 
         Also extends variables for accounts that are already in the config.
         Does not overwrite variables.
         """
-        if existing_accounts_map is None:
-            existing_accounts_map = {}
 
         session = await self.get_boto3_session(
             self.default_region,
@@ -328,27 +445,16 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
             client.list_accounts,
             "Accounts",
         )
-        org_accounts = await asyncio.gather(
-            *[
-                set_org_account_variables(client, account)
-                for account in org_accounts
-                if account["Status"] == "ACTIVE"
-            ]
-        )
-        response = list()
-        discovered_accounts = list()
 
-        for org_account in org_accounts:
-            account_id = org_account["Id"]
-            if account := existing_accounts_map.get(account_id):
-                account.org_id = self.org_id
-                existing_vars = {var["key"] for var in account.variables}
-                for org_var in org_account["variables"]:
-                    if org_var["key"] not in existing_vars:
-                        account.variables.append(org_var)
-                response.append(account)
-            else:
-                discovered_accounts.append(org_account)
+        active_accounts = [
+            account for account in org_accounts if account["Status"] == "ACTIVE"
+        ]
+        org_accounts = await asyncio.gather(
+            *[set_org_account_variables(client, account) for account in active_accounts]
+        )
+        discovered_accounts = [
+            org_account for org_account in org_accounts if org_account
+        ]
 
         discovered_accounts = await asyncio.gather(
             *[
@@ -356,7 +462,15 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
                 for account in discovered_accounts
             ]
         )
-        response.extend([account for account in discovered_accounts if account])
+        response = [account for account in discovered_accounts if account]
+
+        if self.identity_center_account:
+            for elem, account in enumerate(response):
+                if account.account_id == self.identity_center_account.account_id:
+                    response[elem].identity_center_details.org_account_map = {
+                        account["Id"]: account["Name"] for account in active_accounts
+                    }
+
         return response
 
     def __str__(self):
@@ -410,3 +524,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
             log.debug("No changes detected for resource on any account.", **log_params)
 
         return template_changes
+
+
+class Description(AccessModel):
+    description: Optional[str] = ""

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
+from iambic.aws.identity_center.permission_set.utils import generate_permission_set_map
 from iambic.aws.utils import remove_expired_resources
 from iambic.config.models import Config
 from iambic.core.context import ExecutionContext
@@ -13,11 +14,13 @@ from iambic.core.parser import load_templates
 async def apply_changes(
     config: Config, template_paths: list[str], context: ExecutionContext
 ) -> list[TemplateChangeDetails]:
+
+    templates = load_templates(template_paths)
+    if config.aws and config.aws.accounts:
+        await generate_permission_set_map(config.aws.accounts, templates)
+
     template_changes = await asyncio.gather(
-        *[
-            template.apply(config, context)
-            for template in load_templates(template_paths)
-        ]
+        *[template.apply(config, context) for template in templates]
     )
     template_changes = [
         template_change

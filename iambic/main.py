@@ -7,6 +7,7 @@ import warnings
 import click
 
 from iambic.config.models import Config
+from iambic.config.utils import multi_config_loader
 from iambic.config.wizard import ConfigurationWizard
 from iambic.core.context import ctx
 from iambic.core.git import clone_git_repos
@@ -305,11 +306,7 @@ def import_(config_paths: list[str], repo_dir: str):
 
 
 def run_import(config_paths: list[str], repo_dir: str):
-    configs = []
-    for config_path in config_paths:
-        config = Config.load(config_path)
-        asyncio.run(config.setup_aws_accounts())
-        configs.append(config)
+    configs = asyncio.run(multi_config_loader(config_paths))
     asyncio.run(generate_templates(configs, repo_dir or str(pathlib.Path.cwd())))
 
 
