@@ -13,7 +13,6 @@ from github import Github
 from iambic.config.models import Config
 from iambic.core.git import clone_git_repo
 
-os.environ["AWS_PROFILE"] = "iambic_test_org_account/IambicHubRole"
 os.environ["TESTING"] = "true"
 
 github_config = """
@@ -68,6 +67,8 @@ def filesystem():
 # the "iambic git-apply" command on the PR. If the flow is successful, the PR
 # will be merged and we will check the workflow to be completed state.
 def test_github_cicd(filesystem):
+
+    os.environ["AWS_PROFILE"] = "iambic_test_org_account/IambicHubRole"
 
     subprocess.run("make -f Makefile.itest build_docker_itest", shell=True, check=True)
     subprocess.run("make -f Makefile.itest upload_docker_itest", shell=True, check=True)
