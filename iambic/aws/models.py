@@ -66,15 +66,6 @@ class AccessModel(BaseModel):
     )
 
 
-class Deleted(AccessModel):
-    deleted: bool = Field(
-        description=(
-            "Denotes whether the resource has been removed from AWS."
-            "Upon being set to true, the resource will be deleted the next time iambic is ran."
-        ),
-    )
-
-
 class Tag(ExpiryModel, AccessModel):
     key: str
     value: str
