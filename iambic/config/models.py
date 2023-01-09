@@ -186,6 +186,9 @@ class Config(BaseModel):
         arbitrary_types_allowed = True
 
     async def setup_aws_accounts(self):
+        if not self.aws:
+            return
+
         for elem, account in enumerate(self.aws.accounts):
             if not account.role_access_tag:
                 self.aws.accounts[elem].role_access_tag = self.role_access_tag
@@ -194,14 +197,13 @@ class Config(BaseModel):
                 if variable.key not in [av.key for av in account.variables]:
                     self.aws.accounts[elem].variables.append(variable)
 
-        account_map = {account.account_id: account for account in self.aws.accounts}
         config_account_idx_map = {
             account.account_id: idx for idx, account in enumerate(self.aws.accounts)
         }
 
         if self.aws and self.aws.organizations:
             orgs_accounts = await asyncio.gather(
-                *[org.get_accounts(account_map) for org in self.aws.organizations]
+                *[org.get_accounts() for org in self.aws.organizations]
             )
             for org_accounts in orgs_accounts:
                 for account in org_accounts:
