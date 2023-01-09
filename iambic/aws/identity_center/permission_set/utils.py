@@ -171,9 +171,9 @@ async def enrich_permission_set_details(
             continue
 
         for k, v in permission_set_response.items():
-            if v and k != "ResponseMetadata":
-                permission_set_details[k] = v
-
+            if k == "ResponseMetadata" or not v:
+                continue
+            permission_set_details[k] = v
     return permission_set_details
 
 
@@ -481,8 +481,8 @@ async def apply_account_assignments(
     identity_center_client: boto3 client
     instance_arn: str
     permission_set_arn: str
-    template_assignments: list[dict]
-    existing_assignments: list[dict]
+    template_assignments: list[dict]. This is the desired list of assignments from the template
+    existing_assignments: list[dict]. These are the existing assignments from AWS
     log_params: dict
     context: ExecutionContext
     """
@@ -500,17 +500,17 @@ async def apply_account_assignments(
     for assignment_id, assignment in existing_assignment_map.items():
         if not template_assignment_map.get(assignment_id):
             log_str = "Stale assignments discovered."
+            response.append(
+                ProposedChange(
+                    change_type=ProposedChangeType.DELETE,
+                    account=assignment["account_name"],
+                    resource_id=assignment["resource_name"],
+                    resource_type=assignment["resource_type"],
+                    attribute="account_assignment",
+                )
+            )
             if context.execute:
                 log_str = f"{log_str} Removing account assignment..."
-                response.append(
-                    ProposedChange(
-                        change_type=ProposedChangeType.DELETE,
-                        account=assignment["account_name"],
-                        resource_id=assignment["resource_name"],
-                        resource_type=assignment["resource_type"],
-                        attribute="account_assignment",
-                    )
-                )
                 tasks.append(
                     delete_account_assignment(
                         identity_center_client,
