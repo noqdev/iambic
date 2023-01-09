@@ -275,8 +275,13 @@ async def create_templated_permission_set(  # noqa: C901
         )
 
     if inline_policy_resources:
-        permission_set_properties["inline_policy"] = await group_int_or_str_attribute(
-            aws_account_map, num_of_accounts, inline_policy_resources, "inline_policy"
+        permission_set_properties["inline_policy"] = json.loads(
+            await group_int_or_str_attribute(
+                aws_account_map,
+                num_of_accounts,
+                inline_policy_resources,
+                "inline_policy",
+            )
         )
 
     if relay_state_resources:

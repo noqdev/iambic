@@ -75,6 +75,17 @@ async def generate_role_template_from_base(
     role_template.properties.description = "This was created by a functional test."
     role_template.properties.max_session_duration = 3600
 
+    role_template.properties.assume_role_policy_document = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Deny",
+                "Principal": {"Service": "ec2.amazonaws.com"},
+                "Action": "sts:AssumeRole",
+            }
+        ],
+    }
+
     if isinstance(role_template.properties.assume_role_policy_document, list):
         policy_doc = role_template.properties.assume_role_policy_document[0]
         policy_doc.included_accounts = ["*"]
@@ -87,6 +98,7 @@ async def generate_role_template_from_base(
         policy_doc.excluded_accounts = []
         role_template.properties.inline_policies = [policy_doc]
 
+    role_template.write()
     return role_template
 
 

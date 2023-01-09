@@ -268,33 +268,37 @@ def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> boo
 
 
 def apply_to_account(resource, aws_account, context: ExecutionContext) -> bool:
-    if hasattr(resource, "deleted"):
-        return resource.deleted
+    if hasattr(resource, "deleted") and resource.deleted:
+        return False
 
     return evaluate_on_account(resource, aws_account, context)
 
 
 async def remove_expired_resources(
-    resource, template_resource_type: str, template_resource_id: str
+    resource,
+    template_resource_type: str,
+    template_resource_id: str,
+    delete_resource_if_expired: bool = True,
 ):
     from iambic.core.models import BaseModel
 
-    if (
-        not issubclass(type(resource), BaseModel)
-        or not hasattr(resource, "expires_at")
-        or getattr(resource, "deleted", None)
-    ):
+    if not isinstance(resource, BaseModel):
         return resource
 
-    log_params = dict(
-        resource_type=resource.resource_type, resource_id=resource.resource_id
-    )
-    if (
-        template_resource_type != resource.resource_type
-        or template_resource_id != resource.resource_id
-    ):
+    log_params = {}
+    if hasattr(resource, "resource_type"):
+        log_params["resource_type"] = resource.resource_type
+    if hasattr(resource, "resource_id"):
+        log_params["resource_id"] = resource.resource_id
+    if template_resource_type != log_params.get(
+        "resource_type"
+    ) or template_resource_id != log_params.get("resource_id"):
         log_params["parent_resource_type"] = template_resource_type
         log_params["parent_resource_id"] = template_resource_id
+
+    if issubclass(type(resource), BaseModel) and hasattr(resource, "expires_at"):
+        if resource.expires_at and resource.expires_at < datetime.utcnow():
+            resource.deleted = True
 
     if hasattr(resource, "expires_at") and resource.expires_at:
 
@@ -315,11 +319,19 @@ async def remove_expired_resources(
                 ]
             )
             setattr(resource, field_name, new_value)
+            if delete_resource_if_expired:
+                for elem in new_value:
+                    if getattr(elem, "deleted", None) is True:
+                        new_value.remove(elem)
+                        setattr(resource, field_name, new_value)
         else:
             new_value = await remove_expired_resources(
                 field_val, template_resource_type, template_resource_id
             )
-            setattr(resource, field_name, new_value)
+            if getattr(new_value, "deleted", None) is True:
+                setattr(resource, field_name, None)
+            else:
+                setattr(resource, field_name, new_value)
 
     return resource
 
