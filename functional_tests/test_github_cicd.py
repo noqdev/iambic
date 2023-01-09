@@ -72,11 +72,17 @@ def mock_aws_profile():
     os.environ["AWS_PROFILE"] = original_profile
 
 
+@pytest.fixture
+def generate_templates_fixture():
+    # to override the conftest version to speed up testing
+    pass
+
+
 # Opens a PR on noqdev/iambic-templates-test. The workflow on the repo will
 # pull container with "test label". It will then approve the PR and trigger
 # the "iambic git-apply" command on the PR. If the flow is successful, the PR
 # will be merged and we will check the workflow to be completed state.
-def test_github_cicd(filesystem, mock_aws_profile):
+def test_github_cicd(filesystem, mock_aws_profile, generate_templates_fixture):
 
     subprocess.run("make -f Makefile.itest build_docker_itest", shell=True, check=True)
     subprocess.run("make -f Makefile.itest upload_docker_itest", shell=True, check=True)
