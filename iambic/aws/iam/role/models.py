@@ -129,21 +129,6 @@ class RoleTemplate(AWSTemplate, AccessModel):
         if "Tags" not in response:
             response["Tags"] = []
 
-        # Add RoleAccess Tag to role tags
-        role_access = [
-            ra._apply_resource_dict(aws_account, context)
-            for ra in self.access_rules
-            if apply_to_account(ra, aws_account, context)
-        ]
-        if role_access:
-            value = []
-            for role_access_dict in role_access:
-                value.extend(role_access_dict.get("Users", []))
-                value.extend(role_access_dict.get("Groups", []))
-            response["Tags"].append(
-                {"Key": aws_account.role_access_tag, "Value": ":".join(value)}
-            )
-
         # Ensure only 1 of the following objects
         # TODO: Have this handled in a cleaner way. Maybe via an attribute on a pydantic field
         if assume_role_policy := response.pop("AssumeRolePolicyDocument", []):
