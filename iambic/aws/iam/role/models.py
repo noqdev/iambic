@@ -30,7 +30,7 @@ from iambic.aws.models import (
     Description,
     Tag,
 )
-from iambic.aws.utils import apply_to_account
+from iambic.aws.utils import apply_to_account, boto_crud_call
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -41,7 +41,6 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
-from iambic.core.utils import aio_wrapper
 
 AWS_IAM_ROLE_TEMPLATE_TYPE = "NOQ::AWS::IAM::Role"
 
@@ -114,7 +113,6 @@ class RoleProperties(BaseModel):
 
 class RoleTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_ROLE_TEMPLATE_TYPE
-    identifier: str
     properties: RoleProperties = Field(
         description="Properties of the role",
     )
@@ -130,21 +128,6 @@ class RoleTemplate(AWSTemplate, AccessModel):
         response.pop("RoleAccess", None)
         if "Tags" not in response:
             response["Tags"] = []
-
-        # Add RoleAccess Tag to role tags
-        role_access = [
-            ra._apply_resource_dict(aws_account, context)
-            for ra in self.access_rules
-            if apply_to_account(ra, aws_account, context)
-        ]
-        if role_access:
-            value = []
-            for role_access_dict in role_access:
-                value.extend(role_access_dict.get("Users", []))
-                value.extend(role_access_dict.get("Groups", []))
-            response["Tags"].append(
-                {"Key": aws_account.role_access_tag, "Value": ":".join(value)}
-            )
 
         # Ensure only 1 of the following objects
         # TODO: Have this handled in a cleaner way. Maybe via an attribute on a pydantic field
@@ -274,7 +257,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                             **update_resource_log_params,
                         )
                         tasks.append(
-                            aio_wrapper(
+                            boto_crud_call(
                                 client.update_role,
                                 RoleName=role_name,
                                 **{
@@ -311,7 +294,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                 account_role["AssumeRolePolicyDocument"] = json.dumps(
                     account_role["AssumeRolePolicyDocument"]
                 )
-                await aio_wrapper(client.create_role, **account_role)
+                await boto_crud_call(client.create_role, **account_role)
         except Exception as e:
             log.error("Unable to generate tasks for resource", error=e, **log_params)
             return account_change_details
@@ -360,10 +343,6 @@ class RoleTemplate(AWSTemplate, AccessModel):
             )
 
         return account_change_details
-
-    @property
-    def resource_type(self):
-        return "aws:iam:role"
 
     @property
     def resource_id(self):
