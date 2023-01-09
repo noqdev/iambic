@@ -18,6 +18,8 @@ from iambic.core.iambic_enum import IambicManaged
 from iambic.core.models import Variable
 from iambic.core.utils import aio_wrapper, yaml
 
+CURRENT_IAMBIC_VERSION = "1"
+
 
 class GoogleSubjects(BaseModel):
     domain: str
@@ -181,6 +183,9 @@ class Config(BaseModel):
     slack_app: Optional[str] = None
     sqs: Optional[dict] = {}
     slack: Optional[dict] = {}
+    version: str = Field(
+        description="Do not change! The version of iambic this repo is compatible with.",
+    )
 
     class Config:
         arbitrary_types_allowed = True

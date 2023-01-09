@@ -24,6 +24,7 @@ from iambic.aws.models import (
     Description,
     Tag,
 )
+from iambic.aws.utils import boto_crud_call
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -34,7 +35,6 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
-from iambic.core.utils import aio_wrapper
 
 AWS_MANAGED_POLICY_TEMPLATE_TYPE = "NOQ::IAM::ManagedPolicy"
 
@@ -368,7 +368,7 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
             log_str = "New resource found in code."
             if not is_iambic_import_only:
                 log_str = f"{log_str} Creating resource..."
-                await aio_wrapper(client.create_policy, **account_policy)
+                await boto_crud_call(client.create_policy, **account_policy)
             log.info(log_str, **log_params)
 
         if not is_iambic_import_only:
