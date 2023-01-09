@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from enum import Enum
 from typing import TYPE_CHECKING, List, Optional, Union
 
 import boto3
@@ -33,6 +34,12 @@ if TYPE_CHECKING:
     from iambic.config.models import Config
 
 ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\*$"
+
+
+class Partition(Enum):
+    AWS = "aws"
+    AWS_GOV = "aws-us-gov"
+    AWS_CHINA = "aws-cn"
 
 
 class AccessModel(BaseModel):
@@ -171,6 +178,10 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         description="A unique identifier designating the identity of the organization",
     )
     account_name: Optional[str] = None
+    partition: Optional[Partition] = Field(
+        Partition.AWS,
+        description="The AWS partition the account is in. Options are aws, aws-us-gov, and aws-cn",
+    )
     role_access_tag: Optional[str] = Field(
         None,
         description="The key of the tag used to store users and groups that can assume into the role the tag is on",
@@ -464,6 +475,8 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
 
 
 class AWSTemplate(BaseTemplate, ExpiryModel):
+    identifier: str
+
     async def _apply_to_account(
         self, aws_account: AWSAccount, context: ExecutionContext
     ) -> AccountChangeDetails:
@@ -510,6 +523,10 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
             log.debug("No changes detected for resource on any account.", **log_params)
 
         return template_changes
+
+    @property
+    def resource_type(self):
+        return self.identifier
 
 
 class Description(AccessModel):

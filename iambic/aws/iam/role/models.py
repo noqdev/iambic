@@ -114,7 +114,6 @@ class RoleProperties(BaseModel):
 
 class RoleTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_ROLE_TEMPLATE_TYPE
-    identifier: str
     properties: RoleProperties = Field(
         description="Properties of the role",
     )
@@ -360,10 +359,6 @@ class RoleTemplate(AWSTemplate, AccessModel):
             )
 
         return account_change_details
-
-    @property
-    def resource_type(self):
-        return "aws:iam:role"
 
     @property
     def resource_id(self):
