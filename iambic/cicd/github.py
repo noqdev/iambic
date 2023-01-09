@@ -73,6 +73,17 @@ def prepare_local_repo(
     return cloned_repo
 
 
+def prepare_local_repo_from_remote_branch(
+    repo_url: str, repo_path: str, pull_request_branch_name: str
+) -> Repo:
+    if len(os.listdir(repo_path)) > 0:
+        raise Exception(f"{repo_path} already exists. This is unexpected.")
+    cloned_repo = clone_git_repo(repo_url, repo_path, pull_request_branch_name)
+    log_params = {"last_commit_message": cloned_repo.head.commit.message}
+    log.info(cloned_repo.head.commit.message, **log_params)
+    return cloned_repo
+
+
 def load_proposed_changes(filepath: str) -> dict:
     if not os.path.exists(filepath):
         return {}
@@ -90,7 +101,7 @@ TRUNCATED_WARNING = (
 )
 BODY_MAX_LENGTH = 65000
 TRUNCATED_BODY_MAX_LENGTH = BODY_MAX_LENGTH - len(TRUNCATED_WARNING)
-GIT_APPLY_COMMENT_TEMPLATE = """iambic git-applied ran with:
+GIT_APPLY_COMMENT_TEMPLATE = """iambic {iambic_op} ran with:
 
 ```yaml
 {plan}
@@ -107,7 +118,7 @@ def ensure_body_length_fits_github_spec(body: str) -> str:
 
 
 def post_result_as_pr_comment(
-    pull_request: PullRequest, context: dict[str, Any]
+    pull_request: PullRequest, context: dict[str, Any], iambic_op: str
 ) -> None:
     run_url = (
         context["server_url"]
@@ -125,7 +136,9 @@ def post_result_as_pr_comment(
         with open(filepath) as f:
             lines = f.readlines()
     plan = "".join(lines) if lines else "no changes"
-    body = GIT_APPLY_COMMENT_TEMPLATE.format(plan=plan, run_url=run_url)
+    body = GIT_APPLY_COMMENT_TEMPLATE.format(
+        plan=plan, run_url=run_url, iambic_op=iambic_op
+    )
     body = ensure_body_length_fits_github_spec(body)
     pull_request.create_issue_comment(body)
 
@@ -172,7 +185,7 @@ def handle_issue_comment(
     try:
         prepare_local_repo(repo_url, lambda_repo_path, pull_request_branch_name)
         lambda_run_handler(None, {"command": "git_apply"})
-        post_result_as_pr_comment(pull_request, context)
+        post_result_as_pr_comment(pull_request, context, "git-apply")
         copy_data_to_data_directory()
         pull_request.merge()
         return HandleIssueCommentReturnCode.MERGED
@@ -186,8 +199,40 @@ def handle_issue_comment(
         raise e
 
 
+def handle_pull_request(github_client: Github, context: dict[str, Any]) -> None:
+    github_token = context["token"]
+    # repo_name is already in the format {repo_owner}/{repo_short_name}
+    repo_name = context["repository"]
+    pull_number = context["event"]["pull_request"]["number"]
+    repository_url = context["event"]["repository"]["clone_url"]
+    repo_url = format_github_url(repository_url, github_token)
+    # repository_url_token
+    templates_repo = github_client.get_repo(repo_name)
+    pull_request = templates_repo.get_pull(pull_number)
+    pull_request_branch_name = pull_request.head.ref
+    log_params = {"pull_request_branch_name": pull_request_branch_name}
+    log.info("PR remote branch name", **log_params)
+
+    try:
+        prepare_local_repo_from_remote_branch(
+            repo_url, lambda_repo_path, pull_request_branch_name
+        )
+        lambda_run_handler(None, {"command": "git_plan"})
+        post_result_as_pr_comment(pull_request, context, "git-plan")
+        copy_data_to_data_directory()
+    except Exception as e:
+        log.error("fault", exception=str(e))
+        pull_request.create_issue_comment(
+            "exception during git-apply is {0} \n {1}".format(
+                pull_request.mergeable_state, e
+            )
+        )
+        raise e
+
+
 EVENT_DISPATCH_MAP: dict[str, Callable] = {
     "issue_comment": handle_issue_comment,
+    "pull_request": handle_pull_request,
 }
 
 

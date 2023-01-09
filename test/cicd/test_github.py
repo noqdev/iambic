@@ -13,6 +13,7 @@ from iambic.cicd.github import (
     ensure_body_length_fits_github_spec,
     format_github_url,
     handle_issue_comment,
+    handle_pull_request,
     prepare_local_repo,
 )
 
@@ -135,3 +136,36 @@ def test_ensure_body_length_fits_github_spec():
     assert len(body) > BODY_MAX_LENGTH
     new_body = ensure_body_length_fits_github_spec(body)
     assert len(new_body) <= BODY_MAX_LENGTH
+
+
+@pytest.fixture
+def pull_request_context():
+    return {
+        "server_url": "https://github.com",
+        "run_id": "12345",
+        "run_attempt": "1",
+        "token": "fake-token",
+        "sha": "fake-sha",
+        "repository": "example.com/iambic-templates",
+        "event_name": "pull_request",
+        "event": {
+            "pull_request": {
+                "number": 1,
+            },
+            "repository": {
+                "clone_url": "https://github.com/example-org/iambic-templates.git",
+            },
+        },
+    }
+
+
+def test_pull_request_plan(
+    mock_github_client, pull_request_context, mock_lambda_run_handler, mock_repository
+):
+    mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
+    mock_pull_request.head.sha = pull_request_context["sha"]
+    mock_repository.clone_from.return_value.head.commit.hexsha = pull_request_context[
+        "sha"
+    ]
+    handle_pull_request(mock_github_client, pull_request_context)
+    assert mock_lambda_run_handler.called is True
