@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 from enum import Enum
-from ruamel.yaml import yaml_object, YAML
+
+from ruamel.yaml import YAML, yaml_object
 
 yaml = YAML()
+
 
 @yaml_object(yaml)
 class IambicManaged(Enum):
@@ -11,9 +15,7 @@ class IambicManaged(Enum):
 
     @classmethod
     def to_yaml(cls, representer, node):
-        return representer.represent_scalar(
-            u'!IambicManaged', f'{node._value_}'
-        )
+        return representer.represent_scalar("!IambicManaged", f"{node._value_}")
 
     @classmethod
     def from_yaml(cls, constructor, node):
