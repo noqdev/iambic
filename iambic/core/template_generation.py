@@ -24,6 +24,19 @@ async def get_existing_template_file_map(repo_dir: str, template_type: str) -> d
     return {template.resource_id: template.file_path for template in templates}
 
 
+async def get_existing_template_map(repo_dir: str, template_type: str) -> dict:
+    """Used to keep track of existing templates on import
+
+     Write to the existing file before creating a new one.
+
+    :param repo_dir:
+    :param template_type:
+    :return: {resource_id: template}
+    """
+    templates = load_templates(await gather_templates(repo_dir, template_type))
+    return {template.resource_id: template for template in templates}
+
+
 def templatize_resource(aws_account: AWSAccount, resource):
     resource_type = type(resource)
 
