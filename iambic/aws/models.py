@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import asyncio
+from enum import Enum
 from typing import TYPE_CHECKING, List, Optional, Union
 
 import boto3
 import botocore
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, constr
+from ruamel.yaml import YAML, yaml_object
 
 from iambic.aws.utils import (
     RegionName,
+    boto_crud_call,
     create_assume_role_session,
     evaluate_on_account,
     get_account_value,
@@ -29,10 +32,27 @@ from iambic.core.models import (
 )
 from iambic.core.utils import NoqSemaphore, aio_wrapper
 
+yaml = YAML()
+
 if TYPE_CHECKING:
     from iambic.config.models import Config
 
 ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\*$"
+
+
+@yaml_object(yaml)
+class Partition(Enum):
+    AWS = "aws"
+    AWS_GOV = "aws-us-gov"
+    AWS_CHINA = "aws-cn"
+
+    @classmethod
+    def to_yaml(cls, representer, node):
+        return representer.represent_scalar("!Partition", f"{node._value_}")
+
+    @classmethod
+    def from_yaml(cls, constructor, node):
+        return cls(node.value)
 
 
 class AccessModel(BaseModel):
@@ -138,7 +158,7 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
 
     async def get_active_regions(self) -> list[str]:
         client = await self.get_boto3_client("ec2")
-        res = await aio_wrapper(client.describe_regions)
+        res = await boto_crud_call(client.describe_regions)
         return [region["RegionName"] for region in res["Regions"]]
 
     def __init__(self, **kwargs):
@@ -171,6 +191,10 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         description="A unique identifier designating the identity of the organization",
     )
     account_name: Optional[str] = None
+    partition: Optional[Partition] = Field(
+        Partition.AWS,
+        description="The AWS partition the account is in. Options are aws, aws-us-gov, and aws-cn",
+    )
     role_access_tag: Optional[str] = Field(
         None,
         description="The key of the tag used to store users and groups that can assume into the role the tag is on",
@@ -219,7 +243,7 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
                 "identitystore", region_name=region
             )
 
-            identity_center_instances = await aio_wrapper(
+            identity_center_instances = await boto_crud_call(
                 identity_center_client.list_instances
             )
 
@@ -464,6 +488,8 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
 
 
 class AWSTemplate(BaseTemplate, ExpiryModel):
+    identifier: str
+
     async def _apply_to_account(
         self, aws_account: AWSAccount, context: ExecutionContext
     ) -> AccountChangeDetails:
@@ -510,6 +536,10 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
             log.debug("No changes detected for resource on any account.", **log_params)
 
         return template_changes
+
+    @property
+    def resource_type(self):
+        return self.identifier
 
 
 class Description(AccessModel):

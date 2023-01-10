@@ -24,6 +24,7 @@ from iambic.aws.models import (
     Description,
     Tag,
 )
+from iambic.aws.utils import boto_crud_call
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -34,7 +35,6 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
-from iambic.core.utils import aio_wrapper
 
 AWS_MANAGED_POLICY_TEMPLATE_TYPE = "NOQ::IAM::ManagedPolicy"
 
@@ -257,7 +257,6 @@ class ManagedPolicyProperties(BaseModel):
 
 class ManagedPolicyTemplate(AWSTemplate, AccessModel):
     template_type = AWS_MANAGED_POLICY_TEMPLATE_TYPE
-    identifier: str
     properties: ManagedPolicyProperties = Field(
         description="The properties of the managed policy",
     )
@@ -274,7 +273,7 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
     def get_arn_for_account(self, aws_account: AWSAccount) -> str:
         path = self.get_attribute_val_for_account(aws_account, "properties.path", False)
         policy_name = self.properties.policy_name
-        return f"arn:aws:iam::{aws_account.account_id}:policy{path}{policy_name}"
+        return f"arn:{aws_account.partition.value}:iam::{aws_account.account_id}:policy{path}{policy_name}"
 
     def _apply_resource_dict(
         self, aws_account: AWSAccount = None, context: ExecutionContext = None
@@ -369,7 +368,7 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
             log_str = "New resource found in code."
             if not is_iambic_import_only:
                 log_str = f"{log_str} Creating resource..."
-                await aio_wrapper(client.create_policy, **account_policy)
+                await boto_crud_call(client.create_policy, **account_policy)
             log.info(log_str, **log_params)
 
         if not is_iambic_import_only:
@@ -386,10 +385,6 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
             )
 
         return account_change_details
-
-    @property
-    def resource_type(self):
-        return "aws:iam:managed_policy"
 
     @property
     def resource_id(self):
