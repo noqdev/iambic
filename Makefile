@@ -2,6 +2,10 @@ docker_buildx := docker buildx build \
 	--platform=linux/amd64,linux/arm64 \
 	-t "public.ecr.aws/s2p9s3r8/iambic:latest"
 
+.PHONY: docker_build_no_buildkit
+docker_build_no_buildkit:
+	DOCKER_BUILDKIT=0 docker build -t "iambic" .
+
 .PHONY: build_docker
 build_docker:
 	@echo "--> Creating Iambic Docker image"
