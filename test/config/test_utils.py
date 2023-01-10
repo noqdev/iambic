@@ -68,6 +68,7 @@ def config(repo_path):
         slack_app="",
         sqs={},
         slack={},
+        version="0.0.0",
     )
     return test_config
 
