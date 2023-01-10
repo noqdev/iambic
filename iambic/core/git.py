@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import re
 from io import StringIO
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from deepdiff import DeepDiff
 from git import Repo
@@ -25,13 +25,14 @@ class GitDiff(PydanticBaseModel):
     is_deleted: Optional[bool] = False
 
 
-def main_or_master(repo: Repo) -> bool:
-    if any(x.name for x in repo.heads if x.name == "main"):
-        return "main"
-    elif any(x.name for x in repo.heads if x.name == "master"):
-        return "master"
+def get_origin_head(repo: Repo) -> bool:
+    default_branch = [x for x in repo.remotes.origin.refs if x.name == "origin/HEAD"]
+    if any(default_branch):
+        return default_branch[0].name.split("/")[-1]
     else:
-        raise ValueError(f"Repository with branches {repo.heads} does not contain main or master")
+        raise ValueError(
+            "Unable to determine the default branch for the repo 'origin' remote"
+        )
 
 
 async def clone_git_repos(config: Config, repo_base_path: str) -> None:

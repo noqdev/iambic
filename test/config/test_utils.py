@@ -1,13 +1,16 @@
+from __future__ import annotations
+
 import os
 import pathlib
-import asynctest
-import pytest
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock
+
+import asynctest
+import pytest
+
 from iambic.aws.models import AWSAccount, BaseAWSOrgRule
 from iambic.config.models import AWSConfig, AWSOrganization, Config
 from iambic.config.utils import load_template, store_template
-import iambic.core.git
 from iambic.core.iambic_enum import IambicManaged
 
 
@@ -17,6 +20,7 @@ def repo_path(request):
         TEST_CLEANUP = os.getenv("IAMBIC_TEST_CLEANUP", True)
         if TEST_CLEANUP:
             temp_config_folder.cleanup()
+
     request.addfinalizer(fin)
     temp_config_folder = TemporaryDirectory(prefix="iambic_test")
     return pathlib.Path(temp_config_folder.name)
@@ -52,7 +56,10 @@ def config(repo_path):
         secrets={
             "git": {
                 "repositories": [
-                    repo_path.name
+                    {
+                        "name": repo_path.name,
+                        "uri": "http://test_repo_uri",
+                    },
                 ]
             }
         },
@@ -66,10 +73,17 @@ def config(repo_path):
 
 
 @pytest.mark.asyncio
-async def test_load_store_templated_config(mocker, config, repo_path):
+@asynctest.patch(
+    "iambic.config.utils.clone_git_repos", return_value={"test_repo": MagicMock()}
+)
+@asynctest.patch("iambic.config.utils.get_origin_head", return_value="main")
+@asynctest.patch("iambic.config.utils.Repo", return_value=MagicMock())
+# Notice: the order of fixtures is important; asynctest patches always come first in reverse order
+# And then the pytest fixtures
+async def test_load_store_templated_config(
+    repo, origin_head, test_repo, mocker, config, repo_path
+):
     config.slack_app = "test_canary"
-    with asynctest.patch("iambic.config.utils.main_or_master", return_value="main"):
-        with asynctest.patch("iambic.config.utils.clone_git_repos", return_value={"test_repo": MagicMock()}):
-            await store_template(config, repo_path, "test_repo")
+    await store_template(config, repo_path, "test_repo")
     test_config = await load_template(repo_path)
     assert test_config.slack_app == "test_canary"
