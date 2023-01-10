@@ -1,6 +1,6 @@
 ARG FUNCTION_DIR="/app/"
 ARG AWS_LINUX_VERSION="2022"
-ARG PYTHON_VERSION="3.10.8"
+ARG PYTHON_VERSION="3.11.1"
 
 ARG ARCH=
 FROM ${ARCH}amazonlinux:${AWS_LINUX_VERSION} as python-layer
@@ -17,6 +17,7 @@ RUN cd Python-${PYTHON_VERSION}/ && \
     ./configure --enable-optimizations --enable-loadable-sqlite-extensions && \
     make install
 RUN ln -s /Python-${PYTHON_VERSION}/python /usr/bin/python
+RUN python -m ensurepip --upgrade
 RUN python -m pip install --upgrade pip
 
 
@@ -31,6 +32,7 @@ COPY --from=python-layer /Python-${PYTHON_VERSION} /Python-${PYTHON_VERSION}
 COPY --from=python-layer /usr/local/bin /usr/local/bin
 COPY --from=python-layer /usr/local/lib /usr/local/lib
 RUN ln -s /Python-${PYTHON_VERSION}/python /usr/bin/python
+RUN ln -s /Python-${PYTHON_VERSION}/pip3 /usr/bin/pip3
 
 ARG FUNCTION_DIR
 RUN mkdir -p ${FUNCTION_DIR}
@@ -51,7 +53,7 @@ FROM base-layer as build-layer
 ######## ########################### ########################
 
 # install lambda runtime interface client for python
-RUN pip install awslambdaric --target "${FUNCTION_DIR}"
+RUN pip3 install awslambdaric --target "${FUNCTION_DIR}"
 
 
 FROM base-layer as runtime-layer
@@ -73,15 +75,15 @@ ENTRYPOINT [ "python", "-m", "awslambdaric" ]
 # Install Requirements
 # Install the function's dependencies
 RUN pip3 install poetry awslambdaric argh watchdog
-WORKDIR ${LAMBDA_TASK_ROOT}
-COPY pyproject.toml ${LAMBDA_TASK_ROOT}
+WORKDIR ${FUNCTION_DIR}
+COPY pyproject.toml ${FUNCTION_DIR}
 # Do not create virtualenv
 RUN poetry config virtualenvs.create false
 # Only install dependencies
 RUN poetry install --no-root
 
 # Copy function code
-COPY . ${LAMBDA_TASK_ROOT}
+COPY . ${FUNCTION_DIR}
 
 # Set the CMD to your handler (could also be done as a parameter override outside of the Dockerfile)
 CMD [ "python", "-m", "iambic.lambda.app.handler" ]

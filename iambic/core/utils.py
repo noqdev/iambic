@@ -132,6 +132,34 @@ class NoqSemaphore:
         )
 
 
+async def async_batch_processor(
+    tasks: list,
+    batch_size: int,
+    seconds_between_process: int = 1,
+    return_exceptions: bool = False,
+) -> list:
+    """
+    Batches up tasks in an effort to prevent rate limiting
+    """
+    if len(tasks) <= batch_size:
+        return await asyncio.gather(*tasks, return_exceptions=return_exceptions)
+
+    response = []
+    for min_elem in range(0, len(tasks), batch_size):
+        response.extend(
+            await asyncio.gather(
+                *tasks[min_elem : min_elem + batch_size],
+                return_exceptions=return_exceptions,
+            )
+        )
+        if len(response) == len(tasks):
+            return response
+
+        await asyncio.sleep(seconds_between_process)
+
+    return response
+
+
 def un_wrap_json(json_obj: Any) -> Any:
     """Helper function to unwrap nested JSON in the AWS Config resource configuration."""
     # pylint: disable=C0103,W0703,R0911
