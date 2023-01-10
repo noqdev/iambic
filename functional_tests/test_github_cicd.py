@@ -147,8 +147,24 @@ def test_github_cicd(filesystem, mock_aws_profile, generate_templates_fixture):
 
     assert is_workflow_run_successful
 
-    # test git-apply
+    # let github action to handle the approval flow
     pr.create_issue_comment("approve")
+    is_workflow_run_successful = False
+    datetime_since_comment_issued = datetime.datetime.utcnow()
+    while (datetime.datetime.utcnow() - datetime_since_comment_issued).seconds < 120:
+        review_list = github_repo.get_pull(pr_number).get_reviews()
+        approved_review_list = [
+            review for review in review_list if review.state == "APPROVED"
+        ]
+        if len(approved_review_list) != 1:
+            time.sleep(10)
+            print("sleeping")
+            continue
+        else:
+            is_workflow_run_successful = True
+            break
+
+    # test iambic git-apply
     pr.create_issue_comment("iambic git-apply")
     is_workflow_run_successful = False
     datetime_since_comment_issued = datetime.datetime.utcnow()
