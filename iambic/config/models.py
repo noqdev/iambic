@@ -18,6 +18,8 @@ from iambic.core.iambic_enum import IambicManaged
 from iambic.core.models import Variable
 from iambic.core.utils import aio_wrapper, yaml
 
+CURRENT_IAMBIC_VERSION = "1"
+
 
 class GoogleSubjects(BaseModel):
     domain: str
@@ -181,6 +183,10 @@ class Config(BaseModel):
     slack_app: Optional[str] = None
     sqs: Optional[dict] = {}
     slack: Optional[dict] = {}
+    template_type: str = "NOQ::Core::Config"
+    version: str = Field(
+        description="Do not change! The version of iambic this repo is compatible with.",
+    )
 
     class Config:
         arbitrary_types_allowed = True
@@ -279,11 +285,14 @@ class Config(BaseModel):
         aws_account = aws_account_map[account_id]
         return await aws_account.get_boto3_session(region_name)
 
+    def configure_plugins(self):
+        self.combine_extended_configs()
+        self.configure_slack()
+        self.configure_google()
+        self.configure_okta()
+
     @classmethod
     def load(cls, file_path: str):
         c = cls(file_path=file_path, **yaml.load(open(file_path)))
-        c.combine_extended_configs()
-        c.configure_slack()
-        c.configure_google()
-        c.configure_okta()
+        c.configure_plugins()
         return c
