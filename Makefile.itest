@@ -1,5 +1,8 @@
+# skipping linux/arm64 to speed up functional_tests
+# our self-hosted runner is linux/amd64, cross-platform
+# building was really slow
 docker_buildx_itest := docker buildx build \
-	--platform=linux/amd64,linux/arm64 \
+	--platform=linux/amd64 \
 	-t "public.ecr.aws/s2p9s3r8/iambic:itest"
 
 .PHONY: build_docker_itest
