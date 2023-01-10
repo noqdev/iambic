@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import pathlib
 
@@ -66,3 +67,26 @@ async def store_template(config: Config, repo_dir: str, repo_name: str):
         yaml.dump(config.dict(), fp)
     # TODO: Setup a PR request
     repo.git.checkout(previous_head)
+
+
+async def multi_config_loader(config_paths: list[str]) -> list[Config]:
+    """Load multiple config files into a list of Config objects."""
+    configs = []
+    for config_path in config_paths:
+        config = Config.load(config_path)
+        configs.append(config)
+
+    await asyncio.gather(*[config.setup_aws_accounts() for config in configs])
+
+    identity_center_detail_set_tasks = []
+    for config in configs:
+        if config.aws and config.aws.accounts:
+            identity_center_detail_set_tasks.extend(
+                [
+                    account.set_identity_center_details()
+                    for account in config.aws.accounts
+                ]
+            )
+    await asyncio.gather(*identity_center_detail_set_tasks)
+
+    return configs

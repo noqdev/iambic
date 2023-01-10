@@ -9,14 +9,22 @@ import botocore
 from jinja2 import BaseLoader, Environment
 from pydantic import Field, constr
 
-from iambic.aws.iam.models import Description, Path
+from iambic.aws.iam.models import Path
 from iambic.aws.iam.policy.utils import (
     apply_managed_policy_tags,
     delete_managed_policy,
     get_managed_policy,
     update_managed_policy,
 )
-from iambic.aws.models import ARN_RE, AccessModel, AWSAccount, AWSTemplate, Tag
+from iambic.aws.models import (
+    ARN_RE,
+    AccessModel,
+    AWSAccount,
+    AWSTemplate,
+    Description,
+    Tag,
+)
+from iambic.aws.utils import boto_crud_call
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -27,7 +35,8 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
-from iambic.core.utils import aio_wrapper
+
+AWS_MANAGED_POLICY_TEMPLATE_TYPE = "NOQ::IAM::ManagedPolicy"
 
 
 class Principal(BaseModel):
@@ -247,8 +256,7 @@ class ManagedPolicyProperties(BaseModel):
 
 
 class ManagedPolicyTemplate(AWSTemplate, AccessModel):
-    template_type = "NOQ::IAM::ManagedPolicy"
-    identifier: str
+    template_type = AWS_MANAGED_POLICY_TEMPLATE_TYPE
     properties: ManagedPolicyProperties = Field(
         description="The properties of the managed policy",
     )
@@ -262,13 +270,16 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
             or context.eval_only
         )
 
+    def get_arn_for_account(self, aws_account: AWSAccount) -> str:
+        path = self.get_attribute_val_for_account(aws_account, "properties.path", False)
+        policy_name = self.properties.policy_name
+        return f"arn:{aws_account.partition.value}:iam::{aws_account.account_id}:policy{path}{policy_name}"
+
     def _apply_resource_dict(
         self, aws_account: AWSAccount = None, context: ExecutionContext = None
     ) -> dict:
         resource_dict = super()._apply_resource_dict(aws_account, context)
-        resource_dict[
-            "Arn"
-        ] = f"arn:aws:iam::{aws_account.account_id}:policy{resource_dict['Path']}{resource_dict['PolicyName']}"
+        resource_dict["Arn"] = self.get_arn_for_account(aws_account)
         return resource_dict
 
     async def _apply_to_account(
@@ -293,7 +304,7 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
         )
         is_iambic_import_only = self._is_iambic_import_only(aws_account, context)
         policy_arn = account_policy.pop("Arn")
-        current_policy = await get_managed_policy(policy_arn, client)
+        current_policy = await get_managed_policy(client, policy_arn)
         if current_policy:
             account_change_details.current_value = {**current_policy}
 
@@ -317,15 +328,15 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
                 log.info(log_str, **log_params)
 
                 if not is_iambic_import_only:
-                    await delete_managed_policy(policy_arn, client)
+                    await delete_managed_policy(client, policy_arn, log_params)
 
             return account_change_details
 
         if current_policy:
             changes_made = await asyncio.gather(
                 update_managed_policy(
-                    policy_arn,
                     client,
+                    policy_arn,
                     json.loads(account_policy["PolicyDocument"]),
                     current_policy["PolicyDocument"],
                     is_iambic_import_only,
@@ -333,8 +344,8 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
                     context,
                 ),
                 apply_managed_policy_tags(
-                    policy_arn,
                     client,
+                    policy_arn,
                     account_policy.get("Tags", []),
                     current_policy.get("Tags", []),
                     is_iambic_import_only,
@@ -357,7 +368,7 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
             log_str = "New resource found in code."
             if not is_iambic_import_only:
                 log_str = f"{log_str} Creating resource..."
-                await aio_wrapper(client.create_policy, **account_policy)
+                await boto_crud_call(client.create_policy, **account_policy)
             log.info(log_str, **log_params)
 
         if not is_iambic_import_only:
@@ -374,10 +385,6 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
             )
 
         return account_change_details
-
-    @property
-    def resource_type(self):
-        return "aws:iam:managed_policy"
 
     @property
     def resource_id(self):

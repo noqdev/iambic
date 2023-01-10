@@ -10,7 +10,7 @@ from git import Repo
 from git.exc import GitCommandError
 from pydantic import BaseModel as PydanticBaseModel
 
-from iambic.aws.models import Deleted
+from iambic.config.models import Config
 from iambic.config.templates import TEMPLATE_TYPE_MAP
 from iambic.core.logger import log
 from iambic.core.utils import NOQ_TEMPLATE_REGEX, file_regex_search, yaml
@@ -35,7 +35,7 @@ def get_origin_head(repo: Repo) -> bool:
         )
 
 
-async def clone_git_repos(config: Config, repo_base_path: str) -> None:
+async def clone_git_repos(config, repo_base_path: str) -> dict[str, Repo]:
     # TODO: Formalize the model for secrets
     repos = {}
     for repository in config.secrets.get("git", {}).get("repositories", []):
@@ -325,15 +325,7 @@ def create_templates_for_modified_files(
         template.excluded_accounts = template_excluded_accounts
 
         if deleted_included_accounts and template.deleted is not True:
-            deleted_obj = Deleted(
-                deleted=True,
-                included_accounts=deleted_included_accounts,
-                excluded_accounts=[ea for ea in deleted_exclude_accounts if ea != "*"],
-            )
-            if isinstance(template.deleted, bool):
-                template.deleted = [deleted_obj]
-            else:
-                template.deleted.append(deleted_obj)
+            template.deleted = True
 
         templates.append(template)
 
