@@ -1126,7 +1126,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "6aa08ce24928f484cc26c909d2a7bea655efd017e984664db8b8df79b231fdce"
+content-hash = "7bdfcee8d18f2b64a319e1e2a67b2a0a2696bdeaf58321b11bd62737d218f3b5"
 
 [metadata.files]
 aenum = [

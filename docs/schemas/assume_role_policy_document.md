@@ -2,93 +2,83 @@
 
 ## Properties
 
-- **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
-  - **Items**
-- **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
-  - **Items**
-- **`included_orgs`** *(array)*: A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string. Default: `["*"]`.
-  - **Items**
-- **`excluded_orgs`** *(array)*: A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string. Default: `[]`.
-  - **Items**
-- **`version`** *(string)*
-- **`statement`** *(array)*
+- **`IncludedAccounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
+  - **Items** *(string)*
+- **`ExcludedAccounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
+  - **Items** *(string)*
+- **`IncludedOrgs`** *(array)*: A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string. Default: `["*"]`.
+  - **Items** *(string)*
+- **`ExcludedOrgs`** *(array)*: A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string. Default: `[]`.
+  - **Items** *(string)*
+- **`Version`** *(string)*
+- **`Statement`** *(array)*
   - **Items**: Refer to *[#/definitions/PolicyStatement](#definitions/PolicyStatement)*.
 ## Definitions
 
-- <a id="definitions/Deleted"></a>**`Deleted`** *(object)*
-  - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
-    - **Items**
-  - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
-    - **Items**
-  - **`included_orgs`** *(array)*: A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string. Default: `["*"]`.
-    - **Items**
-  - **`excluded_orgs`** *(array)*: A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string. Default: `[]`.
-    - **Items**
-  - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.
 - <a id="definitions/Principal"></a>**`Principal`** *(object)*
-  - **`aws`**
+  - **`Aws`**
     - **Any of**
       - *string*
       - *array*
         - **Items** *(string)*
-  - **`service`**
+  - **`Service`**
     - **Any of**
       - *string*
       - *array*
         - **Items** *(string)*
-  - **`canonical_user`**
+  - **`CanonicalUser`**
     - **Any of**
       - *string*
       - *array*
         - **Items** *(string)*
-  - **`federated`**
+  - **`Federated`**
     - **Any of**
       - *string*
       - *array*
         - **Items** *(string)*
 - <a id="definitions/PolicyStatement"></a>**`PolicyStatement`** *(object)*
-  - **`expires_at`** *(string)*: The date and time the resource will be/was set to deleted.
-  - **`deleted`**: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+  - **`ExpiresAt`**: The date and time the resource will be/was set to deleted.
     - **Any of**
-      - *boolean*
-      - *array*
-        - **Items**: Refer to *[#/definitions/Deleted](#definitions/Deleted)*.
-  - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
-    - **Items**
-  - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
-    - **Items**
-  - **`included_orgs`** *(array)*: A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string. Default: `["*"]`.
-    - **Items**
-  - **`excluded_orgs`** *(array)*: A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string. Default: `[]`.
-    - **Items**
-  - **`effect`** *(string)*: Allow | Deny.
-  - **`principal`**
+      - *string*
+      - *string*
+      - *string*
+  - **`Deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+  - **`IncludedAccounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
+    - **Items** *(string)*
+  - **`ExcludedAccounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
+    - **Items** *(string)*
+  - **`IncludedOrgs`** *(array)*: A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string. Default: `["*"]`.
+    - **Items** *(string)*
+  - **`ExcludedOrgs`** *(array)*: A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string. Default: `[]`.
+    - **Items** *(string)*
+  - **`Effect`** *(string)*: Allow | Deny.
+  - **`Principal`**
     - **Any of**
       - : Refer to *[#/definitions/Principal](#definitions/Principal)*.
       - *string*
-  - **`not_principal`**
+  - **`NotPrincipal`**
     - **Any of**
       - : Refer to *[#/definitions/Principal](#definitions/Principal)*.
       - *string*
-  - **`action`**: A single regex or list of regexes. Values are the actions that can be performed on the resources in the policy statement.
+  - **`Action`**: A single regex or list of regexes. Values are the actions that can be performed on the resources in the policy statement.
     - **Any of**
       - *array*
         - **Items** *(string)*
       - *string*
-  - **`not_action`**: An advanced policy element that explicitly matches everything except the specified list of actions.DON'T use this with effect: allow in the same statement OR policy.
+  - **`NotAction`**: An advanced policy element that explicitly matches everything except the specified list of actions.DON'T use this with effect: allow in the same statement OR policy.
     - **Any of**
       - *array*
         - **Items** *(string)*
       - *string*
-  - **`resource`**: A single regex or list of regexes. Values specified are the resources the statement applies to.
+  - **`Resource`**: A single regex or list of regexes. Values specified are the resources the statement applies to.
     - **Any of**
       - *array*
         - **Items** *(string)*
       - *string*
-  - **`not_resource`**: An advanced policy element that explicitly matches every resource except those specified.DON'T use this with effect: allow and action: '*'.
+  - **`NotResource`**: An advanced policy element that explicitly matches every resource except those specified.DON'T use this with effect: allow and action: '*'.
     - **Any of**
       - *array*
         - **Items** *(string)*
       - *string*
-  - **`condition`** *(object)*: An optional set of conditions to determine of the policy applies to a resource.
-  - **`sid`** *(string)*: The Policy Statement ID.
+  - **`Condition`** *(object)*: An optional set of conditions to determine of the policy applies to a resource.
+  - **`Sid`** *(string)*: The Policy Statement ID.

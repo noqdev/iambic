@@ -18,6 +18,7 @@ from iambic.config.models import Config, ExtendsConfig
 from iambic.core.models import Variable
 from iambic.core.utils import camel_to_snake
 from iambic.google.group.models import GroupMember, GroupTemplate
+from iambic.okta.group.models import OktaGroupTemplate, UserSimple
 
 
 def create_model_schemas(
@@ -51,6 +52,7 @@ def generate_docs():
         ManagedPolicyTemplate,
     ]
     google_template_models = [GroupTemplate, GroupMember]
+    okta_template_models = [OktaGroupTemplate, UserSimple]
     config_models = [
         AWSAccount,
         Config,
@@ -71,6 +73,10 @@ def generate_docs():
     schema_md_str += "\n# Google Template Models\n"
     schema_md_str = create_model_schemas(
         parser, schema_dir, schema_md_str, google_template_models
+    )
+    schema_md_str += "\n# Okta Template Models\n"
+    schema_md_str = create_model_schemas(
+        parser, schema_dir, schema_md_str, okta_template_models
     )
     schema_md_str += "\n# Config Models\n"
     schema_md_str = create_model_schemas(

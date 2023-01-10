@@ -14,6 +14,10 @@
 * [GroupTemplate](schemas/group_template.md)
 * [GroupMember](schemas/group_member.md)
 
+# Okta Template Models
+* [OktaGroupTemplate](schemas/okta_group_template.md)
+* [UserSimple](schemas/user_simple.md)
+
 # Config Models
 * [AWSAccount](schemas/awsaccount.md)
 * [Config](schemas/config.md)
