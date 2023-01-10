@@ -287,8 +287,8 @@ def run_git_plan(
 @click.option(
     "--config",
     "-c",
-    "config_paths",
-    multiple=True,
+    "config",  # config_paths to enable multiple config support
+    multiple=False,
     type=click.Path(exists=True),
     help="The config.yaml file paths. Example: ./prod/config.yaml",
 )
@@ -300,8 +300,8 @@ def run_git_plan(
     type=click.Path(exists=True),
     help="The repo directory containing the templates. Example: ~/noq-templates",
 )
-def import_(config_paths: list[str], repo_dir: str):
-    run_import(config_paths, repo_dir or str(pathlib.Path.cwd()))
+def import_(config: str, repo_dir: str):
+    run_import([config], repo_dir or str(pathlib.Path.cwd()))
 
 
 def run_import(config_paths: list[str], repo_dir: str):

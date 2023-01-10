@@ -18,6 +18,8 @@ os.environ["TESTING"] = "true"
 FUNCTIONAL_TEST_TEMPLATE_DIR = os.getenv("FUNCTIONAL_TEST_TEMPLATE_DIR", None)
 
 all_config = """
+version: '1'
+
 extends:
   - key: AWS_SECRETS_MANAGER
     value: arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/iambic_itest_secrets
