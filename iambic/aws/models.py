@@ -8,6 +8,7 @@ import boto3
 import botocore
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, constr
+from ruamel.yaml import YAML, yaml_object
 
 from iambic.aws.utils import (
     RegionName,
@@ -31,16 +32,27 @@ from iambic.core.models import (
 )
 from iambic.core.utils import NoqSemaphore, aio_wrapper
 
+yaml = YAML()
+
 if TYPE_CHECKING:
     from iambic.config.models import Config
 
 ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\*$"
 
 
+@yaml_object(yaml)
 class Partition(Enum):
     AWS = "aws"
     AWS_GOV = "aws-us-gov"
     AWS_CHINA = "aws-cn"
+
+    @classmethod
+    def to_yaml(cls, representer, node):
+        return representer.represent_scalar("!Partition", f"{node._value_}")
+
+    @classmethod
+    def from_yaml(cls, constructor, node):
+        return cls(node.value)
 
 
 class AccessModel(BaseModel):

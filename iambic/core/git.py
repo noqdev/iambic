@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import re
 from io import StringIO
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from deepdiff import DeepDiff
 from git import Repo
@@ -15,11 +15,24 @@ from iambic.config.templates import TEMPLATE_TYPE_MAP
 from iambic.core.logger import log
 from iambic.core.utils import NOQ_TEMPLATE_REGEX, file_regex_search, yaml
 
+if TYPE_CHECKING:
+    from iambic.config.models import Config
+
 
 class GitDiff(PydanticBaseModel):
     path: str
     content: Optional[str] = None
     is_deleted: Optional[bool] = False
+
+
+def get_origin_head(repo: Repo) -> bool:
+    default_branch = [x for x in repo.remotes.origin.refs if x.name == "origin/HEAD"]
+    if any(default_branch):
+        return default_branch[0].name.split("/")[-1]
+    else:
+        raise ValueError(
+            "Unable to determine the default branch for the repo 'origin' remote"
+        )
 
 
 async def clone_git_repos(config, repo_base_path: str) -> dict[str, Repo]:

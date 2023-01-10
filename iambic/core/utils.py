@@ -70,8 +70,11 @@ async def gather_templates(repo_dir: str, template_type: str = None) -> list[str
         if template_type
         else NOQ_TEMPLATE_REGEX
     )
+    # Support both yaml and yml extensions for templates
     file_paths = glob.glob(f"{repo_dir}/**/*.yaml", recursive=True)
     file_paths += glob.glob(f"{repo_dir}*.yaml", recursive=True)
+    file_paths += glob.glob(f"{repo_dir}/**/*.yml", recursive=True)
+    file_paths += glob.glob(f"{repo_dir}*.yml", recursive=True)
     file_paths = await asyncio.gather(
         *[file_regex_search(fp, regex_pattern) for fp in file_paths]
     )
