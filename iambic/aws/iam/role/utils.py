@@ -104,10 +104,12 @@ async def apply_role_tags(
     log_params: dict,
     context: ExecutionContext,
 ) -> list[ProposedChange]:
-    existing_tag_map = {tag["Key"]: tag["Value"] for tag in existing_tags}
-    template_tag_map = {tag["Key"]: tag["Value"] for tag in template_tags}
+    existing_tag_map = {tag["Key"]: tag.get("Value") for tag in existing_tags}
+    template_tag_map = {tag["Key"]: tag.get("Value") for tag in template_tags}
     tags_to_apply = [
-        tag for tag in template_tags if tag["Value"] != existing_tag_map.get(tag["Key"])
+        tag
+        for tag in template_tags
+        if tag.get("Value") != existing_tag_map.get(tag["Key"])
     ]
     tasks = []
     response = []
@@ -382,15 +384,27 @@ async def apply_role_inline_policies(
 
             log_str = f"{resource_existence} inline policies discovered."
             if context.execute:
-                log_str = f"{log_str} {boto_action} inline policy..."
-                tasks.append(
-                    boto_crud_call(
-                        iam_client.put_role_policy,
-                        RoleName=role_name,
-                        PolicyName=policy_name,
-                        PolicyDocument=json.dumps(policy_document),
+                if policy_document:
+                    log_str = f"{log_str} {boto_action} inline policy..."
+                    tasks.append(
+                        boto_crud_call(
+                            iam_client.put_role_policy,
+                            RoleName=role_name,
+                            PolicyName=policy_name,
+                            PolicyDocument=json.dumps(policy_document),
+                        )
                     )
-                )
+                else:
+                    # No policy document means we should delete the policy
+                    log_str = f"{log_str} Removing inline policy..."
+                    tasks.append(
+                        boto_crud_call(
+                            iam_client.delete_role_policy,
+                            RoleName=role_name,
+                            PolicyName=policy_name,
+                        )
+                    )
+
             log.info(log_str, policy_name=policy_name, **log_params)
 
     if tasks:
