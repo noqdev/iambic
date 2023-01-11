@@ -213,7 +213,13 @@ def sort_dict(original, prioritize=None):
     with optional prioritization of certain elements.
     """
     if prioritize is None:
-        prioritize = ["template_type", "name", "description"]
+        prioritize = [
+            "template_type",
+            "name",
+            "description",
+            "included_accounts",
+            "excluded_accounts",
+        ]
     if isinstance(original, dict):
         # Make a new "ordered" dictionary. No need for Collections in Python 3.7+
         # Sort the keys in the dictionary
