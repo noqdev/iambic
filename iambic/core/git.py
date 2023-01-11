@@ -55,6 +55,11 @@ async def clone_git_repos(config, repo_base_path: str) -> dict[str, Repo]:
     return repos
 
 
+def clone_git_repo(repo_url: str, repo_path: str, remote_branch_name: str):
+    repo = Repo.clone_from(repo_url, repo_path, branch=remote_branch_name)
+    return repo
+
+
 async def retrieve_git_changes(
     repo_dir: str,
     allow_dirty: bool = False,
