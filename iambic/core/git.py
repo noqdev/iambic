@@ -10,7 +10,6 @@ from git import Repo
 from git.exc import GitCommandError
 from pydantic import BaseModel as PydanticBaseModel
 
-from iambic.config.models import Config
 from iambic.config.templates import TEMPLATE_TYPE_MAP
 from iambic.core.logger import log
 from iambic.core.utils import NOQ_TEMPLATE_REGEX, file_regex_search, yaml
@@ -197,6 +196,11 @@ def create_templates_for_modified_files(
         template_cls = TEMPLATE_TYPE_MAP[main_template_dict["template_type"]]
 
         main_template = template_cls(file_path=git_diff.path, **main_template_dict)
+
+        # EN-1634 dealing with providers that have no concept of multi-accounts
+        # a hack to just ignore template that does not have included_accounts attribute
+        if getattr(main_template, "included_accounts", None) is None:
+            continue
 
         template_dict = yaml.load(open(git_diff.path))
         template = template_cls(file_path=git_diff.path, **template_dict)
