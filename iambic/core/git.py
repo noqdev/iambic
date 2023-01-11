@@ -110,15 +110,18 @@ async def retrieve_git_changes(
             files["new_files"].append(file)
 
     # Collect all deleted files
-    for file_obj in diff_index.iter_change_type("D"):
-        if (path := file_obj.b_path).endswith(".yaml"):
-            file = GitDiff(
-                path=str(os.path.join(repo_dir, path)),
-                content=file_obj.a_blob.data_stream.read().decode("utf-8"),
-                is_deleted=True,
-            )
-            if re.search(NOQ_TEMPLATE_REGEX, file.content):
-                files["deleted_files"].append(file)
+    if (
+        False
+    ):  # EN-1635 Disable file deletion cleanup because we don't handle backward compatible and worry about accidental removal
+        for file_obj in diff_index.iter_change_type("D"):
+            if (path := file_obj.b_path).endswith(".yaml"):
+                file = GitDiff(
+                    path=str(os.path.join(repo_dir, path)),
+                    content=file_obj.a_blob.data_stream.read().decode("utf-8"),
+                    is_deleted=True,
+                )
+                if re.search(NOQ_TEMPLATE_REGEX, file.content):
+                    files["deleted_files"].append(file)
 
     # Collect all modified files
     for file_obj in diff_index.iter_change_type("M"):

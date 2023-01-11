@@ -315,7 +315,9 @@ async def set_org_account_variables(client, account: dict) -> dict:
     tags = await legacy_paginated_search(
         client.list_tags_for_resource, "Tags", ResourceId=account["Id"]
     )
-    account["variables"] = [{"key": tag["Key"], "value": tag["Value"]} for tag in tags]
+    account["variables"] = [
+        {"key": tag["Key"], "value": tag.get("Value")} for tag in tags
+    ]
     return account
 
 
