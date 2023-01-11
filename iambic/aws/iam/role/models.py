@@ -30,7 +30,7 @@ from iambic.aws.models import (
     Description,
     Tag,
 )
-from iambic.aws.utils import boto_crud_call
+from iambic.aws.utils import boto_crud_call, remove_expired_resources
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -110,6 +110,14 @@ class RoleProperties(BaseModel):
         description="List of the role's inline policies",
     )
 
+    @property
+    def resource_type(self):
+        return "aws:iam:role"
+
+    @property
+    def resource_id(self):
+        return self.role_name
+
 
 class RoleTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_ROLE_TEMPLATE_TYPE
@@ -164,6 +172,9 @@ class RoleTemplate(AWSTemplate, AccessModel):
         boto3_session = await aws_account.get_boto3_session()
         client = boto3_session.client(
             "iam", config=botocore.client.Config(max_pool_connections=50)
+        )
+        self = await remove_expired_resources(
+            self, self.resource_type, self.resource_id
         )
         account_role = self.apply_resource_dict(aws_account, context)
         role_name = account_role["RoleName"]
@@ -322,7 +333,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
         try:
             changes_made = await asyncio.gather(*tasks)
         except Exception as e:
-            log.error("Unable to apply changes to resource", error=e, **log_params)
+            log.exception("Unable to apply changes to resource", error=e, **log_params)
             return account_change_details
         if any(changes_made):
             account_change_details.proposed_changes.extend(
@@ -330,6 +341,9 @@ class RoleTemplate(AWSTemplate, AccessModel):
             )
 
         if context.execute:
+            if self.deleted:
+                self.delete()
+            self.write()
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),

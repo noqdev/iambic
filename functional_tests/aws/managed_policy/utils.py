@@ -7,7 +7,6 @@ from iambic.aws.iam.policy.models import (
     ManagedPolicyTemplate,
 )
 from iambic.aws.iam.policy.template_generation import get_managed_policy_dir
-from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.utils import gather_templates
 
@@ -36,18 +35,16 @@ async def generate_managed_policy_template_from_base(
     managed_policy_template.properties.description = (
         "This was created by a functional test."
     )
-    managed_policy_template.properties.policy_document = json.dumps(
-        {
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Action": "s3:ListObject",
-                    "Effect": "Deny",
-                    "Resource": ["*"],
-                }
-            ],
-        }
-    )
+    managed_policy_template.properties.policy_document = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Action": "s3:ListObject",
+                "Effect": "Deny",
+                "Resource": ["*"],
+            }
+        ],
+    }
 
     managed_policy_template.write()
     return managed_policy_template

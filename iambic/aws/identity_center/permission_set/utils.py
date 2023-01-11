@@ -741,10 +741,12 @@ async def apply_permission_set_tags(
     log_params: dict,
     context: ExecutionContext,
 ) -> list[ProposedChange]:
-    existing_tag_map = {tag["Key"]: tag["Value"] for tag in existing_tags}
-    template_tag_map = {tag["Key"]: tag["Value"] for tag in template_tags}
+    existing_tag_map = {tag["Key"]: tag.get("Value") for tag in existing_tags}
+    template_tag_map = {tag["Key"]: tag.get("Value") for tag in template_tags}
     tags_to_apply = [
-        tag for tag in template_tags if tag["Value"] != existing_tag_map.get(tag["Key"])
+        tag
+        for tag in template_tags
+        if tag.get("Value") != existing_tag_map.get(tag["Key"])
     ]
     tasks = []
     response = []
