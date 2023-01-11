@@ -10,7 +10,6 @@ from git import Repo
 from git.exc import GitCommandError
 from pydantic import BaseModel as PydanticBaseModel
 
-from iambic.config.models import Config
 from iambic.config.templates import TEMPLATE_TYPE_MAP
 from iambic.core.logger import log
 from iambic.core.utils import NOQ_TEMPLATE_REGEX, file_regex_search, yaml
@@ -54,6 +53,11 @@ async def clone_git_repos(config, repo_base_path: str) -> dict[str, Repo]:
             repo.git.pull()
             repos[repo_name] = repo
     return repos
+
+
+def clone_git_repo(repo_url: str, repo_path: str, remote_branch_name: str):
+    repo = Repo.clone_from(repo_url, repo_path, branch=remote_branch_name)
+    return repo
 
 
 async def retrieve_git_changes(
@@ -106,15 +110,18 @@ async def retrieve_git_changes(
             files["new_files"].append(file)
 
     # Collect all deleted files
-    for file_obj in diff_index.iter_change_type("D"):
-        if (path := file_obj.b_path).endswith(".yaml"):
-            file = GitDiff(
-                path=str(os.path.join(repo_dir, path)),
-                content=file_obj.a_blob.data_stream.read().decode("utf-8"),
-                is_deleted=True,
-            )
-            if re.search(NOQ_TEMPLATE_REGEX, file.content):
-                files["deleted_files"].append(file)
+    if (
+        False
+    ):  # EN-1635 Disable file deletion cleanup because we don't handle backward compatible and worry about accidental removal
+        for file_obj in diff_index.iter_change_type("D"):
+            if (path := file_obj.b_path).endswith(".yaml"):
+                file = GitDiff(
+                    path=str(os.path.join(repo_dir, path)),
+                    content=file_obj.a_blob.data_stream.read().decode("utf-8"),
+                    is_deleted=True,
+                )
+                if re.search(NOQ_TEMPLATE_REGEX, file.content):
+                    files["deleted_files"].append(file)
 
     # Collect all modified files
     for file_obj in diff_index.iter_change_type("M"):
@@ -197,6 +204,11 @@ def create_templates_for_modified_files(
         template_cls = TEMPLATE_TYPE_MAP[main_template_dict["template_type"]]
 
         main_template = template_cls(file_path=git_diff.path, **main_template_dict)
+
+        # EN-1634 dealing with providers that have no concept of multi-accounts
+        # a hack to just ignore template that does not have included_accounts attribute
+        if getattr(main_template, "included_accounts", None) is None:
+            continue
 
         template_dict = yaml.load(open(git_diff.path))
         template = template_cls(file_path=git_diff.path, **template_dict)
