@@ -4,7 +4,17 @@ title: AWS
 
 ## 1. Configure AWS
 
-In this tutorial, you will configure IAMbic for an AWS account or multiple accounts in an AWS organization
+In this tutorial, you will configure IAMbic for an AWS account or multiple accounts in an AWS organization. By the end of this tutorial, you will have performed the following steps:
+
+1. Create a basic configuration for Iambic
+2. Create a role across multiple AWS accounts
+3. Create dynamic permissions for this role, which vary depending on account
+4. Create temporary permissions, that Iambic will automatically expire
+5. Provide temporary (break-glass) access to your AWS SSO Permission Sets
+
+Noq's SaaS Platform provides enterprise Self-Service features that make Iambic change requests easier for end-users. Contact us for a demo today.
+
+We look forward to seeing you on the other side!
 
 ## Prerequisites
 
@@ -52,11 +62,13 @@ https://docs.aws.amazon.com/IAM/latest/UserGuide/id\_roles\_create.html
 
 https://docs.aws.amazon.com/singlesignon/latest/userguide/howtocreatepermissionset.html  -->
 
-1.1 Write a configuration
+### 1.1 Write a configuration
 
 You'll need to tell IAMbic how to connect to your AWS account or AWS organization. IAMbic can connect to your AWS accounts or AWS organizations via a number of different methods, Including using a predefined AWS profile, performing assume role operations, or a combination of these. This guide will walk you through the basic configuration. For anything more advanced, please consult the Configuration Reference. (TODO: Link needed)
 
-1.1.1 AWS Organizations
+#### 1.1.1 AWS Organizations
+
+The AWS Organizations configuration enables you to set up your organization(s) once, and instruct Iambic to populate your current and new AWS accounts when it is ran.
 
 Before starting, you will need your AWS Organizations ID, Organizations name, and administrative-level credentials for your Organization management account.
 
@@ -68,34 +80,267 @@ We recommend placing this in your Git repository under `config/config.yaml`
 
 An example configuration is included below:
 
-```
+```yaml
+template_type: NOQ::Core::Config
 version: '1'
 aws:
   organizations:
     - org_id: 'o-12345'
-      aws_profile: 'profile_name' # Optional. If not provided, the default profile will be used
-      # assume_role_arn is optional. The assume role ARN is processed after the `aws_profile` is used.
-      assume_role_arn: 'arn:aws:iam::123456:role/IambicSpokeRole'
+      # aws_profile: 'profile_name' # Optional. If not provided, the default profile will be used
+      # assume_role_arn: 'arn:aws:iam::123456:role/IambicSpokeRole' # Optional. The role assumed using credentials provided by `aws_profile`
       # `org_name` is a required friendly-name for the AWS organization
       org_name: 'main'
-      # `identity_center_account` is optional. If you're using AWS Identity Center,
-      # specify the account ID and region of your configuration here.
-      identity_center_account:
-        account_id: '259868150464'
-        region: 'us-east-1'
-      # `accounts_rules` specifies which accounts Iambic should include or exclude.
-      # The configuration below will includ all accounts in the organization.
-      account_rules:
-        - included_accounts:
-            - '*'
-          enabled: true
-      default_rule:
-        enabled: true
+      # identity_center_account:
+      #   account_id: '123456789012'
+      #   region: 'us-east-1'
 ```
 
-1.1.2 AWS Accounts
+Write the finished config file to `config/config/yaml` in your `iambic-templates` repository. Once this is written to disk, your repository should resemble this folder structure:
 
-If preferred, you can also connect to accounts individually. In order to do this,
+```bash
+$ tree
+.
+├── config
+│   └── config.yaml
+```
+
+#### 1.1.2 AWS Accounts
+
+Please follow these steps if you have elected to onboard AWS accounts individually, instead of an entire AWS Organization.
+
+Before starting, you will need your AWS Account ID, Account Name, and a method to access the account (Either via using an AWS profile, or assuming a role from your current credentials).
+
+An example configuration is included below:
+
+```yaml
+template_type: NOQ::Core::Config
+version: '1'
+aws:
+  accounts:
+    - account_name: 'main'
+      account_id: '123456789012'
+      # aws_profile: 'profile_name' # Optional. If not provided, the default profile will be used
+      # assume_role_arn: 'arn:aws:iam::123456:role/IambicSpokeRole' # Optional. The role assumed using credentials provided by `aws_profile`
+```
+
+Write the finished config file to `config/config/yaml` in your `iambic-templates` repository. Once this is written to disk, your repository should resemble this folder structure:
+
+```bash
+$ tree
+.
+├── config
+│   └── config.yaml
+```
+
+### 1.2 Import AWS Resources
+
+In this next step, you will run the IAMbic import command, which will read your configuiration, attempt to determine all AWS accounts in your environment, and attempt to import IAM resources from each account.
+
+```bash
+iambic import
+```
+
+Once this has successfully finished, your repository should have a folder structure, which YAML templates nested under each directory structure. It should resemble the following:
+
+```bash
+$ tree -L 4
+├── config
+│   └── config.yaml
+└── resources
+    └── aws
+        ├── identity_center
+        │   └── permission_sets
+        ├── managed_policies
+        │   └── account_1
+        └── roles
+            ├── all_accounts
+            ├── multi_account
+            ├── account_1
+            ├── account_2
+            └── account_3
+```
+
+### 1.3 Create an IAM role across multiple accounts
+
+In this section, we will create an AWS role across all of the AWS accounts that you've configured. In future steps, we will modify this role to demonstrate some of Iambic's features. If you've only configured one account, you may still follow this tutorial. It just won't be as exciting :).
+
+A sample multi-account role template is below. It will propagate a role across all known accounts, including new accounts as they are discovered.
+
+Grab your favorite code editor, have your Git repo handy, and let's get to work. First, you'll create a directory for your template if it doesn't already exist. Then you'll edit an appropriately named YAML file for your template.
+
+```bash
+# Create a directory in your iambic-templates repo
+mkdir -p resources/aws/roles/
+
+# Open the yaml file with your favorite editor, and save the template you crafted above
+code resources/aws/roles/iambic_test_role.yaml
+```
+
+Secondly, we'll create a multi-account role template. An example template is below that can be used as-is, or modified. Take the contents of this template and write it to the file we're editing above.
+
+:::danger
+
+If there are other roles with the role name specified in the template below, they will be overwritten. We've chosen a role name that is specific to Iambic, so we hope this won't be the case for you.
+
+:::
+
+```yaml
+template_type: NOQ::AWS::IAM::Role
+identifier: '{{account_name}}_iambic_test_role'
+included_accounts:
+  - '*'
+properties:
+  description: Iambic test role on {{account_name}}
+  assume_role_policy_document:
+    statement:
+      - action: sts:AssumeRole
+        effect: Deny
+        principal:
+          service: ec2.amazonaws.com
+  inline_policies:
+    - policy_name: spoke-acct-policy
+      statement:
+        - action:
+            - sqs:GetQueueAttributes
+          effect: Deny
+          resource: 'arn:aws:sqs:us-east-1:{{account_id}}:fakequeue'
+  managed_policies:
+    - policy_arn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+  path: /iambic_test/
+  permissions_boundary:
+    policy_arn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+  role_name: '{{account_name}}_iambic_test_role'
+```
+
+Save the template, and in your terminal, use Iambic to apply the change.
+
+```bash
+iambic apply -t resources/aws/roles/all_accounts/iambic_test_role.yaml
+```
+
+If all went according to plan, you should now have a new role across all of the accounts you've defined, or the accounts we've detected in AWS Organizations.
+
+### 1.4 - Create dynamic IAM role policies that vary per account
+
+Now that we've created an IAM role in Section 1.3, let's vary some of the policies based on the accounts at our disposal.
+
+Let's add a new inline policy on only a couple of our accounts. You'll need to replace the `ACCOUNT_A` and `ACCOUNT_B` placeholders below with the names or account IDs of some of your accounts.
+
+```yaml
+template_type: NOQ::AWS::IAM::Role
+identifier: '{{account_name}}_iambic_test_role'
+included_accounts:
+  - '*'
+properties:
+  description: Iambic test role on {{account_name}}
+  assume_role_policy_document:
+    statement:
+      - action: sts:AssumeRole
+        effect: Deny
+        principal:
+          service: ec2.amazonaws.com
+  inline_policies:
+    - policy_name: spoke-acct-policy
+      statement:
+        - excluded_accounts: # Include the policy on the role across all accounts, except ACCOUNT_A
+            - ACCOUNT_A
+          action:
+            - s3:ListBucket
+          effect: Deny
+          resource: '*'
+        - included_accounts: # Only include the policy statement on ACCOUNT_A
+            - ACCOUNT_A
+          action:
+            - s3:GetObject
+          effect: Deny
+          resource: '*'
+        - included_accounts: # Include the policy statement on all accounts except ACCOUNT_A and ACCOUNT_B
+            - '*'
+          excluded_accounts:
+            - ACCOUNT_A
+            - ACCOUNT_B
+          action:
+            - s3:ListAllMyBuckets
+          effect: Deny
+          resource: '*'
+  managed_policies:
+    - policy_arn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+  path: /iambic_test/
+  permissions_boundary:
+    policy_arn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+  role_name: '{{account_name}}_iambic_test_role'
+```
+
+### 1.5 - Create Temporary, Expiring IAM Permissions
+
+We're now going to walk you through the process of writing temporary permissions that expire after a set period of time. Permissions are only expired if you're running Iambic continually (We provide the GitHub actions to automate this). For the purposes of this tutorial, we will trigger a run locally.
+
+Notice that `expires_at` can be a datetime string, a date, or even "tomorrow", "yesterday", "in N days", etc. This is thanks to the wonderful [dateparser](https://dateparser.readthedocs.io/) library ❤️.
 
 
-1.2 Test the configuration
+```yaml
+template_type: NOQ::AWS::IAM::Role
+identifier: '{{account_name}}_iambic_test_role'
+included_accounts:
+  - '*'
+expires_at: in 3 days
+properties:
+  description: Iambic test role on {{account_name}}
+  assume_role_policy_document:
+    statement:
+      - action: sts:AssumeRole
+        effect: Deny
+        principal:
+          service: ec2.amazonaws.com
+  inline_policies:
+    - policy_name: spoke-acct-policy
+      statement:
+        - expires_at: 2021-01-01
+          excluded_accounts: # Include the policy on the role across all accounts, except ACCOUNT_A
+            - ACCOUNT_A
+          action:
+            - s3:ListBucket
+          effect: Deny
+          resource: '*'
+        - expires_at: tomorrow
+          included_accounts: # Only include the policy statement on ACCOUNT_A
+            - ACCOUNT_A
+          action:
+            - s3:GetObject
+          effect: Deny
+          resource: '*'
+        - expires_at: in 4 hours
+          included_accounts: # Include the policy statement on all accounts except ACCOUNT_A and ACCOUNT_B
+            - '*'
+          excluded_accounts:
+            - ACCOUNT_A
+            - ACCOUNT_B
+          action:
+            - s3:ListAllMyBuckets
+          effect: Deny
+          resource: '*'
+  managed_policies:
+    - policy_arn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+  path: /iambic_test/
+  permissions_boundary:
+    policy_arn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+  role_name: '{{account_name}}_iambic_test_role'
+```
+
+
+
+The next step is to create temporary expiring permissions.
+
+Create temporary (expiring) permissions
+
+Create temporary access rules [Noq Enterprise Feature]
+
+Create an AWS SSO (Identity Center) Permission Set
+
+Provide temporary access to a permission set
+
+Attach temporary permissions to a permission set
+
+# 1.3 - Provide Temporary Access to an AWS Identity Center Permission Set
+
+AWS Identity Center (Formerly known as AWS SSO) can be used to broker temporary AWS IAM credentials to human users. Iambic supports
