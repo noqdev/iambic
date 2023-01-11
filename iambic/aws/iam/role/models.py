@@ -30,7 +30,7 @@ from iambic.aws.models import (
     Description,
     Tag,
 )
-from iambic.aws.utils import apply_to_account, boto_crud_call
+from iambic.aws.utils import boto_crud_call
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log

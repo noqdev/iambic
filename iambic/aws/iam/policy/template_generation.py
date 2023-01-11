@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import itertools
 import os
 import pathlib
+from collections import defaultdict
 
 import aiofiles
 
-from iambic.aws.iam.policy.models import ManagedPolicyTemplate
-from iambic.aws.iam.policy.utils import list_managed_policies
+from iambic.aws.event_bridge.models import ManagedPolicyMessageDetails
+from iambic.aws.iam.policy.models import ManagedPolicyProperties, ManagedPolicyTemplate
+from iambic.aws.iam.policy.utils import (
+    get_managed_policy_across_accounts,
+    list_managed_policies,
+)
 from iambic.aws.models import AWSAccount
 from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
 from iambic.config.models import Config
@@ -14,7 +20,7 @@ from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
     base_group_str_attribute,
-    get_existing_template_file_map,
+    get_existing_template_map,
     group_dict_attribute,
     group_int_or_str_attribute,
 )
@@ -105,6 +111,62 @@ async def generate_account_managed_policy_resource_files(
     return response
 
 
+async def generate_managed_policy_resource_file_for_all_accounts(
+    aws_accounts: list[AWSAccount], policy_path: str, policy_name: str
+) -> list:
+    account_mp_response_dir_map = {
+        aws_account.account_id: get_account_managed_policy_resource_dir(
+            aws_account.account_id
+        )
+        for aws_account in aws_accounts
+    }
+    mp_resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
+    messages = []
+    response = []
+
+    mp_across_accounts = await get_managed_policy_across_accounts(
+        aws_accounts, policy_path, policy_name
+    )
+    mp_across_accounts = {k: v for k, v in mp_across_accounts.items() if v}
+
+    log.info(
+        "Retrieved AWS IAM Managed Policy for all accounts.",
+        policy_name=policy_name,
+        policy_path=policy_path,
+        total_accounts=len(mp_across_accounts),
+    )
+
+    for account_id, managed_policy in mp_across_accounts.items():
+        policy_path = os.path.join(
+            account_mp_response_dir_map[account_id],
+            f'{managed_policy["PolicyName"]}.json',
+        )
+
+        response.append(
+            {
+                "file_path": policy_path,
+                "policy_name": managed_policy["PolicyName"],
+                "arn": managed_policy["Arn"],
+                "account_id": account_id,
+            }
+        )
+        messages.append(
+            dict(
+                file_path=policy_path, content_as_dict=managed_policy, replace_file=True
+            )
+        )
+
+    await mp_resource_file_upsert_semaphore.process(messages)
+    log.info(
+        "Finished caching AWS IAM Managed Policy for all accounts.",
+        policy_name=policy_name,
+        policy_path=policy_path,
+        total_accounts=len(mp_across_accounts),
+    )
+
+    return response
+
+
 async def create_templated_managed_policy(  # noqa: C901
     aws_account_map: dict[str, AWSAccount],
     managed_policy_name: str,
@@ -129,11 +191,11 @@ async def create_templated_managed_policy(  # noqa: C901
             ] = normalize_boto3_resp(content_dict)
 
     # Generate the params used for attribute creation
-    managed_policy_properties = {"policy_name": managed_policy_name}
+    template_properties = {"policy_name": managed_policy_name}
 
     # TODO: Fix identifier it should be something along the lines of v but path can vary by account
     #       f"arn:aws:iam::{account_id}:policy{resource['Path']}{managed_policy_name}"
-    managed_policy_template_params = {"identifier": managed_policy_name}
+    template_params = {"identifier": managed_policy_name}
     path_resources = list()
     description_resources = list()
     policy_document_resources = list()
@@ -169,25 +231,25 @@ async def create_templated_managed_policy(  # noqa: C901
         len(managed_policy_refs) != len(aws_account_map)
         or len(aws_account_map) <= min_accounts_required_for_wildcard_included_accounts
     ):
-        managed_policy_template_params["included_accounts"] = [
+        template_params["included_accounts"] = [
             aws_account_map[managed_policy_ref["account_id"]].account_name
             for managed_policy_ref in managed_policy_refs
         ]
     else:
-        managed_policy_template_params["included_accounts"] = ["*"]
+        template_params["included_accounts"] = ["*"]
 
     path = await group_int_or_str_attribute(
         aws_account_map, num_of_accounts, path_resources, "path"
     )
     if path != "/":
-        managed_policy_properties["path"] = path
+        template_properties["path"] = path
 
-    managed_policy_properties["policy_document"] = await group_dict_attribute(
+    template_properties["policy_document"] = await group_dict_attribute(
         aws_account_map, num_of_accounts, policy_document_resources, True
     )
 
     if description_resources:
-        managed_policy_properties["description"] = await group_int_or_str_attribute(
+        template_properties["description"] = await group_int_or_str_attribute(
             aws_account_map, num_of_accounts, description_resources, "description"
         )
 
@@ -197,36 +259,56 @@ async def create_templated_managed_policy(  # noqa: C901
         )
         if isinstance(tags, dict):
             tags = [tags]
-        managed_policy_properties["tags"] = tags
+        template_properties["tags"] = tags
 
-    try:
-        managed_policy = ManagedPolicyTemplate(
-            file_path=existing_template_map.get(
-                managed_policy_name,
-                get_templated_managed_policy_file_path(
-                    managed_policy_dir,
+    if existing_template := existing_template_map.get(managed_policy_name):
+        existing_template.included_accounts = template_params["included_accounts"]
+        existing_template.excluded_accounts = template_params.get(
+            "excluded_accounts", []
+        )
+        existing_template.included_orgs = template_params.get("included_orgs", ["*"])
+        existing_template.excluded_orgs = template_params.get("excluded_orgs", [])
+        existing_template.properties = ManagedPolicyProperties(**template_properties)
+        try:
+            existing_template.write()
+            return existing_template
+        except Exception as err:
+            log.exception(
+                "Unable to update managed policy template.",
+                error=str(err),
+                managed_policy_params=template_params,
+            )
+    else:
+        try:
+            managed_policy = ManagedPolicyTemplate(
+                file_path=existing_template_map.get(
                     managed_policy_name,
-                    managed_policy_template_params.get("included_accounts"),
-                    aws_account_map,
+                    get_templated_managed_policy_file_path(
+                        managed_policy_dir,
+                        managed_policy_name,
+                        template_params.get("included_accounts"),
+                        aws_account_map,
+                    ),
                 ),
-            ),
-            properties=managed_policy_properties,
-            **managed_policy_template_params,
-        )
-        managed_policy.write()
-    except Exception as err:
-        log.info(
-            str(err),
-            managed_policy_params=managed_policy_template_params,
-            managed_policy_properties=managed_policy_properties,
-        )
+                properties=template_properties,
+                **template_params,
+            )
+            managed_policy.write()
+        except Exception as err:
+            log.info(
+                str(err),
+                managed_policy_params=template_params,
+                template_properties=template_properties,
+            )
 
 
 async def generate_aws_managed_policy_templates(
-    configs: list[Config], base_output_dir: str
+    configs: list[Config],
+    base_output_dir: str,
+    managed_policy_messages: list[ManagedPolicyMessageDetails] = None,
 ):
     aws_account_map = await get_aws_account_map(configs)
-    existing_template_map = await get_existing_template_file_map(
+    existing_template_map = await get_existing_template_map(
         base_output_dir, "NOQ::IAM::ManagedPolicy"
     )
     resource_dir = get_managed_policy_dir(base_output_dir)
@@ -240,11 +322,91 @@ async def generate_aws_managed_policy_templates(
         accounts=list(aws_account_map.keys()),
     )
 
-    account_managed_policies = (
-        await generate_account_managed_policy_resource_files_semaphore.process(
-            [{"aws_account": aws_account} for aws_account in aws_account_map.values()]
+    if managed_policy_messages:
+        aws_accounts = list(aws_account_map.values())
+        generate_mp_resource_file_for_all_accounts_semaphore = NoqSemaphore(
+            generate_managed_policy_resource_file_for_all_accounts, 50
         )
-    )
+
+        tasks = [
+            {
+                "aws_accounts": aws_accounts,
+                "policy_path": managed_policy.policy_path,
+                "policy_name": managed_policy.policy_name,
+            }
+            for managed_policy in managed_policy_messages
+            if not managed_policy.delete
+        ]
+
+        # Remove deleted or mark templates for update
+        deleted_managed_policies = [
+            managed_policy
+            for managed_policy in managed_policy_messages
+            if managed_policy.delete
+        ]
+        if deleted_managed_policies:
+            for managed_policy in deleted_managed_policies:
+                policy_account = aws_account_map.get(managed_policy.account_id)
+                if existing_template := existing_template_map.get(
+                    managed_policy.policy_name
+                ):
+                    if len(existing_template.included_accounts) == 1 and (
+                        existing_template.included_accounts[0]
+                        == policy_account.account_name
+                        or existing_template.included_accounts[0]
+                        == policy_account.account_id
+                    ):
+                        # It's the only account for the template so delete it
+                        existing_template.delete()
+                    else:
+                        # There are other accounts for the template so re-eval the template
+                        tasks.append(
+                            {
+                                "aws_accounts": aws_accounts,
+                                "policy_path": existing_template.properties.path,
+                                "policy_name": existing_template.properties.policy_name,
+                            }
+                        )
+
+        account_mp_list = (
+            await generate_mp_resource_file_for_all_accounts_semaphore.process(tasks)
+        )
+        account_mp_list = list(itertools.chain.from_iterable(account_mp_list))
+        account_policy_map = defaultdict(list)
+        for account_policy in account_mp_list:
+            account_policy_map[account_policy["account_id"]].append(account_policy)
+        account_managed_policies = [
+            dict(account_id=account_id, managed_policies=account_managed_policies)
+            for account_id, account_managed_policies in account_policy_map.items()
+        ]
+
+    else:
+        account_managed_policies = (
+            await generate_account_managed_policy_resource_files_semaphore.process(
+                [
+                    {"aws_account": aws_account}
+                    for aws_account in aws_account_map.values()
+                ]
+            )
+        )
+
+        # Remove templates not in any AWS account
+        all_policy_names = set(
+            itertools.chain.from_iterable(
+                [
+                    [
+                        managed_policy["policy_name"]
+                        for managed_policy in account["managed_policies"]
+                    ]
+                    for account in account_managed_policies
+                ]
+            )
+        )
+        for existing_template in existing_template_map.values():
+            if existing_template.properties.policy_name not in all_policy_names:
+                existing_template.delete()
+
+    # Upsert Managed Policies
     messages = []
     for account in account_managed_policies:
         for managed_policy in account["managed_policies"]:
@@ -287,7 +449,7 @@ async def generate_aws_managed_policy_templates(
         aws_account_map, account_managed_policies
     )
 
-    log.info("Writing templated roles")
+    log.info("Writing templated managed policies")
     for policy_name, policy_refs in grouped_managed_policy_map.items():
         await create_templated_managed_policy(
             aws_account_map,

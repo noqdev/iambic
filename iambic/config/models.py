@@ -181,7 +181,7 @@ class Config(BaseModel):
         "These apply to all aws_accounts but can be overwritten by an account.",
     )
     slack_app: Optional[str] = None
-    sqs: Optional[dict] = {}
+    sqs_queues: Optional[list[str]] = []
     slack: Optional[dict] = {}
     version: str = Field(
         description="Do not change! The version of iambic this repo is compatible with.",

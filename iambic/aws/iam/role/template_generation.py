@@ -1,16 +1,20 @@
 from __future__ import annotations
 
+import itertools
 import os
 import pathlib
+from collections import defaultdict
 
 import aiofiles
 
+from iambic.aws.event_bridge.models import RoleMessageDetails
 from iambic.aws.iam.role.models import (
     AWS_IAM_ROLE_TEMPLATE_TYPE,
     RoleProperties,
     RoleTemplate,
 )
 from iambic.aws.iam.role.utils import (
+    get_role_across_accounts,
     get_role_inline_policies,
     get_role_managed_policies,
     list_role_tags,
@@ -100,6 +104,54 @@ async def generate_account_role_resource_files(aws_account: AWSAccount) -> dict:
         "Finished caching AWS IAM Roles.",
         account_id=aws_account.account_id,
         role_count=len(account_roles),
+    )
+
+    return response
+
+
+async def generate_role_resource_file_for_all_accounts(
+    aws_accounts: list[AWSAccount], role_name: str
+) -> list:
+    account_role_response_dir_map = {
+        aws_account.account_id: get_account_role_resource_dir(aws_account.account_id)
+        for aws_account in aws_accounts
+    }
+    role_resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
+    messages = []
+    response = []
+
+    role_across_accounts = await get_role_across_accounts(
+        aws_accounts, role_name, False
+    )
+    role_across_accounts = {k: v for k, v in role_across_accounts.items() if v}
+
+    log.info(
+        "Retrieved AWS IAM Role for all accounts.",
+        role_name=role_name,
+        total_accounts=len(role_across_accounts),
+    )
+
+    for account_id, account_role in role_across_accounts.items():
+        role_path = os.path.join(
+            account_role_response_dir_map[account_id],
+            f'{account_role["RoleName"]}.json',
+        )
+        response.append(
+            {
+                "path": role_path,
+                "name": account_role["RoleName"],
+                "account_id": account_id,
+            }
+        )
+        messages.append(
+            dict(file_path=role_path, content_as_dict=account_role, replace_file=True)
+        )
+
+    await role_resource_file_upsert_semaphore.process(messages)
+    log.info(
+        "Finished caching AWS IAM Role for all accounts.",
+        role_name=role_name,
+        total_accounts=len(role_across_accounts),
     )
 
     return response
@@ -304,10 +356,6 @@ async def create_templated_role(  # noqa: C901
     # iambic-specific knowledge requires us to load the existing template
     # because it will not be reflected by AWS API.
     if existing_template := existing_template_map.get(role_name, None):
-        # In this juncture, we don't have the template object, only the path.
-        # We have to re-load from filesystem again. Opportunities to reuse
-        # the object because caller already walk through the repos and load the
-        # templates before calling this function.
         existing_template.included_accounts = role_template_params["included_accounts"]
         existing_template.excluded_accounts = role_template_params.get(
             "excluded_accounts", []
@@ -326,17 +374,13 @@ async def create_templated_role(  # noqa: C901
                 error=str(err),
                 role_params=role_template_params,
             )
-            return None
     else:
         try:
             role = RoleTemplate(
-                file_path=existing_template_map.get(
+                file_path=get_templated_role_file_path(
+                    role_dir,
                     role_name,
-                    get_templated_role_file_path(
-                        role_dir,
-                        role_name,
-                        role_template_params.get("included_accounts"),
-                    ),
+                    role_template_params.get("included_accounts"),
                 ),
                 properties=role_template_properties,
                 **role_template_params,
@@ -349,18 +393,18 @@ async def create_templated_role(  # noqa: C901
                 error=str(err),
                 role_params=role_template_params,
             )
-            return None
 
 
-async def generate_aws_role_templates(configs: list[Config], base_output_dir: str):
+async def generate_aws_role_templates(
+    configs: list[Config],
+    base_output_dir: str,
+    role_messages: list[RoleMessageDetails] = None,
+):
     aws_account_map = await get_aws_account_map(configs)
     existing_template_map = await get_existing_template_map(
         base_output_dir, AWS_IAM_ROLE_TEMPLATE_TYPE
     )
     role_dir = get_role_dir(base_output_dir)
-    generate_account_role_resource_files_semaphore = NoqSemaphore(
-        generate_account_role_resource_files, 5
-    )
     set_role_resource_inline_policies_semaphore = NoqSemaphore(
         set_role_resource_inline_policies, 20
     )
@@ -374,10 +418,74 @@ async def generate_aws_role_templates(configs: list[Config], base_output_dir: st
         "Beginning to retrieve AWS IAM Roles.", accounts=list(aws_account_map.keys())
     )
 
-    account_roles = await generate_account_role_resource_files_semaphore.process(
-        [{"aws_account": aws_account} for aws_account in aws_account_map.values()]
-    )
+    if role_messages:
+        aws_accounts = list(aws_account_map.values())
+        generate_role_resource_file_for_all_accounts_semaphore = NoqSemaphore(
+            generate_role_resource_file_for_all_accounts, 50
+        )
+        tasks = [
+            {"aws_accounts": aws_accounts, "role_name": role.role_name}
+            for role in role_messages
+            if not role.delete
+        ]
+
+        # Remove deleted or mark templates for update
+        deleted_roles = [role for role in role_messages if role.delete]
+        if deleted_roles:
+            for role in deleted_roles:
+                role_account = aws_account_map.get(role.account_id)
+                if existing_template := existing_template_map.get(role.role_name):
+                    if len(existing_template.included_accounts) == 1 and (
+                        existing_template.included_accounts[0]
+                        == role_account.account_name
+                        or existing_template.included_accounts[0]
+                        == role_account.account_id
+                    ):
+                        # It's the only account for the template so delete it
+                        existing_template.delete()
+                    else:
+                        # There are other accounts for the template so re-eval the template
+                        tasks.append(
+                            {
+                                "aws_accounts": aws_accounts,
+                                "role_name": existing_template.properties.role_name,
+                            }
+                        )
+
+        account_role_list = (
+            await generate_role_resource_file_for_all_accounts_semaphore.process(tasks)
+        )
+        account_role_list = list(itertools.chain.from_iterable(account_role_list))
+        account_role_map = defaultdict(list)
+        for account_role in account_role_list:
+            account_role_map[account_role["account_id"]].append(account_role)
+        account_roles = [
+            dict(account_id=account_id, roles=roles)
+            for account_id, roles in account_role_map.items()
+        ]
+    else:
+        generate_account_role_resource_files_semaphore = NoqSemaphore(
+            generate_account_role_resource_files, 5
+        )
+        account_roles = await generate_account_role_resource_files_semaphore.process(
+            [{"aws_account": aws_account} for aws_account in aws_account_map.values()]
+        )
+
+        # Remove templates not in any AWS account
+        all_role_names = set(
+            itertools.chain.from_iterable(
+                [
+                    [account_role["name"] for account_role in account["roles"]]
+                    for account in account_roles
+                ]
+            )
+        )
+        for existing_template in existing_template_map.values():
+            if existing_template.properties.role_name not in all_role_names:
+                existing_template.delete()
+
     messages = []
+    # Upsert roles
     for account_role in account_roles:
         for role in account_role["roles"]:
             messages.append(
