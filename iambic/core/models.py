@@ -14,7 +14,6 @@ from git import Repo
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, validator
-from pydantic.error_wrappers import ValidationError
 from pydantic.fields import ModelField
 
 from iambic.aws.utils import apply_to_account
@@ -352,14 +351,7 @@ class BaseTemplate(
 
     @classmethod
     def load(cls, file_path: str):
-        try:
-            return cls(file_path=file_path, **yaml.load(open(file_path)))
-        except ValidationError as e:
-            log_params = {
-                "file_path": file_path,
-            }
-            log.error("ValidationError", **log_params)
-            raise e
+        return cls(file_path=file_path, **yaml.load(open(file_path)))
 
 
 class Variable(PydanticBaseModel):
