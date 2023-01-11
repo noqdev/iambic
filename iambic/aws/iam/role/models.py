@@ -110,6 +110,14 @@ class RoleProperties(BaseModel):
         description="List of the role's inline policies",
     )
 
+    @property
+    def resource_type(self):
+        return "aws:iam:role"
+
+    @property
+    def resource_id(self):
+        return self.role_name
+
 
 class RoleTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_ROLE_TEMPLATE_TYPE

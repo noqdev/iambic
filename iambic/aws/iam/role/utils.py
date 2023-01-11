@@ -384,26 +384,15 @@ async def apply_role_inline_policies(
 
             log_str = f"{resource_existence} inline policies discovered."
             if context.execute:
-                if policy_document:
-                    log_str = f"{log_str} {boto_action} inline policy..."
-                    tasks.append(
-                        boto_crud_call(
-                            iam_client.put_role_policy,
-                            RoleName=role_name,
-                            PolicyName=policy_name,
-                            PolicyDocument=json.dumps(policy_document),
-                        )
+                log_str = f"{log_str} {boto_action} inline policy..."
+                tasks.append(
+                    boto_crud_call(
+                        iam_client.put_role_policy,
+                        RoleName=role_name,
+                        PolicyName=policy_name,
+                        PolicyDocument=json.dumps(policy_document),
                     )
-                else:
-                    # No policy document means we should delete the policy
-                    log_str = f"{log_str} Removing inline policy..."
-                    tasks.append(
-                        boto_crud_call(
-                            iam_client.delete_role_policy,
-                            RoleName=role_name,
-                            PolicyName=policy_name,
-                        )
-                    )
+                )
 
             log.info(log_str, policy_name=policy_name, **log_params)
 
