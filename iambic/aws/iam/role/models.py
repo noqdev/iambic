@@ -30,7 +30,7 @@ from iambic.aws.models import (
     Description,
     Tag,
 )
-from iambic.aws.utils import apply_to_account, boto_crud_call
+from iambic.aws.utils import apply_to_account, boto_crud_call, remove_expired_resources
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -166,6 +166,10 @@ class RoleTemplate(AWSTemplate, AccessModel):
             "iam", config=botocore.client.Config(max_pool_connections=50)
         )
         account_role = self.apply_resource_dict(aws_account, context)
+
+        self = await remove_expired_resources(
+            self, self.resource_type, self.resource_id
+        )
         role_name = account_role["RoleName"]
         account_change_details = AccountChangeDetails(
             account=str(aws_account),

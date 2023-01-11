@@ -53,7 +53,9 @@
                 "apply",
                 "-f",
                 "--template",
-                "../noq-templates/resources/aws/roles/application/noqmeter_null_test_role.yaml",
+                // "../noq-templates/google/groups/noq.dev/iambic_test_group.yaml",
+                "/home/ccastrapel/localrepos/noq-templates/resources/aws/roles/multi_account/iambic_test_role.yaml",
+                // "/home/ccastrapel/localrepos/noq-templates/resources/aws/identity_center/permission_sets/testpermissionset.yaml",
                 "--config",
                 "demo/config.yaml"
             ],

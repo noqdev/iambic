@@ -258,10 +258,13 @@ async def remove_expired_resources(
         return resource
 
     log_params = {}
-    if hasattr(resource, "resource_type"):
-        log_params["resource_type"] = resource.resource_type
-    if hasattr(resource, "resource_id"):
-        log_params["resource_id"] = resource.resource_id
+    try:
+        if hasattr(resource, "resource_type"):
+            log_params["resource_type"] = resource.resource_type
+        if hasattr(resource, "resource_id"):
+            log_params["resource_id"] = resource.resource_id
+    except NotImplementedError:
+        pass
     if template_resource_type != log_params.get(
         "resource_type"
     ) or template_resource_id != log_params.get("resource_id"):
