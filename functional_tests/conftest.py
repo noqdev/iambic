@@ -13,7 +13,7 @@ from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.main import run_import
 
-os.environ["AWS_PROFILE"] = "staging/IambicHubRole"
+os.environ["AWS_PROFILE"] = "iambic_test_org_account/IambicHubRole"
 os.environ["TESTING"] = "true"
 FUNCTIONAL_TEST_TEMPLATE_DIR = os.getenv("FUNCTIONAL_TEST_TEMPLATE_DIR", None)
 
@@ -22,16 +22,16 @@ version: '1'
 
 extends:
   - key: AWS_SECRETS_MANAGER
-    value: arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/google-MmAS1o
-    assume_role_arn: arn:aws:iam::759357822767:role/IambicSpokeRole
+    value: arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/iambic_itest_secrets
+    assume_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
 
 aws:
   organizations:
-    - org_id: 'o-yfdp0r70sq'
-      assume_role_arn: 'arn:aws:iam::259868150464:role/IambicSpokeRole'
-      org_name: 'staging'
+    - org_id: 'o-8t0mt0ybdd'
+      assume_role_arn: 'arn:aws:iam::580605962305:role/IambicSpokeRole'
+      org_name: 'iambic_test_org_account'
       identity_center_account:
-        account_id: '259868150464'
+        account_id: '580605962305'
         region: 'us-east-1'
       account_rules:
         - included_accounts:
