@@ -12,6 +12,7 @@ from iambic.cicd.github import (
     HandleIssueCommentReturnCode,
     ensure_body_length_fits_github_spec,
     format_github_url,
+    get_session_name,
     handle_issue_comment,
     handle_pull_request,
     prepare_local_repo,
@@ -169,3 +170,19 @@ def test_pull_request_plan(
     ]
     handle_pull_request(mock_github_client, pull_request_context)
     assert mock_lambda_run_handler.called is True
+
+
+@pytest.mark.parametrize(
+    "repo_name,pr_number,expected_result",
+    [
+        (
+            "noqdev/iambic-templates-itest",
+            "1",
+            "org=noqdev,repo=iambic-templates-itest,pr=1",
+        ),
+        ("noqdev/a^b", "1", "org=noqdev,repo=ab,pr=1"),
+    ],
+)
+def test_get_session_name(repo_name, pr_number, expected_result):
+    session_name = get_session_name(repo_name, pr_number)
+    assert session_name == expected_result
