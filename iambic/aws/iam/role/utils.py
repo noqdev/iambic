@@ -383,7 +383,7 @@ async def apply_role_inline_policies(
                 )
 
             log_str = f"{resource_existence} inline policies discovered."
-            if context.execute:
+            if context.execute and policy_document:
                 log_str = f"{log_str} {boto_action} inline policy..."
                 tasks.append(
                     boto_crud_call(

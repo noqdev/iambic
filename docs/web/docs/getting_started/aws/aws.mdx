@@ -5,11 +5,10 @@ title: AWS
 In this tutorial, you will configure IAMbic for an AWS account or multiple accounts in an AWS organization. By the end of this tutorial, you will have performed the following steps:
 
 1. Create a basic configuration for Iambic
-2. Import AWS resources into Iambic
-3. Create a role across multiple AWS accounts
-4. Create dynamic permissions for this role, which vary depending on account
-5. Create temporary permissions, that Iambic will automatically expire
-6. Provide temporary (break-glass) access to your AWS Identity Center Permission Sets
+2. Create a role across multiple AWS accounts
+3. Create dynamic permissions for this role, which vary depending on account
+4. Create temporary permissions, that Iambic will automatically expire
+5. Provide temporary (break-glass) access to your AWS Identity Center Permission Sets
 
 Noq's SaaS Platform provides enterprise Self-Service features that make Iambic change requests easier for end-users. Contact us for a demo today.
 
@@ -272,7 +271,13 @@ properties:
   role_name: "{{account_name}}_iambic_test_role"
 ```
 
-### 3.2 - Create Temporary, Expiring IAM Permissions
+Save the template, and in your terminal, use Iambic to apply the change.
+
+```bash
+iambic apply -t resources/aws/roles/all_accounts/iambic_test_role.yaml
+```
+
+### 1.5 - Create Temporary, Expiring IAM Permissions
 
 We're now going to walk you through the process of writing temporary permissions that expire after a set period of time. Permissions are only expired if you're running Iambic continually (We provide the GitHub actions to automate this). For the purposes of this tutorial, we will trigger a run locally.
 
@@ -429,7 +434,7 @@ properties:
   role_name: "{{account_name}}_iambic_test_role"
 ```
 
-As usual, run the following command to reflect the changes in your cloud environment immediately.
+Save the template, and in your terminal, use Iambic to apply the change.
 
 ```bash
 iambic apply -t resources/aws/roles/all_accounts/iambic_test_role.yaml
