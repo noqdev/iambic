@@ -70,8 +70,11 @@ async def gather_templates(repo_dir: str, template_type: str = None) -> list[str
         if template_type
         else NOQ_TEMPLATE_REGEX
     )
+    # Support both yaml and yml extensions for templates
     file_paths = glob.glob(f"{repo_dir}/**/*.yaml", recursive=True)
     file_paths += glob.glob(f"{repo_dir}*.yaml", recursive=True)
+    file_paths += glob.glob(f"{repo_dir}/**/*.yml", recursive=True)
+    file_paths += glob.glob(f"{repo_dir}*.yml", recursive=True)
     file_paths = await asyncio.gather(
         *[file_regex_search(fp, regex_pattern) for fp in file_paths]
     )
@@ -129,6 +132,34 @@ class NoqSemaphore:
         )
 
 
+async def async_batch_processor(
+    tasks: list,
+    batch_size: int,
+    seconds_between_process: int = 1,
+    return_exceptions: bool = False,
+) -> list:
+    """
+    Batches up tasks in an effort to prevent rate limiting
+    """
+    if len(tasks) <= batch_size:
+        return await asyncio.gather(*tasks, return_exceptions=return_exceptions)
+
+    response = []
+    for min_elem in range(0, len(tasks), batch_size):
+        response.extend(
+            await asyncio.gather(
+                *tasks[min_elem : min_elem + batch_size],
+                return_exceptions=return_exceptions,
+            )
+        )
+        if len(response) == len(tasks):
+            return response
+
+        await asyncio.sleep(seconds_between_process)
+
+    return response
+
+
 def un_wrap_json(json_obj: Any) -> Any:
     """Helper function to unwrap nested JSON in the AWS Config resource configuration."""
     # pylint: disable=C0103,W0703,R0911
@@ -182,7 +213,13 @@ def sort_dict(original, prioritize=None):
     with optional prioritization of certain elements.
     """
     if prioritize is None:
-        prioritize = ["template_type", "name", "description"]
+        prioritize = [
+            "template_type",
+            "name",
+            "description",
+            "included_accounts",
+            "excluded_accounts",
+        ]
     if isinstance(original, dict):
         # Make a new "ordered" dictionary. No need for Collections in Python 3.7+
         # Sort the keys in the dictionary

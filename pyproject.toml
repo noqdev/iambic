@@ -29,13 +29,20 @@ slack-bolt = "^1.15.1"
 google-api-python-client = "^2.64.0"
 google-auth = "^2.12.0"
 jsonschema2md2 = "^0.6.0"
-GitPython = "^3.1.29"
+GitPython = "^3.1.30"
+PyGithub = "^1.57"
 pydantic-factories = "^1.12.0"
 okta = "^2.8.0"
+asyncache = "^0.3.1"
 dateparser = "^1.1.4"
+pytest-mock = "^3.10.0"
+asynctest = "^0.13.0"
 
 [tool.poetry.scripts]
 iambic = "iambic.main:cli"
+
+[tool.poetry.group.dev.dependencies]
+types-cachetools = "^5.2.1"
 
 [build-system]
 requires = ["poetry-core"]

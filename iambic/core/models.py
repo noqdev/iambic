@@ -14,6 +14,7 @@ from git import Repo
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, validator
+from pydantic.error_wrappers import ValidationError
 from pydantic.fields import ModelField
 
 from iambic.aws.utils import apply_to_account
@@ -23,16 +24,14 @@ from iambic.core.logger import log
 from iambic.core.utils import snake_to_camelcap, sort_dict, yaml
 
 if TYPE_CHECKING:
-    from iambic.aws.models import AWSAccount, Deleted
+    from iambic.aws.models import AWSAccount
     from iambic.config.models import Config
 
 
 class BaseModel(PydanticBaseModel):
     @classmethod
     def update_forward_refs(cls, **kwargs):
-        from iambic.aws.models import Deleted
-
-        kwargs.update({"Union": Union, "Deleted": Deleted})
+        kwargs.update({"Union": Union})
         super().update_forward_refs(**kwargs)
 
     class Config:
@@ -154,16 +153,22 @@ class BaseModel(PydanticBaseModel):
     async def remove_expired_resources(self, context: ExecutionContext):
         # Look at current model and recurse through submodules to see if it is a subclass of ExpiryModel
         # If it is, then call the remove_expired_resources method
+
         if issubclass(type(self), ExpiryModel):
             if hasattr(self, "expires_at") and self.expires_at:
                 if self.expires_at < datetime.datetime.utcnow():
                     self.deleted = True
+                    log.info("Expired resource found, marking for deletion")
                     return self
         for field_name in self.__fields__.keys():
             field_val = getattr(self, field_name)
             if isinstance(field_val, list):
                 await asyncio.gather(
-                    *[elem.remove_expired_resources(context) for elem in field_val]
+                    *[
+                        elem.remove_expired_resources(context)
+                        for elem in field_val
+                        if isinstance(elem, BaseModel)
+                    ]
                 )
                 for elem in field_val:
                     if getattr(elem, "deleted", None) is True:
@@ -175,9 +180,10 @@ class BaseModel(PydanticBaseModel):
                 continue
 
             else:
-                await field_val.remove_expired_resources(context)
-                if getattr(field_val, "deleted", None) is True:
-                    setattr(self, field_name, None)
+                if isinstance(field_val, BaseModel):
+                    await field_val.remove_expired_resources(context)
+                    if getattr(field_val, "deleted", None) is True:
+                        setattr(self, field_name, None)
 
     @property
     def exclude_keys(self) -> set:
@@ -206,6 +212,9 @@ class ProposedChangeType(Enum):
 
 class ProposedChange(PydanticBaseModel):
     change_type: ProposedChangeType
+    account: Optional[
+        str
+    ]  # Used for Org related changes like permission set account assignments
     attribute: Optional[str]
     resource_id: Optional[str]
     resource_type: Optional[str]
@@ -215,6 +224,7 @@ class ProposedChange(PydanticBaseModel):
 
 
 class AccountChangeDetails(PydanticBaseModel):
+    org_id: Optional[str]
     account: Union[str, int]
     resource_id: Union[str, int]
     current_value: Optional[dict]
@@ -342,7 +352,14 @@ class BaseTemplate(
 
     @classmethod
     def load(cls, file_path: str):
-        return cls(file_path=file_path, **yaml.load(open(file_path)))
+        try:
+            return cls(file_path=file_path, **yaml.load(open(file_path)))
+        except ValidationError as e:
+            log_params = {
+                "file_path": file_path,
+            }
+            log.error("ValidationError", **log_params)
+            raise e
 
 
 class Variable(PydanticBaseModel):
@@ -354,7 +371,7 @@ class ExpiryModel(PydanticBaseModel):
     expires_at: Optional[Union[str, datetime.datetime, datetime.date]] = Field(
         None, description="The date and time the resource will be/was set to deleted."
     )
-    deleted: Optional[Union[bool, List[Deleted]]] = Field(
+    deleted: Optional[bool] = Field(
         False,
         description=(
             "Denotes whether the resource has been removed from AWS."
