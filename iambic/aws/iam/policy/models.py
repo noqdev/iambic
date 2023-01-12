@@ -368,6 +368,10 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
             log_str = "New resource found in code."
             if not is_iambic_import_only:
                 log_str = f"{log_str} Creating resource..."
+                if isinstance(account_policy["PolicyDocument"], dict):
+                    account_policy["PolicyDocument"] = json.dumps(
+                        account_policy["PolicyDocument"]
+                    )
                 await boto_crud_call(client.create_policy, **account_policy)
             log.info(log_str, **log_params)
 
