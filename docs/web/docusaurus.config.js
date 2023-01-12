@@ -128,15 +128,15 @@ const config = {
         defaultMode: 'dark',
       },
     }),
-    // plugins: [
-    //   [
-    //     require.resolve("@cmfcmf/docusaurus-search-local"),
-    //     {
-    //       indexDocs: true,
-    //       indexBlog: false,
-    //     },
-    //   ],
-    // ],
+    plugins: [
+      [
+        require.resolve("@cmfcmf/docusaurus-search-local"),
+        {
+          indexDocs: true,
+          indexBlog: false,
+        },
+      ],
+    ],
 };
 
 module.exports = config;
