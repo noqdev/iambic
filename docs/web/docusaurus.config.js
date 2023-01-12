@@ -58,7 +58,7 @@ const config = {
 
         logo: {
           alt: 'Noq Logo',
-          src: 'img/logo.svg',
+          src: 'img/mark.svg',
         },
         items: [
           // {
@@ -124,7 +124,19 @@ const config = {
         theme: lightCodeTheme,
         darkTheme: darkCodeTheme,
       },
+      colorMode: {
+        defaultMode: 'dark',
+      },
     }),
+    // plugins: [
+    //   [
+    //     require.resolve("@cmfcmf/docusaurus-search-local"),
+    //     {
+    //       indexDocs: true,
+    //       indexBlog: false,
+    //     },
+    //   ],
+    // ],
 };
 
 module.exports = config;

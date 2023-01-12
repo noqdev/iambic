@@ -1,7 +1,6 @@
 ---
 title: AWS
 ---
-
 ## 1. Configure AWS
 
 In this tutorial, you will configure IAMbic for an AWS account or multiple accounts in an AWS organization. By the end of this tutorial, you will have performed the following steps:
@@ -277,7 +276,6 @@ We're now going to walk you through the process of writing temporary permissions
 
 Notice that `expires_at` can be a datetime string, a date, or even "tomorrow", "yesterday", "in N days", etc. This is thanks to the wonderful [dateparser](https://dateparser.readthedocs.io/) library ❤️.
 
-
 ```yaml
 template_type: NOQ::AWS::IAM::Role
 identifier: '{{account_name}}_iambic_test_role'
@@ -327,15 +325,151 @@ properties:
   role_name: '{{account_name}}_iambic_test_role'
 ```
 
+Simply run the following command. You'll notice the changes reflected in the cloud immediately, and the file has been updated to reflect the changes.
 
+```bash
+iambic apply -t resources/aws/roles/all_accounts/iambic_test_role.yaml
+```
 
-The next step is to create temporary expiring permissions.
+### 1.6 Create temporary access rules ![Enterprise Feature](/img/mark.svg)
 
-Create temporary (expiring) permissions
+Noq Enterprise is capable of brokering temporary AWS IAM role credentials for end-users and applications. These credentials can be IP-restricted (Either to a static list of IP addresses, such as a list of VPN NAT addresses, or to the requester's IP address). Noq also integrates tightly with your single-sign-on provider of choice (Basically, anything that speaks SAML or OpenID Connect), tightly integrating with your existing groups and users. Lastly, the Noq-CLI utility provides a number of developer-friendly methods for managing temporary IAM credentials.
 
-Create temporary access rules [Noq Enterprise Feature]
+To provide temporary access to a user, add an `access_rules` section to your YAML. The following is an example access rules stanza  that provides access to the user `user@example.com`, and group `group_name`. The access rules are applied to the role across all accounts, unless `included_accounts` or `excluded_accounts` are specified.
 
-Create an AWS SSO (Identity Center) Permission Set
+```yaml
+access_rules:
+  - users:
+    - user@example.com
+  - groups:
+    - group_name
+```
+
+We can further limit these access rules to the role across specific accounts:
+
+```yaml
+access_rules:
+  - users:
+      - user@example.com
+    included_accounts:
+      - ACCOUNT_A
+  - groups:
+      - group_name
+    included_accounts:
+      - ACCOUNT_A
+```
+
+Lastly, to provide temporary access to a role (for Breakglass use cases or otherwise), we can add an `expires_at` flag to the access rules. This will cause the access rules to expire after the specified time. The following example will expire the access rules in 3 days.
+
+```yaml
+access_rules:
+  - users:
+      - user@example.com
+    expires_at: in 3 days
+```
+
+The template below provides a complete example of a role with temporary access rules.
+
+```yaml
+template_type: NOQ::AWS::IAM::Role
+identifier: '{{account_name}}_iambic_test_role'
+included_accounts:
+  - '*'
+expires_at: in 3 days
+access_rules:
+  - users:
+      - user@example.com
+    expires_at: in 3 days
+    included_accounts:
+      - ACCOUNT_A
+properties:
+  description: Iambic test role on {{account_name}}
+  assume_role_policy_document:
+    statement:
+      - action: sts:AssumeRole
+        effect: Deny
+        principal:
+          service: ec2.amazonaws.com
+  inline_policies:
+    - policy_name: spoke-acct-policy
+      statement:
+        - expires_at: 2021-01-01
+          excluded_accounts: # Include the policy on the role across all accounts, except ACCOUNT_A
+            - ACCOUNT_A
+          action:
+            - s3:ListBucket
+          effect: Deny
+          resource: '*'
+        - expires_at: tomorrow
+          included_accounts: # Only include the policy statement on ACCOUNT_A
+            - ACCOUNT_A
+          action:
+            - s3:GetObject
+          effect: Deny
+          resource: '*'
+        - expires_at: in 4 hours
+          included_accounts: # Include the policy statement on all accounts except ACCOUNT_A and ACCOUNT_B
+            - '*'
+          excluded_accounts:
+            - ACCOUNT_A
+            - ACCOUNT_B
+          action:
+            - '*'
+          effect: Deny
+          resource: '*'
+  managed_policies:
+    - included_accounts:
+        - ACCOUNT_A
+      policy_arn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+  path: /iambic_test/
+  permissions_boundary:
+    policy_arn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+  role_name: '{{account_name}}_iambic_test_role'
+```
+
+As usual, run the following command to reflect the changes in your cloud environment immediately.
+
+```bash
+iambic apply -t resources/aws/roles/all_accounts/iambic_test_role.yaml
+```
+
+After applying the changes, the users specified in the access rules will now have access to the role in the Noq platform.
+
+## 3 - Create an AWS SSO (Identity Center) Permission Set
+
+Just like IAM roles, IAMbic can be used to manage permission sets within AWS SSO (Identity Center). Here is an example of a permission set template:
+
+```yaml
+template_type: NOQ::AWS::IdentityCenter::PermissionSet
+access_rules:
+  - groups:
+      - AWSSSOGroup
+    included_accounts:
+      - demo-*
+      - development
+    excluded_accounts:
+      - demo-3
+    included_orgs:
+      - o-12345678
+identifier: iambic_test_permission_set
+included_orgs:
+  - o-yfdp0r70sq
+properties:
+  name: iambic_test_permission_set
+  description: Permission set for testing Iambic
+  inline_policy:
+    statement:
+      - action:
+          - '*'
+        effect: Deny
+        resource:
+          - '*'
+  managed_policies:
+    - arn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+  permissions_boundary:
+    managed_policy_arn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+  session_duration: PT1H
+```
 
 Provide temporary access to a permission set
 
