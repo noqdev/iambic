@@ -3,18 +3,19 @@ from __future__ import annotations
 import os
 import re
 from io import StringIO
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from deepdiff import DeepDiff
 from git import Repo
 from git.exc import GitCommandError
 from pydantic import BaseModel as PydanticBaseModel
 
-from iambic.aws.models import Deleted
-from iambic.config.models import Config
 from iambic.config.templates import TEMPLATE_TYPE_MAP
 from iambic.core.logger import log
 from iambic.core.utils import NOQ_TEMPLATE_REGEX, file_regex_search, yaml
+
+if TYPE_CHECKING:
+    from iambic.config.models import Config
 
 
 class GitDiff(PydanticBaseModel):
@@ -23,7 +24,17 @@ class GitDiff(PydanticBaseModel):
     is_deleted: Optional[bool] = False
 
 
-async def clone_git_repos(config, repo_base_path: str) -> None:
+def get_origin_head(repo: Repo) -> bool:
+    default_branch = [x for x in repo.remotes.origin.refs if x.name == "origin/HEAD"]
+    if any(default_branch):
+        return default_branch[0].name.split("/")[-1]
+    else:
+        raise ValueError(
+            "Unable to determine the default branch for the repo 'origin' remote"
+        )
+
+
+async def clone_git_repos(config, repo_base_path: str) -> dict[str, Repo]:
     # TODO: Formalize the model for secrets
     repos = {}
     for repository in config.secrets.get("git", {}).get("repositories", []):
@@ -42,6 +53,11 @@ async def clone_git_repos(config, repo_base_path: str) -> None:
             repo.git.pull()
             repos[repo_name] = repo
     return repos
+
+
+def clone_git_repo(repo_url: str, repo_path: str, remote_branch_name: str):
+    repo = Repo.clone_from(repo_url, repo_path, branch=remote_branch_name)
+    return repo
 
 
 async def retrieve_git_changes(
@@ -94,15 +110,18 @@ async def retrieve_git_changes(
             files["new_files"].append(file)
 
     # Collect all deleted files
-    for file_obj in diff_index.iter_change_type("D"):
-        if (path := file_obj.b_path).endswith(".yaml"):
-            file = GitDiff(
-                path=str(os.path.join(repo_dir, path)),
-                content=file_obj.a_blob.data_stream.read().decode("utf-8"),
-                is_deleted=True,
-            )
-            if re.search(NOQ_TEMPLATE_REGEX, file.content):
-                files["deleted_files"].append(file)
+    if (
+        False
+    ):  # EN-1635 Disable file deletion cleanup because we don't handle backward compatible and worry about accidental removal
+        for file_obj in diff_index.iter_change_type("D"):
+            if (path := file_obj.b_path).endswith(".yaml"):
+                file = GitDiff(
+                    path=str(os.path.join(repo_dir, path)),
+                    content=file_obj.a_blob.data_stream.read().decode("utf-8"),
+                    is_deleted=True,
+                )
+                if re.search(NOQ_TEMPLATE_REGEX, file.content):
+                    files["deleted_files"].append(file)
 
     # Collect all modified files
     for file_obj in diff_index.iter_change_type("M"):
@@ -185,6 +204,11 @@ def create_templates_for_modified_files(
         template_cls = TEMPLATE_TYPE_MAP[main_template_dict["template_type"]]
 
         main_template = template_cls(file_path=git_diff.path, **main_template_dict)
+
+        # EN-1634 dealing with providers that have no concept of multi-accounts
+        # a hack to just ignore template that does not have included_accounts attribute
+        if getattr(main_template, "included_accounts", None) is None:
+            continue
 
         template_dict = yaml.load(open(git_diff.path))
         template = template_cls(file_path=git_diff.path, **template_dict)
@@ -313,15 +337,7 @@ def create_templates_for_modified_files(
         template.excluded_accounts = template_excluded_accounts
 
         if deleted_included_accounts and template.deleted is not True:
-            deleted_obj = Deleted(
-                deleted=True,
-                included_accounts=deleted_included_accounts,
-                excluded_accounts=[ea for ea in deleted_exclude_accounts if ea != "*"],
-            )
-            if isinstance(template.deleted, bool):
-                template.deleted = [deleted_obj]
-            else:
-                template.deleted.append(deleted_obj)
+            template.deleted = True
 
         templates.append(template)
 

@@ -24,6 +24,19 @@ async def get_existing_template_file_map(repo_dir: str, template_type: str) -> d
     return {template.resource_id: template.file_path for template in templates}
 
 
+async def get_existing_template_map(repo_dir: str, template_type: str) -> dict:
+    """Used to keep track of existing templates on import
+
+     Write to the existing file before creating a new one.
+
+    :param repo_dir:
+    :param template_type:
+    :return: {resource_id: template}
+    """
+    templates = load_templates(await gather_templates(repo_dir, template_type))
+    return {template.resource_id: template for template in templates}
+
+
 def templatize_resource(aws_account: AWSAccount, resource):
     resource_type = type(resource)
 
@@ -184,7 +197,7 @@ async def base_group_dict_attribute(
     """Groups an attribute that is a dict or list of dicts with matching aws_accounts
 
     Call group_dict_attribute instead unless you need to transform this response.
-    An example would be tags which also contain role_access.
+    An example would be tags which also contain access_rules.
 
     :param aws_account_map: dict(account_id:str = AWSAccount)
     :param account_resources: list[dict(account_id:str, resources=list[dict])]

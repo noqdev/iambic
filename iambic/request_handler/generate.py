@@ -6,6 +6,9 @@ from iambic.aws.iam.policy.template_generation import (
     generate_aws_managed_policy_templates,
 )
 from iambic.aws.iam.role.template_generation import generate_aws_role_templates
+from iambic.aws.identity_center.permission_set.template_generation import (
+    generate_aws_permission_set_templates,
+)
 from iambic.config.models import Config
 
 # TODO: This is a plugin anti-pattern. We need to make a real plugin architecture.
@@ -30,6 +33,11 @@ async def generate_templates(configs: list[Config], output_dir: str):
     #                     config, subject.domain, output_dir, project
     #                 )
     #             )
+    tasks = [
+        generate_aws_role_templates(configs, output_dir),
+        generate_aws_managed_policy_templates(configs, output_dir),
+        generate_aws_permission_set_templates(configs, output_dir),
+    ]
     for config in configs:
         for okta_organization in config.okta_organizations:
             # tasks.append(
