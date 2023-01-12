@@ -4,13 +4,20 @@ title: AWS
 
 In this tutorial, you will configure IAMbic for an AWS account or multiple accounts in an AWS organization. By the end of this tutorial, you will have performed the following steps:
 
-1. Create a basic configuration for Iambic
-2. Create a role across multiple AWS accounts
-3. Create dynamic permissions for this role, which vary depending on account
-4. Create temporary permissions, that Iambic will automatically expire
-5. Provide temporary (break-glass) access to your AWS Identity Center Permission Sets
+1. Configure Iambic for AWS
+2. Import your AWS resources
+3. Create and Manage an IAM role across multiple AWS accounts
+  3.1. Create dynamic permissions for your IAM role, which can vary depending on account
+  3.2. Create temporary permissions for your IAM role (Iambic will automatically expire these)
+  3.3. Create temporary access rules for your IAM role (Requires Noq Enterprise)
+4. Create and Manage an AWS Identity Center (SSO) Permission Set
+  4.1. Create dynamic permissions for your Permission Set, which can vary depending on account
+  4.2. Create temporary permissions for your Permission Set (Iambic will automatically expire these)
+  4.3. Create temporary access rules for your Permission Set (Requires Noq Enterprise)
+  4.4. Provide temporary (break-glass) access to your AWS Identity Center Permission Sets
+5. Create and Manage an IAM Managed Policy
 
-Noq's SaaS Platform provides enterprise Self-Service features that make Iambic change requests easier for end-users. Contact us for a demo today.
+Noq's SaaS Platform provides enterprise Self-Service features that make Iambic change requests easier for end-users. Reach out to us for a demo on our website, [https://www.noq.dev](https://www.noq.dev)
 
 We look forward to seeing you on the other side!
 
@@ -22,7 +29,7 @@ These credentials should be configured in the terminal you are using to configur
 
 You should also be aware of [how AWS credentials are sourced locally](https://docs.aws.amazon.com/sdkref/latest/guide/standardized-credentials.html#credentialProviderChain) by the Amazon SDKs. This will help debug different scenarios, such as credential prioritization and expiration.
 
-## 1. Configure AWS
+## 1. Configure Iambic for AWS
 
 <!-- ### 1.1 Obtain AWS Credentials
 
@@ -160,7 +167,7 @@ $ tree -L 4
             └── account_3
 ```
 
-## 3 Create an IAM role across multiple accounts
+## 3 Create and Manage an IAM role across multiple accounts
 
 In this section, we will create an AWS role across all of the AWS accounts that you've configured. In future steps, we will modify this role to demonstrate some of Iambic's features. If you've only configured one account, you may still follow this tutorial. It just won't be as exciting :).
 
