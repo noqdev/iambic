@@ -4,7 +4,7 @@ import asyncio
 import base64
 import os
 from enum import Enum
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import boto3
 import googleapiclient.discovery
@@ -31,7 +31,7 @@ class OktaOrganization(BaseModel):
     org_url: str
     api_token: str
     request_timeout: int = 60
-    client: Optional[OktaClient]
+    client: Any = None  # OktaClient
 
     class Config:
         arbitrary_types_allowed = True

@@ -9,6 +9,7 @@
 * [RoleAccess](schemas/role_access.md)
 * [PolicyStatement](schemas/policy_statement.md)
 * [ManagedPolicyTemplate](schemas/managed_policy_template.md)
+* [AWSIdentityCenterPermissionSetTemplate](schemas/awsidentity_center_permission_set_template.md)
 
 # Google Template Models
 * [GroupTemplate](schemas/group_template.md)
