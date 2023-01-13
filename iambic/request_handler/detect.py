@@ -23,8 +23,8 @@ from iambic.core.logger import log
 async def detect_changes(  # noqa: C901
     config: Config, repo_dir: str
 ) -> Union[str, None]:
-    if not config.sqs_queues:
-        log.info("No queue arn found. Returning")
+    if not config.sqs_cloudtrail_changes_queues:
+        log.info("No cloudtrail changes queue arn found. Returning")
         return
 
     role_messages = []
@@ -32,7 +32,7 @@ async def detect_changes(  # noqa: C901
     permission_set_messages = []
     commit_message = "Out of band changes detected.\nSummary:\n"
 
-    for queue_arn in config.sqs_queues:
+    for queue_arn in config.sqs_cloudtrail_changes_queues:
         queue_name = queue_arn.split(":")[-1]
         region_name = queue_arn.split(":")[3]
         session = await config.get_boto_session_from_arn(queue_arn, region_name)
