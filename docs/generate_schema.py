@@ -9,7 +9,7 @@ from iambic.aws.iam.role.models import RoleTemplate
 from iambic.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetTemplate,
 )
-from iambic.aws.models import AWSAccount
+from iambic.aws.models import AWSAccount, AWSOrganization
 from iambic.config.models import Config, ExtendsConfig
 from iambic.core.models import Variable
 from iambic.core.utils import camel_to_snake
@@ -42,6 +42,7 @@ def generate_docs():
     google_template_models = [GroupTemplate]
     config_models = [
         AWSAccount,
+        AWSOrganization,
         Config,
         ExtendsConfig,
         Variable,
