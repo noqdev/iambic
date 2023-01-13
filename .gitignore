@@ -131,3 +131,5 @@ dmypy.json
 # iambic
 proposed_changes.json
 proposed_changes.yaml
+.DS_Store
+.gitignore
