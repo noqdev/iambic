@@ -92,14 +92,22 @@ def run_plan(config_path: str, templates: list[str], repo_dir: str):
     type=click.Path(exists=True),
     help="The config.yaml file path to apply. Example: ./prod/config.yaml",
 )
-def detect(config_path: str):
-    run_detect(config_path)
+@click.option(
+    "--repo-dir",
+    "-d",
+    "repo_dir",
+    required=False,
+    type=click.Path(exists=True),
+    help="The repo directory containing the templates. Example: ~/noq-templates",
+)
+def detect(config_path: str, repo_dir: str):
+    run_detect(config_path, repo_dir)
 
 
-def run_detect(config_path: str):
+def run_detect(config_path: str, repo_dir: str):
     config = Config.load(config_path)
     asyncio.run(config.setup_aws_accounts())
-    asyncio.run(detect_changes(config))
+    asyncio.run(detect_changes(config, repo_dir or str(pathlib.Path.cwd())))
 
 
 @cli.command()
@@ -178,7 +186,7 @@ def run_apply(force: bool, config_path: str, templates: list[str], repo_dir: str
     if ctx.eval_only and template_changes and click.confirm("Proceed?"):
         ctx.eval_only = False
         asyncio.run(apply_changes(config, templates, ctx))
-    asyncio.run(detect_changes(config))
+    asyncio.run(detect_changes(config, repo_dir))
 
 
 @cli.command(name="git-apply")

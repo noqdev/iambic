@@ -33,6 +33,7 @@ test:
 functional_test:
 	pytest --cov-report html --cov iambic functional_tests -s
 # 	pytest --cov-report html --cov iambic functional_tests/aws/role/test_create_template.py -s
+# 	pytest --cov-report html --cov iambic functional_tests/aws/managed_policy/test_template_expiration.py -s
 
 
 docker_base_image_buildx := docker buildx build \

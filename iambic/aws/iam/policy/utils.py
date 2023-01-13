@@ -5,6 +5,7 @@ import asyncio
 from botocore.exceptions import ClientError
 from deepdiff import DeepDiff
 
+from iambic.aws.models import AWSAccount
 from iambic.aws.utils import boto_crud_call, paginated_search
 from iambic.core import noq_json as json
 from iambic.core.context import ExecutionContext
@@ -258,3 +259,21 @@ async def apply_managed_policy_tags(
         await asyncio.gather(*tasks)
 
     return response
+
+
+async def get_managed_policy_across_accounts(
+    aws_accounts: list[AWSAccount], managed_policy_path: str, managed_policy_name: str
+) -> dict:
+    async def get_managed_policy_for_account(aws_account: AWSAccount):
+        iam_client = await aws_account.get_boto3_client("iam")
+        arn = f"arn:aws:iam::{aws_account.account_id}:policy{managed_policy_path}{managed_policy_name}"
+        return {aws_account.account_id: await get_managed_policy(iam_client, arn)}
+
+    account_on_managed_policies = await asyncio.gather(
+        *[get_managed_policy_for_account(aws_account) for aws_account in aws_accounts]
+    )
+    return {
+        account_id: mp
+        for resp in account_on_managed_policies
+        for account_id, mp in resp.items()
+    }

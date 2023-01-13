@@ -5,12 +5,10 @@ from unittest import IsolatedAsyncioTestCase
 
 import dateparser
 
-from functional_tests.aws.role.utils import (
-    generate_role_template_from_base,
-    get_role_across_accounts,
-)
+from functional_tests.aws.role.utils import generate_role_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
+from iambic.aws.iam.role.utils import get_role_across_accounts
 from iambic.core.context import ctx
 
 

@@ -7,7 +7,7 @@ import pytest
 from iambic.aws.iam.role.models import RoleTemplate
 from iambic.aws.iam.role.template_generation import create_templated_role
 from iambic.aws.models import AWSAccount
-from iambic.config.models import Config, CURRENT_IAMBIC_VERSION
+from iambic.config.models import CURRENT_IAMBIC_VERSION, Config
 from iambic.core.iambic_enum import IambicManaged
 
 
