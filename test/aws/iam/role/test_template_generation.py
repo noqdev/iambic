@@ -7,7 +7,7 @@ import pytest
 from iambic.aws.iam.role.models import RoleTemplate
 from iambic.aws.iam.role.template_generation import create_templated_role
 from iambic.aws.models import AWSAccount
-from iambic.config.models import Config, CURRENT_IAMBIC_VERSION
+from iambic.config.models import CURRENT_IAMBIC_VERSION, Config
 from iambic.core.iambic_enum import IambicManaged
 
 
@@ -56,7 +56,9 @@ async def test_create_template_role(test_role, mock_account_id_to_role_map, mock
     test_role_ref["account_id"] = "123456789012"
     test_role_refs = [test_role_ref]
     test_existing_template_map = {}
-    test_configs = [Config(version=CURRENT_IAMBIC_VERSION)]
+    test_configs = [
+        Config(version=CURRENT_IAMBIC_VERSION, file_path="cool_file_man.yaml")
+    ]
     output_role = await create_templated_role(
         test_config,
         test_aws_account_map,

@@ -1,0 +1,56 @@
+---
+title: Okta
+---
+
+## 1. Configure Okta
+
+In this tutorial, you will configure IAMbic for an Okta Organization. By the end of this tutorial,
+you will have performed the following steps:
+
+1. Create a basic Okta configuration for Iambic
+2. Create an Okta Group with users
+
+
+## Prerequisities
+
+You will need administrative access to an existing Okta organization. If you do not have one, you can
+create a developer organization at [developer.okta.com](https://developer.okta.com/).
+
+## 1.1 Create a basic Okta configuration for Iambic
+
+First, you'll need to create an API token that allows Okta to manage group memberships by
+signing in to Okta and following these steps:
+
+1. Click on Security
+2. Click on API
+3. Click on Tokens
+4. Click on "Create Token"
+5. Create a token for Iambic. This token will be used to authenticate Iambic with Okta.
+6. Copy the value of the token.
+
+<details>
+  <summary>Screenshot</summary>
+
+![Okta-token](/img/okta/okta-token-1.png)
+
+</details>
+
+With your token in hand, create the following file
+in your iambic repo:
+
+
+```yaml
+secrets:
+  okta:
+    - idp_name: development
+      org_url: https://dev-12345.okta.com/
+      api_token: <TOKEN>
+```
+
+
+Security -> API -> Tokens -> Create Token
+
+
+
+Store the token in the Iambic configuration file.
+
