@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pydantic import ValidationError
+
 from iambic.config.templates import TEMPLATE_TYPE_MAP
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate
@@ -21,6 +23,9 @@ def load_templates(template_paths: list[str]) -> list[BaseTemplate]:
                 file_path=template_path,
                 template_type=template_dict["template_type"],
             )
+            raise
+        except ValidationError:
+            log.critical("Invalid template structure", file_path=template_path)
             raise
 
     return templates

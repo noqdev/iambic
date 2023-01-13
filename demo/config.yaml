@@ -42,7 +42,5 @@ google:
 slack:
   alert_channel_id: 'C046KESSMQ8'
 
-sqs:
-  queues:
-    iam_mutation:
-      arn: arn:aws:sqs:us-east-1:759357822767:noqform-iam-mutation-events
+sqs_cloudtrail_changes_queues:
+  - arn:aws:sqs:us-east-1:759357822767:noqform-iam-mutation-events

@@ -4,7 +4,7 @@ import asyncio
 import base64
 import os
 from enum import Enum
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import boto3
 import googleapiclient.discovery
@@ -31,7 +31,7 @@ class OktaOrganization(BaseModel):
     org_url: str
     api_token: str
     request_timeout: int = 60
-    client: Optional[OktaClient]
+    client: Any = None  # OktaClient
 
     class Config:
         arbitrary_types_allowed = True
@@ -181,7 +181,7 @@ class Config(BaseModel):
         "These apply to all aws_accounts but can be overwritten by an account.",
     )
     slack_app: Optional[str] = None
-    sqs: Optional[dict] = {}
+    sqs_cloudtrail_changes_queues: Optional[list[str]] = []
     slack: Optional[dict] = {}
     template_type: str = "NOQ::Core::Config"
     version: str = Field(

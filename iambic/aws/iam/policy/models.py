@@ -236,7 +236,7 @@ class ManagedPolicyDocument(AccessModel):
 
     @property
     def resource_id(self):
-        return
+        return "N/A"
 
 
 class ManagedPolicyProperties(BaseModel):
@@ -253,6 +253,14 @@ class ManagedPolicyProperties(BaseModel):
         [],
         description="List of tags attached to the role",
     )
+
+    @property
+    def resource_type(self):
+        return "aws:iam:managed_policy:properties"
+
+    @property
+    def resource_id(self):
+        return self.policy_name
 
 
 class ManagedPolicyTemplate(AWSTemplate, AccessModel):
@@ -368,6 +376,10 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
             log_str = "New resource found in code."
             if not is_iambic_import_only:
                 log_str = f"{log_str} Creating resource..."
+                if isinstance(account_policy["PolicyDocument"], dict):
+                    account_policy["PolicyDocument"] = json.dumps(
+                        account_policy["PolicyDocument"]
+                    )
                 await boto_crud_call(client.create_policy, **account_policy)
             log.info(log_str, **log_params)
 

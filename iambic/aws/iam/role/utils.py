@@ -6,6 +6,7 @@ from typing import Union
 
 from deepdiff import DeepDiff
 
+from iambic.aws.models import AWSAccount
 from iambic.aws.utils import boto_crud_call, paginated_search
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
@@ -94,6 +95,27 @@ async def get_role(role_name: str, iam_client, include_policies: bool = True) ->
         current_role = {}
 
     return current_role
+
+
+async def get_role_across_accounts(
+    aws_accounts: list[AWSAccount], role_name: str, include_policies: bool = True
+) -> dict:
+    async def get_role_for_account(aws_account: AWSAccount):
+        iam_client = await aws_account.get_boto3_client("iam")
+        return {
+            aws_account.account_id: await get_role(
+                role_name, iam_client, include_policies
+            )
+        }
+
+    account_on_roles = await asyncio.gather(
+        *[get_role_for_account(aws_account) for aws_account in aws_accounts]
+    )
+    return {
+        account_id: role
+        for resp in account_on_roles
+        for account_id, role in resp.items()
+    }
 
 
 async def apply_role_tags(
