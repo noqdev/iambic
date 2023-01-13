@@ -236,7 +236,7 @@ class ManagedPolicyDocument(AccessModel):
 
     @property
     def resource_id(self):
-        return
+        return "N/A"
 
 
 class ManagedPolicyProperties(BaseModel):
@@ -253,6 +253,14 @@ class ManagedPolicyProperties(BaseModel):
         [],
         description="List of tags attached to the role",
     )
+
+    @property
+    def resource_type(self):
+        return "aws:iam:managed_policy:properties"
+
+    @property
+    def resource_id(self):
+        return self.policy_name
 
 
 class ManagedPolicyTemplate(AWSTemplate, AccessModel):
