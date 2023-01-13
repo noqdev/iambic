@@ -181,7 +181,7 @@ class Config(BaseModel):
         "These apply to all aws_accounts but can be overwritten by an account.",
     )
     slack_app: Optional[str] = None
-    sqs_queues: Optional[list[str]] = []
+    sqs_cloudtrail_changes_queues: Optional[list[str]] = []
     slack: Optional[dict] = {}
     template_type: str = "NOQ::Core::Config"
     version: str = Field(

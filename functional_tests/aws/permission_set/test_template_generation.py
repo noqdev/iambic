@@ -49,10 +49,6 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
         identity_center_account = IAMBIC_TEST_DETAILS.identity_center_account
         identity_center_details = identity_center_account.identity_center_details
 
-        from iambic.core import noq_json as json
-
-        print(json.dumps(identity_center_details.permission_set_map, indent=2))
-
         permission_set_properties = identity_center_details.permission_set_map.get(
             self.template.properties.name
         )
