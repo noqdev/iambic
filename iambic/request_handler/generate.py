@@ -34,9 +34,9 @@ async def generate_templates(configs: list[Config], output_dir: str):
     #                 )
     #             )
     tasks = [
-        generate_aws_role_templates(configs, output_dir),
-        generate_aws_managed_policy_templates(configs, output_dir),
-        generate_aws_permission_set_templates(configs, output_dir),
+        # generate_aws_role_templates(configs, output_dir),
+        # generate_aws_managed_policy_templates(configs, output_dir),
+        # generate_aws_permission_set_templates(configs, output_dir),
     ]
     for config in configs:
         for okta_organization in config.okta_organizations:
