@@ -95,6 +95,17 @@ async def generate_permission_set_resource_file(
     return response
 
 
+def _sorted_and_clean_access_rules(unsorted_rules: list) -> list:
+    # access_rules has no semantic ordering, we sort it explicitly to ensure the template
+    # generation is deterministic.
+    sorted_access_rules = sorted(
+        unsorted_rules, key=lambda rule: rule["account_rule_key"]
+    )
+    for rule in sorted_access_rules:
+        del rule["account_rule_key"]
+    return sorted_access_rules
+
+
 async def create_templated_permission_set(  # noqa: C901
     aws_account_map: dict[str, AWSAccount],
     permission_set_name: str,
@@ -219,6 +230,7 @@ async def create_templated_permission_set(  # noqa: C901
                         "included_accounts": accounts,
                         "users": [],
                         "groups": [],
+                        "account_rule_key": account_rule_key,  # this will be remove after sorting
                     }
 
                 account_rules[account_rule_key][f"{assignment_type}s"].append(
@@ -227,6 +239,12 @@ async def create_templated_permission_set(  # noqa: C901
 
         if account_rules:
             permission_set_params["access_rules"].extend(list(account_rules.values()))
+
+    # access_rules has no semantic ordering, we sort it explicitly to ensure the template
+    # generation is deterministic.
+    permission_set_params["access_rules"] = _sorted_and_clean_access_rules(
+        permission_set_params["access_rules"]
+    )
 
     if len(permission_set_refs) != len(aws_account_map):
         permission_set_params["included_orgs"] = [
