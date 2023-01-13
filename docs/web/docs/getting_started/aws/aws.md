@@ -2,11 +2,11 @@
 title: AWS
 ---
 
-## 1. Configure AWS
+## Configure AWS
 
-In this tutorial, you will configure IAMbic for an AWS account or multiple accounts in an AWS organization
+In this tutorial, you will configure IAMbic for an AWS account or multiple accounts in an AWS organization.
 
-## Prerequisites
+### Prerequisites
 
 You will need administrative-level access to AWS in order to create and manage IAM identities. This level of access is required to create an IAM identity for the use of IAMbic and also to manage policies associated with it.
 
@@ -52,6 +52,8 @@ https://docs.aws.amazon.com/IAM/latest/UserGuide/id\_roles\_create.html
 
 https://docs.aws.amazon.com/singlesignon/latest/userguide/howtocreatepermissionset.html  -->
 
+### 1. Configuring AWS
+   
 1.1 Write a configuration
 
 You'll need to tell IAMbic how to connect to your AWS account or AWS organization. IAMbic can connect to your AWS accounts or AWS organizations via a number of different methods, Including using a predefined AWS profile, performing assume role operations, or a combination of these. This guide will walk you through the basic configuration. For anything more advanced, please consult the Configuration Reference. (TODO: Link needed)
