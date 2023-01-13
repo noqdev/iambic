@@ -4,6 +4,7 @@ import random
 
 from iambic.aws.iam.policy.models import (
     AWS_MANAGED_POLICY_TEMPLATE_TYPE,
+    ManagedPolicyDocument,
     ManagedPolicyTemplate,
 )
 from iambic.aws.iam.policy.template_generation import get_managed_policy_dir
@@ -35,16 +36,16 @@ async def generate_managed_policy_template_from_base(
     managed_policy_template.properties.description = (
         "This was created by a functional test."
     )
-    managed_policy_template.properties.policy_document = {
-        "Version": "2012-10-17",
-        "Statement": [
+    managed_policy_template.properties.policy_document = ManagedPolicyDocument(
+        version="2012-10-17",
+        statement=[
             {
                 "Action": "s3:ListObject",
                 "Effect": "Deny",
                 "Resource": ["*"],
             }
         ],
-    }
+    )
 
     managed_policy_template.write()
     return managed_policy_template

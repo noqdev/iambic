@@ -16,7 +16,7 @@ class SetEncoder(json.JSONEncoder):
         if isinstance(obj, Decimal):
             return float(obj)
         if isinstance(obj, datetime):
-            return obj.timestamp()
+            return obj.strftime("%Y-%m-%d %H:%M:%S %Z")
         if isinstance(obj, Exception):
             return str(obj)
         if isinstance(obj, UUID):
