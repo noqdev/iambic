@@ -174,7 +174,7 @@ class PolicyStatement(AccessModel, ExpiryModel):
 
 
 class AssumeRolePolicyDocument(AccessModel):
-    version: Optional[str] = None
+    version: str = "2008-10-17"
     statement: Optional[List[PolicyStatement]] = None
 
     @property
@@ -190,7 +190,7 @@ class PolicyDocument(AccessModel, ExpiryModel):
     policy_name: str = Field(
         description="The name of the policy.",
     )
-    version: Optional[str] = None
+    version: Optional[str]
     statement: Optional[List[PolicyStatement]] = Field(
         None,
         description="List of policy statements",

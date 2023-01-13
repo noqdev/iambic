@@ -8,7 +8,7 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 const config = {
   title: 'Iambic Documentation',
   tagline: 'Cloud permissions made easy',
-  url: 'https://your-docusaurus-test-site.com',
+  url: 'https://iambic.org/',
   baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
@@ -58,7 +58,7 @@ const config = {
 
         logo: {
           alt: 'Noq Logo',
-          src: 'img/logo.svg',
+          src: 'img/mark.svg',
         },
         items: [
           // {
@@ -124,7 +124,19 @@ const config = {
         theme: lightCodeTheme,
         darkTheme: darkCodeTheme,
       },
+      colorMode: {
+        defaultMode: 'dark',
+      },
     }),
+    plugins: [
+      [
+        require.resolve("@cmfcmf/docusaurus-search-local"),
+        {
+          indexDocs: true,
+          indexBlog: false,
+        },
+      ],
+    ],
 };
 
 module.exports = config;

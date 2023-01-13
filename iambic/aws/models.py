@@ -118,6 +118,9 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
     )
     boto3_session_map: Optional[dict] = None
 
+    class Config:
+        fields = {"boto3_session_map": {"exclude": True}}
+
     async def get_boto3_session(self, region_name: Optional[str] = None):
         region_name = region_name or self.default_region
 
@@ -209,6 +212,9 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
     )
     org_session_info: Optional[dict] = None
     identity_center_details: Optional[Union[IdentityCenterDetails, None]] = None
+
+    class Config:
+        fields = {"org_session_info": {"exclude": True}}
 
     async def get_boto3_session(self, region_name: str = None):
         region_name = region_name or self.default_region
@@ -371,6 +377,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         description="The AWS Account ID and region of the AWS Identity Center instance to use for this organization",
     )
     default_rule: BaseAWSOrgRule = Field(
+        BaseAWSOrgRule(enabled=True),
         description="The rule used to determine how an organization account should be handled if the account was not found in account_rules.",
     )
     account_rules: Optional[List[AWSOrgAccountRule]] = Field(

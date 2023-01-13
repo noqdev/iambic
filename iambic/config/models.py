@@ -15,7 +15,7 @@ from slack_bolt import App as SlackBoltApp
 
 from iambic.aws.models import AWSAccount, AWSOrganization
 from iambic.core.iambic_enum import IambicManaged
-from iambic.core.models import Variable
+from iambic.core.models import BaseTemplate, Variable
 from iambic.core.utils import aio_wrapper, yaml
 
 CURRENT_IAMBIC_VERSION = "1"
@@ -162,7 +162,7 @@ class AWSConfig(BaseModel):
     )
 
 
-class Config(BaseModel):
+class Config(BaseTemplate):
     aws: AWSConfig = Field(
         AWSConfig(),
         description="AWS configuration for iambic to use when managing AWS resources",
@@ -207,6 +207,8 @@ class Config(BaseModel):
             account.account_id: idx for idx, account in enumerate(self.aws.accounts)
         }
 
+        modified = False
+
         if self.aws and self.aws.organizations:
             orgs_accounts = await asyncio.gather(
                 *[org.get_accounts() for org in self.aws.organizations]
@@ -221,6 +223,11 @@ class Config(BaseModel):
                         self.aws.accounts[account_elem] = account
                     else:
                         self.aws.accounts.append(account)
+                        modified = True
+        if modified:
+            # exclude_unset will exclude all updated fields, so we
+            # set it False here
+            self.write(exclude_unset=False)
 
     def get_aws_secret(self, extend: ExtendsConfig) -> dict:
         """TODO: Secrets should be moved to the account to prevent an anti-pattern
@@ -293,6 +300,6 @@ class Config(BaseModel):
 
     @classmethod
     def load(cls, file_path: str):
-        c = cls(file_path=file_path, **yaml.load(open(file_path)))
+        c = cls(file_path=str(file_path), **yaml.load(open(file_path)))
         c.configure_plugins()
         return c

@@ -19,20 +19,20 @@ async def list_managed_policy_versions(iam_client, policy_arn: str) -> list[dict
     ).get("Versions", [])
 
 
-async def list_managed_policy_tags(iam_client, managed_policy_arn: str) -> list[dict]:
+async def list_managed_policy_tags(iam_client, policy_arn: str) -> list[dict]:
     return await paginated_search(
-        iam_client.list_policy_tags, "Tags", PolicyArn=managed_policy_arn
+        iam_client.list_policy_tags, "Tags", PolicyArn=policy_arn
     )
 
 
 async def get_managed_policy_version_doc(
-    iam_client, managed_policy_arn: str, version_id: str, **kwargs
+    iam_client, policy_arn: str, version_id: str, **kwargs
 ) -> dict:
     return (
         (
             await boto_crud_call(
                 iam_client.get_policy_version,
-                PolicyArn=managed_policy_arn,
+                PolicyArn=policy_arn,
                 VersionId=version_id,
             )
         )
@@ -41,7 +41,7 @@ async def get_managed_policy_version_doc(
     )
 
 
-async def get_managed_policy_attachments(iam_client, managed_policy_arn: str):
+async def get_managed_policy_attachments(iam_client, policy_arn: str):
     """
     Get a list of all entities that have the managed policy attached.
 
@@ -55,18 +55,18 @@ async def get_managed_policy_attachments(iam_client, managed_policy_arn: str):
     return await paginated_search(
         iam_client.list_entities_for_policy,
         response_keys=["PolicyGroups", "PolicyRoles", "PolicyUsers"],
-        PolicyArn=managed_policy_arn,
+        PolicyArn=policy_arn,
     )
 
 
-async def get_managed_policy(iam_client, managed_policy_arn: str, **kwargs) -> dict:
+async def get_managed_policy(iam_client, policy_arn: str, **kwargs) -> dict:
     try:
         response = (
-            await boto_crud_call(iam_client.get_policy, PolicyArn=managed_policy_arn)
+            await boto_crud_call(iam_client.get_policy, PolicyArn=policy_arn)
         ).get("Policy", {})
         if response:
             response["PolicyDocument"] = await get_managed_policy_version_doc(
-                iam_client, managed_policy_arn, response.pop("DefaultVersionId")
+                iam_client, policy_arn, response.pop("DefaultVersionId")
             )
     except ClientError as err:
         if err.response["Error"]["Code"] == "NoSuchEntity":
@@ -106,7 +106,7 @@ async def list_managed_policies(
     )
     return await get_managed_policy_semaphore.process(
         [
-            {"iam_client": iam_client, "managed_policy_arn": policy["Arn"]}
+            {"iam_client": iam_client, "policy_arn": policy["Arn"]}
             for policy in managed_policies
         ]
     )
@@ -128,7 +128,7 @@ async def delete_managed_policy(iam_client, policy_arn: str, log_params: dict):
 
     log.info(
         "Detaching managed policy from resources.",
-        managed_policy_arn=policy_arn,
+        policy_arn=policy_arn,
         **log_params,
     )
     await asyncio.gather(*tasks)
@@ -203,10 +203,12 @@ async def apply_managed_policy_tags(
     log_params: dict,
     context: ExecutionContext,
 ) -> list[ProposedChange]:
-    existing_tag_map = {tag["Key"]: tag["Value"] for tag in existing_tags}
-    template_tag_map = {tag["Key"]: tag["Value"] for tag in template_tags}
+    existing_tag_map = {tag["Key"]: tag.get("Value") for tag in existing_tags}
+    template_tag_map = {tag["Key"]: tag.get("Value") for tag in template_tags}
     tags_to_apply = [
-        tag for tag in template_tags if tag["Value"] != existing_tag_map.get(tag["Key"])
+        tag
+        for tag in template_tags
+        if tag.get("Value") != existing_tag_map.get(tag["Key"])
     ]
     tasks = []
     response = []
