@@ -4,20 +4,16 @@ import os
 
 import jsonschema2md2
 
-from iambic.aws.iam.models import MaxSessionDuration, Path
-from iambic.aws.iam.policy.models import (
-    AssumeRolePolicyDocument,
-    ManagedPolicyRef,
-    ManagedPolicyTemplate,
-    PolicyDocument,
-    PolicyStatement,
+from iambic.aws.iam.policy.models import ManagedPolicyTemplate
+from iambic.aws.iam.role.models import RoleTemplate
+from iambic.aws.identity_center.permission_set.models import (
+    AWSIdentityCenterPermissionSetTemplate,
 )
-from iambic.aws.iam.role.models import PermissionBoundary, RoleAccess, RoleTemplate
 from iambic.aws.models import AWSAccount
 from iambic.config.models import Config, ExtendsConfig
 from iambic.core.models import Variable
 from iambic.core.utils import camel_to_snake
-from iambic.google.group.models import GroupMember, GroupTemplate
+from iambic.google.group.models import GroupTemplate
 
 
 def create_model_schemas(
@@ -32,7 +28,7 @@ def create_model_schemas(
         model_schema_path = str(os.path.join(schema_dir, f"{file_name}.md"))
         schema_md_str += f"* [{class_name}]({model_schema_path.replace('docs/', '')})\n"
         with open(model_schema_path, "w") as f:
-            f.write("".join(parser.parse_schema(model.schema())))
+            f.write("".join(parser.parse_schema(model.schema(by_alias=False))))
 
     return schema_md_str
 
@@ -40,17 +36,10 @@ def create_model_schemas(
 def generate_docs():
     aws_template_models = [
         RoleTemplate,
-        AssumeRolePolicyDocument,
-        ManagedPolicyRef,
-        PolicyDocument,
-        Path,
-        PermissionBoundary,
-        MaxSessionDuration,
-        RoleAccess,
-        PolicyStatement,
         ManagedPolicyTemplate,
+        AWSIdentityCenterPermissionSetTemplate,
     ]
-    google_template_models = [GroupTemplate, GroupMember]
+    google_template_models = [GroupTemplate]
     config_models = [
         AWSAccount,
         Config,
