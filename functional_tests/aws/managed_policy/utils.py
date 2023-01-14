@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-import asyncio
 import random
 
 from iambic.aws.iam.policy.models import (
     AWS_MANAGED_POLICY_TEMPLATE_TYPE,
+    ManagedPolicyDocument,
     ManagedPolicyTemplate,
 )
 from iambic.aws.iam.policy.template_generation import get_managed_policy_dir
-from iambic.aws.iam.policy.utils import get_managed_policy
-from iambic.aws.models import AWSAccount
 from iambic.core.logger import log
 from iambic.core.utils import gather_templates
 
@@ -38,34 +36,16 @@ async def generate_managed_policy_template_from_base(
     managed_policy_template.properties.description = (
         "This was created by a functional test."
     )
-    managed_policy_template.properties.policy_document = {
-        "Version": "2012-10-17",
-        "Statement": [
+    managed_policy_template.properties.policy_document = ManagedPolicyDocument(
+        version="2012-10-17",
+        statement=[
             {
                 "Action": "s3:ListObject",
                 "Effect": "Deny",
                 "Resource": ["*"],
             }
         ],
-    }
+    )
 
     managed_policy_template.write()
-    return ManagedPolicyTemplate.load(managed_policy_template.file_path)
-
-
-async def get_managed_policy_across_accounts(
-    aws_accounts: list[AWSAccount], managed_policy_path: str, managed_policy_name: str
-) -> dict:
-    async def get_managed_policy_for_account(aws_account: AWSAccount):
-        iam_client = await aws_account.get_boto3_client("iam")
-        arn = f"arn:aws:iam::{aws_account.account_id}:policy{managed_policy_path}{managed_policy_name}"
-        return {aws_account.account_id: await get_managed_policy(iam_client, arn)}
-
-    account_on_managed_policies = await asyncio.gather(
-        *[get_managed_policy_for_account(aws_account) for aws_account in aws_accounts]
-    )
-    return {
-        account_id: mp
-        for resp in account_on_managed_policies
-        for account_id, mp in resp.items()
-    }
+    return managed_policy_template

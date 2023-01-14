@@ -4,11 +4,13 @@ from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.aws.managed_policy.utils import (
     generate_managed_policy_template_from_base,
-    get_managed_policy_across_accounts,
 )
 from functional_tests.aws.role.utils import get_modifiable_role
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.aws.iam.policy.utils import get_managed_policy_attachments
+from iambic.aws.iam.policy.utils import (
+    get_managed_policy_across_accounts,
+    get_managed_policy_attachments,
+)
 from iambic.core.context import ctx
 from iambic.core.utils import aio_wrapper
 
