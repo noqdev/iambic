@@ -18,5 +18,37 @@ Before you begin, you will need the following:
 
 * A Google Workspace administrative account
 
+## Set Up a Google Cloud Identity
+
+Administrator API
+
+Service Account
+
+.gitignore
+
+Domain Wide Delegation for Service Account in Google Admin
+
+oAuth Scopes:
+
+https://www.googleapis.com/auth/admin.directory.group
+https://www.googleapis.com/auth/admin.reports.audit.readonly
+https://www.googleapis.com/auth/admin.directory.user.security
+https://www.googleapis.com/auth/admin.directory.user
+https://www.googleapis.com/auth/admin.directory.group.member
+
+
+Cloud Identity:
+
+https://cloud.google.com/identity/docs/how-to/setup
+
+{
+  "assignedTo": "116530529754086502376", # Unique ID of service account
+  "roleId": "59319257640468482", # Unique ID of role
+  "scopeType": "CUSTOMER",
+  "kind": "admin#directory#roleAssignment"
+}
+
 ## Create a basic configuration for IAMbic
+
+
 
