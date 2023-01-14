@@ -181,9 +181,10 @@
                 "AWS_PROFILE": "580605962305_AdministratorAccess"
             },
             "args": [
-                "apply",
-                "-t",
-                "resources/aws/roles/all_accounts/iambic_test_role.yaml"
+                "import"
+                // "apply",
+                // "-t",
+                // "resources/aws/roles/all_accounts/iambic_test_role.yaml"
             ],
             "justMyCode": true,
             "cwd": "${workspaceFolder}/../iambic-templates"

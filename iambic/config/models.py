@@ -138,6 +138,7 @@ class GoogleProject(BaseModel):
 
 class ExtendsConfigKey(Enum):
     AWS_SECRETS_MANAGER = "AWS_SECRETS_MANAGER"
+    LOCAL_FILE = "LOCAL_FILE"
 
 
 class ExtendsConfig(BaseModel):
@@ -282,6 +283,14 @@ class Config(BaseTemplate):
             for extend in self.extends:
                 if extend.key == ExtendsConfigKey.AWS_SECRETS_MANAGER:
                     for k, v in self.get_aws_secret(extend).items():
+                        if not getattr(self, k, None):
+                            setattr(self, k, v)
+                if extend.key == ExtendsConfigKey.LOCAL_FILE:
+                    dir_path = os.path.dirname(self.file_path)
+                    extend_path = os.path.join(dir_path, extend.value)
+                    with open(extend_path, "r") as ymlfile:
+                        extend_config = yaml.load(ymlfile)
+                    for k, v in extend_config.items():
                         if not getattr(self, k, None):
                             setattr(self, k, v)
 
