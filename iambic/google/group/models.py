@@ -130,7 +130,12 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
 
         await self.remove_expired_resources(context)
 
-        if not group_exists and not self.deleted:
+        if not group_exists:
+            if self.deleted:
+                log.info(
+                    "Resource is marked for deletion, but does not exist in the cloud. Skipping.",
+                )
+                return change_details
             change_details.proposed_changes.append(
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,

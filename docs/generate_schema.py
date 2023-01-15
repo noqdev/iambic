@@ -48,7 +48,7 @@ def generate_docs():
         Variable,
     ]
 
-    schema_dir = os.path.join("docs", "schemas")
+    schema_dir = os.path.join("docs", "web", "docs", "schemas")
     os.makedirs(schema_dir, exist_ok=True)
     parser = jsonschema2md2.Parser(
         examples_as_yaml=False,
