@@ -55,6 +55,9 @@ Create a private GitHub repository called `iambic-templates`.
 mkdir iambic-templates
 cd iambic-templates
 git init
+cat <<EOF > .gitignore
+**/secrets.yaml
+EOF
 ```
 
 ## Onto the Next Steps

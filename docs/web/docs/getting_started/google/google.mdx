@@ -5,50 +5,321 @@ title: Google
 In this tutorial, you will configure IAMbic to manage Google Groups.
 By the end of this tutorial, you will have performed the following steps:
 
-1. Create a basic configuration for IAMbic
+1. Configure Iambic for Google Group Management
 2. Import existing Google Groups into your IAMbic templates repository
-3. Create a Google Group with multiple users
-4. Provide temporary (break-glass) access to your groups
+3. Create a Google Group with one or more users
+4. Add users / groups to a Google group
+5. Provide temporary ("break-glass") access to a Google Group
+6. Expire a Google Group
 
-Noq's SaaS Platform provides enterprise Self-Service features that make IAMbic change requests easier for end-users. Reach out to us for a demo on our website, [https://www.noq.dev](https://www.noq.dev)
+Noq's SaaS Platform provides enterprise Self-Service features that make Google Group requests easier for end-users. Reach out to us at [hello@noq.dev](mailto:hello@noq.dev) or visit [https://www.noq.dev](https://www.noq.dev) for more information.
 
 ## Prerequisites
 
 Before you begin, you will need the following:
 
-* A Google Workspace administrative account
+* A local Git repository to store your IAMbic templates (See [Getting Started](/getting_started/index.html) for guidance on setting this up)
+* A Google Workspace account, and administrative access to it
+* Set the following environment variables in the terminal you will be using to run Iambic commands.
+  These are only needed for the duration of this tutorial. They are not required for the normal usage of Iambic:
 
-## Set Up a Google Cloud Identity
+```bash
+export DOMAIN=<your_gsuite_domain.com>
+export EMAIL=<your_gsuite_email_address>
+```
 
-Administrator API
+## Configure Iambic for Google Group Management
 
-Service Account
+In this section, you will set up a Google Cloud Identity that will be used by Iambic to manage your Google Groups.
+Perform the following steps to set up your identity:
 
-.gitignore
+1. Sign in to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a new project for Iambic
+3. Enable the [Admin SDK](https://console.cloud.google.com/flows/enableapi?apiid=admin.googleapis.com)
+  and the [Cloud Identity API](https://console.cloud.google.com/flows/enableapi?apiid=cloudidentity.googleapis.com)
+4. Create a service account for Iambic with access to the Admin SDK API, and access to User Data.
 
-Domain Wide Delegation for Service Account in Google Admin
+<details>
+  <summary>Screenshot</summary>
 
-oAuth Scopes:
+![Create Service Account](/img/google/create-service-account.png)
 
-https://www.googleapis.com/auth/admin.directory.group
-https://www.googleapis.com/auth/admin.reports.audit.readonly
-https://www.googleapis.com/auth/admin.directory.user.security
-https://www.googleapis.com/auth/admin.directory.user
-https://www.googleapis.com/auth/admin.directory.group.member
+</details>
 
+5. Enable Domain Wide Delegation for the Google account with the following scopes: (TODO: Needs censoring)
+  - https://www.googleapis.com/auth/admin.directory.group
+  - https://www.googleapis.com/auth/admin.reports.audit.readonly
+  - https://www.googleapis.com/auth/admin.directory.user.security
+  - https://www.googleapis.com/auth/admin.directory.user
+  - https://www.googleapis.com/auth/admin.directory.group.member
 
-Cloud Identity:
+<details>
+  <summary>Screenshot</summary>
 
-https://cloud.google.com/identity/docs/how-to/setup
+![Domain Wide Delegation](/img/google/enable-domain-wide-delegation.png)
 
-{
-  "assignedTo": "116530529754086502376", # Unique ID of service account
-  "roleId": "59319257640468482", # Unique ID of role
-  "scopeType": "CUSTOMER",
-  "kind": "admin#directory#roleAssignment"
-}
+</details>
 
-## Create a basic configuration for IAMbic
+6. Follow the instructions [here](https://cloud.google.com/identity/docs/how-to/setup) to assign an admin role to your service account
 
+7. Download the JSON key file for your service account
 
+8. Create an Iambic configuration file for your Google Workspace account. This configuration file will instruct Iambic to load a
+   secrets.yaml file that will be created in the next step, and to enable google groups management.
+   Run the following command from the root of your `iambic-templates` repository to generate the configuration file:
+
+```bash
+# Run from the root folder of your iambic-templates repository
+mkdir -p config
+cat <<EOF > config/config.yaml
+template_type: NOQ::Core::Config
+version: "1"
+extends:
+  - key: LOCAL_FILE
+    value: secrets.yaml
+google:
+  groups:
+    enabled: true
+EOF
+```
+
+Create a `secrets.yaml` in your `config` directory with your service accounts secrets.
+An example is provided below, but you will need to replace the values with your own.
+These secrets can be found in the JSON key file you downloaded in the previous step.
+
+:::danger
+
+Never commit secrets Git. Ensure that you have a  `.gitignore` file in the root directory of your `iambic-templates` repository that
+is configured to ignore secrets.yaml files with `**/secrets.yaml`. Learn more about `.gitignore` files [here](https://git-scm.com/docs/gitignore).
+
+:::
+
+```yaml
+secrets:
+  google:
+    - subjects:
+      - domain: "iambic.org"
+        service_account: "iambic-...@iambic-....iam.gserviceaccount.com"
+      type: "service_account"
+      project_id: "iambic-..."
+      private_key_id: "bfa86..."
+      private_key: "-----BEGIN PRIVATE KEY-----\nMIIEv...\n-----END PRIVATE KEY-----\n"
+      client_email: "iambic-...@iambic-....iam.gserviceaccount.com"
+      client_id: "1165324...."
+      auth_uri: "https://accounts.google.com/o/oauth2/auth"
+      token_uri": "https://oauth2.googleapis.com/token"
+      auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs"
+      client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/iambic..."
+```
+
+From the base directory of your IAMbic templates repository, your directory structure should resemble the following. You may
+have more files if you've recently imported your cloud resources.
+
+```bash
+tree .
+.
+├── config
+│   ├── config.yaml
+│   └── secrets.yaml
+```
+
+## Import Existing Google Groups
+
+In this section, you will manually import existing Google Groups into your IAMbic templates repository.
+In a production environment, automation provided by Iambic would ensure that Git is updated with the
+cloud resources in your production environment. This allows you to monitor the history of
+these groups via Git History.
+
+Run the following command in the root of your `iambic-templates` repository to import your existing Google Groups:
+
+```bash
+iambic import
+```
+
+If you have Google Groups defined, your iambic-templates repository should have a `google/groups` directory with a
+subdirectory for each domain you have defined.
+
+## Create a Google group
+
+Iambic uses a YAML file to describe the desired state of a Google Group. In this section, we will create a group called
+`iambic-test-group` in your domain. Ensure that the environment variables you've set previously are still configured,
+and also ensure that your credentials are working properly by running the import process from the previous section.
+
+Run the following set of commands from the root of your `iambic-templates` repository to create a new Google Group template:
+
+```bash
+mkdir -p google/groups/$DOMAIN
+cat <<EOF > google/groups/$DOMAIN/iambic-test-group.yaml
+template_type: NOQ::Google::Group
+properties:
+  name: iambic-test-group
+  description: ''
+  domain: $DOMAIN
+  email: iambic-test-group@$DOMAIN
+  members:
+    - email: $EMAIL
+      role: OWNER
+EOF
+```
+
+Apply the template to your Google Workspace account by running the following command:
+
+:::info
+
+In a production environment, this would be handled by a command issued on a Github Pull Request after the appropriate approvals have been made.
+
+:::
+
+```bash
+iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+```
+
+Confirm that the group has been created by running the following in your terminal, and visiting the URL in your browser:
+
+```bash
+echo https://groups.google.com/a/$DOMAIN/g/iambic-test-group
+```
+
+:::tip
+
+You can add Subgroups to the google group with the  `type: GROUP` property. Here's an example:
+
+```yaml
+  - email: testgroup@DOMAIN.com
+    type: GROUP
+```
+
+:::
+
+By now the directory of your `iambic-templates` repository should resemble the following,
+and may include other resources that you've imported:
+
+```bash
+$ tree .
+.
+├── config
+│   ├── config.yaml
+│   └── secrets.yaml
+├── google
+│   └── groups
+│       └── $DOMAIN
+│           ├── iambic-test-group.yaml
+```
+
+## Add a user to the group
+
+In this section, we will add a user (testuser@example.com) to the group we created in the previous section.
+`example.com` is a reserved domain for this use case, and `testuser@example.com` is not a real user.
+
+Run the following command to replace the previous group you created with a new one that includes the new user:
+
+```bash
+cat <<EOF > google/groups/$DOMAIN/iambic-test-group.yaml
+template_type: NOQ::Google::Group
+properties:
+  name: iambic-test-group
+  description: ''
+  domain: $DOMAIN
+  email: iambic-test-group@$DOMAIN
+  members:
+    - email: $EMAIL
+      role: OWNER
+    - email: fakeuser@example.com
+EOF
+```
+
+Run the `apply` command again to update the group:
+
+```bash
+iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+```
+
+## Provide temporary ("break-glass") access to a Google Group
+
+In this section, we will provide `fakeuser@example.com` with break-glass access to the `iambic-test-group` we created in the
+previous section. Our fakeuser only needs access for two minutes (This user works very quickly). In order to facilitate this request,
+we will add an expiration date to the user's membership in the group. Run the following command to replace the previous group you
+created with a new one that includes the additional user and an expiration date:
+
+:::tip
+
+If a specific expiration date is provided without a timezone, Iambic will assume the timezone is UTC.
+If a timezone is provided, Iambic will use that timezone.
+
+:::
+
+```bash
+cat <<EOF > google/groups/$DOMAIN/iambic-test-group.yaml
+template_type: NOQ::Google::Group
+expires_at: tomorrow
+properties:
+  name: iambic-test-group
+  description: ''
+  domain: $DOMAIN
+  email: iambic-test-group@$DOMAIN
+  members:
+    - email: $EMAIL
+      role: OWNER
+    - email: fakeuser@example.com
+      expires_at: in 2 minutes
+EOF
+```
+
+```bash
+iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+```
+
+After applying the change, notice that the `expires_at` date in the template was converted from a relative expiration time ("in two minutes")
+to an absolute date (Example: "2021-05-20T15:00:00-04:00"). This allows Iambic to know exactly when the request should be expired.
+
+Confirm that the user was added by visiting the following URL in your browser:
+
+```bash
+echo https://groups.google.com/a/$DOMAIN/g/iambic-test-group
+```
+
+After a couple of minutes, the request should expire. In a production deployment, this process would be automatic. But for the purposes
+of testing, you can manually expire the request by re-running the apply command:
+
+```bash
+iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+```
+
+## Expire the Google Group
+
+In this section, we will update the Google Group we created in the previous section so the group will expire in one minute. Notice the extra
+line at the top-level of the YAML below, `expires_at: in one minute`.
+
+Run the following command to update the group template.
+
+```bash
+cat <<EOF > google/groups/$DOMAIN/iambic-test-group.yaml
+template_type: NOQ::Google::Group
+expires_at: in one minute
+properties:
+  name: iambic-test-group
+  description: ''
+  domain: $DOMAIN
+  email: iambic-test-group@$DOMAIN
+  members:
+    - email: $EMAIL
+      role: OWNER
+    - email: fakeuser@example.com
+      expires_at: in 2 minutes
+EOF
+
+iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+
+cat google/groups/$DOMAIN/iambic-test-group.yaml
+```
+
+In the last line of the above command, we printed the contents of the template to the terminal.
+Notice that the `expires_at` date has been updated from a relative time to an absolute date.
+This allows Iambic to know exactly when the request should be expired.
+
+After a minute, re-run the apply command to expire the request.
+
+```bash
+iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+```
 

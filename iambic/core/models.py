@@ -155,7 +155,7 @@ class BaseModel(PydanticBaseModel):
 
         if issubclass(type(self), ExpiryModel):
             if hasattr(self, "expires_at") and self.expires_at:
-                if self.expires_at < datetime.datetime.utcnow():
+                if self.expires_at < datetime.datetime.now(datetime.timezone.utc):
                     self.deleted = True
                     log.info("Expired resource found, marking for deletion")
                     return self
@@ -373,10 +373,14 @@ class ExpiryModel(PydanticBaseModel):
 
     @validator("expires_at", pre=True)
     def parse_expires_at(cls, value):
-        if not value or isinstance(value, datetime.datetime):
+        dt = None
+        if not value:
             return value
-        elif isinstance(value, datetime.date):
-            return datetime.datetime.combine(value, datetime.datetime.min.time())
-        return dateparser.parse(
-            value,
+        if isinstance(value, datetime.date):
+            dt = datetime.datetime.combine(value, datetime.datetime.min.time())
+        if isinstance(value, datetime.datetime):
+            dt = value
+        dt = dateparser.parse(
+            value, settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True}
         )
+        return dt
