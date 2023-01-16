@@ -137,3 +137,105 @@ Confirm that the group has been created by running the following in your termina
 ```bash
 echo https://$OKTA_DOMAIN/admin/groups
 ```
+
+By now the directory of your `iambic-templates` repository should resemble the following,
+and may include other resources that you've imported:
+
+```bash
+$ tree .
+.
+├── config
+│   ├── config.yaml
+│   └── secrets.yaml
+├── okta
+│   └── groups
+│       └── $OKTA_DOMAIN
+│           ├── iambic-test-group.yaml
+```
+
+## Add a user to the group
+
+In this section, we will add your user to the group we created in the previous section.
+
+Run the following command to replace the previous group you created with a new one that includes the new user:
+
+```bash
+cat <<EOF > google/groups/$DOMAIN/iambic-test-group.yaml
+template_type: NOQ::Google::Group
+properties:
+  name: iambic-test-group
+  description: ''
+  domain: $DOMAIN
+  email: iambic-test-group@$DOMAIN
+  members:
+    - email: $EMAIL
+      role: OWNER
+    - email: fakeuser@example.com
+EOF
+```
+
+```bash
+cat <<EOF > okta/groups/$OKTA_ORG_NAME/iambic-test-group.yaml
+template_type: NOQ::Okta::Group
+properties:
+  name: iambic-test-group
+  description: ''
+  idp_name: development
+  members:
+    - username: $EMAIL
+EOF
+```
+
+Run the `apply` command again to update the group:
+
+```bash
+iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+```
+
+## Provide temporary ("break-glass") access to a Google Group
+
+In this section, we will update the group membership added in the previous section
+to configure the access to expire in two minutes, simulating a very short breakglass request.
+In order to facilitate this request,
+we will add an expiration date to the user's membership in the group. Run the following command to replace the previous group you
+created with a new one that includes the additional user and an expiration date:
+
+:::tip
+
+If a specific expiration date is provided without a timezone, Iambic will assume the timezone is UTC.
+If a timezone is provided, Iambic will use that timezone.
+
+:::
+
+```bash
+cat <<EOF > okta/groups/$OKTA_ORG_NAME/iambic-test-group.yaml
+template_type: NOQ::Okta::Group
+properties:
+  name: iambic-test-group
+  description: ''
+  idp_name: development
+  members:
+    - username: $EMAIL
+      expires_at: in 2 minutes
+EOF
+```
+
+```bash
+iambic apply -t okta/groups/$OKTA_ORG_NAME/iambic-test-group.yaml
+```
+
+After applying the change, notice that the `expires_at` date in the template was converted from a relative expiration time ("in two minutes")
+to an absolute date (Example: "2021-05-20T15:00:00-04:00"). This allows Iambic to know exactly when the request should be expired.
+
+Confirm that the user was added by visiting the following URL in your browser:
+
+```bash
+echo https://$OKTA_DOMAIN/admin/groups
+```
+
+After a couple of minutes, the request should expire. In a production deployment, this process would be automatic. But for the purposes
+of testing, you can manually expire the request by re-running the apply command:
+
+```bash
+iambic apply -t okta/groups/$OKTA_ORG_NAME/iambic-test-group.yaml
+```
