@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import json
 import os
 from enum import Enum
 from typing import Any, List, Optional
@@ -16,7 +17,7 @@ from slack_bolt import App as SlackBoltApp
 from iambic.aws.models import AWSAccount, AWSOrganization
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.models import Variable
-from iambic.core.utils import aio_wrapper, yaml
+from iambic.core.utils import aio_wrapper, yaml, sort_dict
 
 CURRENT_IAMBIC_VERSION = "1"
 
@@ -171,10 +172,6 @@ class Config(BaseModel):
     okta_organizations: List[OktaOrganization] = []
     extends: List[ExtendsConfig] = []
     secrets: Optional[dict] = None
-    role_access_tag: Optional[str] = Field(
-        "noq-authorized",
-        description="The key of the tag used to store users and groups that can assume into the role the tag is on",
-    )
     variables: Optional[List[Variable]] = Field(
         [],
         description="A list of variables to be used when creating templates. "
@@ -196,9 +193,6 @@ class Config(BaseModel):
             return
 
         for elem, account in enumerate(self.aws.accounts):
-            if not account.role_access_tag:
-                self.aws.accounts[elem].role_access_tag = self.role_access_tag
-
             for variable in self.variables:
                 if variable.key not in [av.key for av in account.variables]:
                     self.aws.accounts[elem].variables.append(variable)
@@ -213,8 +207,6 @@ class Config(BaseModel):
             )
             for org_accounts in orgs_accounts:
                 for account in org_accounts:
-                    if not account.role_access_tag:
-                        account.role_access_tag = self.role_access_tag
                     if (
                         account_elem := config_account_idx_map.get(account.account_id)
                     ) is not None:
@@ -222,7 +214,9 @@ class Config(BaseModel):
                     else:
                         self.aws.accounts.append(account)
 
-    def get_aws_secret(self, extend: ExtendsConfig) -> dict:
+        await self.configure_plugins()
+
+    async def get_aws_secret(self, extend: ExtendsConfig) -> dict:
         """TODO: Secrets should be moved to the account to prevent an anti-pattern
         It also makes it required for every account to have access to the account the secret exists on
         Example: If the secret is in prod
@@ -230,22 +224,15 @@ class Config(BaseModel):
         """
         secret_arn = extend.value
         region_name = secret_arn.split(":")[3]
-        session = boto3.Session(region_name=region_name)
-        if extend.assume_role_arn:
-            sts = session.client("sts")
-            role_params = dict(
-                RoleArn=extend.assume_role_arn,
-                RoleSessionName="iambic",
-            )
-            if extend.external_id:
-                role_params["ExternalId"] = self.external_id
-            role = sts.assume_role(**role_params)
-            session = boto3.Session(
-                region_name=region_name,
-                aws_access_key_id=role["Credentials"]["AccessKeyId"],
-                aws_secret_access_key=role["Credentials"]["SecretAccessKey"],
-                aws_session_token=role["Credentials"]["SessionToken"],
-            )
+        secret_account_id = secret_arn.split(":")[4]
+        aws_account_map = {
+            account.account_id: account for account in self.aws.accounts
+        }
+
+        if aws_account := aws_account_map.get(secret_account_id):
+            session = await aws_account.get_boto3_session(region_name=region_name)
+        else:
+            session = boto3.Session(region_name=region_name)
 
         client = session.client(service_name="secretsmanager")
         get_secret_value_response = client.get_secret_value(SecretId=secret_arn)
@@ -270,11 +257,11 @@ class Config(BaseModel):
         if self.secrets and (okta_secrets := self.secrets.get("okta")):
             self.okta_organizations = [OktaOrganization(**x) for x in okta_secrets]
 
-    def combine_extended_configs(self):
+    async def combine_extended_configs(self):
         if self.extends:
             for extend in self.extends:
                 if extend.key == ExtendsConfigKey.AWS_SECRETS_MANAGER:
-                    for k, v in self.get_aws_secret(extend).items():
+                    for k, v in (await self.get_aws_secret(extend)).items():
                         if not getattr(self, k, None):
                             setattr(self, k, v)
 
@@ -285,8 +272,8 @@ class Config(BaseModel):
         aws_account = aws_account_map[account_id]
         return await aws_account.get_boto3_session(region_name)
 
-    def configure_plugins(self):
-        self.combine_extended_configs()
+    async def configure_plugins(self):
+        await self.combine_extended_configs()
         self.configure_slack()
         self.configure_google()
         self.configure_okta()
@@ -294,5 +281,25 @@ class Config(BaseModel):
     @classmethod
     def load(cls, file_path: str):
         c = cls(file_path=file_path, **yaml.load(open(file_path)))
-        c.configure_plugins()
         return c
+
+    def write(self, file_path, exclude_none=True, exclude_unset=False, exclude_defaults=True):
+        input_dict = self.json(
+            exclude_none=exclude_none,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude={"google_projects", "okta_organizations", "slack_app", "secrets"},
+        )
+        input_dict = json.loads(input_dict)
+        input_dict["template_type"] = self.template_type
+        sorted_input_dict = sort_dict(
+            input_dict,
+            [
+                "template_type",
+                "version",
+            ]
+        )
+
+        os.makedirs(os.path.dirname(os.path.expanduser(file_path)), exist_ok=True)
+        with open(file_path, "w") as f:
+            f.write(yaml.dump(sorted_input_dict))

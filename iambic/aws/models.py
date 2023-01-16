@@ -30,7 +30,7 @@ from iambic.core.models import (
     TemplateChangeDetails,
     Variable,
 )
-from iambic.core.utils import NoqSemaphore, aio_wrapper
+from iambic.core.utils import NoqSemaphore, aio_wrapper, sort_dict
 
 yaml = YAML()
 
@@ -195,10 +195,6 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         Partition.AWS,
         description="The AWS partition the account is in. Options are aws, aws-us-gov, and aws-cn",
     )
-    role_access_tag: Optional[str] = Field(
-        None,
-        description="The key of the tag used to store users and groups that can assume into the role the tag is on",
-    )
     iambic_managed: Optional[IambicManaged] = Field(
         IambicManaged.UNDEFINED,
         description="Controls the directionality of iambic changes",
@@ -311,6 +307,47 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
                         group["GroupId"]: group for group in user_or_group["Groups"]
                     }
 
+    def dict(
+        self,
+        *,
+        include: Optional[
+            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
+        ] = None,
+        exclude: Optional[
+            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
+        ] = None,
+        by_alias: bool = False,
+        skip_defaults: Optional[bool] = None,
+        exclude_unset: bool = True,
+        exclude_defaults: bool = False,
+        exclude_none: bool = True,
+    ) -> "DictStrAny":  # noqa
+        required_exclude = {"boto3_session_map", "org_session_info", "identity_center_details"}
+        if exclude:
+            exclude.update(required_exclude)
+        else:
+            exclude = required_exclude
+
+        resp = super(AWSAccount, self).dict(
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            skip_defaults=skip_defaults,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+        )
+        return sort_dict(
+            resp,
+            [
+                "account_id",
+                "account_name",
+                "org_id",
+                "identity_center_account",
+                "default_rule",
+            ]
+        )
+
     def __str__(self):
         return f"{self.account_name} - ({self.account_id})"
 
@@ -365,7 +402,6 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         None,
         description="A unique identifier designating the identity of the organization",
     )
-    org_name: Optional[str] = None
     identity_center_account: Optional[AWSIdentityCenterAccount] = Field(
         default=None,
         description="The AWS Account ID and region of the AWS Identity Center instance to use for this organization",
@@ -483,8 +519,41 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
 
         return response
 
+    def dict(
+        self,
+        *,
+        include: Optional[
+            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
+        ] = None,
+        exclude: Optional[
+            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
+        ] = None,
+        by_alias: bool = False,
+        skip_defaults: Optional[bool] = None,
+        exclude_unset: bool = True,
+        exclude_defaults: bool = False,
+        exclude_none: bool = True,
+    ) -> "DictStrAny":  # noqa
+        if exclude:
+            exclude.add("boto3_session_map")
+        else:
+            exclude = {"boto3_session_map"}
+
+        resp = super(AWSOrganization, self).dict(
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            skip_defaults=skip_defaults,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+        )
+        return sort_dict(
+            resp, ["org_id"]
+        )
+
     def __str__(self):
-        return f"{self.org_name} - ({self.org_id})"
+        return self.org_id
 
 
 class AWSTemplate(BaseTemplate, ExpiryModel):
