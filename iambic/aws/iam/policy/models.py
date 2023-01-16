@@ -7,7 +7,8 @@ from typing import List, Optional, Union
 
 import botocore
 from jinja2 import BaseLoader, Environment
-from pydantic import Field, constr
+from pydantic import constr
+from sqlmodel import Field
 
 from iambic.aws.iam.models import Path
 from iambic.aws.iam.policy.utils import (
@@ -139,7 +140,6 @@ class PolicyStatement(AccessModel, ExpiryModel):
         None,
         description="A single regex or list of regexes. "
         "Values are the actions that can be performed on the resources in the policy statement",
-        example="dynamodb:list*",
     )
     not_action: Optional[Union[List[str], str]] = Field(
         None,

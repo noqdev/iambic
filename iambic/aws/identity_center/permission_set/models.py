@@ -5,7 +5,7 @@ import re
 from itertools import chain
 from typing import List, Optional, Union
 
-from pydantic import Field
+from sqlmodel import Field
 
 from iambic.aws.iam.policy.models import PolicyStatement
 from iambic.aws.identity_center.permission_set.utils import (

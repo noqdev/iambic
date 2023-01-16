@@ -6,7 +6,8 @@ from itertools import chain
 from typing import Optional, Union
 
 import botocore
-from pydantic import Field, constr
+from pydantic import constr
+from sqlmodel import Field
 
 from iambic.aws.iam.models import MaxSessionDuration, Path
 from iambic.aws.iam.policy.models import (

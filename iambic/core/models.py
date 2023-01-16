@@ -12,9 +12,9 @@ import dateparser
 from deepdiff.model import PrettyOrderedSet
 from git import Repo
 from jinja2 import BaseLoader, Environment
-from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, validator
+from pydantic import validator
 from pydantic.fields import ModelField
+from sqlmodel import Field, SQLModel
 
 from iambic.aws.utils import apply_to_account
 from iambic.core.context import ExecutionContext
@@ -27,7 +27,9 @@ if TYPE_CHECKING:
     from iambic.config.models import Config
 
 
-class BaseModel(PydanticBaseModel):
+class BaseModel(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+
     @classmethod
     def update_forward_refs(cls, **kwargs):
         kwargs.update({"Union": Union})
@@ -209,7 +211,7 @@ class ProposedChangeType(Enum):
     DETACH = "Detach"
 
 
-class ProposedChange(PydanticBaseModel):
+class ProposedChange(SQLModel):
     change_type: ProposedChangeType
     account: Optional[
         str
@@ -222,7 +224,7 @@ class ProposedChange(PydanticBaseModel):
     change_summary: Optional[dict]
 
 
-class AccountChangeDetails(PydanticBaseModel):
+class AccountChangeDetails(SQLModel):
     org_id: Optional[str]
     account: Union[str, int]
     resource_id: Union[str, int]
@@ -231,7 +233,7 @@ class AccountChangeDetails(PydanticBaseModel):
     proposed_changes: list[ProposedChange] = Field(default=[])
 
 
-class TemplateChangeDetails(PydanticBaseModel):
+class TemplateChangeDetails(SQLModel):
     resource_id: str
     resource_type: str
     template_path: str
@@ -354,12 +356,12 @@ class BaseTemplate(
         return cls(file_path=file_path, **yaml.load(open(file_path)))
 
 
-class Variable(PydanticBaseModel):
+class Variable(SQLModel):
     key: str
     value: str
 
 
-class ExpiryModel(PydanticBaseModel):
+class ExpiryModel(SQLModel):
     expires_at: Optional[Union[str, datetime.datetime, datetime.date]] = Field(
         None, description="The date and time the resource will be/was set to deleted."
     )

@@ -1,22 +1,22 @@
 from __future__ import annotations
 
-from pydantic import BaseModel as PydanticBaseModel
+from sqlmodel import SQLModel
 
 
-class PermissionSetMessageDetails(PydanticBaseModel):
+class PermissionSetMessageDetails(SQLModel):
     account_id: str
     instance_arn: str
     permission_set_arn: str
 
 
-class ManagedPolicyMessageDetails(PydanticBaseModel):
+class ManagedPolicyMessageDetails(SQLModel):
     account_id: str
     policy_path: str
     policy_name: str
     delete: bool
 
 
-class RoleMessageDetails(PydanticBaseModel):
+class RoleMessageDetails(SQLModel):
     account_id: str
     role_name: str
     delete: bool

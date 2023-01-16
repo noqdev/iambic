@@ -10,8 +10,9 @@ import boto3
 import googleapiclient.discovery
 from google.oauth2 import service_account
 from okta.client import Client as OktaClient
-from pydantic import BaseModel, Field
+from pydantic import Field
 from slack_bolt import App as SlackBoltApp
+from sqlmodel import SQLModel
 
 from iambic.aws.models import AWSAccount, AWSOrganization
 from iambic.core.iambic_enum import IambicManaged
@@ -21,12 +22,12 @@ from iambic.core.utils import aio_wrapper, yaml
 CURRENT_IAMBIC_VERSION = "1"
 
 
-class GoogleSubjects(BaseModel):
+class GoogleSubjects(SQLModel):
     domain: str
     service_account: str
 
 
-class OktaOrganization(BaseModel):
+class OktaOrganization(SQLModel):
     idp_name: str
     org_url: str
     api_token: str
@@ -48,7 +49,7 @@ class OktaOrganization(BaseModel):
         return self.client
 
 
-class GoogleProject(BaseModel):
+class GoogleProject(SQLModel):
     project_id: str
     project_name: Optional[str]
     subjects: list[GoogleSubjects]
@@ -141,14 +142,14 @@ class ExtendsConfigKey(Enum):
     LOCAL_FILE = "LOCAL_FILE"
 
 
-class ExtendsConfig(BaseModel):
+class ExtendsConfig(SQLModel):
     key: ExtendsConfigKey
     value: str
     assume_role_arn: Optional[str]
     external_id: Optional[str]
 
 
-class AWSConfig(BaseModel):
+class AWSConfig(SQLModel):
     organizations: list[AWSOrganization] = Field(
         [], description="A list of AWS Organizations to be managed by iambic"
     )

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Optional
 from deepdiff import DeepDiff
 from git import Repo
 from git.exc import GitCommandError
-from pydantic import BaseModel as PydanticBaseModel
+from sqlmodel import SQLModel
 
 from iambic.config.templates import TEMPLATE_TYPE_MAP
 from iambic.core.logger import log
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from iambic.config.models import Config
 
 
-class GitDiff(PydanticBaseModel):
+class GitDiff(SQLModel):
     path: str
     content: Optional[str] = None
     is_deleted: Optional[bool] = False

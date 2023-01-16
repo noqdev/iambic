@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING, List, Optional, Union
 
 import boto3
 import botocore
-from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, constr
+from pydantic import constr
 from ruamel.yaml import YAML, yaml_object
+from sqlmodel import Field, SQLModel
 
 from iambic.aws.utils import (
     RegionName,
@@ -99,7 +99,7 @@ class Tag(ExpiryModel, AccessModel):
         return self.key
 
 
-class BaseAWSAccountAndOrgModel(PydanticBaseModel):
+class BaseAWSAccountAndOrgModel(SQLModel):
     default_region: Optional[RegionName] = Field(
         RegionName.us_east_1,
         description="Default region to use when making AWS requests",
@@ -169,7 +169,7 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         self.default_region = self.default_region.value
 
 
-class IdentityCenterDetails(PydanticBaseModel):
+class IdentityCenterDetails(SQLModel):
     region: str
     instance_arn: Optional[str] = None
     identity_store_id: Optional[str] = None
@@ -359,7 +359,7 @@ class AWSOrgAccountRule(BaseAWSOrgRule):
     )
 
 
-class AWSIdentityCenterAccount(PydanticBaseModel):
+class AWSIdentityCenterAccount(SQLModel):
     account_id: constr(min_length=12, max_length=12) = Field(
         None, description="The AWS Account ID"
     )

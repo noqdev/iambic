@@ -4,7 +4,7 @@ import asyncio
 from itertools import chain
 from typing import List, Optional
 
-from pydantic import Field
+from sqlmodel import Field
 
 from iambic.config.models import GoogleProject
 from iambic.core.context import ExecutionContext

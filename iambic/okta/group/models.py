@@ -6,7 +6,7 @@ from enum import Enum
 from itertools import chain
 from typing import Any, List, Optional
 
-from pydantic import Field
+from sqlmodel import Field
 
 from iambic.config.models import Config, OktaOrganization
 from iambic.core.context import ExecutionContext
