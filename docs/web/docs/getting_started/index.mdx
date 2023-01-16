@@ -14,6 +14,7 @@ This section of the tutorial has the greatest potential for complications, as it
 
 Before proceeding you will need to have the following configured, and know the basics of using them:
 
+- Python 3.10+ (see [Python’s download page](https://www.python.org/downloads/))
 - Git (see [GitHub’s set up Git guide](https://help.github.com/en/github/getting-started-with-github/set-up-git))
 - ability to create a GitHub Repository
 - one or more of the following: (TODO: Guidance needed for each of these flows)
@@ -22,28 +23,44 @@ Before proceeding you will need to have the following configured, and know the b
   - Google Credentials
 
 
+### Python
+
+Use one of the following methods to install Python on your system:
+
+#### Linux
+
+```bash
+# Debian-based:
+sudo apt install wget git python3 python3-venv
+# Red Hat-based:
+sudo dnf install wget git python3
+# Arch-based:
+sudo pacman -S wget git python3
+```
+
+#### Mac
+
+Install from [Python's download page](https://www.python.org/downloads/), or
+via [Brew](https://brew.sh/):
+
+```bash
+brew install python@3.10
+```
+
 ### Docker
 
-We recommend using Docker to run IAMbic, as this provides the most accurate environment for its intended operation and helps to prevent issues caused by variations between different systems. If you plan to make changes to IAMbic, we suggest installing IAMbic locally instead. Guidance can be found in our Local Development guide below.
+You may also use Docker to run Iambic, as this provides the most accurate environment for its
+intended operation and helps to prevent issues caused by variations between different systems.
+If you plan to make changes to IAMbic, we suggest installing IAMbic locally instead.
+Guidance can be found in our Local Development guide below.
 
 #### Install Docker and Docker Compose
 
-- Install Docker (see [Docker&#39;s Quick Start Guide)](https://docs.docker.com/desktop/get-started/)
+- Install Docker (see [Docker's Quick Start Guide)](https://docs.docker.com/desktop/get-started/)
 
 - Confirm Docker is installed properly:
 `docker run --rm busybox true`
 
-### Local Development
-TBD?
-
-#### Install Python (for local development)
-
-If you're following the local development guide, you'll also need Python 3.10+ before proceeding:
-
-- Install Python 3.10+ (see the [Python download page](https://www.python.org/downloads/))
-
-- Confirm Python is installed properly:
-`python -c "print('It\'s working!')"`
 
 ### Create a local Git Repository
 
