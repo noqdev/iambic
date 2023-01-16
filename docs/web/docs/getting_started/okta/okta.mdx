@@ -2,15 +2,15 @@
 title: Okta
 ---
 
-# TODO: Confirm support for Subgroups in Okta Groups
-
 ## 1. Configure Okta
 
 In this tutorial, you will configure IAMbic for an Okta Organization. By the end of this tutorial,
 you will have performed the following steps:
 
-1. Create a basic Okta configuration for IAMbic
-2. Create an Okta Group with users
+1. Create a basic Okta configuration for Iambic
+2. Import existing Okta Groups
+3. Create an Okta Group
+4. Create
 
 
 ## Prerequisities
@@ -18,7 +18,17 @@ you will have performed the following steps:
 You will need administrative access to an existing Okta organization. If you do not have one, you can
 create a developer organization at [developer.okta.com](https://developer.okta.com/).
 
-## 1.1 Create a basic Okta configuration for IAMbic
+* Set the following environment variables in the terminal you will be using to run Iambic commands.
+  These are only needed for the duration of this tutorial. They are not required for the normal usage of Iambic:
+
+```bash
+export EMAIL=<your_okta_email_address>
+export OKTA_DOMAIN=<your_okta_domain> # ex: https://dev-12345.okta.com/
+export OKTA_ORG_NAME=<your_okta_org_name> # ex: development. This is a friendly name to identify your Okta organization
+export OKTA_API_TOKEN=<your_okta_api_token> # An administrative API token for your Okta organization, follow the instructions in the following steps to create one.
+```
+
+## 1.1 Create a basic Okta configuration for Iambic
 
 First, you'll need to create an API token that allows Okta to manage group memberships by
 signing in to Okta and following these steps:
@@ -27,8 +37,10 @@ signing in to Okta and following these steps:
 2. Click on API
 3. Click on Tokens
 4. Click on "Create Token"
-5. Create a token for IAMbic. This token will be used to authenticate IAMbic with Okta.
+5. Create a token for Iambic. This token will be used to authenticate
+   Iambic with Okta.
 6. Copy the value of the token.
+
 
 <details>
   <summary>Screenshot</summary>
@@ -37,21 +49,91 @@ signing in to Okta and following these steps:
 
 </details>
 
-With your token in hand, create the following file in your iambic repo:
+With your token in hand, create `config/secrets.yaml`
+in your `iambic-templates` Git repo if it doesn't already exist:
+
+:::danger
+
+Never commit secrets Git. Ensure that you have a  `.gitignore` file in the root directory of your `iambic-templates` repository that
+is configured to ignore secrets.yaml files with `**/secrets.yaml`. Learn more about `.gitignore` files [here](https://git-scm.com/docs/gitignore).
+
+:::
 
 
-```yaml
+```bash
+cat <<EOF > config/secrets.yaml
 secrets:
   okta:
-    - idp_name: development
-      org_url: https://dev-12345.okta.com/
-      api_token: <TOKEN>
+    - idp_name: $OKTA_ORG_NAME
+      org_url: $OKTA_DOMAIN
+      api_token: $OKTA_API_TOKEN
+EOF
 ```
 
 
-Security -> API -> Tokens -> Create Token
+From the base directory of your IAMbic templates repository, your directory structure should resemble the following. You may
+have more files if you've recently imported your cloud resources.
+
+```bash
+tree .
+.
+├── config
+│   ├── config.yaml
+│   └── secrets.yaml
+```
+
+## Import existing Okta Groups
 
 
+In this section, you will manually import existing Okta Groups into your IAMbic templates repository.
+In a production environment, automation provided by Iambic would ensure that Git is updated with the
+cloud resources in your production environment. This allows you to monitor the history of
+these groups via Git History.
 
-Store the token in the IAMbic configuration file.
+Run the following command in the root of your `iambic-templates` repository to import your existing Okta Groups:
 
+```bash
+iambic import
+```
+
+If you have Okta Groups defined, your iambic-templates repository should have a `okta/groups` directory with a
+subdirectory for each Okta organization you have defined.
+
+## Create an Okta Group
+
+Iambic uses a YAML file to describe the desired state of a Google Group. In this section, we will create a group called
+`iambic-test-group` in your domain. Ensure that the environment variables you've set previously are still configured,
+and also ensure that your credentials are working properly by running the import process from the previous section.
+
+Run the following set of commands from the root of your `iambic-templates` repository to create a new Google Group template:
+
+```bash
+mkdir -p okta/groups/$OKTA_ORG_NAME
+cat <<EOF > okta/groups/$OKTA_ORG_NAME/iambic-test-group.yaml
+template_type: NOQ::Okta::Group
+properties:
+  name: iambic-test-group
+  description: ''
+  idp_name: development
+  members:
+    - username: $EMAIL
+EOF
+```
+
+Apply the template to your Okta Organization by running the following command:
+
+:::info
+
+In a production environment, this would be handled by a command issued on a Github Pull Request after the appropriate approvals have been made.
+
+:::
+
+```bash
+iambic apply -t okta/groups/$OKTA_ORG_NAME/iambic-test-group.yaml
+```
+
+Confirm that the group has been created by running the following in your terminal, and visiting the URL in your browser:
+
+```bash
+echo https://$OKTA_DOMAIN/admin/groups
+```
