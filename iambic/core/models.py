@@ -377,9 +377,15 @@ class ExpiryModel(PydanticBaseModel):
         if not value:
             return value
         if isinstance(value, datetime.date):
-            dt = datetime.datetime.combine(value, datetime.datetime.min.time())
+            dt = datetime.datetime.combine(
+                value, datetime.datetime.min.time()
+            ).astimezone(datetime.timezone.utc)
+            return dt
         if isinstance(value, datetime.datetime):
             dt = value
+            if not dt.tzinfo:
+                dt = dt.replace(tzinfo=datetime.timezone.utc)
+            return dt
         dt = dateparser.parse(
             value, settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True}
         )
