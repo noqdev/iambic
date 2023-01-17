@@ -28,7 +28,6 @@ def create_model_schemas(
         file_name = camel_to_snake(class_name)
         model_schema_path = str(os.path.join(schema_dir, f"{file_name}.md"))
         schema_md_str += f"* [{class_name}]({model_schema_path.replace('docs/', '')})\n"
-        schema_str = "".join(parser.parse_schema(model.schema(by_alias=False)))
 
         with open(model_schema_path, "w") as f:
             f.write("".join(parser.parse_schema(model.schema(by_alias=False))))
@@ -52,7 +51,7 @@ def generate_docs():
         Variable,
     ]
 
-    schema_dir = os.path.join("docs", "web", "docs", "schemas")
+    schema_dir = os.path.join("docs", "schemas")
     os.makedirs(schema_dir, exist_ok=True)
     parser = jsonschema2md2.Parser(
         examples_as_yaml=False,
@@ -75,7 +74,7 @@ def generate_docs():
         parser, schema_dir, schema_md_str, config_models
     )
 
-    with open(os.path.join("docs", "web", "docs", "schemas", "index.md"), "w") as f:
+    with open(os.path.join("docs", "SCHEMA.md"), "w") as f:
         f.write(schema_md_str)
 
 
