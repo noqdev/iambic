@@ -152,6 +152,8 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
         # Set expiration
         self.template.properties.inline_policies[1].statement[
             0
-        ].expires_at = dateparser.parse("yesterday")
+        ].expires_at = dateparser.parse(
+            "yesterday", settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True}
+        )
         r = await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
         self.assertEqual(len(r.proposed_changes), 1)
