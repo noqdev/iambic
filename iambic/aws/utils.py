@@ -273,9 +273,8 @@ async def remove_expired_resources(
         if resource.expires_at and resource.expires_at < cur_time:
             resource.deleted = True
 
-    if hasattr(resource, "expires_at") and resource.expires_at:
-
-        if resource.expires_at < cur_time:
+    if expires_at := getattr(resource, "expires_at"):
+        if expires_at < cur_time:
             resource.deleted = True
             log.info("Expired resource found, marking for deletion", **log_params)
             return resource
