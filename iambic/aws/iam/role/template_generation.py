@@ -411,7 +411,7 @@ async def generate_aws_role_templates(
     set_role_resource_managed_policies_semaphore = NoqSemaphore(
         set_role_resource_managed_policies, 30
     )
-    set_role_resource_tags_semaphore = NoqSemaphore(set_role_resource_tags, 75)
+    set_role_resource_tags_semaphore = NoqSemaphore(set_role_resource_tags, 45)
 
     log.info("Generating AWS role templates.")
     log.info(
