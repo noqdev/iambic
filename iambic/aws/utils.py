@@ -258,7 +258,6 @@ async def remove_expired_resources(
         return resource
 
     log_params = {}
-    cur_time = datetime.now(tz=timezone.utc)
     if hasattr(resource, "resource_type"):
         log_params["resource_type"] = resource.resource_type
     if hasattr(resource, "resource_id"):
@@ -270,14 +269,12 @@ async def remove_expired_resources(
         log_params["parent_resource_id"] = template_resource_id
 
     if issubclass(type(resource), BaseModel) and hasattr(resource, "expires_at"):
-        if resource.expires_at and resource.expires_at < cur_time:
-            resource.deleted = True
-
-    if expires_at := getattr(resource, "expires_at"):
-        if expires_at < cur_time:
-            resource.deleted = True
-            log.info("Expired resource found, marking for deletion", **log_params)
-            return resource
+        if resource.expires_at:
+            cur_time = datetime.now(tz=timezone.utc)
+            if resource.expires_at < cur_time:
+                log.info("Expired resource found, marking for deletion", **log_params)
+                resource.deleted = True
+                return resource
 
     for field_name in resource.__fields__.keys():
         field_val = getattr(resource, field_name)
