@@ -283,8 +283,8 @@ async def create_templated_permission_set(  # noqa: C901
 
     # access_rules has no semantic ordering, we sort it explicitly to ensure the template
     # generation is deterministic.
-    permission_set_params["access_rules"] = _sorted_and_clean_access_rules(
-        permission_set_params["access_rules"]
+    template_params["access_rules"] = _sorted_and_clean_access_rules(
+        template_params["access_rules"]
     )
 
     if len(permission_set_refs) != len(aws_account_map):

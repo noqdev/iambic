@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Optional, Union
 
@@ -258,6 +258,7 @@ async def remove_expired_resources(
         return resource
 
     log_params = {}
+    cur_time = datetime.now(tz=timezone.utc)
     if hasattr(resource, "resource_type"):
         log_params["resource_type"] = resource.resource_type
     if hasattr(resource, "resource_id"):
@@ -269,12 +270,12 @@ async def remove_expired_resources(
         log_params["parent_resource_id"] = template_resource_id
 
     if issubclass(type(resource), BaseModel) and hasattr(resource, "expires_at"):
-        if resource.expires_at and resource.expires_at < datetime.utcnow():
+        if resource.expires_at and resource.expires_at < cur_time:
             resource.deleted = True
 
     if hasattr(resource, "expires_at") and resource.expires_at:
 
-        if resource.expires_at < datetime.utcnow():
+        if resource.expires_at < cur_time:
             resource.deleted = True
             log.info("Expired resource found, marking for deletion", **log_params)
             return resource
