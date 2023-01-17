@@ -152,9 +152,16 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         return self.boto3_session_map[region_name]
 
     async def get_boto3_client(self, service: str, region_name: Optional[str] = None):
-        return (await self.get_boto3_session(region_name)).client(
+        region_name = region_name or self.default_region
+
+        if client := self.boto3_session_map.get("client", {}).get(service, {}).get(region_name):
+            return client
+
+        client = (await self.get_boto3_session(region_name)).client(
             service, config=botocore.client.Config(max_pool_connections=50)
         )
+        self.boto3_session_map.setdefault("client", {}).setdefault(service, {})[region_name] = client
+        return client
 
     async def get_active_regions(self) -> list[str]:
         client = await self.get_boto3_client("ec2")
