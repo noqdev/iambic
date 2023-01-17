@@ -65,8 +65,7 @@ class RoleAccess(ExpiryModel, AccessModel):
 
 
 class PermissionBoundary(ExpiryModel, AccessModel):
-    permissions_boundary_type: str
-    permissions_boundary_arn: constr(regex=ARN_RE)
+    policy_arn: constr(regex=ARN_RE)
 
     @property
     def resource_type(self):
@@ -74,7 +73,7 @@ class PermissionBoundary(ExpiryModel, AccessModel):
 
     @property
     def resource_id(self):
-        return self.permissions_boundary_arn
+        return self.policy_arn
 
 
 class RoleProperties(BaseModel):
@@ -177,6 +176,10 @@ class RoleTemplate(AWSTemplate, AccessModel):
             self, self.resource_type, self.resource_id
         )
         account_role = self.apply_resource_dict(aws_account, context)
+
+        self = await remove_expired_resources(
+            self, self.resource_type, self.resource_id
+        )
         role_name = account_role["RoleName"]
         account_change_details = AccountChangeDetails(
             account=str(aws_account),
@@ -305,6 +308,11 @@ class RoleTemplate(AWSTemplate, AccessModel):
                 account_role["AssumeRolePolicyDocument"] = json.dumps(
                     account_role["AssumeRolePolicyDocument"]
                 )
+                if account_role.get("PermissionsBoundary"):
+                    account_role["PermissionsBoundary"] = account_role[
+                        "PermissionsBoundary"
+                    ]["PolicyArn"]
+
                 await boto_crud_call(client.create_role, **account_role)
         except Exception as e:
             log.error("Unable to generate tasks for resource", error=e, **log_params)

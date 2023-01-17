@@ -43,6 +43,9 @@ iambic = "iambic.main:cli"
 
 [tool.poetry.group.dev.dependencies]
 types-cachetools = "^5.2.1"
+types-pyyaml = "^6.0.12.2"
+types-aiofiles = "^22.1.0.4"
+types-ujson = "^5.7.0.0"
 
 [build-system]
 requires = ["poetry-core"]
