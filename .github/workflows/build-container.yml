@@ -1,0 +1,36 @@
+name: Build container
+on:
+  pull_request:
+  #push:
+  #  branches:
+  #    - main
+jobs:
+  run-test:
+    runs-on: self-hosted
+    name: Run test
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v3
+      - name: set git identity
+        run: |
+          git config user.name "Version Auto Bump"
+          git config user.email "github-action@noq.dev"
+      - name: bootstrap
+          python3.10 -m venv env
+          . env/bin/activate && pip install toml
+      # - name: bump version
+      #   id: bump-version
+      #   run: |
+      #     . env/bin/activate && python build/tag_and_build_container.py bump-version
+      # - name: Configure AWS Credentials
+      #   uses: aws-actions/configure-aws-credentials@v1
+      #   with:
+      #     role-to-assume: arn:aws:iam::759357822767:role/iambic_image_builder
+      #     aws-region: us-east-1
+      - name: build container
+        id: build-container
+        run: |
+          . env/bin/activate && make build_docker
