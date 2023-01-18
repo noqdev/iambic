@@ -13,7 +13,10 @@ from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.main import run_import
 
-os.environ["AWS_PROFILE"] = "iambic_test_org_account/IambicHubRole"
+if os.environ.get("GITHUB_ACTIONS", None) is None:
+    # Github action runner will use temporary creds in the environment
+    os.environ["AWS_PROFILE"] = "iambic_test_org_account/IambicHubRole"
+
 os.environ["TESTING"] = "true"
 FUNCTIONAL_TEST_TEMPLATE_DIR = os.getenv("FUNCTIONAL_TEST_TEMPLATE_DIR", None)
 

@@ -16,3 +16,7 @@ jobs:
         run: |
           python3.10 -m venv env
           . env/bin/activate && pip install poetry && poetry install && make test
+      - name: run-functional-test
+        id: run-functional-test
+        run: |
+          . env/bin/activate && make functional_test
