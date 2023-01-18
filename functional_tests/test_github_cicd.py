@@ -76,6 +76,7 @@ def generate_templates_fixture():
 def test_github_cicd(filesystem, generate_templates_fixture):
 
     if os.environ.get("GITHUB_ACTIONS", None) is None:
+        subprocess.run("make -f Makefile.itest auth_to_ecr", shell=True, check=True)
         subprocess.run(
             "make -f Makefile.itest build_docker_itest", shell=True, check=True
         )
@@ -92,6 +93,15 @@ def test_github_cicd(filesystem, generate_templates_fixture):
     repo = clone_git_repo(repo_url, temp_templates_directory, None)
     head_sha = repo.head.commit.hexsha
     print(repo)
+
+    repo_config_writer = repo.config_writer()
+    repo_config_writer.set_value(
+        "user", "name", "Iambic Github Functional Test for Github"
+    )
+    repo_config_writer.set_value(
+        "user", "email", "github-cicd-functional-test@iambic.org"
+    )
+    repo_config_writer.release()
 
     utc_obj = datetime.datetime.utcnow()
     date_isoformat = utc_obj.isoformat()
