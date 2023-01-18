@@ -19,7 +19,7 @@ jobs:
       - name: Configure AWS Credentials for building itest image
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: arn:aws:iam::442632209887:role/iambic-image-builder
+          role-to-assume: arn:aws:iam::442632209887:role/iambic_image_builder
           aws-region: us-east-1
       - name: build-itest-image
         id: build-itest-image
