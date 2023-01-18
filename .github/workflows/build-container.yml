@@ -26,4 +26,5 @@ jobs:
       - name: build container
         id: build-container
         run: |
+          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/l1s5s8m2
           . build-env/bin/activate && make build_docker upload_docker
