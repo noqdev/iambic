@@ -1,6 +1,11 @@
 name: Build container
 on:
-  pull_request:
+  # Testing this is a pain in the rear.
+  # One way to test is to enable event type pull_request; however, our setup
+  # is restrictive on who can assume the container building role. You can consider
+  # temporarily open the role to allow the pull_request or via specific branch to
+  # do the image building in teh aws assume role side.
+  # pull_request:
   push:
    branches:
      - main
