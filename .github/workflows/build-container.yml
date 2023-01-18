@@ -1,9 +1,8 @@
 name: Build container
 on:
-  pull_request:
-  #push:
-  #  branches:
-  #    - main
+  push:
+   branches:
+     - main
 jobs:
   build-container:
     runs-on: self-hosted
@@ -28,11 +27,11 @@ jobs:
           . env/bin/activate && python build_utils/tag_and_build_container.py bump-version
           git add pyproject.toml
           git commit -m "Bump version"
-      # - name: Configure AWS Credentials
-      #   uses: aws-actions/configure-aws-credentials@v1
-      #   with:
-      #     role-to-assume: arn:aws:iam::759357822767:role/iambic_image_builder
-      #     aws-region: us-east-1
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::759357822767:role/iambic_image_builder
+          aws-region: us-east-1
       - name: build container
         id: build-container
         run: |
