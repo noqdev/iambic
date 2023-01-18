@@ -1,5 +1,6 @@
 name: Build container
 on:
+  pull_request:
   push:
    branches:
      - main
@@ -27,7 +28,7 @@ jobs:
           . build-env/bin/activate && python build_utils/tag_and_build_container.py bump-version
           git add pyproject.toml
           git commit -m "Bump version"
-          git push origin HEAD:main
+          git push origin HEAD:${GITHUB_REF_NAME}
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
