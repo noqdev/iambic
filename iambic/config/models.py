@@ -172,7 +172,9 @@ class Config(BaseTemplate):
     google_projects: List[GoogleProject] = []
     okta_organizations: List[OktaOrganization] = []
     extends: List[ExtendsConfig] = []
-    secrets: Optional[dict] = None
+    secrets: Optional[dict] = Field(
+        "secrets should only be used in memory and never serialized out", exclude=True
+    )
     role_access_tag: Optional[str] = Field(
         "noq-authorized",
         description="The key of the tag used to store users and groups that can assume into the role the tag is on",
