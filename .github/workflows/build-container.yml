@@ -19,6 +19,7 @@ jobs:
           git config user.name "Version Auto Bump"
           git config user.email "github-action@noq.dev"
       - name: bootstrap
+        run: |
           python3.10 -m venv env
           . env/bin/activate && pip install toml
       # - name: bump version
