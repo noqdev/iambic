@@ -16,6 +16,15 @@ jobs:
         run: |
           python3.10 -m venv env
           . env/bin/activate && pip install poetry && poetry install && make test
+      - name: Configure AWS Credentials for building itest image
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::442632209887:role/iambic-image-builder
+          aws-region: us-east-1
+      - name: build-itest-image
+        id: build-itest-image
+        run: |
+          . env/bin/activate && make -f Makefile.itest build_docker_itest upload_docker_itest
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:

@@ -1,9 +1,15 @@
+# public.ecr.aws/l1s5s8m2 is the public ecr repository for integration testing
+
 # skipping linux/arm64 to speed up functional_tests
 # our self-hosted runner is linux/amd64, cross-platform
 # building was really slow
 docker_buildx_itest := docker buildx build \
 	--platform=linux/amd64 \
-	-t "public.ecr.aws/s2p9s3r8/iambic:itest"
+	-t "public.ecr.aws/l1s5s8m2/iambic:itest"
+
+.PHONY: auth_to_ecr
+auth_to_ecr:
+	bash -c "AWS_PROFILE=development/iambic_image_builder aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/l1s5s8m2"
 
 .PHONY: build_docker_itest
 build_docker_itest:
