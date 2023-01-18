@@ -19,12 +19,12 @@ jobs:
           git config user.email "github-action-version-auto-bump@noq.dev"
       - name: bootstrap
         run: |
-          python3.10 -m venv env
-          . env/bin/activate && pip install toml
+          python3.10 -m venv build-env
+          . env/bin/activate && pip install poetry
       - name: bump version
         id: bump-version
         run: |
-          . env/bin/activate && python build_utils/tag_and_build_container.py bump-version
+          . build-env/bin/activate && python build_utils/tag_and_build_container.py bump-version
           git add pyproject.toml
           git commit -m "Bump version"
       - name: Configure AWS Credentials
@@ -35,4 +35,4 @@ jobs:
       - name: build container
         id: build-container
         run: |
-          . env/bin/activate && make build_docker
+          . env/bin/activate && make build_docker upload_docker
