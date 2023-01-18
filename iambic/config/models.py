@@ -173,7 +173,8 @@ class Config(BaseTemplate):
     okta_organizations: List[OktaOrganization] = []
     extends: List[ExtendsConfig] = []
     secrets: Optional[dict] = Field(
-        "secrets should only be used in memory and never serialized out", exclude=True
+        description="secrets should only be used in memory and never serialized out",
+        exclude=True,
     )
     role_access_tag: Optional[str] = Field(
         "noq-authorized",
