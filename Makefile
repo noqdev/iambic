@@ -1,20 +1,30 @@
+BUILD_VERSION := $(shell python build/tag_and_build_container.py print-current-version)
+
+.PHONY: prepare_for_dist
+prepare_for_dist:
+	rm -f proposed_changes.yaml # especially important if this is run locally
+
+.PHONY: auth_to_ecr
+auth_to_ecr:
+	bash -c "AWS_PROFILE=development/iambic_image_builder aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/s2p9s3r"
+
 docker_buildx := docker buildx build \
 	--platform=linux/amd64 \
-	-t "public.ecr.aws/s2p9s3r8/iambic:latest"
+	-t "public.ecr.aws/s2p9s3r8/iambic:latest" -t "public.ecr.aws/s2p9s3r8/iambic:${BUILD_VERSION}"
 
 .PHONY: docker_build_no_buildkit
 docker_build_no_buildkit:
 	DOCKER_BUILDKIT=0 docker build -t "iambic" .
 
 .PHONY: build_docker
-build_docker:
+build_docker: prepare_for_dist
 	@echo "--> Creating Iambic Docker image"
+	@echo ${BUILD_VERSION}
 	$(docker_buildx) .
 
 .PHONY: upload_docker
 upload_docker:
 	@echo "--> Uploading Iambic Docker image"
-	bash -c "AWS_PROFILE=development/development_admin aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/s2p9s3r"
 	$(docker_buildx) --push .
 
 .PHONY: create_manifest
@@ -48,5 +58,4 @@ build_docker_base_image:
 .PHONY: upload_docker_base_image
 upload_docker_base_image:
 	@echo "--> Uploading Iambic Docker base container image"
-	bash -c "AWS_PROFILE=development/development_admin aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/s2p9s3r"
 	$(docker_base_image_buildx) --push .
