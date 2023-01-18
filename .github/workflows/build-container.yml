@@ -1,4 +1,5 @@
 name: Build container
+# This builds the container upon a push event in noqdev/iambic repository
 on:
   # Testing this is a pain in the rear.
   # One way to test is to enable event type pull_request; however, our setup
@@ -11,6 +12,7 @@ on:
      - main
 jobs:
   build-container:
+    if: ${{ github.repository == 'noqdev/iambic') }}
     runs-on: self-hosted
     name: Build Container
     permissions:
