@@ -2,19 +2,19 @@ from __future__ import annotations
 
 import sys
 
-import toml
+import tomlkit
 
 
 def get_current_version():
     with open("./pyproject.toml", "r") as f:
-        iambic_toml = toml.load(f)
+        iambic_toml = tomlkit.load(f)
     version = iambic_toml["tool"]["poetry"]["version"]
     print(version)
 
 
 def bump_version():
     with open("./pyproject.toml", "r") as f:
-        iambic_toml = toml.load(f)
+        iambic_toml = tomlkit.load(f)
     current_version_string = iambic_toml["tool"]["poetry"]["version"]
     versions = current_version_string.split(".")
     patch_version = int(versions[2])
@@ -23,7 +23,7 @@ def bump_version():
     new_version_string = ".".join(versions)
     iambic_toml["tool"]["poetry"]["version"] = new_version_string
     with open("./pyproject.toml", "w") as f:
-        toml.dump(iambic_toml, f)
+        tomlkit.dump(iambic_toml, f)
 
 
 if __name__ == "__main__":
