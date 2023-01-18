@@ -172,23 +172,22 @@
             "justMyCode": true
         },
         {
-            "name": "Iambic Apply2",
+            "name": "Iambic Import",
             "type": "python",
             "request": "launch",
             "module": "iambic.main",
             "console": "integratedTerminal",
             "env": {
-                "AWS_PROFILE": "580605962305_AdministratorAccess"
+                "AWS_PROFILE": "staging/IambicHubRole"
             },
             "args": [
-                // "import"
-                "apply",
-                "-t",
-                // // "resources/aws/roles/all_accounts/iambic_test_role.yaml"
-                "google/groups/iambic.org/iambic-test-group.yaml"
+                "import",
+                "--config",
+                "demo/config.yaml",
+                "--repo-dir",
+                "../noq-templates"
             ],
-            "justMyCode": true,
-            "cwd": "${workspaceFolder}/../iambic-templates"
+            "justMyCode": true
         },
         {
             "name": "Iambic Detect",
