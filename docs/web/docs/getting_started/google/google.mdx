@@ -12,9 +12,10 @@ By the end of this tutorial, you will have performed the following steps:
 5. Provide temporary ("break-glass") access to a Google Group
 6. Expire a Google Group
 
-// would be awesome to link these entries above to steps below
-// Can we autogenerate a ToC in the sidebar, like in gdocs? 
-// These steps would benefit from a bit of why, not just what
+<!--  would be awesome to link these entries above to steps below
+ Can we autogenerate a ToC in the sidebar, like in gdocs? 
+ These steps would benefit from a bit of why, not just what
+  -->
 
 Noq's SaaS Platform provides enterprise Self-Service features that make Google Group requests easier for end-users. Reach out to us at [hello@noq.dev](mailto:hello@noq.dev) or visit [https://www.noq.dev](https://www.noq.dev) for more information.
 
@@ -32,7 +33,7 @@ export DOMAIN=<your_gsuite_domain.com>
 export EMAIL=<your_gsuite_email_address>
 ```
 
-## Configure Iambic for Google Group Management
+## 1. Configure Iambic for Google Group Management
 
 In this section, you will set up a Google Cloud Identity that will be used by Iambic to manage your Google Groups.
 Perform the following steps to set up your identity:
@@ -127,7 +128,7 @@ tree .
 │   └── secrets.yaml
 ```
 
-## Import Existing Google Groups
+## 2. Import Existing Google Groups
 
 In this section, you will manually import existing Google Groups into your IAMbic templates repository.
 In a production environment, automation provided by Iambic would ensure that Git is updated with the
@@ -143,7 +144,7 @@ iambic import
 If you have Google Groups defined, your iambic-templates repository should have a `google/groups` directory with a
 subdirectory for each domain you have defined.
 
-## Create a Google group
+## 3. Create a Google group
 
 Iambic uses a YAML file to describe the desired state of a Google Group. In this section, we will create a group called
 `iambic-test-group` in your domain. Ensure that the environment variables you've set previously are still configured,
@@ -210,7 +211,7 @@ $ tree .
 │           ├── iambic-test-group.yaml
 ```
 
-## Add a user to the group
+## 4. Add a user to the group
 
 In this section, we will add a user (testuser@example.com) to the group we created in the previous section.
 `example.com` is a reserved domain for this use case, and `testuser@example.com` is not a real user.
@@ -238,7 +239,7 @@ Run the `apply` command again to update the group:
 iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
 ```
 
-## Provide temporary ("break-glass") access to a Google Group
+## 5. Provide temporary ("break-glass") access to a Google Group
 
 In this section, we will provide `fakeuser@example.com` with break-glass access to the `iambic-test-group` we created in the
 previous section. Our fakeuser only needs access for two minutes (This user works very quickly). In order to facilitate this request,
@@ -289,10 +290,10 @@ of testing, you can manually expire the request by re-running the apply command:
 iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
 ```
 
-## Expire the Google Group
+## 6. Expire the Google Group
 
-In this section, we will update the Google Group we created in the previous section so the group will expire in one minute. Notice the extra
-line at the top-level of the YAML below, `expires_at: in one minute`.
+In this section, we will update the Google Group we created in the previous section so the group will expire in one minute. 
+Notice the extra line at the top-level of the YAML below, `expires_at: in one minute`.
 
 Run the following command to update the group template.
 

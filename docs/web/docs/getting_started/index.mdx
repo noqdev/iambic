@@ -14,18 +14,24 @@ This section of the tutorial has the greatest potential for complications, as it
 
 Before proceeding you will need to have the following configured, and know the basics of using them:
 
-- Python 3.10+ (see [Python’s download page](https://www.python.org/downloads/))
-- Git (see [GitHub’s set up Git guide](https://help.github.com/en/github/getting-started-with-github/set-up-git))
+- Python 3.10+ (see [Python’s download page](https://www.python.org/downloads/)) (TODO is python required if we use the docker install below?)
+- Git (see [GitHub’s set up Git guide](https://help.github.com/en/github/getting-started-with-github/set-up-git)) 
 - ability to create a GitHub Repository
 - one or more of the following: (TODO: Guidance needed for each of these flows)
   - AWS Credentials
   - Okta Credentials
   - Google Credentials
 
+Once these requisites are complete, you can select from a Python or Docker based install (TODO: is that true?)(TODO those should link to the right sections)
 
-### Python
+### Install Python
 
 Use one of the following methods to install Python on your system:
+
+Linux, using python (and docker??? TODO) (links to sections below)
+
+Mac, using python (and docker??? TODO)
+(TODO what is the alternataive to Docker??)
 
 #### Linux
 
@@ -46,17 +52,17 @@ via [Brew](https://brew.sh/):
 ```bash
 brew install python@3.10
 ```
+<!-- TODO This says "also" but it's unclear what docker is an alternative to.
+If I don't install docker, how do I install iambic? Need to update the above-->
 
-### Docker
-// This says "also" but it's unclear what docker is an alternative to.
-// If I don't install docker, how do I install iambic? 
+### Install Docker and Docker Compose
+
 
 You may also use Docker to run Iambic, as this provides the most accurate environment for its
 intended operation and helps to prevent issues caused by variations between different systems.
 If you plan to make changes to IAMbic, we suggest installing IAMbic locally instead.
 Guidance can be found in our Local Development guide below.
 
-#### Install Docker and Docker Compose
 
 - Install Docker (see [Docker's Quick Start Guide)](https://docs.docker.com/desktop/get-started/)
 
@@ -87,4 +93,4 @@ Now that you have IAMbic installed, you're ready to move on to the next steps. A
 - Continue with Okta
 - Continue with Google
 
-(COMMENT: presumably these will be links)
+(TODO: presumably these will be links)
