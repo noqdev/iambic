@@ -8,7 +8,7 @@ import xxhash
 from iambic.aws.models import AWSAccount
 from iambic.core import noq_json as json
 from iambic.core.parser import load_templates
-from iambic.core.utils import gather_templates
+from iambic.core.utils import gather_templates, sort_list_of_dicts_with_list_value
 
 
 async def get_existing_template_map(repo_dir: str, template_type: str) -> dict:
@@ -383,6 +383,9 @@ async def group_int_or_str_attribute(
         else:
             response.append({key: resource_val, "included_accounts": included_accounts})
 
+    # handle sorting stability
+    response = sort_list_of_dicts_with_list_value(response, key)
+
     return response
 
 
@@ -423,5 +426,8 @@ async def group_dict_attribute(
             attr_val["included_accounts"] = included_accounts
 
         response.append(attr_val)
+
+    # handle sorting stability
+    response = sort_list_of_dicts_with_list_value(response, "included_accounts")
 
     return response
