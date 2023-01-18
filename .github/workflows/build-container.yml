@@ -5,9 +5,9 @@ on:
   #  branches:
   #    - main
 jobs:
-  run-test:
+  build-container:
     runs-on: self-hosted
-    name: Run test
+    name: Build Container
     permissions:
       id-token: write
       contents: read
@@ -17,15 +17,17 @@ jobs:
       - name: set git identity
         run: |
           git config user.name "Version Auto Bump"
-          git config user.email "github-action@noq.dev"
+          git config user.email "github-action-version-auto-bump@noq.dev"
       - name: bootstrap
         run: |
           python3.10 -m venv env
           . env/bin/activate && pip install toml
-      # - name: bump version
-      #   id: bump-version
-      #   run: |
-      #     . env/bin/activate && python build_utils/tag_and_build_container.py bump-version
+      - name: bump version
+        id: bump-version
+        run: |
+          . env/bin/activate && python build_utils/tag_and_build_container.py bump-version
+          git add pyproject.toml
+          git commit -m "Bump version"
       # - name: Configure AWS Credentials
       #   uses: aws-actions/configure-aws-credentials@v1
       #   with:
