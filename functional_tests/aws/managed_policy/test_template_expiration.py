@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os.path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.aws.managed_policy.utils import (
@@ -29,9 +29,9 @@ class ManagedPolicyExpirationTestCase(IsolatedAsyncioTestCase):
         self.template.properties.policy_document.statement.append(
             self.template.properties.policy_document.statement[0]
         )
-        self.template.properties.policy_document.statement[
-            0
-        ].expires_at = datetime.utcnow() - timedelta(days=1)
+        self.template.properties.policy_document.statement[0].expires_at = datetime.now(
+            timezone.utc
+        ) - timedelta(days=1)
         self.template.write()
 
         file_sys_template = ManagedPolicyTemplate.load(self.template.file_path)
@@ -54,7 +54,7 @@ class ManagedPolicyExpirationTestCase(IsolatedAsyncioTestCase):
         )
 
     async def test_expire_managed_policy_template(self):
-        self.template.expires_at = datetime.utcnow() - timedelta(days=1)
+        self.template.expires_at = datetime.now(timezone.utc) - timedelta(days=1)
         self.template.write()
 
         self.assertFalse(self.template.deleted)

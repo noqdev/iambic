@@ -42,13 +42,13 @@ properties:
     assert group_template.properties.members[2].email == "fakeuser@example.com"
 
     # Expire `fakeuser@example.com`
-    group_template.properties.members[
-        2
-    ].expires_at = datetime.datetime.now() - datetime.timedelta(days=1)
+    group_template.properties.members[2].expires_at = datetime.datetime.now(
+        datetime.timezone.utc
+    ) - datetime.timedelta(days=1)
     # Set `steven@noq.dev` to expire tomorrow
-    group_template.properties.members[
-        1
-    ].expires_at = datetime.datetime.now() + datetime.timedelta(days=1)
+    group_template.properties.members[1].expires_at = datetime.datetime.now(
+        datetime.timezone.utc
+    ) + datetime.timedelta(days=1)
     # Write new template, apply, and confirm access removed
     group_template.write()
     run_apply(
