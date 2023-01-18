@@ -24,6 +24,7 @@ jobs:
       - name: build-itest-image
         id: build-itest-image
         run: |
+          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/l1s5s8m2"
           . env/bin/activate && make -f Makefile.itest build_docker_itest upload_docker_itest
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
