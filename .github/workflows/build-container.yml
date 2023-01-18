@@ -25,6 +25,8 @@ jobs:
       - name: bump version
         id: bump-version
         run: |
+          git fetch origin
+          git checkout -b automation/${BRANCH_NAME} origin/${BRANCH_NAME}
           . build-env/bin/activate && python build_utils/tag_and_build_container.py bump-version
           git add pyproject.toml
           git commit -m "Bump version"
