@@ -1,4 +1,4 @@
-BUILD_VERSION := $(shell python build/tag_and_build_container.py print-current-version)
+BUILD_VERSION := $(shell python build_utils/tag_and_build_container.py print-current-version)
 
 .PHONY: prepare_for_dist
 prepare_for_dist:

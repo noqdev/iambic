@@ -25,7 +25,7 @@ jobs:
       # - name: bump version
       #   id: bump-version
       #   run: |
-      #     . env/bin/activate && python build/tag_and_build_container.py bump-version
+      #     . env/bin/activate && python build_utils/tag_and_build_container.py bump-version
       # - name: Configure AWS Credentials
       #   uses: aws-actions/configure-aws-credentials@v1
       #   with:
