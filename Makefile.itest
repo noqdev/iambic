@@ -9,7 +9,7 @@ docker_buildx_itest := docker buildx build \
 
 .PHONY: auth_to_ecr
 auth_to_ecr:
-	bash -c "AWS_PROFILE=development/iambic_image_builder aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/l1s5s8m2"
+	bash -c "AWS_PROFILE=iambic_test_org_spoke_account_1/iambic_image_builder aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/l1s5s8m2"
 
 .PHONY: build_docker_itest
 build_docker_itest:
