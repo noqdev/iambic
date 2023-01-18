@@ -75,12 +75,13 @@ def generate_templates_fixture():
 # will be merged and we will check the workflow to be completed state.
 def test_github_cicd(filesystem, generate_templates_fixture):
 
-    if os.environ.get("GITHUB_ACTIONS", None) is not None:
-        # skip the test for now for github actions runner
-        return
-
-    subprocess.run("make -f Makefile.itest build_docker_itest", shell=True, check=True)
-    subprocess.run("make -f Makefile.itest upload_docker_itest", shell=True, check=True)
+    if os.environ.get("GITHUB_ACTIONS", None) is None:
+        subprocess.run(
+            "make -f Makefile.itest build_docker_itest", shell=True, check=True
+        )
+        subprocess.run(
+            "make -f Makefile.itest upload_docker_itest", shell=True, check=True
+        )
 
     temp_config_filename, temp_templates_directory = filesystem
 
