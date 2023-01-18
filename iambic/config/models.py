@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import json
 import os
 from enum import Enum
 from typing import Any, List, Optional
@@ -171,7 +172,9 @@ class Config(BaseTemplate):
     google_projects: List[GoogleProject] = []
     okta_organizations: List[OktaOrganization] = []
     extends: List[ExtendsConfig] = []
-    secrets: Optional[dict] = None
+    secrets: Optional[dict] = Field(
+        "secrets should only be used in memory and never serialized out", exclude=True
+    )
     role_access_tag: Optional[str] = Field(
         "noq-authorized",
         description="The key of the tag used to store users and groups that can assume into the role the tag is on",
@@ -226,9 +229,24 @@ class Config(BaseTemplate):
                         self.aws.accounts.append(account)
                         modified = True
         if modified:
-            # exclude_unset will exclude all updated fields, so we
-            # set it False here
-            self.write(exclude_unset=False)
+            # the invariant is this modification can ever only modifies the aws.accounts section
+            # and nothing else
+            with open(self.file_path, "r") as f:
+                config_from_filesystem = yaml.load(f)
+            # the json roundtrip is to flatten any object types
+            config_from_filesystem["aws"]["accounts"] = [
+                json.loads(
+                    account.json(
+                        skip_defaults=True,
+                        exclude_unset=True,
+                        exclude_defaults=True,
+                        exclude_none=True,
+                    )
+                )
+                for account in self.aws.accounts
+            ]
+            with open(self.file_path, "w") as f:
+                yaml.dump(config_from_filesystem, f)
 
     def get_aws_secret(self, extend: ExtendsConfig) -> dict:
         """TODO: Secrets should be moved to the account to prevent an anti-pattern
