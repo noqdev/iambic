@@ -12,7 +12,7 @@ on:
      - main
 jobs:
   build-container:
-    if: ${{ github.repository == 'noqdev/iambic') }}
+    if: ${{ github.repository == 'noqdev/iambic' }}
     runs-on: self-hosted
     name: Build Container
     permissions:

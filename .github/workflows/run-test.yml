@@ -18,7 +18,7 @@ jobs:
   run-functional-test:
     # functional test requires various web services
     runs-on: self-hosted
-    if: ${{ github.repository == 'noqdev/iambic') }}
+    if: ${{ github.repository == 'noqdev/iambic' }}
     name: Run functional test
     needs: [run-unit-test]
     permissions:
