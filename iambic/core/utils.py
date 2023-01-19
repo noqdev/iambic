@@ -207,15 +207,6 @@ def un_wrap_json_and_dump_values(json_obj: Any) -> Any:
     return json_obj
 
 
-def sort_list_of_dicts_with_list_value(
-    unsorted_list_of_dicts: list[dict(str, Any)], sort_key: str
-) -> list[dict(str, Any)]:
-    sorted_list_of_dicts = sorted(
-        unsorted_list_of_dicts, key=lambda _dict: ".".join(_dict[sort_key])
-    )
-    return sorted_list_of_dicts
-
-
 # lifted from cloudumi's repo common.lib.generic import sort_dict, and modified to support prioritization
 def sort_dict(original, prioritize=None):
     """Recursively sorts dictionary keys and dictionary values in alphabetical order,
