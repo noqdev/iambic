@@ -74,7 +74,7 @@ https://docs.aws.amazon.com/singlesignon/latest/userguide/howtocreatepermissions
 
 ### 1.1 Write a configuration
 
-You'll need to tell IAMbic how to connect to your AWS account or AWS organization. IAMbic can connect to your AWS accounts or AWS organizations via a number of different methods, Including using a predefined AWS profile, performing assume role operations, or a combination of these. This guide will walk you through the basic configuration. For anything more advanced, please consult the Configuration Reference. (TODO: Link needed)
+You'll need to tell IAMbic how to connect to your AWS account or AWS organization. IAMbic can connect to your AWS accounts or AWS organizations via a number of different methods, Including using a predefined AWS profile, performing assume role operations, or a combination of these. This guide will walk you through the basic configuration. For anything more advanced, please consult the Configuration Reference. <!-- TODO: Link needed -->
 
 #### 1.1.1 AWS Organizations
 
@@ -452,7 +452,7 @@ iambic apply -t resources/aws/roles/all_accounts/iambic_test_role.yaml
 
 After applying the changes, the users specified in the access rules will now have access to the role in the Noq platform.
 
-## 4 - AWS Identity Center Permission Sets  (TODO AKA Create dynamic permissions for your IAM role, which can vary depending on account)
+## 4 - AWS Identity Center Permission Sets  <!-- TODO AKA Create dynamic permissions for your IAM role, which can vary depending on account -->
 
 ```bash
 # Create a directory in your iambic-templates repo
@@ -570,4 +570,4 @@ access_rules:
 
 ### 4.4 Attach temporary permissions to a permission set
 
-AWS Identity Center can be used to broker temporary AWS IAM credentials to human users. IAMbic supports (TODO finish this sentence)
+AWS Identity Center can be used to broker temporary AWS IAM credentials to human users. IAMbic supports <!-- TODO finish this sentence -->
