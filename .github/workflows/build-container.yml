@@ -38,7 +38,7 @@ jobs:
           git add pyproject.toml
           git commit -m "Bump version"
           git push origin HEAD:${BRANCH_NAME}
-          git tag v$(python build_utils/tag_and_build_container.py print-current-version)
+          git tag v$(. build-env/bin/activate && python build_utils/tag_and_build_container.py print-current-version)
           git push --tags
         env:
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
