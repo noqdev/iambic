@@ -383,9 +383,6 @@ async def group_int_or_str_attribute(
         else:
             response.append({key: resource_val, "included_accounts": included_accounts})
 
-    # handle sorting stability
-    response = sorted(response, key=lambda x: x[key])
-
     return response
 
 
@@ -426,8 +423,5 @@ async def group_dict_attribute(
             attr_val["included_accounts"] = included_accounts
 
         response.append(attr_val)
-
-    # handle sorting stability
-    response = sorted(response, key=lambda x: sorted(x.keys())[0])
 
     return response

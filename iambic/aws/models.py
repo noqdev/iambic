@@ -85,6 +85,14 @@ class AccessModel(BaseModel):
         ),
     )
 
+    def access_model_sort_weight(self):
+        return (
+            str(self.included_accounts)
+            + str(self.excluded_accounts)
+            + str(self.included_orgs)
+            + str(self.excluded_orgs)
+        )
+
 
 class Tag(ExpiryModel, AccessModel):
     key: str
