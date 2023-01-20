@@ -13,8 +13,11 @@ from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.main import run_import
 
-if os.environ.get("GITHUB_ACTIONS", None) is None:
+if not os.environ.get("GITHUB_ACTIONS", None):
+    # We will select a particular AWS_PROFILE to run on developer local machine
     # Github action runner will use temporary creds in the environment
+    # If you are public developer, this probably won't work for you since
+    # functional test requires particular cloud resources for testing.
     os.environ["AWS_PROFILE"] = "iambic_test_org_account/IambicHubRole"
 
 os.environ["TESTING"] = "true"
