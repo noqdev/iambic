@@ -75,7 +75,10 @@ def generate_templates_fixture():
 # will be merged and we will check the workflow to be completed state.
 def test_github_cicd(filesystem, generate_templates_fixture):
 
-    if os.environ.get("GITHUB_ACTIONS", None) is None:
+    if not os.environ.get("GITHUB_ACTIONS", None):
+        # If we are running locally on developer machine, we need to ensure
+        # the payload is packed into a container image for the test templates repo
+        # to run against, so this is why we are building the container images on-the-fly
         subprocess.run("make -f Makefile.itest auth_to_ecr", shell=True, check=True)
         subprocess.run(
             "make -f Makefile.itest build_docker_itest", shell=True, check=True
