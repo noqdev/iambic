@@ -7,8 +7,8 @@ import warnings
 import click
 
 from iambic.config.models import Config
-from iambic.config.wizard import ConfigurationWizard
 from iambic.config.utils import multi_config_loader
+from iambic.config.wizard import ConfigurationWizard
 from iambic.core.context import ctx
 from iambic.core.git import clone_git_repos
 from iambic.core.logger import log

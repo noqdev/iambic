@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-import base64
+import asyncio
 import os
 import sys
 import time
 from enum import Enum
 
-import boto3
-
+from iambic.config.utils import resolve_config_template_path
 from iambic.core.models import BaseModel
-from iambic.core.utils import yaml
 from iambic.main import (
     run_apply,
     run_clone_repos,
@@ -20,8 +18,6 @@ from iambic.main import (
     run_plan,
 )
 
-CONFIG_PATH = os.path.expanduser("~/.iambic/config.yaml")
-os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
 REPO_BASE_PATH = os.path.expanduser("~/.iambic/repos/")
 os.makedirs(os.path.dirname(REPO_BASE_PATH), exist_ok=True)
 PLAN_OUTPUT_PATH = os.environ.get("PLAN_OUTPUT_PATH", None)
@@ -56,57 +52,26 @@ def run_handler(event=None, context=None):
     if not context:
         context = {"command": "import"}
     lambda_context = LambdaContext(**context)
-    if not (iambic_config_path := os.getenv("IAMBIC_CONFIG")):
-        raise NotImplementedError("You must set the IAMBIC_CONFIG environment variable")
-    if not iambic_config_path.startswith("arn:aws:secretsmanager:"):
-        raise NotImplementedError(
-            "IAMBIC_CONFIG must be an ARN to a secret in AWS Secrets Manager"
-        )
-    iambic_assume_role = os.getenv("IAMBIC_CONFIG_ASSUME_ROLE")
-    secret_arn = iambic_config_path
-    region_name = secret_arn.split(":")[3]
-    session = boto3.Session(region_name=region_name)
-    if iambic_assume_role:
-        sts = session.client("sts")
-        role_params = dict(
-            RoleArn=iambic_assume_role,
-            RoleSessionName="iambic",
-        )
-        role = sts.assume_role(**role_params)
-        session = boto3.Session(
-            region_name=region_name,
-            aws_access_key_id=role["Credentials"]["AccessKeyId"],
-            aws_secret_access_key=role["Credentials"]["SecretAccessKey"],
-            aws_session_token=role["Credentials"]["SessionToken"],
-        )
 
-    client = session.client(service_name="secretsmanager", region_name=region_name)
-    get_secret_value_response = client.get_secret_value(SecretId=secret_arn)
-    config_text = (
-        get_secret_value_response["SecretString"]
-        if "SecretString" in get_secret_value_response
-        else base64.b64decode(get_secret_value_response["SecretBinary"])
-    )
-    config = yaml.load(config_text)
-    with open(CONFIG_PATH, "w") as f:
-        yaml.dump(config, f)
+    config_path = asyncio.run(resolve_config_template_path(REPO_BASE_PATH))
+
     match lambda_context.command:
         case LambdaCommand.run_import.value:
-            return run_import((CONFIG_PATH,), REPO_BASE_PATH)
+            return run_import([config_path], REPO_BASE_PATH)
         case LambdaCommand.run_plan.value:
-            return run_plan(CONFIG_PATH, None, REPO_BASE_PATH)
+            return run_plan(config_path, None, REPO_BASE_PATH)
         case LambdaCommand.run_apply.value:
-            return run_apply(True, CONFIG_PATH, None, REPO_BASE_PATH)
+            return run_apply(True, config_path, None, REPO_BASE_PATH)
         case LambdaCommand.run_detect.value:
             return run_detect(
-                CONFIG_PATH,
+                config_path,
             )
         case LambdaCommand.run_git_apply.value:
-            return run_git_apply(CONFIG_PATH, REPO_BASE_PATH, None, FROM_SHA, TO_SHA)
+            return run_git_apply(config_path, REPO_BASE_PATH, None, FROM_SHA, TO_SHA)
         case LambdaCommand.run_git_plan.value:
-            return run_git_plan(CONFIG_PATH, None, REPO_BASE_PATH, PLAN_OUTPUT_PATH)
+            return run_git_plan(config_path, None, REPO_BASE_PATH, PLAN_OUTPUT_PATH)
         case LambdaCommand.run_clone_git_repos.value:
-            return run_clone_repos(CONFIG_PATH, REPO_BASE_PATH)
+            return run_clone_repos(config_path, REPO_BASE_PATH)
         case _:
             raise NotImplementedError(f"Unknown command {lambda_context.command}")
 

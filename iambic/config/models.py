@@ -17,7 +17,7 @@ from slack_bolt import App as SlackBoltApp
 from iambic.aws.models import AWSAccount, AWSOrganization
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.models import Variable
-from iambic.core.utils import aio_wrapper, yaml, sort_dict
+from iambic.core.utils import aio_wrapper, sort_dict, yaml
 
 CURRENT_IAMBIC_VERSION = "1"
 
@@ -225,9 +225,7 @@ class Config(BaseModel):
         secret_arn = extend.value
         region_name = secret_arn.split(":")[3]
         secret_account_id = secret_arn.split(":")[4]
-        aws_account_map = {
-            account.account_id: account for account in self.aws.accounts
-        }
+        aws_account_map = {account.account_id: account for account in self.aws.accounts}
 
         if aws_account := aws_account_map.get(secret_account_id):
             session = await aws_account.get_boto3_session(region_name=region_name)
@@ -283,7 +281,9 @@ class Config(BaseModel):
         c = cls(file_path=file_path, **yaml.load(open(file_path)))
         return c
 
-    def write(self, file_path, exclude_none=True, exclude_unset=False, exclude_defaults=True):
+    def write(
+        self, file_path, exclude_none=True, exclude_unset=False, exclude_defaults=True
+    ):
         input_dict = self.json(
             exclude_none=exclude_none,
             exclude_unset=exclude_unset,
@@ -297,7 +297,7 @@ class Config(BaseModel):
             [
                 "template_type",
                 "version",
-            ]
+            ],
         )
 
         os.makedirs(os.path.dirname(os.path.expanduser(file_path)), exist_ok=True)

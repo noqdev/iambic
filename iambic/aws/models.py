@@ -154,13 +154,19 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
     async def get_boto3_client(self, service: str, region_name: Optional[str] = None):
         region_name = region_name or self.default_region
 
-        if client := self.boto3_session_map.get("client", {}).get(service, {}).get(region_name):
+        if (
+            client := self.boto3_session_map.get("client", {})
+            .get(service, {})
+            .get(region_name)
+        ):
             return client
 
         client = (await self.get_boto3_session(region_name)).client(
             service, config=botocore.client.Config(max_pool_connections=50)
         )
-        self.boto3_session_map.setdefault("client", {}).setdefault(service, {})[region_name] = client
+        self.boto3_session_map.setdefault("client", {}).setdefault(service, {})[
+            region_name
+        ] = client
         return client
 
     async def get_active_regions(self) -> list[str]:
@@ -329,7 +335,11 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         exclude_defaults: bool = False,
         exclude_none: bool = True,
     ) -> "DictStrAny":  # noqa
-        required_exclude = {"boto3_session_map", "org_session_info", "identity_center_details"}
+        required_exclude = {
+            "boto3_session_map",
+            "org_session_info",
+            "identity_center_details",
+        }
         if exclude:
             exclude.update(required_exclude)
         else:
@@ -352,7 +362,7 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
                 "org_id",
                 "identity_center_account",
                 "default_rule",
-            ]
+            ],
         )
 
     def __str__(self):
@@ -555,9 +565,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
         )
-        return sort_dict(
-            resp, ["org_id"]
-        )
+        return sort_dict(resp, ["org_id"])
 
     def __str__(self):
         return self.org_id
