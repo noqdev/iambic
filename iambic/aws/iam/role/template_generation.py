@@ -8,6 +8,7 @@ from collections import defaultdict
 import aiofiles
 
 from iambic.aws.event_bridge.models import RoleMessageDetails
+from iambic.aws.iam.policy.models import AssumeRolePolicyDocument
 from iambic.aws.iam.role.models import (
     AWS_IAM_ROLE_TEMPLATE_TYPE,
     RoleProperties,
@@ -194,6 +195,21 @@ async def _account_id_to_role_map(role_refs):
     for role_ref in role_refs:
         async with aiofiles.open(role_ref["path"], mode="r") as f:
             content_dict = json.loads(await f.read())
+
+            # handle strange unstable response with deleted princiapls
+            assume_role_policy_document = content_dict.get(
+                "AssumeRolePolicyDocument", None
+            )
+            if assume_role_policy_document:
+                policy_document = AssumeRolePolicyDocument.parse_obj(
+                    normalize_boto3_resp(assume_role_policy_document)
+                )
+                content_dict["AssumeRolePolicyDocument"] = json.loads(
+                    policy_document.json(
+                        exclude_unset=True, exclude_defaults=True, exclude_none=True
+                    )
+                )
+
             account_id_to_role_map[role_ref["account_id"]] = normalize_boto3_resp(
                 content_dict
             )
