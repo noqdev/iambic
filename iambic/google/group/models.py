@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import time
 from itertools import chain
 from typing import List, Optional
 
@@ -169,7 +168,7 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
                     self.properties.email, self.properties.domain, google_project
                 )
                 if not current_group:
-                    time.sleep(1)
+                    await asyncio.sleep(1)
 
             if current_group:
                 change_details.current_value = current_group
