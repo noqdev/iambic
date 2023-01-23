@@ -39,6 +39,9 @@ if TYPE_CHECKING:
 
 ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\*$"
 
+IAMBIC_HUB_ROLE_NAME = "IambicHubRole"
+IAMBIC_SPOKE_ROLE_NAME = "IambicSpokeRole"
+
 
 @yaml_object(yaml)
 class Partition(Enum):
@@ -108,7 +111,7 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         None,
         description="The AWS profile used when making calls to the account",
     )
-    assume_role_arn: Optional[str] = Field(
+    hub_role_arn: Optional[str] = Field(
         None,
         description="The role arn to assume into when making calls to the account",
     )
@@ -137,10 +140,10 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
                 return self.boto3_session_map[region_name]
 
         session = boto3.Session(region_name=region_name)
-        if self.assume_role_arn:
+        if self.hub_role_arn:
             boto3_session = await create_assume_role_session(
                 session,
-                self.assume_role_arn,
+                self.hub_role_arn,
                 region_name,
                 external_id=self.external_id,
             )
@@ -216,10 +219,14 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         [],
         description="A list of variables to be used when creating templates",
     )
-    org_session_info: Optional[dict] = None
+    hub_session_info: Optional[dict] = None
     identity_center_details: Optional[Union[IdentityCenterDetails, None]] = None
+    spoke_role_arn: str = Field(
+        None,
+        description="(Auto-populated) The role arn to assume into when making calls to the account",
+    )
 
-    async def get_boto3_session(self, region_name: str = None):
+    async def get_boto3_session(self, region_name: str = None, is_spoke_session: bool = True):
         region_name = region_name or self.default_region
 
         if self.boto3_session_map is None:
@@ -227,10 +234,10 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         elif boto3_session := self.boto3_session_map.get(region_name):
             return boto3_session
 
-        if self.org_session_info:
+        if is_spoke_session:
             boto3_session = await create_assume_role_session(
-                self.org_session_info["boto3_session"],
-                self.assume_role_arn,
+                self.hub_session_info["boto3_session"],
+                self.spoke_role_arn,
                 region_name,
                 external_id=self.external_id,
             )
@@ -337,7 +344,7 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
     ) -> "DictStrAny":  # noqa
         required_exclude = {
             "boto3_session_map",
-            "org_session_info",
+            "hub_session_info",
             "identity_center_details",
         }
         if exclude:
@@ -382,11 +389,6 @@ class BaseAWSOrgRule(BaseModel):
     iambic_managed: Optional[IambicManaged] = Field(
         IambicManaged.UNDEFINED,
         description="Controls the directionality of iambic changes",
-    )
-    assume_role_name: Optional[Union[str, list[str]]] = Field(
-        default=["OrganizationAccountAccessRole", "AWSControlTowerExecution"],
-        description="The role name(s) to use when assuming into an included account. "
-        "If not provided, this iambic will use the default AWS organization role(s).",
     )
 
 
@@ -465,35 +467,20 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
             variables=account["variables"],
             identity_center_details=identity_center_details,
             iambic_managed=account_rule.iambic_managed,
+            spoke_role_arn=f"arn:aws:iam::{account_id}:role/{IAMBIC_SPOKE_ROLE_NAME}",
+            hub_session_info=dict(boto3_session=session),
+            default_region=region_name,
+            boto3_session_map={},
         )
-        aws_account.boto3_session_map = {}
-        assume_role_names = account_rule.assume_role_name
-        if not isinstance(assume_role_names, list):
-            assume_role_names = [assume_role_names]
-
-        # Determine the assume_role_arn by attempting to assume into the provided assume_role_names.
-        for assume_role_name in assume_role_names:
-            assume_role_arn = f"arn:aws:iam::{account_id}:role/{assume_role_name}"
-            boto3_session = await create_assume_role_session(
-                session,
-                assume_role_arn,
-                region_name,
-                external_id=self.external_id,
+        try:
+            await aws_account.get_boto3_session()
+            return aws_account
+        except Exception as err:
+            log.debug(
+                "Failed to assume role",
+                assume_role_arn=aws_account.spoke_role_arn,
+                error=err,
             )
-            if boto3_session:
-                try:
-                    await aio_wrapper(boto3_session.get_credentials)
-                    aws_account.boto3_session_map[region_name] = boto3_session
-                    aws_account.org_session_info = dict(boto3_session=boto3_session)
-                    aws_account.assume_role_arn = assume_role_arn
-                    return aws_account
-                except Exception as err:
-                    log.debug(
-                        "Failed to assume role",
-                        assume_role_arn=assume_role_arn,
-                        error=err,
-                    )
-                    continue
 
     async def get_accounts(self) -> list[AWSAccount]:
         """Get all accounts in an AWS Organization

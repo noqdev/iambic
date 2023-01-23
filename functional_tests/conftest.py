@@ -23,12 +23,12 @@ version: '1'
 extends:
   - key: AWS_SECRETS_MANAGER
     value: arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/iambic_itest_secrets
-    assume_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
+    hub_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
 
 aws:
   organizations:
     - org_id: 'o-8t0mt0ybdd'
-      assume_role_arn: 'arn:aws:iam::580605962305:role/IambicSpokeRole'
+      hub_role_arn: 'arn:aws:iam::580605962305:role/IambicSpokeRole'
       org_name: 'iambic_test_org_account'
       identity_center_account:
         account_id: '580605962305'
