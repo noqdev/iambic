@@ -23,6 +23,11 @@ jobs:
       - uses: actions/checkout@v3
         with:
           token: ${{ secrets.VERSION_BUMP_TOKEN }}
+          # VERSION_BUMP_TOKEN is a Github Fine Grain Access token. It belongs to a github user that
+          # can bypass a repository code review rules. The access it needs to be granted are the following:
+          # 1. The repository it needs to bump access to.
+          # 2. Read and Write access to code (also known as Contents of the Repository Permission)
+          # 3. Because point 2, it will include Read access to Metadata
       - name: bootstrap
         run: |
           python3.10 -m venv build-env
