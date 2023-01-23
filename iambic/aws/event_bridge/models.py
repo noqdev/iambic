@@ -20,3 +20,9 @@ class RoleMessageDetails(PydanticBaseModel):
     account_id: str
     role_name: str
     delete: bool
+
+
+class UserMessageDetails(PydanticBaseModel):
+    account_id: str
+    user_name: str
+    delete: bool
