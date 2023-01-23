@@ -24,7 +24,7 @@ jobs:
         with:
           token: ${{ secrets.VERSION_BUMP_TOKEN }}
           # VERSION_BUMP_TOKEN is a Github Fine Grain Access token. It belongs to a github user that
-          # can bypass a repository code review rules. The access it needs to be granted are the following:
+          # can bypass the repository code review rules. It needs to be granted the following:
           # 1. The repository it needs to bump access to.
           # 2. Read and Write access to code (also known as Contents of the Repository Permission)
           # 3. Because point 2, it will include Read access to Metadata
