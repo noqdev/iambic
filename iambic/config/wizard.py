@@ -245,7 +245,7 @@ class ConfigurationWizard:
             " from the current role. (If you are using a role with access to the Organization, "
             "you can leave this blank)"
         ).ask():
-            account.assume_role_arn = assume_role_arn
+            account.hub_role_arn = assume_role_arn
 
         if aws_profile := questionary.text(
             "(Optional) Provide an AWS profile name (Configured in ~/.aws/config) that Iambic "
@@ -420,7 +420,7 @@ class ConfigurationWizard:
             "(Optional) Provide a role ARN to assume when accessing the AWS Organization"
             " from the current role. This is required if running IAMbic from a githook or CI/CD pipeline."
         ).ask():
-            aws_org.assume_role_arn = assume_role_arn
+            aws_org.hub_role_arn = assume_role_arn
 
         aws_org.default_rule.iambic_managed = set_iambic_control(
             aws_org.default_rule.iambic_managed
@@ -496,9 +496,9 @@ class ConfigurationWizard:
 
         if (
             self.config.aws.organizations
-            and self.config.aws.organizations[0].assume_role_arn
+            and self.config.aws.organizations[0].hub_role_arn
         ):
-            role_arn = self.config.aws.organizations[0].assume_role_arn
+            role_arn = self.config.aws.organizations[0].hub_role_arn
         else:
             role_arn = questionary.text(
                 "What is the ARN of the role that Iambic will assume to decode the secret? "
@@ -827,7 +827,7 @@ class ConfigurationWizard:
             )
             if self.config.aws and self.config.aws.organizations:
                 aws_org = self.config.aws.organizations[0]
-                assume_role_arn = aws_org.assume_role_arn
+                assume_role_arn = aws_org.hub_role_arn
                 region = aws_org.default_region
 
                 if not assume_role_arn:
@@ -839,7 +839,7 @@ class ConfigurationWizard:
                     ).ask():
                         self.config.aws.organizations[
                             0
-                        ].assume_role_arn = assume_role_arn
+                        ].hub_role_arn = assume_role_arn
                         self.config.write(self.config_path)
             else:
                 region = set_required_text_value(
