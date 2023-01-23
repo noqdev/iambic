@@ -8,11 +8,13 @@ from iambic.aws.event_bridge.models import (
     ManagedPolicyMessageDetails,
     PermissionSetMessageDetails,
     RoleMessageDetails,
+    UserMessageDetails,
 )
 from iambic.aws.iam.policy.template_generation import (
     generate_aws_managed_policy_templates,
 )
 from iambic.aws.iam.role.template_generation import generate_aws_role_templates
+from iambic.aws.iam.user.template_generation import generate_aws_user_templates
 from iambic.aws.identity_center.permission_set.template_generation import (
     generate_aws_permission_set_templates,
 )
@@ -28,6 +30,7 @@ async def detect_changes(  # noqa: C901
         return
 
     role_messages = []
+    user_messages = []
     managed_policy_messages = []
     permission_set_messages = []
     commit_message = "Out of band changes detected.\nSummary:\n"
@@ -108,6 +111,16 @@ async def detect_changes(  # noqa: C901
                                     delete=bool(event == "DeleteRole"),
                                 )
                             )
+                        elif user_name := request_params.get("userName"):
+                            resource_id = user_name
+                            resource_type = "User"
+                            user_messages.append(
+                                UserMessageDetails(
+                                    account_id=account_id,
+                                    role_name=user_name,
+                                    delete=bool(event == "DeleteUser"),
+                                )
+                            )
                         elif policy_arn := request_params.get("policyArn"):
                             split_policy = policy_arn.split("/")
                             policy_name = split_policy[-1]
@@ -160,6 +173,8 @@ async def detect_changes(  # noqa: C901
     tasks = []
     if role_messages:
         tasks.append(generate_aws_role_templates([config], repo_dir, role_messages))
+    if user_messages:
+        tasks.append(generate_aws_user_templates([config], repo_dir, user_messages))
     if managed_policy_messages:
         tasks.append(
             generate_aws_managed_policy_templates(
