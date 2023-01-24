@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  This template creates the IAMbic spoke role.
+Parameters:
+  SpokeRoleName:
+    Type: String
+  HubRoleArn:
+    Type: String
+Resources:
+  IambicSpokeRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Ref SpokeRoleName
+      Description: >-
+        This role is used by IAMbic to perform all actions on the account.
+        It is assumed by the Iambic hub role in the hub account.
+        Managed via CloudFormation.
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+              - sts:TagSession
+            Principal:
+              AWS: !Ref HubRoleArn
+      Policies:
+        - PolicyName: base_permissions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:Describe*
+                  - identitystore:*
+                  - organizations:describe*
+                  - organizations:list*
+                  - iam:*
+                  - sso:*
+                Resource:
+                  - '*'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/ReadOnlyAccess'
