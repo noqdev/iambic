@@ -14,7 +14,6 @@ from git import Repo
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, validator
-from pydantic.error_wrappers import ValidationError
 from pydantic.fields import ModelField
 
 from iambic.aws.utils import apply_to_account
@@ -156,7 +155,7 @@ class BaseModel(PydanticBaseModel):
 
         if issubclass(type(self), ExpiryModel):
             if hasattr(self, "expires_at") and self.expires_at:
-                if self.expires_at < datetime.datetime.utcnow():
+                if self.expires_at < datetime.datetime.now(datetime.timezone.utc):
                     self.deleted = True
                     log.info("Expired resource found, marking for deletion")
                     return self
@@ -352,14 +351,7 @@ class BaseTemplate(
 
     @classmethod
     def load(cls, file_path: str):
-        try:
-            return cls(file_path=file_path, **yaml.load(open(file_path)))
-        except ValidationError as e:
-            log_params = {
-                "file_path": file_path,
-            }
-            log.error("ValidationError", **log_params)
-            raise e
+        return cls(file_path=file_path, **yaml.load(open(file_path)))
 
 
 class Variable(PydanticBaseModel):
@@ -381,10 +373,20 @@ class ExpiryModel(PydanticBaseModel):
 
     @validator("expires_at", pre=True)
     def parse_expires_at(cls, value):
-        if not value or isinstance(value, datetime.datetime):
+        dt = None
+        if not value:
             return value
-        elif isinstance(value, datetime.date):
-            return datetime.datetime.combine(value, datetime.datetime.min.time())
-        return dateparser.parse(
-            value,
+        if isinstance(value, datetime.date):
+            dt = datetime.datetime.combine(
+                value, datetime.datetime.min.time()
+            ).astimezone(datetime.timezone.utc)
+            return dt
+        if isinstance(value, datetime.datetime):
+            dt = value
+            if not dt.tzinfo:
+                dt = dt.replace(tzinfo=datetime.timezone.utc)
+            return dt
+        dt = dateparser.parse(
+            value, settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True}
         )
+        return dt

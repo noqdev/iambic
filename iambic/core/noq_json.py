@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 import ujson
@@ -16,7 +17,7 @@ class SetEncoder(json.JSONEncoder):
         if isinstance(obj, Decimal):
             return float(obj)
         if isinstance(obj, datetime):
-            return obj.timestamp()
+            return obj.strftime("%Y-%m-%d %H:%M:%S %Z")
         if isinstance(obj, Exception):
             return str(obj)
         if isinstance(obj, UUID):
@@ -58,7 +59,7 @@ def dumps(
     return result
 
 
-def loads(s: str, **kwargs) -> any:
+def loads(s: str, **kwargs) -> Any:
     try:
         result = ujson.loads(s, **kwargs)
     except ValueError:

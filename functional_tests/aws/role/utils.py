@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import asyncio
 import random
 
 from iambic.aws.iam.role.models import RoleAccess, RoleTemplate
 from iambic.aws.iam.role.template_generation import get_role_dir
-from iambic.aws.iam.role.utils import get_role, list_roles
+from iambic.aws.iam.role.utils import list_roles
 from iambic.aws.models import AWSAccount
 
 
@@ -83,27 +82,6 @@ properties:
     role_template = RoleTemplate.load(file_path)
 
     return role_template
-
-
-async def get_role_across_accounts(
-    aws_accounts: list[AWSAccount], role_name: str, include_policies: bool = True
-) -> dict:
-    async def get_role_for_account(aws_account: AWSAccount):
-        iam_client = await aws_account.get_boto3_client("iam")
-        return {
-            aws_account.account_id: await get_role(
-                role_name, iam_client, include_policies
-            )
-        }
-
-    account_on_roles = await asyncio.gather(
-        *[get_role_for_account(aws_account) for aws_account in aws_accounts]
-    )
-    return {
-        account_id: role
-        for resp in account_on_roles
-        for account_id, role in resp.items()
-    }
 
 
 async def get_modifiable_role(iam_client):

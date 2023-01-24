@@ -67,6 +67,14 @@ def prepare_local_repo(
     for remote in cloned_repo.remotes:
         remote.fetch()
     cloned_repo.git.checkout("-b", "attempt/git-apply")
+
+    # Note, this is for local usage, we don't actually
+    # forward this commit upstream
+    repo_config_writer = cloned_repo.config_writer()
+    repo_config_writer.set_value("user", "name", "Iambic Merger")
+    repo_config_writer.set_value("user", "email", "iambic-merger@iambic.org")
+    repo_config_writer.release()
+
     cloned_repo.git.merge(f"origin/{pull_request_branch_name}")
     log_params = {"last_commit_message": cloned_repo.head.commit.message}
     log.info(cloned_repo.head.commit.message, **log_params)

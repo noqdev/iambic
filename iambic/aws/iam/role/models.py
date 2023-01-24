@@ -3,10 +3,10 @@ from __future__ import annotations
 import asyncio
 import json
 from itertools import chain
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import botocore
-from pydantic import Field, constr
+from pydantic import Field, constr, validator
 
 from iambic.aws.iam.models import MaxSessionDuration, Path
 from iambic.aws.iam.policy.models import (
@@ -65,8 +65,7 @@ class RoleAccess(ExpiryModel, AccessModel):
 
 
 class PermissionBoundary(ExpiryModel, AccessModel):
-    permissions_boundary_type: str
-    permissions_boundary_arn: constr(regex=ARN_RE)
+    policy_arn: constr(regex=ARN_RE)
 
     @property
     def resource_type(self):
@@ -74,7 +73,7 @@ class PermissionBoundary(ExpiryModel, AccessModel):
 
     @property
     def resource_id(self):
-        return self.permissions_boundary_arn
+        return self.policy_arn
 
 
 class RoleProperties(BaseModel):
@@ -117,6 +116,35 @@ class RoleProperties(BaseModel):
     @property
     def resource_id(self):
         return self.role_name
+
+    @classmethod
+    def sort_func(cls, attribute_name: str) -> Callable:
+        def _sort_func(obj):
+            return f"{getattr(obj, attribute_name)}!{obj.access_model_sort_weight()}"
+
+        return _sort_func
+
+    @validator("managed_policies")
+    def sort_managed_policy_refs(cls, v: list[ManagedPolicyRef]):
+        sorted_v = sorted(v, key=cls.sort_func("policy_arn"))
+        return sorted_v
+
+    @validator("inline_policies")
+    def sort_inline_policies(cls, v: list[PolicyDocument]):
+        sorted_v = sorted(v, key=cls.sort_func("policy_name"))
+        return sorted_v
+
+    @validator("tags")
+    def sort_tags(cls, v: list[Tag]):
+        sorted_v = sorted(v, key=cls.sort_func("key"))
+        return sorted_v
+
+    @validator("assume_role_policy_document")
+    def sort_assume_role_policy_documents(cls, v: list[AssumeRolePolicyDocument]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
 
 
 class RoleTemplate(AWSTemplate, AccessModel):
@@ -177,6 +205,10 @@ class RoleTemplate(AWSTemplate, AccessModel):
             self, self.resource_type, self.resource_id
         )
         account_role = self.apply_resource_dict(aws_account, context)
+
+        self = await remove_expired_resources(
+            self, self.resource_type, self.resource_id
+        )
         role_name = account_role["RoleName"]
         account_change_details = AccountChangeDetails(
             account=str(aws_account),
@@ -305,6 +337,11 @@ class RoleTemplate(AWSTemplate, AccessModel):
                 account_role["AssumeRolePolicyDocument"] = json.dumps(
                     account_role["AssumeRolePolicyDocument"]
                 )
+                if account_role.get("PermissionsBoundary"):
+                    account_role["PermissionsBoundary"] = account_role[
+                        "PermissionsBoundary"
+                    ]["PolicyArn"]
+
                 await boto_crud_call(client.create_role, **account_role)
         except Exception as e:
             log.error("Unable to generate tasks for resource", error=e, **log_params)
