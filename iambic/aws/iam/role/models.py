@@ -3,10 +3,10 @@ from __future__ import annotations
 import asyncio
 import json
 from itertools import chain
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import botocore
-from pydantic import Field, constr
+from pydantic import Field, constr, validator
 
 from iambic.aws.iam.models import MaxSessionDuration, Path
 from iambic.aws.iam.policy.models import (
@@ -116,6 +116,35 @@ class RoleProperties(BaseModel):
     @property
     def resource_id(self):
         return self.role_name
+
+    @classmethod
+    def sort_func(cls, attribute_name: str) -> Callable:
+        def _sort_func(obj):
+            return f"{getattr(obj, attribute_name)}!{obj.access_model_sort_weight()}"
+
+        return _sort_func
+
+    @validator("managed_policies")
+    def sort_managed_policy_refs(cls, v: list[ManagedPolicyRef]):
+        sorted_v = sorted(v, key=cls.sort_func("policy_arn"))
+        return sorted_v
+
+    @validator("inline_policies")
+    def sort_inline_policies(cls, v: list[PolicyDocument]):
+        sorted_v = sorted(v, key=cls.sort_func("policy_name"))
+        return sorted_v
+
+    @validator("tags")
+    def sort_tags(cls, v: list[Tag]):
+        sorted_v = sorted(v, key=cls.sort_func("key"))
+        return sorted_v
+
+    @validator("assume_role_policy_document")
+    def sort_assume_role_policy_documents(cls, v: list[AssumeRolePolicyDocument]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
 
 
 class RoleTemplate(AWSTemplate, AccessModel):
