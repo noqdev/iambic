@@ -7,7 +7,7 @@ import pytest
 from iambic.aws.iam.role.models import RoleTemplate
 from iambic.aws.iam.role.template_generation import create_templated_role
 from iambic.aws.models import AWSAccount
-from iambic.config.models import Config
+from iambic.config.models import CURRENT_IAMBIC_VERSION, Config
 from iambic.core.iambic_enum import IambicManaged
 
 
@@ -56,7 +56,9 @@ async def test_create_template_role(test_role, mock_account_id_to_role_map, mock
     test_role_ref["account_id"] = "123456789012"
     test_role_refs = [test_role_ref]
     test_existing_template_map = {}
-    test_configs = [Config()]
+    test_configs = [
+        Config(version=CURRENT_IAMBIC_VERSION, file_path="cool_file_man.yaml")
+    ]
     output_role = await create_templated_role(
         test_config,
         test_aws_account_map,
@@ -68,20 +70,16 @@ async def test_create_template_role(test_role, mock_account_id_to_role_map, mock
     )
     assert output_role.iambic_managed is IambicManaged.UNDEFINED
 
-    test_existing_template_map = {test_role_name: "fake_file_path"}
-    with patch(
-        "iambic.aws.iam.role.template_generation.load_templates"
-    ) as _mock_load_templates:
-        _mock_load_templates.return_value = [test_role]
-        test_role.iambic_managed = IambicManaged.READ_AND_WRITE
-        output_role = await create_templated_role(
-            test_config,
-            test_aws_account_map,
-            test_role_name,
-            test_role_refs,
-            test_role_dir,
-            test_existing_template_map,
-            test_configs,
-        )
-        assert output_role.iambic_managed is IambicManaged.READ_AND_WRITE
-        assert output_role is not test_role
+    test_role.iambic_managed = IambicManaged.READ_AND_WRITE
+    test_existing_template_map = {test_role_name: test_role}
+    output_role = await create_templated_role(
+        test_config,
+        test_aws_account_map,
+        test_role_name,
+        test_role_refs,
+        test_role_dir,
+        test_existing_template_map,
+        test_configs,
+    )
+    assert output_role.iambic_managed is IambicManaged.READ_AND_WRITE
+    assert output_role is test_role

@@ -6,12 +6,29 @@ from botocore.exceptions import ClientError
 from deepdiff import DeepDiff
 
 from iambic.aws.models import AWSAccount
-from iambic.aws.utils import legacy_paginated_search
+from iambic.aws.utils import boto_crud_call, legacy_paginated_search
 from iambic.core import noq_json as json
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper, async_batch_processor
+
+
+async def get_permission_set_details(
+    identity_center_client,
+    instance_arn: str,
+    permission_set_arn: str,
+) -> dict:
+    try:
+        return (
+            await boto_crud_call(
+                identity_center_client.describe_permission_set,
+                InstanceArn=instance_arn,
+                PermissionSetArn=permission_set_arn,
+            )
+        ).get("PermissionSet", {})
+    except identity_center_client.exceptions.ResourceNotFoundException:
+        return {}
 
 
 async def generate_permission_set_map(aws_accounts: list[AWSAccount], templates: list):
@@ -138,10 +155,10 @@ async def enrich_permission_set_details(
     permission_set_arn = permission_set_details["PermissionSetArn"]
     query_params = dict(InstanceArn=instance_arn, PermissionSetArn=permission_set_arn)
     tasks = [
-        aio_wrapper(
+        boto_crud_call(
             identity_center_client.get_inline_policy_for_permission_set, **query_params
         ),
-        aio_wrapper(
+        boto_crud_call(
             identity_center_client.get_permissions_boundary_for_permission_set,
             **query_params,
         ),
@@ -171,9 +188,9 @@ async def enrich_permission_set_details(
             continue
 
         for k, v in permission_set_response.items():
-            if v and k != "ResponseMetadata":
-                permission_set_details[k] = v
-
+            if k == "ResponseMetadata" or not v:
+                continue
+            permission_set_details[k] = v
     return permission_set_details
 
 
@@ -208,7 +225,7 @@ async def apply_permission_set_aws_managed_policies(
         if context.execute:
             log_str = f"{log_str} Attaching AWS managed policies..."
             tasks = [
-                aio_wrapper(
+                boto_crud_call(
                     identity_center_client.attach_managed_policy_to_permission_set,
                     InstanceArn=instance_arn,
                     PermissionSetArn=permission_set_arn,
@@ -238,7 +255,7 @@ async def apply_permission_set_aws_managed_policies(
             log_str = f"{log_str} Detaching AWS managed policies..."
             tasks.extend(
                 [
-                    aio_wrapper(
+                    boto_crud_call(
                         identity_center_client.detach_managed_policy_from_permission_set,
                         InstanceArn=instance_arn,
                         PermissionSetArn=permission_set_arn,
@@ -259,7 +276,7 @@ async def detach_customer_managed_policy_ref(
     identity_center_client, instance_arn: str, permission_set_arn: str, policy: dict
 ):
     try:
-        await aio_wrapper(
+        await boto_crud_call(
             identity_center_client.detach_customer_managed_policy_reference_from_permission_set,
             InstanceArn=instance_arn,
             PermissionSetArn=permission_set_arn,
@@ -313,7 +330,7 @@ async def apply_permission_set_customer_managed_policies(
         if context.execute:
             log_str = f"{log_str} Attaching customer managed policies..."
             tasks = [
-                aio_wrapper(
+                boto_crud_call(
                     identity_center_client.attach_customer_managed_policy_reference_to_permission_set,
                     InstanceArn=instance_arn,
                     PermissionSetArn=permission_set_arn,
@@ -378,7 +395,7 @@ async def create_account_assignment(
     resource_name: str,
     log_params: dict,
 ):
-    status = await aio_wrapper(
+    status = await boto_crud_call(
         identity_center_client.create_account_assignment,
         InstanceArn=instance_arn,
         TargetId=account_id,
@@ -392,7 +409,7 @@ async def create_account_assignment(
 
     while creation_status.get("Status") == "IN_PROGRESS":
         await asyncio.sleep(0.5)
-        status = await aio_wrapper(
+        status = await boto_crud_call(
             identity_center_client.describe_account_assignment_creation_status,
             InstanceArn=instance_arn,
             AccountAssignmentCreationRequestId=request_id,
@@ -424,7 +441,7 @@ async def delete_account_assignment(
     resource_name: str,
     log_params: dict,
 ):
-    status = await aio_wrapper(
+    status = await boto_crud_call(
         identity_center_client.delete_account_assignment,
         InstanceArn=instance_arn,
         TargetId=account_id,
@@ -438,7 +455,7 @@ async def delete_account_assignment(
 
     while deletion_status.get("Status") == "IN_PROGRESS":
         await asyncio.sleep(0.5)
-        status = await aio_wrapper(
+        status = await boto_crud_call(
             identity_center_client.describe_account_assignment_deletion_status,
             InstanceArn=instance_arn,
             AccountAssignmentDeletionRequestId=request_id,
@@ -481,8 +498,8 @@ async def apply_account_assignments(
     identity_center_client: boto3 client
     instance_arn: str
     permission_set_arn: str
-    template_assignments: list[dict]
-    existing_assignments: list[dict]
+    template_assignments: list[dict]. This is the desired list of assignments from the template
+    existing_assignments: list[dict]. These are the existing assignments from AWS
     log_params: dict
     context: ExecutionContext
     """
@@ -500,17 +517,17 @@ async def apply_account_assignments(
     for assignment_id, assignment in existing_assignment_map.items():
         if not template_assignment_map.get(assignment_id):
             log_str = "Stale assignments discovered."
+            response.append(
+                ProposedChange(
+                    change_type=ProposedChangeType.DELETE,
+                    account=assignment["account_name"],
+                    resource_id=assignment["resource_name"],
+                    resource_type=assignment["resource_type"],
+                    attribute="account_assignment",
+                )
+            )
             if context.execute:
                 log_str = f"{log_str} Removing account assignment..."
-                response.append(
-                    ProposedChange(
-                        change_type=ProposedChangeType.DELETE,
-                        account=assignment["account_name"],
-                        resource_id=assignment["resource_name"],
-                        resource_type=assignment["resource_type"],
-                        attribute="account_assignment",
-                    )
-                )
                 tasks.append(
                     delete_account_assignment(
                         identity_center_client,
@@ -611,7 +628,7 @@ async def apply_permission_set_inline_policy(
         if context.execute:
             boto_action = "Creating" if not existing_inline_policy else "Updating"
             log_str = f"{log_str} {boto_action} InlinePolicyDocument..."
-            await aio_wrapper(
+            await boto_crud_call(
                 identity_center_client.put_inline_policy_to_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
@@ -629,7 +646,7 @@ async def apply_permission_set_inline_policy(
         )
         if context.execute:
             log_str = f"{log_str} Removing InlinePolicyDocument..."
-            await aio_wrapper(
+            await boto_crud_call(
                 identity_center_client.delete_inline_policy_from_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
@@ -686,7 +703,7 @@ async def apply_permission_set_permission_boundary(
         if context.execute:
             boto_action = "Creating" if not existing_permission_boundary else "Updating"
             log_str = f"{log_str} {boto_action} PermissionsBoundary..."
-            await aio_wrapper(
+            await boto_crud_call(
                 identity_center_client.put_permissions_boundary_to_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
@@ -705,7 +722,7 @@ async def apply_permission_set_permission_boundary(
 
         if context.execute:
             log_str = f"{log_str} Deleting PermissionsBoundary..."
-            await aio_wrapper(
+            await boto_crud_call(
                 identity_center_client.delete_permissions_boundary_from_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
@@ -724,10 +741,12 @@ async def apply_permission_set_tags(
     log_params: dict,
     context: ExecutionContext,
 ) -> list[ProposedChange]:
-    existing_tag_map = {tag["Key"]: tag["Value"] for tag in existing_tags}
-    template_tag_map = {tag["Key"]: tag["Value"] for tag in template_tags}
+    existing_tag_map = {tag["Key"]: tag.get("Value") for tag in existing_tags}
+    template_tag_map = {tag["Key"]: tag.get("Value") for tag in template_tags}
     tags_to_apply = [
-        tag for tag in template_tags if tag["Value"] != existing_tag_map.get(tag["Key"])
+        tag
+        for tag in template_tags
+        if tag.get("Value") != existing_tag_map.get(tag["Key"])
     ]
     tasks = []
     response = []
@@ -746,7 +765,7 @@ async def apply_permission_set_tags(
         if context.execute:
             log_str = f"{log_str} Removing tags..."
             tasks.append(
-                aio_wrapper(
+                boto_crud_call(
                     identity_center_client.untag_resource,
                     InstanceArn=instance_arn,
                     ResourceArn=permission_set_arn,
@@ -768,7 +787,7 @@ async def apply_permission_set_tags(
         if context.execute:
             log_str = f"{log_str} Adding tags..."
             tasks.append(
-                aio_wrapper(
+                boto_crud_call(
                     identity_center_client.tag_resource,
                     InstanceArn=instance_arn,
                     ResourceArn=permission_set_arn,
@@ -822,7 +841,7 @@ async def delete_permission_set(
         log_params["managed_policies"] = managed_policies
         tasks.extend(
             [
-                aio_wrapper(
+                boto_crud_call(
                     identity_center_client.detach_managed_policy_from_permission_set,
                     InstanceArn=instance_arn,
                     PermissionSetArn=permission_set_arn,
@@ -849,7 +868,7 @@ async def delete_permission_set(
     if permissions_boundary:
         log_params["permissions_boundary"] = permissions_boundary
         tasks.append(
-            aio_wrapper(
+            boto_crud_call(
                 identity_center_client.delete_permissions_boundary_from_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
@@ -858,7 +877,7 @@ async def delete_permission_set(
     if inline_policy:
         log_params["inline_policy"] = inline_policy
         tasks.append(
-            aio_wrapper(
+            boto_crud_call(
                 identity_center_client.delete_inline_policy_from_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
@@ -868,7 +887,7 @@ async def delete_permission_set(
         log_params["tags"] = tags
         tags_to_remove = [tag["Key"] for tag in tags]
         tasks.append(
-            aio_wrapper(
+            boto_crud_call(
                 identity_center_client.untag_resource,
                 InstanceArn=instance_arn,
                 ResourceArn=permission_set_arn,
@@ -886,7 +905,7 @@ async def delete_permission_set(
     retry_count = 0
     while True:
         try:
-            await aio_wrapper(
+            await boto_crud_call(
                 identity_center_client.delete_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,

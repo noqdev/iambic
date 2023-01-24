@@ -44,7 +44,11 @@ async def resource_file_upsert(
     content_as_dict: dict,
     replace_file: bool = False,
 ):
-    if not replace_file and os.path.exists(file_path):
+    if (
+        not replace_file
+        and os.path.exists(file_path)
+        and os.stat(file_path).st_size != 0
+    ):
         async with aiofiles.open(file_path, mode="r") as f:
             content_dict = json.loads(await f.read())
             content_as_dict = {**content_dict, **content_as_dict}
@@ -70,8 +74,11 @@ async def gather_templates(repo_dir: str, template_type: str = None) -> list[str
         if template_type
         else NOQ_TEMPLATE_REGEX
     )
+    # Support both yaml and yml extensions for templates
     file_paths = glob.glob(f"{repo_dir}/**/*.yaml", recursive=True)
     file_paths += glob.glob(f"{repo_dir}*.yaml", recursive=True)
+    file_paths += glob.glob(f"{repo_dir}/**/*.yml", recursive=True)
+    file_paths += glob.glob(f"{repo_dir}*.yml", recursive=True)
     file_paths = await asyncio.gather(
         *[file_regex_search(fp, regex_pattern) for fp in file_paths]
     )
@@ -210,7 +217,13 @@ def sort_dict(original, prioritize=None):
     with optional prioritization of certain elements.
     """
     if prioritize is None:
-        prioritize = ["template_type", "name", "description"]
+        prioritize = [
+            "template_type",
+            "name",
+            "description",
+            "included_accounts",
+            "excluded_accounts",
+        ]
     if isinstance(original, dict):
         # Make a new "ordered" dictionary. No need for Collections in Python 3.7+
         # Sort the keys in the dictionary

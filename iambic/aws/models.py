@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import asyncio
+from enum import Enum
 from typing import TYPE_CHECKING, List, Optional, Union
 
 import boto3
 import botocore
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, constr
+from ruamel.yaml import YAML, yaml_object
 
 from iambic.aws.utils import (
     RegionName,
+    boto_crud_call,
     create_assume_role_session,
     evaluate_on_account,
     get_account_value,
@@ -29,10 +32,27 @@ from iambic.core.models import (
 )
 from iambic.core.utils import NoqSemaphore, aio_wrapper
 
+yaml = YAML()
+
 if TYPE_CHECKING:
     from iambic.config.models import Config
 
 ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\*$"
+
+
+@yaml_object(yaml)
+class Partition(Enum):
+    AWS = "aws"
+    AWS_GOV = "aws-us-gov"
+    AWS_CHINA = "aws-cn"
+
+    @classmethod
+    def to_yaml(cls, representer, node):
+        return representer.represent_scalar("!Partition", f"{node._value_}")
+
+    @classmethod
+    def from_yaml(cls, constructor, node):
+        return cls(node.value)
 
 
 class AccessModel(BaseModel):
@@ -62,15 +82,6 @@ class AccessModel(BaseModel):
         description=(
             "A list of AWS organization ids this statement explicitly does not apply to. "
             "Org ids can be represented as a regex and string"
-        ),
-    )
-
-
-class Deleted(AccessModel):
-    deleted: bool = Field(
-        description=(
-            "Denotes whether the resource has been removed from AWS."
-            "Upon being set to true, the resource will be deleted the next time iambic is ran."
         ),
     )
 
@@ -107,6 +118,9 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
     )
     boto3_session_map: Optional[dict] = None
 
+    class Config:
+        fields = {"boto3_session_map": {"exclude": True}}
+
     async def get_boto3_session(self, region_name: Optional[str] = None):
         region_name = region_name or self.default_region
 
@@ -141,13 +155,26 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         return self.boto3_session_map[region_name]
 
     async def get_boto3_client(self, service: str, region_name: Optional[str] = None):
-        return (await self.get_boto3_session(region_name)).client(
+        region_name = region_name or self.default_region
+
+        if (
+            client := self.boto3_session_map.get("client", {})
+            .get(service, {})
+            .get(region_name)
+        ):
+            return client
+
+        client = (await self.get_boto3_session(region_name)).client(
             service, config=botocore.client.Config(max_pool_connections=50)
         )
+        self.boto3_session_map.setdefault("client", {}).setdefault(service, {})[
+            region_name
+        ] = client
+        return client
 
     async def get_active_regions(self) -> list[str]:
         client = await self.get_boto3_client("ec2")
-        res = await aio_wrapper(client.describe_regions)
+        res = await boto_crud_call(client.describe_regions)
         return [region["RegionName"] for region in res["Regions"]]
 
     def __init__(self, **kwargs):
@@ -180,6 +207,10 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         description="A unique identifier designating the identity of the organization",
     )
     account_name: Optional[str] = None
+    partition: Optional[Partition] = Field(
+        Partition.AWS,
+        description="The AWS partition the account is in. Options are aws, aws-us-gov, and aws-cn",
+    )
     role_access_tag: Optional[str] = Field(
         None,
         description="The key of the tag used to store users and groups that can assume into the role the tag is on",
@@ -194,6 +225,9 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
     )
     org_session_info: Optional[dict] = None
     identity_center_details: Optional[Union[IdentityCenterDetails, None]] = None
+
+    class Config:
+        fields = {"org_session_info": {"exclude": True}}
 
     async def get_boto3_session(self, region_name: str = None):
         region_name = region_name or self.default_region
@@ -228,7 +262,7 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
                 "identitystore", region_name=region
             )
 
-            identity_center_instances = await aio_wrapper(
+            identity_center_instances = await boto_crud_call(
                 identity_center_client.list_instances
             )
 
@@ -356,6 +390,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         description="The AWS Account ID and region of the AWS Identity Center instance to use for this organization",
     )
     default_rule: BaseAWSOrgRule = Field(
+        BaseAWSOrgRule(enabled=True),
         description="The rule used to determine how an organization account should be handled if the account was not found in account_rules.",
     )
     account_rules: Optional[List[AWSOrgAccountRule]] = Field(
@@ -473,6 +508,8 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
 
 
 class AWSTemplate(BaseTemplate, ExpiryModel):
+    identifier: str
+
     async def _apply_to_account(
         self, aws_account: AWSAccount, context: ExecutionContext
     ) -> AccountChangeDetails:
@@ -519,6 +556,10 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
             log.debug("No changes detected for resource on any account.", **log_params)
 
         return template_changes
+
+    @property
+    def resource_type(self):
+        return self.identifier
 
 
 class Description(AccessModel):

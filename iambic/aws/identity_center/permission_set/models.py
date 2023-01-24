@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import re
 from itertools import chain
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 from pydantic import Field
 
+from iambic.aws.iam.policy.models import PolicyStatement
 from iambic.aws.identity_center.permission_set.utils import (
     apply_account_assignments,
     apply_permission_set_aws_managed_policies,
@@ -26,7 +27,11 @@ from iambic.aws.models import (
     ExpiryModel,
     Tag,
 )
-from iambic.aws.utils import evaluate_on_account
+from iambic.aws.utils import (
+    boto_crud_call,
+    evaluate_on_account,
+    remove_expired_resources,
+)
 from iambic.config.models import Config
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
@@ -47,7 +52,7 @@ AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE = (
 # TODO: Add true support for defining multiple orgs with IdentityCenter rules
 
 
-class PermissionSetAccess(ExpiryModel, AccessModel):
+class PermissionSetAccess(AccessModel, ExpiryModel):
     users: list[str] = Field(
         [],
         description="List of users who can access the role",
@@ -73,7 +78,7 @@ class AWSIdentityCenterInstance(BaseModel):
     identity_store_id: str
 
 
-class CustomerManagedPolicyReference(BaseModel):
+class CustomerManagedPolicyReference(BaseModel, ExpiryModel):
     path: str
     name: str
 
@@ -86,7 +91,7 @@ class CustomerManagedPolicyReference(BaseModel):
         return f"{self.path}{self.name}"
 
 
-class ManagedPolicyArn(BaseModel):
+class ManagedPolicyArn(BaseModel, ExpiryModel):
     arn: str
 
     @property
@@ -98,9 +103,9 @@ class ManagedPolicyArn(BaseModel):
         return self.arn
 
 
-class PermissionBoundary(BaseModel):
+class PermissionBoundary(BaseModel, ExpiryModel):
     customer_managed_policy_reference: Optional[CustomerManagedPolicyReference]
-    managed_policy_arn: Optional[str]
+    policy_arn: Optional[str]
 
     @property
     def resource_type(self):
@@ -108,15 +113,27 @@ class PermissionBoundary(BaseModel):
 
     @property
     def resource_id(self):
-        return self.customer_managed_policy_reference.name or self.managed_policy_arn
+        return self.customer_managed_policy_reference.name or self.policy_arn
 
 
 class SessionDuration(BaseModel):
     session_duration: str
 
 
-class InlinePolicy(BaseModel):
-    inline_policy: str
+class InlinePolicy(BaseModel, ExpiryModel):
+    version: Optional[str] = None
+    statement: Optional[List[PolicyStatement]] = Field(
+        None,
+        description="List of policy statements",
+    )
+
+    @property
+    def resource_type(self) -> str:
+        return "aws:identity_center:inline_policy"
+
+    @property
+    def resource_id(self) -> str:
+        return str(self.statement)
 
 
 class AWSIdentityCenterPermissionSetProperties(BaseModel):
@@ -127,10 +144,8 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
     )
     relay_state: Optional[str] = None
     session_duration: Optional[Union[str, list[SessionDuration]]] = None
-    permissions_boundary: Optional[
-        Union[PermissionBoundary, list[PermissionBoundary]]
-    ] = None
-    inline_policy: Optional[Union[str, list[InlinePolicy]]] = None
+    permissions_boundary: Optional[PermissionBoundary] = None
+    inline_policy: Optional[InlinePolicy] = None
     customer_managed_policy_references: Optional[
         list[CustomerManagedPolicyReference]
     ] = []
@@ -146,10 +161,9 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
         return self.name
 
 
-class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
+class AWSIdentityCenterPermissionSetTemplate(AWSTemplate, ExpiryModel):
     template_type: str = AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
     properties: AWSIdentityCenterPermissionSetProperties
-    identifier: str
     access_rules: Optional[list[PermissionSetAccess]] = []
     included_orgs: list[str] = Field(
         ["*"],
@@ -189,6 +203,9 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
 
         for rule in self.access_rules:
             rule_hit = None
+
+            if rule.deleted:
+                continue
 
             # If the account's org is excluded or not included, skip
             if aws_account.org_id in rule.excluded_orgs:
@@ -348,7 +365,9 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
         )
         instance_arn = aws_account.identity_center_details.instance_arn
         permission_set_arn = None
-
+        self = await remove_expired_resources(
+            self, self.resource_type, self.resource_id
+        )
         template_permission_set = self.apply_resource_dict(aws_account, context)
         name = template_permission_set["Name"]
         template_account_assignments = await self._verbose_access_rules(aws_account)
@@ -401,7 +420,6 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
             account_change_details.current_value[
                 "AccountAssignments"
             ] = current_account_assignments
-
         deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
         if isinstance(deleted, list):
             deleted = deleted[0].deleted
@@ -430,6 +448,7 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
                         current_account_assignments,
                         log_params,
                     )
+                    self.delete()
 
             return account_change_details
 
@@ -474,7 +493,7 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
                             **update_resource_log_params,
                         )
                         tasks.append(
-                            aio_wrapper(
+                            boto_crud_call(
                                 identity_center_client.update_permission_set,
                                 InstanceArn=instance_arn,
                                 PermissionSetArn=permission_set_arn,
@@ -507,7 +526,7 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
                 log_str = f"{log_str} Creating resource..."
                 log.info(log_str, **log_params)
 
-                permission_set = await aio_wrapper(
+                permission_set = await boto_crud_call(
                     identity_center_client.create_permission_set,
                     Name=name,
                     InstanceArn=instance_arn,
@@ -600,7 +619,7 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
 
         if context.execute:
             if any(changes_made):
-                res = await aio_wrapper(
+                res = await boto_crud_call(
                     identity_center_client.provision_permission_set,
                     InstanceArn=instance_arn,
                     PermissionSetArn=permission_set_arn,
@@ -610,7 +629,7 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
                 request_id = res["PermissionSetProvisioningStatus"]["RequestId"]
 
                 for _ in range(20):
-                    provision_status = await aio_wrapper(
+                    provision_status = await boto_crud_call(
                         identity_center_client.describe_permission_set_provisioning_status,
                         InstanceArn=instance_arn,
                         ProvisionPermissionSetRequestId=request_id,
@@ -618,13 +637,15 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
 
                     if (
                         provision_status["PermissionSetProvisioningStatus"]["Status"]
-                        == "IN_PROGRESS"
+                        != "IN_PROGRESS"
                     ):
-                        await asyncio.sleep(1)
-                        continue
-                    else:
                         break
 
+                    await asyncio.sleep(1)
+                    continue
+            if self.deleted:
+                self.delete()
+            self.write()
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),
@@ -688,10 +709,6 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate):
             log.debug("No changes detected for resource on any account.", **log_params)
 
         return template_changes
-
-    @property
-    def resource_type(self) -> str:
-        return "aws:identity_center:permission_set"
 
     @property
     def resource_id(self) -> str:

@@ -6,7 +6,8 @@ from typing import Union
 
 from deepdiff import DeepDiff
 
-from iambic.aws.utils import paginated_search
+from iambic.aws.models import AWSAccount
+from iambic.aws.utils import boto_crud_call, paginated_search
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
@@ -36,7 +37,7 @@ async def list_role_tags(role_name: str, iam_client):
 
 
 async def get_role_policy(role_name: str, policy_name: str, iam_client):
-    return await aio_wrapper(
+    return await boto_crud_call(
         iam_client.get_role_policy, RoleName=role_name, PolicyName=policy_name
     )
 
@@ -65,7 +66,7 @@ async def get_role_managed_policies(role_name: str, iam_client) -> list[dict[str
     policies = []
 
     while True:
-        response = await aio_wrapper(
+        response = await boto_crud_call(
             iam_client.list_attached_role_policies, RoleName=role_name, **marker
         )
         policies.extend(response["AttachedPolicies"])
@@ -78,21 +79,43 @@ async def get_role_managed_policies(role_name: str, iam_client) -> list[dict[str
     return policies
 
 
-async def get_role(role_name: str, iam_client):
+async def get_role(role_name: str, iam_client, include_policies: bool = True) -> dict:
     try:
-        current_role = (await aio_wrapper(iam_client.get_role, RoleName=role_name))[
+        current_role = (await boto_crud_call(iam_client.get_role, RoleName=role_name))[
             "Role"
         ]
-        current_role["ManagedPolicies"] = await get_role_managed_policies(
-            role_name, iam_client
-        )
-        current_role["InlinePolicies"] = await get_role_inline_policies(
-            role_name, iam_client, as_dict=False
-        )
+        if include_policies:
+            current_role["ManagedPolicies"] = await get_role_managed_policies(
+                role_name, iam_client
+            )
+            current_role["InlinePolicies"] = await get_role_inline_policies(
+                role_name, iam_client, as_dict=False
+            )
     except iam_client.exceptions.NoSuchEntityException:
         current_role = {}
 
     return current_role
+
+
+async def get_role_across_accounts(
+    aws_accounts: list[AWSAccount], role_name: str, include_policies: bool = True
+) -> dict:
+    async def get_role_for_account(aws_account: AWSAccount):
+        iam_client = await aws_account.get_boto3_client("iam")
+        return {
+            aws_account.account_id: await get_role(
+                role_name, iam_client, include_policies
+            )
+        }
+
+    account_on_roles = await asyncio.gather(
+        *[get_role_for_account(aws_account) for aws_account in aws_accounts]
+    )
+    return {
+        account_id: role
+        for resp in account_on_roles
+        for account_id, role in resp.items()
+    }
 
 
 async def apply_role_tags(
@@ -103,10 +126,12 @@ async def apply_role_tags(
     log_params: dict,
     context: ExecutionContext,
 ) -> list[ProposedChange]:
-    existing_tag_map = {tag["Key"]: tag["Value"] for tag in existing_tags}
-    template_tag_map = {tag["Key"]: tag["Value"] for tag in template_tags}
+    existing_tag_map = {tag["Key"]: tag.get("Value") for tag in existing_tags}
+    template_tag_map = {tag["Key"]: tag.get("Value") for tag in template_tags}
     tags_to_apply = [
-        tag for tag in template_tags if tag["Value"] != existing_tag_map.get(tag["Key"])
+        tag
+        for tag in template_tags
+        if tag.get("Value") != existing_tag_map.get(tag["Key"])
     ]
     tasks = []
     response = []
@@ -125,7 +150,7 @@ async def apply_role_tags(
         if context.execute:
             log_str = f"{log_str} Removing tags..."
             tasks.append(
-                aio_wrapper(
+                boto_crud_call(
                     iam_client.untag_role, RoleName=role_name, TagKeys=tags_to_remove
                 )
             )
@@ -144,7 +169,9 @@ async def apply_role_tags(
         if context.execute:
             log_str = f"{log_str} Adding tags..."
             tasks.append(
-                aio_wrapper(iam_client.tag_role, RoleName=role_name, Tags=tags_to_apply)
+                boto_crud_call(
+                    iam_client.tag_role, RoleName=role_name, Tags=tags_to_apply
+                )
             )
         log.info(log_str, tags=tags_to_apply, **log_params)
 
@@ -206,7 +233,7 @@ async def update_assume_role_policy(
         if context.execute:
             boto_action = "Creating" if existing_policy_document else "Updating"
             log_str = f"{log_str} {boto_action} AssumeRolePolicyDocument..."
-            await aio_wrapper(
+            await boto_crud_call(
                 iam_client.update_assume_role_policy,
                 RoleName=role_name,
                 PolicyDocument=json.dumps(template_policy_document),
@@ -248,7 +275,7 @@ async def apply_role_managed_policies(
         if context.execute:
             log_str = f"{log_str} Attaching managed policies..."
             tasks = [
-                aio_wrapper(
+                boto_crud_call(
                     iam_client.attach_role_policy,
                     RoleName=role_name,
                     PolicyArn=policy_arn,
@@ -277,7 +304,7 @@ async def apply_role_managed_policies(
             log_str = f"{log_str} Detaching managed policies..."
             tasks.extend(
                 [
-                    aio_wrapper(
+                    boto_crud_call(
                         iam_client.detach_role_policy,
                         RoleName=role_name,
                         PolicyArn=policy_arn,
@@ -325,7 +352,7 @@ async def apply_role_inline_policies(
                     )
                 )
                 tasks.append(
-                    aio_wrapper(
+                    boto_crud_call(
                         iam_client.delete_role_policy,
                         RoleName=role_name,
                         PolicyName=policy_name,
@@ -378,16 +405,17 @@ async def apply_role_inline_policies(
                 )
 
             log_str = f"{resource_existence} inline policies discovered."
-            if context.execute:
+            if context.execute and policy_document:
                 log_str = f"{log_str} {boto_action} inline policy..."
                 tasks.append(
-                    aio_wrapper(
+                    boto_crud_call(
                         iam_client.put_role_policy,
                         RoleName=role_name,
                         PolicyName=policy_name,
                         PolicyDocument=json.dumps(policy_document),
                     )
                 )
+
             log.info(log_str, policy_name=policy_name, **log_params)
 
     if tasks:
@@ -402,7 +430,7 @@ async def delete_iam_role(role_name: str, iam_client, log_params: dict):
     tasks = []
     for instance_profile in instance_profiles:
         tasks.append(
-            aio_wrapper(
+            boto_crud_call(
                 iam_client.remove_role_from_instance_profile,
                 RoleName=role_name,
                 InstanceProfileName=instance_profile["InstanceProfileName"],
@@ -413,7 +441,7 @@ async def delete_iam_role(role_name: str, iam_client, log_params: dict):
     tasks = []
     for instance_profile in instance_profiles:
         tasks.append(
-            aio_wrapper(
+            boto_crud_call(
                 iam_client.delete_instance_profile,
                 InstanceProfileName=instance_profile["InstanceProfileName"],
             )
@@ -429,7 +457,7 @@ async def delete_iam_role(role_name: str, iam_client, log_params: dict):
     )
     for policy in managed_policies:
         tasks.append(
-            aio_wrapper(
+            boto_crud_call(
                 iam_client.detach_role_policy, RoleName=role_name, PolicyArn=policy
             )
         )
@@ -442,7 +470,7 @@ async def delete_iam_role(role_name: str, iam_client, log_params: dict):
     )
     for policy_name in inline_policies:
         tasks.append(
-            aio_wrapper(
+            boto_crud_call(
                 iam_client.delete_role_policy,
                 RoleName=role_name,
                 PolicyName=policy_name,
@@ -452,4 +480,4 @@ async def delete_iam_role(role_name: str, iam_client, log_params: dict):
     # Actually perform the deletion of Managed & Inline policies
     await asyncio.gather(*tasks)
     # Now that everything has been removed from the role, delete the role itself
-    await aio_wrapper(iam_client.delete_role, RoleName=role_name)
+    await boto_crud_call(iam_client.delete_role, RoleName=role_name)

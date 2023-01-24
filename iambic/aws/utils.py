@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 import boto3
 from botocore.exceptions import ClientError
@@ -18,41 +18,62 @@ if TYPE_CHECKING:
     from iambic.config.models import Config
 
 
-async def paginated_search(
-    search_fnc,
-    response_key: str,
-    max_results: int = None,
-    retain_key: bool = False,
-    **search_kwargs,
-) -> list:
-    """Retrieve and aggregate each paged response, returning a single list of each response object
-    :param search_fnc:
-    :param response_key:
-    :param max_results:
-    :param retain_key: If true, the response_key will be retained in the response
+async def boto_crud_call(boto_fnc, **kwargs) -> Union[list, dict]:
+    """Responsible for calls to boto. Adds async support and error handling
+    :param boto_fnc:
+    :param kwargs: The params to pass to the boto fnc
     :return:
     """
-    results = []
     retry_count = 0
 
     while True:
         try:
-            response = await aio_wrapper(search_fnc, **search_kwargs)
+            return await aio_wrapper(boto_fnc, **kwargs)
         except ClientError as err:
             if "Throttling" in err.response["Error"]["Code"]:
                 if retry_count >= 10:
                     raise
                 retry_count += 1
-                await asyncio.sleep(retry_count * 2)
+                await asyncio.sleep(retry_count / 2)
                 continue
             else:
                 raise
 
-        retry_count = 0
-        results.extend(response.get(response_key, []))
+
+async def paginated_search(
+    search_fnc,
+    response_key: str = None,
+    response_keys: list[str] = None,
+    max_results: int = None,
+    retain_key: bool = False,
+    **search_kwargs,
+) -> Union[list, dict]:
+    """Retrieve and aggregate each paged response, returning a single list of each response object
+    :param search_fnc:
+    :param response_key:
+    :param response_keys:
+    :param max_results:
+    :param retain_key: If true, the response_key will be retained in the response
+    :return:
+    """
+    assert bool(response_key) ^ bool(response_keys)  # XOR
+
+    if response_keys and not retain_key:
+        log.warning("retain_key must be true if response_keys is provided")
+        retain_key = True
+
+    if response_key:
+        response_keys = [response_key]
+
+    results = {key: [] for key in response_keys}
+
+    while True:
+        response = await boto_crud_call(search_fnc, **search_kwargs)
+        for response_key in response_keys:
+            results[response_key].extend(response.get(response_key, []))
 
         if not response["IsTruncated"] or (max_results and len(results) >= max_results):
-            return {response_key: results} if retain_key else results
+            return results if retain_key else results[response_key]
         else:
             search_kwargs["Marker"] = response["Marker"]
 
@@ -76,24 +97,10 @@ async def legacy_paginated_search(
     :return:
     """
     results = []
-    retry_count = 0
     is_first_call = True
 
     while True:
-        try:
-            response = await aio_wrapper(search_fnc, **search_kwargs)
-        except ClientError as err:
-            if "Throttling" in err.response["Error"]["Code"]:
-                if retry_count >= 10:
-                    raise
-                retry_count += 1
-                await asyncio.sleep(retry_count * 2)
-                continue
-            else:
-                log.warning(err.response["Error"]["Code"])
-                raise
-
-        retry_count = 0
+        response = await boto_crud_call(search_fnc, **search_kwargs)
         results.extend(response.get(response_key, []))
 
         if (
@@ -233,53 +240,41 @@ def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> boo
 
 
 def apply_to_account(resource, aws_account, context: ExecutionContext) -> bool:
-    from iambic.aws.models import Deleted
-
-    if hasattr(resource, "deleted"):
-        deleted_resource_type = isinstance(resource, Deleted)
-
-        if isinstance(resource.deleted, bool):
-            if resource.deleted and not deleted_resource_type:
-                return False
-        else:
-            deleted_obj = resource.get_attribute_val_for_account(aws_account, "deleted")
-            deleted_obj = get_account_value(
-                deleted_obj, aws_account.account_id, aws_account.account_name
-            )
-            if deleted_obj and deleted_obj.deleted and not deleted_resource_type:
-                return False
+    if hasattr(resource, "deleted") and resource.deleted:
+        return False
 
     return evaluate_on_account(resource, aws_account, context)
 
 
 async def remove_expired_resources(
-    resource, template_resource_type: str, template_resource_id: str
+    resource,
+    template_resource_type: str,
+    template_resource_id: str,
+    delete_resource_if_expired: bool = True,
 ):
     from iambic.core.models import BaseModel
 
-    if (
-        not issubclass(type(resource), BaseModel)
-        or not hasattr(resource, "expires_at")
-        or getattr(resource, "deleted", None)
-    ):
+    if not isinstance(resource, BaseModel):
         return resource
 
-    log_params = dict(
-        resource_type=resource.resource_type, resource_id=resource.resource_id
-    )
-    if (
-        template_resource_type != resource.resource_type
-        or template_resource_id != resource.resource_id
-    ):
+    log_params = {}
+    if hasattr(resource, "resource_type"):
+        log_params["resource_type"] = resource.resource_type
+    if hasattr(resource, "resource_id"):
+        log_params["resource_id"] = resource.resource_id
+    if template_resource_type != log_params.get(
+        "resource_type"
+    ) or template_resource_id != log_params.get("resource_id"):
         log_params["parent_resource_type"] = template_resource_type
         log_params["parent_resource_id"] = template_resource_id
 
-    if hasattr(resource, "expires_at") and resource.expires_at:
-
-        if resource.expires_at < datetime.utcnow():
-            resource.deleted = True
-            log.info("Expired resource found, marking for deletion", **log_params)
-            return resource
+    if issubclass(type(resource), BaseModel) and hasattr(resource, "expires_at"):
+        if resource.expires_at:
+            cur_time = datetime.now(tz=timezone.utc)
+            if resource.expires_at < cur_time:
+                log.info("Expired resource found, marking for deletion", **log_params)
+                resource.deleted = True
+                return resource
 
     for field_name in resource.__fields__.keys():
         field_val = getattr(resource, field_name)
@@ -293,11 +288,19 @@ async def remove_expired_resources(
                 ]
             )
             setattr(resource, field_name, new_value)
+            if delete_resource_if_expired:
+                for elem in new_value:
+                    if getattr(elem, "deleted", None) is True:
+                        new_value.remove(elem)
+                        setattr(resource, field_name, new_value)
         else:
             new_value = await remove_expired_resources(
                 field_val, template_resource_type, template_resource_id
             )
-            setattr(resource, field_name, new_value)
+            if getattr(new_value, "deleted", None) is True:
+                setattr(resource, field_name, None)
+            else:
+                setattr(resource, field_name, new_value)
 
     return resource
 
@@ -306,7 +309,9 @@ async def set_org_account_variables(client, account: dict) -> dict:
     tags = await legacy_paginated_search(
         client.list_tags_for_resource, "Tags", ResourceId=account["Id"]
     )
-    account["variables"] = [{"key": tag["Key"], "value": tag["Value"]} for tag in tags]
+    account["variables"] = [
+        {"key": tag["Key"], "value": tag.get("Value")} for tag in tags
+    ]
     return account
 
 

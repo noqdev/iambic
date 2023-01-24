@@ -53,7 +53,7 @@
                 "apply",
                 "-f",
                 "--template",
-                "../noq-templates/resources/aws/roles/application/noqmeter_null_test_role.yaml",
+                "../noq-templates/resources/aws/roles/multi_account/noqmeter_null_test_role.yaml",
                 "--config",
                 "demo/config.yaml"
             ],
@@ -333,6 +333,14 @@
                 "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
                 "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
             },
+        },
+        {
+            "name": "Iambic Docs: Generate Schema",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/docs/generate_schema.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
         },
     ]
 }
