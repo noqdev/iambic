@@ -160,9 +160,16 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
                 description=self.properties.description,
                 google_project=google_project,
             )
-            current_group = await get_group(
-                self.properties.email, self.properties.domain, google_project
-            )
+            group_get_attempt = 0
+            while not current_group and group_get_attempt < 5:
+                # handle fetching group too fast
+                group_get_attempt = group_get_attempt + 1
+                current_group = await get_group(
+                    self.properties.email, self.properties.domain, google_project
+                )
+                if not current_group:
+                    await asyncio.sleep(1)
+
             if current_group:
                 change_details.current_value = current_group
 
