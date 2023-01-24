@@ -12,6 +12,7 @@ from github import Github, PullRequest
 
 from iambic.core.git import Repo, clone_git_repo
 from iambic.core.logger import log
+from iambic.main import run_detect
 
 iambic_app = __import__("iambic.lambda.app", globals(), locals(), [], 0)
 lambda_run_handler = getattr(iambic_app, "lambda").app.run_handler
@@ -51,11 +52,41 @@ def run_handler(context: dict[str, Any]):
         raise Exception("no supported handler")
 
 
+def run_integration_command(command: str, context: dict[str, Any]):
+    github_token: str = context["token"]
+    github_client = Github(github_token)
+    f: Callable[[Github, dict[str, Any]]] = INTEGRATION_DISPATCH_MAP.get(command)
+    if f:
+        f(github_client, context)
+    else:
+        log.error("no supported handler")
+        raise Exception("no supported handler")
+
+
 def format_github_url(repository_url: str, github_token: str) -> str:
     parse_result = urlparse(repository_url)
     return parse_result._replace(
         netloc="oauth2:{0}@{1}".format(github_token, parse_result.netloc)
     ).geturl()
+
+
+def prepare_local_repo_for_new_commits(
+    repo_url: str, repo_path: str, purpose: str
+) -> Repo:
+    if len(os.listdir(repo_path)) > 0:
+        raise Exception(f"{repo_path} already exists. This is unexpected.")
+    cloned_repo = clone_git_repo(repo_url, repo_path, None)
+    cloned_repo.git.checkout("-b", f"attempt/{purpose}")
+
+    # Note, this is for local usage, we don't actually
+    # forward this commit upstream
+    repo_config_writer = cloned_repo.config_writer()
+    # TODO customize the name and email
+    repo_config_writer.set_value("user", "name", "Iambic Merger")
+    repo_config_writer.set_value("user", "email", "iambic-merger@iambic.org")
+    repo_config_writer.release()
+
+    return cloned_repo
 
 
 def prepare_local_repo(
@@ -238,14 +269,52 @@ def handle_pull_request(github_client: Github, context: dict[str, Any]) -> None:
         raise e
 
 
+def handle_detect_changes_from_eventbridge(
+    github_client: Github, context: dict[str, Any]
+) -> None:
+
+    github_token = context["token"]
+    # repo_name is already in the format {repo_owner}/{repo_short_name}
+    repository_url = context["event"]["repository"]["clone_url"]
+    repo_url = format_github_url(repository_url, github_token)
+    # repository_url_token
+    # log_params = {"pull_request_branch_name": pull_request_branch_name}
+    # log.info("PR remote branch name", **log_params)
+
+    try:
+        repo = prepare_local_repo(repo_url, lambda_repo_path, "detect")
+        # TODO customize config.yaml filename
+        config_path = f"{lambda_repo_path}/config.yaml"
+        run_detect(config_path, lambda_repo_path)
+        repo.git.add(".")
+        repo.git.commit(
+            "-m", "Detect changes from EventBridge", author="sunilt@xxx.com"
+        )
+    except Exception as e:
+        log.error("fault", exception=str(e))
+        raise e
+
+
 EVENT_DISPATCH_MAP: dict[str, Callable] = {
     "issue_comment": handle_issue_comment,
     "pull_request": handle_pull_request,
 }
 
 
+INTEGRATION_DISPATCH_MAP: dict[str, Callable] = {
+    "detect": handle_detect_changes_from_eventbridge,
+}
+
+
 if __name__ == "__main__":
     github_context_json_str = os.environ.get("GITHUB_CONTEXT")
+    github_override_token = os.environ.get("GITHUB_OVERRIDE_TOKEN")
+    iambic_integration_str = os.environ.get("IAMBIC_GITHUB_INTEGRATION")
     with open("/root/github_context/github_context.json", "r") as f:
         github_context = json.load(f)
-    run_handler(github_context)
+
+    if iambic_integration_str:
+        github_context["token"] = github_override_token
+        run_integration_command(iambic_integration_str, github_context)
+    else:
+        run_handler(github_context)

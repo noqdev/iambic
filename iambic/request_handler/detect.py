@@ -165,10 +165,14 @@ async def detect_changes(  # noqa: C901
                     )
                     continue
 
-            sqs.delete_message_batch(QueueUrl=queue_url, Entries=processed_messages)
-            messages = sqs.receive_message(
-                QueueUrl=queue_url, MaxNumberOfMessages=10
-            ).get("Messages", [])
+            # remove this after testing
+            messages = []
+
+            # temporary disable to continue testing the detect flow
+            # sqs.delete_message_batch(QueueUrl=queue_url, Entries=processed_messages)
+            # messages = sqs.receive_message(
+            #     QueueUrl=queue_url, MaxNumberOfMessages=10
+            # ).get("Messages", [])
 
     tasks = []
     if role_messages:
