@@ -5,12 +5,10 @@ from unittest import IsolatedAsyncioTestCase
 
 import dateparser
 
-from functional_tests.aws.role.utils import (
-    generate_role_template_from_base,
-    get_role_across_accounts,
-)
+from functional_tests.aws.role.utils import generate_role_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
+from iambic.aws.iam.role.utils import get_role_across_accounts
 from iambic.core.context import ctx
 
 
@@ -154,6 +152,8 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
         # Set expiration
         self.template.properties.inline_policies[1].statement[
             0
-        ].expires_at = dateparser.parse("yesterday")
+        ].expires_at = dateparser.parse(
+            "yesterday", settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True}
+        )
         r = await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
         self.assertEqual(len(r.proposed_changes), 1)

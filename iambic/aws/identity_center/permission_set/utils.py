@@ -14,6 +14,23 @@ from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper, async_batch_processor
 
 
+async def get_permission_set_details(
+    identity_center_client,
+    instance_arn: str,
+    permission_set_arn: str,
+) -> dict:
+    try:
+        return (
+            await boto_crud_call(
+                identity_center_client.describe_permission_set,
+                InstanceArn=instance_arn,
+                PermissionSetArn=permission_set_arn,
+            )
+        ).get("PermissionSet", {})
+    except identity_center_client.exceptions.ResourceNotFoundException:
+        return {}
+
+
 async def generate_permission_set_map(aws_accounts: list[AWSAccount], templates: list):
     """Generates the map of permission sets for AWS accounts that are referenced in at least 1 template
 

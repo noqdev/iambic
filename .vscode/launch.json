@@ -334,5 +334,13 @@
                 "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
             },
         },
+        {
+            "name": "Iambic Docs: Generate Schema",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/docs/generate_schema.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
     ]
 }

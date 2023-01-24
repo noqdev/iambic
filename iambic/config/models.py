@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import json
 import os
 from enum import Enum
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import boto3
 import googleapiclient.discovery
@@ -15,7 +16,7 @@ from slack_bolt import App as SlackBoltApp
 
 from iambic.aws.models import AWSAccount, AWSOrganization
 from iambic.core.iambic_enum import IambicManaged
-from iambic.core.models import Variable
+from iambic.core.models import BaseTemplate, Variable
 from iambic.core.utils import aio_wrapper, yaml
 
 CURRENT_IAMBIC_VERSION = "1"
@@ -31,7 +32,7 @@ class OktaOrganization(BaseModel):
     org_url: str
     api_token: str
     request_timeout: int = 60
-    client: Optional[OktaClient]
+    client: Any = None  # OktaClient
 
     class Config:
         arbitrary_types_allowed = True
@@ -138,6 +139,7 @@ class GoogleProject(BaseModel):
 
 class ExtendsConfigKey(Enum):
     AWS_SECRETS_MANAGER = "AWS_SECRETS_MANAGER"
+    LOCAL_FILE = "LOCAL_FILE"
 
 
 class ExtendsConfig(BaseModel):
@@ -162,7 +164,7 @@ class AWSConfig(BaseModel):
     )
 
 
-class Config(BaseModel):
+class Config(BaseTemplate):
     aws: AWSConfig = Field(
         AWSConfig(),
         description="AWS configuration for iambic to use when managing AWS resources",
@@ -170,7 +172,10 @@ class Config(BaseModel):
     google_projects: List[GoogleProject] = []
     okta_organizations: List[OktaOrganization] = []
     extends: List[ExtendsConfig] = []
-    secrets: Optional[dict] = None
+    secrets: Optional[dict] = Field(
+        description="secrets should only be used in memory and never serialized out",
+        exclude=True,
+    )
     role_access_tag: Optional[str] = Field(
         "noq-authorized",
         description="The key of the tag used to store users and groups that can assume into the role the tag is on",
@@ -181,7 +186,7 @@ class Config(BaseModel):
         "These apply to all aws_accounts but can be overwritten by an account.",
     )
     slack_app: Optional[str] = None
-    sqs: Optional[dict] = {}
+    sqs_cloudtrail_changes_queues: Optional[list[str]] = []
     slack: Optional[dict] = {}
     template_type: str = "NOQ::Core::Config"
     version: str = Field(
@@ -207,6 +212,8 @@ class Config(BaseModel):
             account.account_id: idx for idx, account in enumerate(self.aws.accounts)
         }
 
+        modified = False
+
         if self.aws and self.aws.organizations:
             orgs_accounts = await asyncio.gather(
                 *[org.get_accounts() for org in self.aws.organizations]
@@ -221,6 +228,26 @@ class Config(BaseModel):
                         self.aws.accounts[account_elem] = account
                     else:
                         self.aws.accounts.append(account)
+                        modified = True
+        if modified:
+            # the invariant is this modification can ever only modifies the aws.accounts section
+            # and nothing else
+            with open(self.file_path, "r") as f:
+                config_from_filesystem = yaml.load(f)
+            # the json roundtrip is to flatten any object types
+            config_from_filesystem["aws"]["accounts"] = [
+                json.loads(
+                    account.json(
+                        skip_defaults=True,
+                        exclude_unset=True,
+                        exclude_defaults=True,
+                        exclude_none=True,
+                    )
+                )
+                for account in self.aws.accounts
+            ]
+            with open(self.file_path, "w") as f:
+                yaml.dump(config_from_filesystem, f)
 
     def get_aws_secret(self, extend: ExtendsConfig) -> dict:
         """TODO: Secrets should be moved to the account to prevent an anti-pattern
@@ -277,6 +304,14 @@ class Config(BaseModel):
                     for k, v in self.get_aws_secret(extend).items():
                         if not getattr(self, k, None):
                             setattr(self, k, v)
+                if extend.key == ExtendsConfigKey.LOCAL_FILE:
+                    dir_path = os.path.dirname(self.file_path)
+                    extend_path = os.path.join(dir_path, extend.value)
+                    with open(extend_path, "r") as ymlfile:
+                        extend_config = yaml.load(ymlfile)
+                    for k, v in extend_config.items():
+                        if not getattr(self, k, None):
+                            setattr(self, k, v)
 
     async def get_boto_session_from_arn(self, arn: str, region_name: str = None):
         region_name = region_name or arn.split(":")[3]
@@ -293,6 +328,6 @@ class Config(BaseModel):
 
     @classmethod
     def load(cls, file_path: str):
-        c = cls(file_path=file_path, **yaml.load(open(file_path)))
+        c = cls(file_path=str(file_path), **yaml.load(open(file_path)))
         c.configure_plugins()
         return c

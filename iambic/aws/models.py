@@ -85,6 +85,14 @@ class AccessModel(BaseModel):
         ),
     )
 
+    def access_model_sort_weight(self):
+        return (
+            str(self.included_accounts)
+            + str(self.excluded_accounts)
+            + str(self.included_orgs)
+            + str(self.excluded_orgs)
+        )
+
 
 class Tag(ExpiryModel, AccessModel):
     key: str
@@ -117,6 +125,9 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         description="The external id to use for assuming into a role when making calls to the account",
     )
     boto3_session_map: Optional[dict] = None
+
+    class Config:
+        fields = {"boto3_session_map": {"exclude": True}}
 
     async def get_boto3_session(self, region_name: Optional[str] = None):
         region_name = region_name or self.default_region
@@ -152,9 +163,22 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         return self.boto3_session_map[region_name]
 
     async def get_boto3_client(self, service: str, region_name: Optional[str] = None):
-        return (await self.get_boto3_session(region_name)).client(
+        region_name = region_name or self.default_region
+
+        if (
+            client := self.boto3_session_map.get("client", {})
+            .get(service, {})
+            .get(region_name)
+        ):
+            return client
+
+        client = (await self.get_boto3_session(region_name)).client(
             service, config=botocore.client.Config(max_pool_connections=50)
         )
+        self.boto3_session_map.setdefault("client", {}).setdefault(service, {})[
+            region_name
+        ] = client
+        return client
 
     async def get_active_regions(self) -> list[str]:
         client = await self.get_boto3_client("ec2")
@@ -209,6 +233,9 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
     )
     org_session_info: Optional[dict] = None
     identity_center_details: Optional[Union[IdentityCenterDetails, None]] = None
+
+    class Config:
+        fields = {"org_session_info": {"exclude": True}}
 
     async def get_boto3_session(self, region_name: str = None):
         region_name = region_name or self.default_region
@@ -371,6 +398,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         description="The AWS Account ID and region of the AWS Identity Center instance to use for this organization",
     )
     default_rule: BaseAWSOrgRule = Field(
+        BaseAWSOrgRule(enabled=True),
         description="The rule used to determine how an organization account should be handled if the account was not found in account_rules.",
     )
     account_rules: Optional[List[AWSOrgAccountRule]] = Field(

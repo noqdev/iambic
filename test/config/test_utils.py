@@ -69,6 +69,7 @@ def config(repo_path):
         sqs={},
         slack={},
         version="0.0.0",
+        file_path="cool_location.yaml",
     )
     return test_config
 

@@ -18,6 +18,7 @@ class UserStatus(Enum):
     active = "active"
     provisioned = "provisioned"
     deprovisioned = "deprovisioned"
+    recovery = "recovery"
 
 
 class User(BaseModel, ExpiryModel):
