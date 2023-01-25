@@ -37,6 +37,7 @@ Resources:
                   - organizations:list*
                   - iam:*
                   - sso:*
+                  - secretsmanager:CreateSecret
                 Resource:
                   - '*'
       ManagedPolicyArns:
