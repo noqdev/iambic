@@ -14,6 +14,6 @@ def test_aws_template_merge():
     )
     merged_template = merge_model(existing_template, new_template)
     assert merged_template.template_type == new_template.template_type
-    assert merged_template.file_path == new_template.file_path
+    assert merged_template.file_path == existing_template.file_path
     assert merged_template.identifier == new_template.identifier
     assert merged_template.expires_at == existing_template_expires_at
