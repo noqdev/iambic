@@ -398,3 +398,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
     @property
     def resource_id(self):
         return self.properties.role_name
+
+    @classmethod
+    def iambic_specific_knowledge(cls) -> set[str]:
+        return set(["access_rules"])
