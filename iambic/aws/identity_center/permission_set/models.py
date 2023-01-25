@@ -361,7 +361,7 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate, ExpiryModel):
         """
 
         identity_center_client = await aws_account.get_boto3_client(
-            "sso-admin", region_name=aws_account.identity_center_details.region
+            "sso-admin", region_name=aws_account.identity_center_details.region_name
         )
         instance_arn = aws_account.identity_center_details.instance_arn
         permission_set_arn = None
