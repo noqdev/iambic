@@ -80,7 +80,8 @@ async def gather_permission_set_names(
     sso_admin_client_map = {
         aws_account.account_id: (
             await aws_account.get_boto3_client(
-                "sso-admin", region_name=aws_account.identity_center_details.region
+                "sso-admin",
+                region_name=aws_account.identity_center_details.region.value,
             )
         )
         for aws_account in aws_accounts
@@ -433,7 +434,7 @@ async def generate_aws_permission_set_templates(
 
         instance_arn = aws_account.identity_center_details.instance_arn
         identity_center_client = await aws_account.get_boto3_client(
-            "sso-admin", region_name=aws_account.identity_center_details.region
+            "sso-admin", region_name=aws_account.identity_center_details.region_name
         )
 
         if permission_set_names:
