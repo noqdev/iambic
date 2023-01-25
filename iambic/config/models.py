@@ -162,6 +162,17 @@ class AWSConfig(BaseModel):
         ),
     )
 
+    @property
+    def hub_role_arn(self):
+        if self.organizations:
+            return self.organizations[0].hub_role_arn
+        else:
+            return [
+                account.hub_role_arn
+                for account in self.accounts
+                if account.hub_role_arn
+            ][0]
+
 
 class Config(BaseModel):
     aws: AWSConfig = Field(
@@ -201,18 +212,47 @@ class Config(BaseModel):
             account.account_id: idx for idx, account in enumerate(self.aws.accounts)
         }
 
-        if self.aws and self.aws.organizations:
-            orgs_accounts = await asyncio.gather(
-                *[org.get_accounts() for org in self.aws.organizations]
-            )
-            for org_accounts in orgs_accounts:
-                for account in org_accounts:
-                    if (
-                        account_elem := config_account_idx_map.get(account.account_id)
-                    ) is not None:
-                        self.aws.accounts[account_elem] = account
-                    else:
-                        self.aws.accounts.append(account)
+        if self.aws:
+            if self.aws.organizations:
+                if any(account.hub_role_arn for account in self.aws.accounts):
+                    raise AttributeError(
+                        "You cannot specify a hub_role_arn on an AWS Account if you are using an AWS Organization"
+                    )
+
+                orgs_accounts = await asyncio.gather(
+                    *[org.get_accounts() for org in self.aws.organizations]
+                )
+                for org_accounts in orgs_accounts:
+                    for account in org_accounts:
+                        if (
+                            account_elem := config_account_idx_map.get(
+                                account.account_id
+                            )
+                        ) is not None:
+                            self.aws.accounts[account_elem] = account
+                        else:
+                            self.aws.accounts.append(account)
+            elif self.aws.accounts:
+                hub_account = [
+                    account for account in self.aws.accounts if account.hub_role_arn
+                ]
+                if len(hub_account) > 1:
+                    raise AttributeError(
+                        "Only one AWS Account can specify the hub_role_arn"
+                    )
+                elif not hub_account:
+                    raise AttributeError(
+                        "One of the AWS Accounts must define the hub_role_arn"
+                    )
+                else:
+                    hub_account = hub_account[0]
+                    await hub_account.set_hub_session_info()
+                    hub_session_info = hub_account.hub_session_info
+                    if not hub_session_info:
+                        raise Exception("Unable to assume into the hub_role_arn")
+                    for account in self.aws.accounts:
+                        if account.account_id != hub_account.account_id:
+                            account.hub_session_info = hub_session_info
 
         await self.configure_plugins()
 
