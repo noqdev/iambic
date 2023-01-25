@@ -370,46 +370,6 @@ async def create_templated_role(  # noqa: C901
 
         role_template_properties["tags"] = tags
 
-    # iambic-specific knowledge requires us to load the existing template
-    # because it will not be reflected by AWS API.
-    # if existing_template := existing_template_map.get(role_name, None):
-    #     existing_template.included_accounts = role_template_params["included_accounts"]
-    #     existing_template.excluded_accounts = role_template_params.get(
-    #         "excluded_accounts", []
-    #     )
-    #     existing_template.included_orgs = role_template_params.get(
-    #         "included_orgs", ["*"]
-    #     )
-    #     existing_template.excluded_orgs = role_template_params.get("excluded_orgs", [])
-    #     existing_template.properties = RoleProperties(**role_template_properties)
-    #     try:
-    #         existing_template.write()
-    #         return existing_template
-    #     except Exception as err:
-    #         log.exception(
-    #             "Unable to update role template.",
-    #             error=str(err),
-    #             role_params=role_template_params,
-    #         )
-    # else:
-    #     try:
-    #         role = RoleTemplate(
-    #             file_path=get_templated_role_file_path(
-    #                 role_dir,
-    #                 role_name,
-    #                 role_template_params.get("included_accounts"),
-    #             ),
-    #             properties=role_template_properties,
-    #             **role_template_params,
-    #         )
-    #         role.write()
-    #         return role
-    #     except Exception as err:
-    #         log.exception(
-    #             "Unable to create role template.",
-    #             error=str(err),
-    #             role_params=role_template_params,
-    #         )
     file_path = get_templated_role_file_path(
         role_dir,
         role_name,
