@@ -243,7 +243,7 @@ def get_resource_id_to_model_map(models: list[BaseModel]) -> dict[str, BaseModel
 def merge_model_list(existing_list: list[BaseModel], new_list: list[BaseModel]) -> list:
     existing_resource_id_to_model_map = get_resource_id_to_model_map(existing_list)
     merged_list = []
-    for new_model in new_list:
+    for new_index, new_model in enumerate(new_list):
         new_model_resource_id = None
         try:
             new_model_resource_id = new_model.resource_id
@@ -254,6 +254,10 @@ def merge_model_list(existing_list: list[BaseModel], new_list: list[BaseModel]) 
             and new_model_resource_id in existing_resource_id_to_model_map
         ):
             existing_model = existing_resource_id_to_model_map[new_model_resource_id]
+            merged_list.append(merge_model(existing_model, new_model))
+        elif not new_model_resource_id and new_index < len(existing_list):
+            # when we cannot use
+            existing_model = existing_list[new_index]
             merged_list.append(merge_model(existing_model, new_model))
         else:
             merged_list.append(new_model.copy())
