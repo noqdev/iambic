@@ -3,24 +3,32 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
+import sys
 from typing import Union
 
 import boto3
+import botocore
 import questionary
 from botocore.exceptions import ClientError
 
-from iambic.aws.cloud_formation.utils import create_iambic_stacks
+from iambic.aws.cloud_formation.utils import (
+    create_iambic_eventbridge_stacks,
+    create_iambic_role_stacks,
+    create_spoke_role_stack,
+)
 from iambic.aws.iam.policy.models import PolicyDocument, PolicyStatement
 from iambic.aws.iam.role.models import AWS_IAM_ROLE_TEMPLATE_TYPE, RoleTemplate
 from iambic.aws.iam.role.template_generation import generate_aws_role_templates
 from iambic.aws.models import (
+    IAMBIC_SPOKE_ROLE_NAME,
     AWSAccount,
     AWSIdentityCenterAccount,
     AWSOrganization,
     BaseAWSOrgRule,
     Partition,
+    get_hub_role_arn,
+    get_spoke_role_arn,
 )
-from iambic.aws.utils import boto_crud_call
 from iambic.config.models import (
     CURRENT_IAMBIC_VERSION,
     Config,
@@ -33,23 +41,9 @@ from iambic.config.utils import resolve_config_template_path
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
-from iambic.core.parser import load_templates
 from iambic.core.template_generation import get_existing_template_map
 from iambic.core.utils import yaml
 from iambic.github.utils import create_workflow_files
-
-IAMBIC_SPOKE_ROLE_TEMPLATE_FP = os.path.join(
-    os.path.dirname(__file__), "../aws/iam/role/templates/iambicspokerole.yaml"
-)
-SPOKE_ROLE_TEMPLATE = load_templates([IAMBIC_SPOKE_ROLE_TEMPLATE_FP])[0]
-
-
-async def get_org_account_id(aws_org: AWSOrganization) -> str:
-    client = await aws_org.get_boto3_client("organizations")
-    response = await boto_crud_call(
-        client.describe_organization,
-    )
-    return response.get("MasterAccountId")
 
 
 def set_iambic_control(default_val: Union[str, IambicManaged]) -> str:
@@ -74,20 +68,6 @@ def set_aws_account_partition(default_val: Union[str, Partition]) -> str:
         choices=[e.value for e in Partition],
         default=default_val if isinstance(default_val, str) else default_val.value,
     ).ask()
-
-
-def set_aws_org_assume_role_name(default_val: Union[list, str]) -> Union[list, str]:
-    if isinstance(default_val, list):
-        default_val = ", ".join(default_val)
-    return sorted(
-        questionary.text(
-            "What are the role name(s) the org should attempt to use to assume into the spoke accounts? (comma separated)",
-            default=default_val,
-        )
-        .ask()
-        .replace(" ", "")
-        .split(",")
-    )
 
 
 def set_required_text_value(human_readable_name: str, default_val: str = None):
@@ -164,9 +144,7 @@ def set_google_client_cert_url(default_val: str = None):
     return set_required_text_value("client_x509_cert_url", default_val)
 
 
-def set_identity_center_account(
-    account_id: str, region: str = None
-) -> AWSIdentityCenterAccount:
+def set_identity_center_account(region: str = None) -> AWSIdentityCenterAccount:
     region_params = {"default": region} if region else {}
 
     region = questionary.text(
@@ -174,21 +152,51 @@ def set_identity_center_account(
         **region_params,
     ).ask()
 
-    identity_center_account = AWSIdentityCenterAccount(
-        account_id=account_id, region=region
-    )
+    identity_center_account = AWSIdentityCenterAccount(region=region)
     return identity_center_account
 
 
 class ConfigurationWizard:
     def __init__(self, repo_dir: str):
         # TODO: Handle the case where the config file exists but is not valid
-        session = boto3.Session()
+        self.default_region = "us-east-1"
+        self.boto3_session = boto3.Session(region_name=self.default_region)
         self.autodetected_org_settings = {}
         self.existing_role_template_map = {}
         self.aws_account_map = {}
-        self.default_region = session.region_name or "us-east-1"
         self.repo_dir = repo_dir
+        self._has_cf_permissions = None
+        self._cf_role_arn = None
+        self._assume_as_arn = None
+        self.caller_identity = {}
+        self.current_account_id = None
+
+        try:
+            self.caller_identity = self.boto3_session.client(
+                "sts"
+            ).get_caller_identity()
+            self.current_account_id = self.caller_identity.get("Arn").split(":")[4]
+        except botocore.exceptions.ClientError:
+            log.warning("Unable to determine current AWS account ID.")
+            profile_name = questionary.text(
+                "(Optional) Provide an AWS profile name (Defined in `~/.aws/config` or `~/.aws/credentials`)"
+                " to create an AWS session used to streamline the Iambic setup process."
+            ).ask()
+            if profile_name:
+                self.boto3_session = boto3.Session(
+                    profile_name=profile_name, region_name=self.default_region
+                )
+                try:
+                    self.caller_identity = self.boto3_session.client(
+                        "sts"
+                    ).get_caller_identity()
+                    self.current_account_id = self.caller_identity.get("Arn").split(
+                        ":"
+                    )[4]
+                except botocore.exceptions.ClientError:
+                    log.info(
+                        "Unable to create a session for the provided profile name. Skipping."
+                    )
 
         try:
             self.config_path = asyncio.run(resolve_config_template_path(repo_dir))
@@ -202,13 +210,70 @@ class ConfigurationWizard:
                 # Try to load a configuration
                 self.config = Config.load(self.config_path)
         with contextlib.suppress(ClientError):
-            self.autodetected_org_settings = session.client(
+            self.autodetected_org_settings = self.boto3_session.client(
                 "organizations"
             ).describe_organization()["Organization"]
 
         asyncio.run(self.attempt_aws_account_refresh())
 
         log.debug("Starting configuration wizard", config_path=self.config_path)
+
+    @property
+    def has_cf_permissions(self):
+        if self._has_cf_permissions is None:
+            self._has_cf_permissions = questionary.confirm(
+                "This requires that you have the ability to "
+                "create CloudFormation stacks, stack sets, and stack set instances. "
+                "Proceed?"
+            ).ask()
+
+        return self._has_cf_permissions
+
+    @property
+    def assume_as_arn(self):
+        if self._assume_as_arn is None:
+            if current_arn := self.caller_identity.get("Arn"):
+                current_arn = current_arn.replace(":sts:", ":iam:").replace(
+                    "assumed-role", "role"
+                )
+                if "assumed-role" in self.caller_identity["Arn"]:
+                    session_name = self.caller_identity["UserId"].split(":")[-1]
+                    current_arn = current_arn.replace(f"/{session_name}", "")
+
+            self._assume_as_arn = questionary.text(
+                "Provide a user or role ARN that will be able to access the hub role. "
+                "Note: Access to this identity is required to use IAMbic locally.",
+                default=current_arn,
+            ).ask()
+
+        return self._assume_as_arn
+
+    @property
+    def cf_role_arn(self):
+        if self._cf_role_arn is None:
+            self._cf_role_arn = questionary.text(
+                "(Optional) Provide a role arn to execute the cloudformation or hit enter to use your current access"
+            ).ask()
+
+        return self._cf_role_arn
+
+    def get_boto3_session_for_account(self, account_id: str):
+        if account_id == self.current_account_id:
+            return self.boto3_session, None
+        else:
+            profile_name = questionary.text(
+                f"What is the name of your AWS profile to use for making calls to this account ({account_id})?"
+                f"This can be found in `~/.aws/config` or `~/.aws/credentials`."
+            ).ask()
+            if not profile_name:
+                log.info("Unable to add the AWS Account without a session.")
+                return None, None
+            return (
+                boto3.Session(
+                    profile_name=profile_name, region_name=self.default_region
+                ),
+                profile_name,
+            )
 
     async def attempt_aws_account_refresh(self):
         self.aws_account_map = {}
@@ -222,38 +287,100 @@ class ConfigurationWizard:
                 if account.identity_center_details:
                     await account.set_identity_center_details()
         except Exception as err:
-            log.debug("Failed to refresh AWS accounts", error=err)
+            log.info("Failed to refresh AWS accounts", error=err)
 
         self.aws_account_map = {
             account.account_id: account for account in self.config.aws.accounts
         }
 
+    async def save_and_deploy_changes(self, role_template: RoleTemplate):
+        log.info(
+            "Writing changes locally and deploying updates to AWS",
+            role_name=role_template.properties.role_name,
+        )
+
+        self.config.write(self.config_path)
+        role_template.write(exclude_unset=False)
+        await role_template.apply(self.config, ctx)
+
     def configuration_wizard_aws_account_add(self):
+        if not self.has_cf_permissions:
+            log.info(
+                "Unable to edit this attribute without CloudFormation permissions."
+            )
+            return
+
+        is_hub_account = bool(
+            not self.config.aws.accounts and not self.config.aws.organizations
+        )
+
         account_id = questionary.text(
             "What is the AWS Account ID? Usually this looks like `12345689012`"
         ).ask()
 
         account_name = questionary.text("What is the name of the AWS Account?").ask()
 
+        if is_hub_account:
+            if not questionary.confirm(
+                "Create required Hub and Spoke roles via CloudFormation?"
+            ).ask():
+                log.info(
+                    "Unable to add the AWS Account without creating the required roles."
+                )
+                return
+        else:
+            if not questionary.confirm(
+                "Create required Spoke role via CloudFormation?"
+            ).ask():
+                log.info(
+                    "Unable to add the AWS account without creating the required role."
+                )
+                return
+
+        session, profile_name = self.get_boto3_session_for_account(account_id)
+        if not session:
+            return
+
+        cf_client = session.client("cloudformation")
+        role_arn = questionary.text(
+            "(Optional) Provide a role arn to execute the cloudformation"
+        ).ask()
+        if is_hub_account:
+            created_successfully = asyncio.run(
+                create_iambic_role_stacks(
+                    cf_client=cf_client,
+                    hub_account_id=account_id,
+                    assume_as_arn=self.assume_as_arn,
+                    role_arn=role_arn,
+                )
+            )
+            if not created_successfully:
+                log.error("Failed to create the required IAMbic roles. Exiting.")
+                sys.exit(0)
+        else:
+            asyncio.run(
+                create_spoke_role_stack(
+                    cf_client=cf_client,
+                    hub_account_id=account_id,
+                    role_arn=role_arn,
+                )
+            )
+
         account = AWSAccount(
             account_id=account_id,
             account_name=account_name,
+            spoke_role_arn=get_spoke_role_arn(account_id),
         )
-
-        if assume_role_arn := questionary.text(
-            "(Optional) Provide a role ARN to assume when accessing the AWS Organization"
-            " from the current role. (If you are using a role with access to the Organization, "
-            "you can leave this blank)"
-        ).ask():
-            account.hub_role_arn = assume_role_arn
+        if is_hub_account:
+            account.hub_role_arn = get_hub_role_arn(account_id)
 
         if aws_profile := questionary.text(
-            "(Optional) Provide an AWS profile name (Configured in ~/.aws/config) that Iambic "
-            "should use when we access the AWS Organization. Note: "
-            "this profile will be used before assuming any subsequent roles. "
+            "(Optional) Provide an AWS profile name (Defined in `~/.aws/config` or `~/.aws/credentials`) "
+            "that Iambic should use when accessing the AWS Organization. "
+            "Note: this profile will be used before assuming any subsequent roles. "
             "(If you are using a role with access to the Organization and don't use "
             "a profile, you can leave this blank)",
-            default=os.environ.get("AWS_PROFILE"),
+            default=profile_name or os.environ.get("AWS_PROFILE", ""),
         ).ask():
             account.aws_profile = aws_profile
 
@@ -362,7 +489,6 @@ class ConfigurationWizard:
             "Go back",
             "Update IdentityCenter",
             "Update Iambic control",
-            "Update assume role name",
         ]
         while True:
             action = questionary.select(
@@ -372,15 +498,8 @@ class ConfigurationWizard:
             if action == "Go back":
                 return
             elif action == "Update IdentityCenter":
-                account_id = asyncio.run(get_org_account_id(org_to_edit))
                 org_to_edit.identity_center_account = set_identity_center_account(
-                    account_id, org_to_edit.identity_center_account.region
-                )
-            elif action == "Update role name":
-                org_to_edit.default_rule.assume_role_name = (
-                    set_aws_org_assume_role_name(
-                        org_to_edit.default_rule.assume_role_name
-                    )
+                    org_to_edit.identity_center_account.region
                 )
             elif action == "Update Iambic control":
                 org_to_edit.iambic_managed = set_iambic_control(
@@ -393,6 +512,12 @@ class ConfigurationWizard:
             self.config.write(self.config_path)
 
     def configuration_wizard_aws_organizations_add(self):
+        if not self.has_cf_permissions:
+            log.info(
+                "Unable to edit this attribute without CloudFormation permissions."
+            )
+            return
+
         org_region = questionary.text(
             "What region is the AWS Organization in? (Such as `us-east-1`)",
             default=self.default_region,
@@ -403,24 +528,48 @@ class ConfigurationWizard:
             default=self.autodetected_org_settings.get("Id"),
         ).ask()
 
+        account_id = questionary.text(
+            "What is the AWS Account ID the Organization is on? Usually this looks like `12345689012`"
+        ).ask()
+        session, profile_name = self.get_boto3_session_for_account(account_id)
+        if not session:
+            return
+
+        if not questionary.confirm(
+            "Create required Hub and Spoke roles via CloudFormation?"
+        ).ask():
+            log.info("Unable to add the AWS Org without creating the required roles.")
+            return
+
+        created_successfully = asyncio.run(
+            create_iambic_role_stacks(
+                cf_client=session.client("cloudformation"),
+                hub_account_id=account_id,
+                assume_as_arn=self.assume_as_arn,
+                role_arn=self.cf_role_arn,
+                org_client=session.client("organizations"),
+            )
+        )
+        if not created_successfully:
+            log.error("Failed to create the required IAMbic roles. Exiting.")
+            sys.exit(0)
+
         aws_org = AWSOrganization(
-            org_id=org_id, region=org_region, default_rule=BaseAWSOrgRule()
+            org_id=org_id,
+            org_account_id=account_id,
+            region=org_region,
+            default_rule=BaseAWSOrgRule(),
+            hub_role_arn=get_hub_role_arn(account_id),
         )
         if aws_profile := questionary.text(
-            "(Optional) Provide an AWS profile name (Configured in ~/.aws/config) that Iambic "
-            "should use when we access the AWS Organization. Note: "
-            "this profile will be used before assuming any subsequent roles. "
+            "(Optional) Provide an AWS profile name (Defined in `~/.aws/config` or `~/.aws/credentials`) "
+            "that Iambic should use when accessing the AWS Organization. "
+            "Note: this profile will be used before assuming any subsequent roles. "
             "(If you are using a role with access to the Organization and don't use "
             "a profile, you can leave this blank)",
-            default=os.environ.get("AWS_PROFILE"),
+            default=profile_name or os.environ.get("AWS_PROFILE", ""),
         ).ask():
             aws_org.aws_profile = aws_profile
-
-        if assume_role_arn := questionary.text(
-            "(Optional) Provide a role ARN to assume when accessing the AWS Organization"
-            " from the current role. This is required if running IAMbic from a githook or CI/CD pipeline."
-        ).ask():
-            aws_org.hub_role_arn = assume_role_arn
 
         aws_org.default_rule.iambic_managed = set_iambic_control(
             aws_org.default_rule.iambic_managed
@@ -441,28 +590,10 @@ class ConfigurationWizard:
                 "Would you like to setup Identity Center (SSO) support?", default=False
             ).ask()
         ):
-            account_id = asyncio.run(get_org_account_id(aws_org))
-            aws_org.identity_center_account = set_identity_center_account(account_id)
+            aws_org.identity_center_account = set_identity_center_account()
 
         if not questionary.confirm("Keep these settings? ").ask():
             return
-
-        if (
-            session
-            and questionary.confirm(
-                "Bootstrap an Iambic Spoke Role on the org account?",
-            ).ask()
-        ):
-            role_name = SPOKE_ROLE_TEMPLATE.properties.role_name
-            self.config.aws.organizations[0].default_rule.assume_role_name = role_name
-            asyncio.run(SPOKE_ROLE_TEMPLATE.apply(self.config, ctx))
-            return
-
-        self.config.aws.organizations[
-            0
-        ].default_rule.assume_role_name = set_aws_org_assume_role_name(
-            aws_org.default_rule.assume_role_name
-        )
 
     def configuration_wizard_aws_organizations(self):
         # Currently only 1 org per config is supported.
@@ -494,20 +625,11 @@ class ConfigurationWizard:
             default="us-east-1",
         ).ask()
 
-        if (
-            self.config.aws.organizations
-            and self.config.aws.organizations[0].hub_role_arn
-        ):
-            role_arn = self.config.aws.organizations[0].hub_role_arn
-        else:
-            role_arn = questionary.text(
-                "What is the ARN of the role that Iambic will assume to decode the secret? "
-                "Example: `arn:aws:iam::123456789012:role/iambic`",
-            ).ask()
+        role_arn = get_spoke_role_arn(self.current_account_id)
 
         question_text = "Create the secret"
-        role_name = role_arn.split("/")[-1] if role_arn else None
-        role_account_id = role_arn.split(":")[4] if role_arn else None
+        role_name = IAMBIC_SPOKE_ROLE_NAME
+        role_account_id = self.current_account_id
 
         if role_name:
             question_text += f" and update the {role_name} template"
@@ -523,16 +645,25 @@ class ConfigurationWizard:
 
         client = session.client(service_name="secretsmanager")
         response = client.create_secret(
-            Name="iambic-config-test4",
+            Name="iambic-config-secrets-test-2",
             Description="IAMbic managed secret used to store protected config values",
             SecretString=yaml.dump({"secrets": self.config.secrets}),
         )
+
+        self.config.extends = [
+            ExtendsConfig(
+                key=ExtendsConfigKey.AWS_SECRETS_MANAGER,
+                value=response["ARN"],
+                assume_role_arn=role_arn,
+            )
+        ]
+        self.config.write(self.config_path)
 
         if role_arn:
             role_template: RoleTemplate = self.existing_role_template_map.get(role_name)
             role_template.properties.inline_policies.append(
                 PolicyDocument(
-                    policy_name="read-iambic-secrets",
+                    policy_name="read_iambic_secrets",
                     included_accounts=[role_account_id],
                     statement=[
                         PolicyStatement(
@@ -543,15 +674,7 @@ class ConfigurationWizard:
                     ],
                 )
             )
-            role_template.write(exclude_unset=False)
-
-        self.config.extends = [
-            ExtendsConfig(
-                key=ExtendsConfigKey.AWS_SECRETS_MANAGER,
-                value=response["ARN"],
-                assume_role_arn=role_arn,
-            )
-        ]
+            asyncio.run(self.save_and_deploy_changes(role_template))
 
     def update_secret(self):
         self.config.secrets = {}
@@ -815,7 +938,7 @@ class ConfigurationWizard:
             self.configuration_wizard_okta_organization_add()
 
     def configuration_wizard_github_workflow(self):
-        print(
+        log.info(
             "NOTE: Currently, only GitHub Workflows are supported. "
             "However, you can modify the generated output to work with your Git provider."
         )
@@ -827,65 +950,70 @@ class ConfigurationWizard:
             )
             if self.config.aws and self.config.aws.organizations:
                 aws_org = self.config.aws.organizations[0]
-                assume_role_arn = aws_org.hub_role_arn
                 region = aws_org.default_region
-
-                if not assume_role_arn:
-                    assume_role_arn = set_required_text_value(
-                        "ARN of the role to assume for the workflow"
-                    )
-                    if questionary.confirm(
-                        "Update the AWS Org definition in the config to include this value?"
-                    ).ask():
-                        self.config.aws.organizations[
-                            0
-                        ].hub_role_arn = assume_role_arn
-                        self.config.write(self.config_path)
             else:
                 region = set_required_text_value(
                     "What region should the workflow run in?", default_val="us-east-1"
-                )
-                assume_role_arn = set_required_text_value(
-                    "ARN of the role to assume for the workflow"
                 )
 
             create_workflow_files(
                 repo_dir=self.repo_dir,
                 repo_name=repo_name,
                 commit_email=commit_email,
-                assume_role_arn=assume_role_arn,
+                assume_role_arn=self.config.aws.hub_role_arn,
                 region=region,
             )
 
-    async def configuration_wizard_change_detection_setup(
-        self, aws_org: AWSOrganization
-    ):
+    def configuration_wizard_change_detection_setup(self, aws_org: AWSOrganization):
         if not questionary.confirm(
             "To setup change detection for iambic requires "
             "creating CloudFormation stacks "
-            "and a CloudFormation stack set. Proceed?"
+            "and a CloudFormation stack set. "
+            "This will also update the IAMbic Hub Role to add the required policy to consume the changes. "
+            "Proceed?"
         ).ask():
             return
 
-        account = self.aws_account_map[asyncio.run(get_org_account_id(aws_org))]
-        cf_client = await account.get_boto3_client("cloudformation", "us-east-1")
-        org_client = await account.get_boto3_client("organizations", "us-east-1")
-        role_arn = None
+        session, _ = self.get_boto3_session_for_account(aws_org.org_account_id)
+        cf_client = session.client("cloudformation", region_name="us-east-1")
+        org_client = session.client("organizations", region_name="us-east-1")
 
-        if questionary.confirm(
-            "Provide a role arn to execute the cloudformation used to provision"
-        ).ask():
-            role_arn = questionary.text(
-                "What is the Role ARN to be used for creating the CloudFormations?"
-            ).ask()
-
-        successfully_created = await create_iambic_stacks(
-            cf_client, org_client, account.org_id, account.account_id, role_arn
+        successfully_created = asyncio.run(
+            create_iambic_eventbridge_stacks(
+                cf_client,
+                org_client,
+                aws_org.org_id,
+                aws_org.org_account_id,
+                self.cf_role_arn,
+            )
         )
         if not successfully_created:
             return
 
-        # Update the role template by adding policy that allows the role to consume from the SQS queue
+        role_name = IAMBIC_SPOKE_ROLE_NAME
+        hub_account_id = self.current_account_id
+        sqs_arn = f"arn:aws:sqs:us-east-1:{hub_account_id}:IAMbicChangeDetectionQueue"
+        role_template: RoleTemplate = self.existing_role_template_map.get(role_name)
+        role_template.properties.inline_policies.append(
+            PolicyDocument(
+                policy_name="consume_iambic_changes",
+                included_accounts=[hub_account_id],
+                statement=[
+                    PolicyStatement(
+                        effect="Allow",
+                        action=[
+                            "sqs:DeleteMessage",
+                            "sqs:ReceiveMessage",
+                            "sqs:GetQueueAttributes",
+                        ],
+                        resource=[sqs_arn],
+                    )
+                ],
+            )
+        )
+
+        self.config.sqs_cloudtrail_changes_queues = [sqs_arn]
+        asyncio.run(self.save_and_deploy_changes(role_template))
 
     def run(self):
         while True:
@@ -911,12 +1039,13 @@ class ConfigurationWizard:
 
                 if (
                     self.config.aws.organizations
+                    and self.existing_role_template_map
                     and not self.config.sqs_cloudtrail_changes_queues
                 ):
-                    choices.insert(-1, "Setup Change Detection")
+                    choices.insert(-1, "Setup AWS change detection")
 
             action = questionary.select(
-                "What would you to configure?",
+                "What would you like to configure?",
                 choices=choices,
             ).ask()
 
@@ -948,8 +1077,11 @@ class ConfigurationWizard:
             elif action == "Generate Git Workflows":
                 self.configuration_wizard_github_workflow()
             elif action == "Setup AWS change detection":
-                asyncio.run(
+                if self.has_cf_permissions:
                     self.configuration_wizard_change_detection_setup(
                         self.config.aws.organizations[0]
                     )
-                )
+                else:
+                    log.info(
+                        "Unable to edit this attribute without CloudFormation permissions."
+                    )
