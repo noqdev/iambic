@@ -106,11 +106,28 @@ class Group(BaseModel):
         return "okta:group"
 
 
-class App(BaseModel):
+class Assignment(BaseModel, ExpiryModel):
+    user: Optional[str] = Field(None, description="User assigned to the app")
+    group: Optional[str] = Field(None, description="Group assigned to the app")
+
+
+class Status(Enum):
+    active = "ACTIVE"
+    inactive = "INACTIVE"
+
+
+class AppProfileMapping(BaseModel):
+    id: str
+    name: str
+    source: str
+    target: str
+
+
+class App(BaseModel, ExpiryModel):
     id: str = Field(..., description="ID of the app")
+    idp_name: str = Field(..., description="Name of the identity provider")
     name: str = Field(..., description="Name of the app")
-    label: str = Field(..., description="Label of the app")
-    status: Optional[str] = Field(None, description="Status of the app")
+    status: Optional[Status] = Field(None, description="Status of the app")
     created: Optional[str] = Field(None, description="Date the app was created")
     last_updated: Optional[str] = Field(
         None, description="Date the app was last updated"
@@ -121,6 +138,10 @@ class App(BaseModel):
     sign_on_mode: Optional[str] = Field(None, description="Sign-on mode")
     credentials: Optional[dict] = Field(None, description="Credentials settings")
     settings: Optional[dict] = Field(None, description="Settings")
+    assignments: list[Assignment] = Field([], description="Assignments")
+    profile_mappings: list[AppProfileMapping] = Field(
+        [], description="Profile mappings"
+    )
 
 
 class ActionStatus(Enum):
