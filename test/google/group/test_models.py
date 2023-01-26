@@ -90,3 +90,4 @@ def test_merge_list_group_members_expires_at():
     assert (
         merged_document.members[0].expires_at == existing_document.members[0].expires_at
     )
+    assert merged_document.members[0].email == "user@example.com"
