@@ -29,22 +29,24 @@ from iambic.okta.group.utils import (
     update_group_members,
     update_group_name,
 )
-from iambic.okta.models import Group
+from iambic.okta.models import Assignment, Group, Status
 
 
 class OktaAppTemplateProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the app")
     owner: Optional[str] = Field(None, description="Owner of the app")
+    status: Optional[Status] = Field(None, description="Status of the app")
     idp_name: str = Field(
         ...,
         description="Name of the identity provider that's associated with the group",
     )
-    app_id: str = Field(
-        "", description="Unique App ID for the app. Usually it's {idp-name}-{name}"
+    id: Optional[str] = Field(
+        None, description="Unique App ID for the app. Usually it's {idp-name}-{name}"
     )
-    description: str = Field("", description="Description of the app")
+    description: Optional[str] = Field("", description="Description of the app")
     extra: Any = Field(None, description=("Extra attributes to store"))
-    created: str = Field("", description="Date the app was created")
+    created: Optional[str] = Field("", description="Date the app was created")
+    assignments: List[Assignment] = Field([], description="List of assignments")
 
     @property
     def resource_type(self) -> str:
@@ -64,14 +66,18 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
 
 async def get_app_template(okta_app) -> OktaAppTemplate:
     """Get a template for an app"""
+    file_name = f"{okta_app.name}.yaml"
     app = OktaAppTemplate(
-        name=okta_app.name,
-        app_id=okta_app.app_id,
-        file_path=f"{okta_app.name}.yaml",
-        attributes=dict(),
-        extra=dict(
-            okta_app_id=okta_app.extra["okta_app_id"],
-            created=okta_app.extra["created"],
+        file_path=f"okta/apps/{okta_app.idp_name}/{file_name}",
+        template_type="NOQ::Okta::App",
+        properties=OktaAppTemplateProperties(
+            name=okta_app.name,
+            status=okta_app.status,
+            idp_name=okta_app.idp_name,
+            id=okta_app.id,
+            file_path="{}.yaml".format(okta_app.name),
+            attributes=dict(),
+            assignments=okta_app.assignments,
         ),
     )
     return app

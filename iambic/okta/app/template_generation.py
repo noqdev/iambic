@@ -14,6 +14,7 @@ async def generate_app_templates(config, output_dir, okta_organization):
 
     base_path = os.path.expanduser(output_dir)
     for okta_app in apps:
+        # TODO: Make sure we don't overwrite expiration on import
         app = await get_app_template(okta_app)
         file_path = os.path.expanduser(app.file_path)
         app.file_path = os.path.join(base_path, file_path)
