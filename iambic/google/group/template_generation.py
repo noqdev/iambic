@@ -27,7 +27,7 @@ async def generate_group_templates(config, domain, output_dir, google_project):
         create_or_update_template(
             group.file_path,
             existing_template_map,
-            group.properties.name,
+            group.properties.resource_id,
             GroupTemplate,
             {},
             group.properties,
