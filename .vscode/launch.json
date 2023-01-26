@@ -78,7 +78,7 @@
             "justMyCode": true
         },
         {
-            "name": "Iambic Apply Okta Template",
+            "name": "Iambic Apply Okta Group Template",
             "type": "python",
             "request": "launch",
             "module": "iambic.main",
@@ -90,6 +90,24 @@
                 "apply",
                 "--template",
                 "../noq-templates/okta/groups/development/networking2.yaml",
+                "--config",
+                "demo/config.yaml"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "Iambic Apply Okta App Template",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "env": {
+                "AWS_PROFILE": "staging/IambicHubRole"
+            },
+            "args": [
+                "apply",
+                "--template",
+                "../noq-templates/okta/apps/development/frontegg-test.yaml",
                 "--config",
                 "demo/config.yaml"
             ],

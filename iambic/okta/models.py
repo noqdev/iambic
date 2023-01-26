@@ -110,6 +110,14 @@ class Assignment(BaseModel, ExpiryModel):
     user: Optional[str] = Field(None, description="User assigned to the app")
     group: Optional[str] = Field(None, description="Group assigned to the app")
 
+    @property
+    def resource_type(self) -> str:
+        return "okta:group:assignment"
+
+    @property
+    def resource_id(self) -> str:
+        return f"{self.user or self.group}"
+
 
 class Status(Enum):
     active = "ACTIVE"
@@ -142,6 +150,14 @@ class App(BaseModel, ExpiryModel):
     profile_mappings: list[AppProfileMapping] = Field(
         [], description="Profile mappings"
     )
+
+    @property
+    def resource_type(self) -> str:
+        return "okta:app"
+
+    @property
+    def resource_id(self) -> str:
+        return f"{self.id}"
 
 
 class ActionStatus(Enum):
