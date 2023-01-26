@@ -21,7 +21,13 @@ from iambic.aws.utils import apply_to_account
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
-from iambic.core.utils import snake_to_camelcap, sort_dict, yaml
+from iambic.core.utils import (
+    create_commented_map,
+    snake_to_camelcap,
+    sort_dict,
+    transform_commments,
+    yaml,
+)
 
 if TYPE_CHECKING:
     from iambic.aws.models import AWSAccount
@@ -33,6 +39,7 @@ class IambicPydanticBaseModel(PydanticBaseModel):
     metadata_iambic_fields = Field(
         set(), description="metadata for iambic", exclude=True
     )
+    metadata_commented_dict: dict = Field({}, description="yaml inline comments")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -49,7 +56,7 @@ class IambicPydanticBaseModel(PydanticBaseModel):
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
-        return set()
+        return set(["metadata_commented_dict"])
 
 
 class BaseModel(IambicPydanticBaseModel):
@@ -139,6 +146,7 @@ class BaseModel(IambicPydanticBaseModel):
             "template_type",
             "file_path",
             "metadata_iambic_fields",
+            "metadata_commented_dict",
         }
         exclude_keys.update(self.exclude_keys)
         has_properties = hasattr(self, "properties")
@@ -409,6 +417,7 @@ class BaseTemplate(
             exclude={"file_path"},
         )
         sorted_input_dict = sort_dict(input_dict)
+        sorted_input_dict = create_commented_map(sorted_input_dict)
         as_yaml = yaml.dump(sorted_input_dict)
         # Force template_type to be at the top of the yaml
         template_type_str = f"template_type: {self.template_type}"
@@ -439,7 +448,9 @@ class BaseTemplate(
 
     @classmethod
     def load(cls, file_path: str):
-        return cls(file_path=file_path, **yaml.load(open(file_path)))
+        return cls(
+            file_path=file_path, **transform_commments(yaml.load(open(file_path)))
+        )
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
