@@ -208,16 +208,9 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate, ExpiryModel):
     def iambic_specific_knowledge(cls) -> set[str]:
         return set(["access_rules"])
 
-    @classmethod
-    def sort_func(cls, attribute_name: str) -> Callable:
-        def _sort_func(obj):
-            return f"{getattr(obj, attribute_name)}!{obj.access_model_sort_weight()}"
-
-        return _sort_func
-
     @validator("access_rules")
     def sort_access_rules(cls, v: list[PermissionSetAccess]):
-        sorted_v = sorted(v, key=cls.sort_func("resource_id"))
+        sorted_v = sorted(v, key=lambda o: o.access_model_sort_weight())
         return sorted_v
 
     async def _access_rules_for_account(  # noqa: C901
