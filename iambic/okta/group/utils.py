@@ -506,14 +506,3 @@ async def maybe_delete_group(
         if err:
             raise Exception("Error deleting group")
     return response
-
-
-async def get_group_schema():
-    # placeholder for call to resp, _, err = await client.get_group_schema()
-    # Also need to set group schema
-    pass
-
-
-async def set_group_schema():
-    # placeholder for call to resp, _, err = await client.set_group_schema()
-    pass

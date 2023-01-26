@@ -153,7 +153,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
         )
         if current_app:
             change_details.current_value = current_app
-        # TODO: Check if deleted
+
         app_exists = bool(current_app)
         tasks = []
 
@@ -165,6 +165,13 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
             log.error(
                 "Iambic does not support creating new apps. "
                 "Please create the app in Okta and then import it.",
+                **log_params,
+            )
+            return change_details
+
+        if self.deleted:
+            log.info(
+                "App is marked for deletion. Please delete manually in Okta",
                 **log_params,
             )
             return change_details
