@@ -31,6 +31,8 @@ from iambic.okta.group.utils import (
 )
 from iambic.okta.models import Group
 
+OKTA_GROUP_TEMPLATE_TYPE = "NOQ::Okta::Group"
+
 
 class UserStatus(Enum):
     active = "active"
@@ -88,7 +90,7 @@ class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
 
 
 class OktaGroupTemplate(BaseTemplate, ExpiryModel):
-    template_type = "NOQ::Okta::Group"
+    template_type = OKTA_GROUP_TEMPLATE_TYPE
     properties: OktaGroupTemplateProperties = Field(
         ..., description="Properties for the Okta Group"
     )
