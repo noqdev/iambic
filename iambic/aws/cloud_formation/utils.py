@@ -52,7 +52,7 @@ async def create_stack(
             "Stack already exists. Skipping creation. "
             "If this is not the desired behavior, please delete the stack in the console and try again.\n",
             stack_name=stack_name,
-            stack_url="https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks\n"
+            stack_url="https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks\n",
         )
         return True
 
@@ -122,7 +122,7 @@ async def create_stack_set(
             "StackSet already exists. Skipping creation. "
             "If this is not the desired behavior, please delete the stack in the console and try again.\n",
             stack_set_name=stack_set_name,
-            stack_set_url="https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacksets\n"
+            stack_set_url="https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacksets\n",
         )
         return True
     except client.exceptions.StackSetNotFoundException:

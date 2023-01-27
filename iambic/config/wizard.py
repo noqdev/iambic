@@ -281,7 +281,9 @@ class ConfigurationWizard:
             self.config_path = asyncio.run(resolve_config_template_path(self.repo_dir))
         except RuntimeError:
             self.config_path = f"{self.repo_dir}/iambic_config.yaml"
-        self.config: Config = Config(file_path=self.config_path, version=CURRENT_IAMBIC_VERSION)
+        self.config: Config = Config(
+            file_path=self.config_path, version=CURRENT_IAMBIC_VERSION
+        )
 
         if os.path.exists(self.config_path) and os.path.getsize(self.config_path) != 0:
             log.info("Found existing configuration file", config_path=self.config_path)

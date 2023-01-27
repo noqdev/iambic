@@ -72,7 +72,7 @@ async def store_template(config: Config, repo_dir: str, repo_name: str):
     if previous_head != main_branch:
         repo.git.checkout(main_branch)
 
-    config.write(config_path)
+    config.write()
     # TODO: Setup a PR request
     repo.git.checkout(previous_head)
 
