@@ -44,7 +44,11 @@ async def resource_file_upsert(
     content_as_dict: dict,
     replace_file: bool = False,
 ):
-    if not replace_file and os.path.exists(file_path):
+    if (
+        not replace_file
+        and os.path.exists(file_path)
+        and os.stat(file_path).st_size != 0
+    ):
         async with aiofiles.open(file_path, mode="r") as f:
             content_dict = json.loads(await f.read())
             content_as_dict = {**content_dict, **content_as_dict}

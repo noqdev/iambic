@@ -7,7 +7,7 @@ from typing import List, Optional, Union
 
 import botocore
 from jinja2 import BaseLoader, Environment
-from pydantic import Field, constr
+from pydantic import Field, constr, validator
 
 from iambic.aws.iam.models import Path
 from iambic.aws.iam.policy.utils import (
@@ -62,6 +62,13 @@ class Principal(BaseModel):
     @property
     def resource_id(self) -> str:
         return self.service or self.canonical_user or self.federated or self.aws
+
+    @validator("aws", "service", "canonical_user", "federated")
+    def sort_tags(cls, v: list[str]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v)
+        return sorted_v
 
 
 class ConditionalStatement(BaseModel):
@@ -174,7 +181,7 @@ class PolicyStatement(AccessModel, ExpiryModel):
 
 
 class AssumeRolePolicyDocument(AccessModel):
-    version: Optional[str] = None
+    version: str = "2008-10-17"
     statement: Optional[List[PolicyStatement]] = None
 
     @property
@@ -190,7 +197,7 @@ class PolicyDocument(AccessModel, ExpiryModel):
     policy_name: str = Field(
         description="The name of the policy.",
     )
-    version: Optional[str] = None
+    version: Optional[str]
     statement: Optional[List[PolicyStatement]] = Field(
         None,
         description="List of policy statements",

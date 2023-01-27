@@ -64,16 +64,6 @@ def filesystem():
 
 
 @pytest.fixture
-def mock_aws_profile():
-    # this has to be a fixture and restore the previous environment.
-    # because other functional tests depend on it.
-    original_profile = os.environ["AWS_PROFILE"]
-    os.environ["AWS_PROFILE"] = "iambic_test_org_account/IambicHubRole"
-    yield
-    os.environ["AWS_PROFILE"] = original_profile
-
-
-@pytest.fixture
 def generate_templates_fixture():
     # to override the conftest version to speed up testing
     pass
@@ -83,10 +73,19 @@ def generate_templates_fixture():
 # pull container with "test label". It will then approve the PR and trigger
 # the "iambic git-apply" command on the PR. If the flow is successful, the PR
 # will be merged and we will check the workflow to be completed state.
-def test_github_cicd(filesystem, mock_aws_profile, generate_templates_fixture):
+def test_github_cicd(filesystem, generate_templates_fixture):
 
-    subprocess.run("make -f Makefile.itest build_docker_itest", shell=True, check=True)
-    subprocess.run("make -f Makefile.itest upload_docker_itest", shell=True, check=True)
+    if not os.environ.get("GITHUB_ACTIONS", None):
+        # If we are running locally on developer machine, we need to ensure
+        # the payload is packed into a container image for the test templates repo
+        # to run against, so this is why we are building the container images on-the-fly
+        subprocess.run("make -f Makefile.itest auth_to_ecr", shell=True, check=True)
+        subprocess.run(
+            "make -f Makefile.itest build_docker_itest", shell=True, check=True
+        )
+        subprocess.run(
+            "make -f Makefile.itest upload_docker_itest", shell=True, check=True
+        )
 
     temp_config_filename, temp_templates_directory = filesystem
 
@@ -97,6 +96,15 @@ def test_github_cicd(filesystem, mock_aws_profile, generate_templates_fixture):
     repo = clone_git_repo(repo_url, temp_templates_directory, None)
     head_sha = repo.head.commit.hexsha
     print(repo)
+
+    repo_config_writer = repo.config_writer()
+    repo_config_writer.set_value(
+        "user", "name", "Iambic Github Functional Test for Github"
+    )
+    repo_config_writer.set_value(
+        "user", "email", "github-cicd-functional-test@iambic.org"
+    )
+    repo_config_writer.release()
 
     utc_obj = datetime.datetime.utcnow()
     date_isoformat = utc_obj.isoformat()

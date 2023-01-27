@@ -14,6 +14,7 @@ from iambic.config.models import Config, ExtendsConfig
 from iambic.core.models import Variable
 from iambic.core.utils import camel_to_snake
 from iambic.google.group.models import GroupTemplate
+from iambic.okta.group.models import OktaGroupTemplate
 
 
 def create_model_schemas(
@@ -27,6 +28,7 @@ def create_model_schemas(
         file_name = camel_to_snake(class_name)
         model_schema_path = str(os.path.join(schema_dir, f"{file_name}.md"))
         schema_md_str += f"* [{class_name}]({model_schema_path.replace('docs/', '')})\n"
+
         with open(model_schema_path, "w") as f:
             f.write("".join(parser.parse_schema(model.schema(by_alias=False))))
 
@@ -40,6 +42,7 @@ def generate_docs():
         AWSIdentityCenterPermissionSetTemplate,
     ]
     google_template_models = [GroupTemplate]
+    okta_template_models = [OktaGroupTemplate]
     config_models = [
         AWSAccount,
         AWSOrganization,
@@ -61,6 +64,10 @@ def generate_docs():
     schema_md_str += "\n# Google Template Models\n"
     schema_md_str = create_model_schemas(
         parser, schema_dir, schema_md_str, google_template_models
+    )
+    schema_md_str += "\n# Okta Template Models\n"
+    schema_md_str = create_model_schemas(
+        parser, schema_dir, schema_md_str, okta_template_models
     )
     schema_md_str += "\n# Config Models\n"
     schema_md_str = create_model_schemas(

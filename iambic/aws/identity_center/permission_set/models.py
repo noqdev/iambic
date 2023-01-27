@@ -105,7 +105,7 @@ class ManagedPolicyArn(BaseModel, ExpiryModel):
 
 class PermissionBoundary(BaseModel, ExpiryModel):
     customer_managed_policy_reference: Optional[CustomerManagedPolicyReference]
-    managed_policy_arn: Optional[str]
+    policy_arn: Optional[str]
 
     @property
     def resource_type(self):
@@ -113,7 +113,7 @@ class PermissionBoundary(BaseModel, ExpiryModel):
 
     @property
     def resource_id(self):
-        return self.customer_managed_policy_reference.name or self.managed_policy_arn
+        return self.customer_managed_policy_reference.name or self.policy_arn
 
 
 class SessionDuration(BaseModel):

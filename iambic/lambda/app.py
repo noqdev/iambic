@@ -59,19 +59,19 @@ def run_handler(event=None, context=None):
         case LambdaCommand.run_import.value:
             return run_import([config_path], REPO_BASE_PATH)
         case LambdaCommand.run_plan.value:
-            return run_plan(config_path, None, REPO_BASE_PATH)
+            return run_plan(config_path, [], REPO_BASE_PATH)
         case LambdaCommand.run_apply.value:
-            return run_apply(True, config_path, None, REPO_BASE_PATH)
+            return run_apply(True, config_path, [], REPO_BASE_PATH)
         case LambdaCommand.run_detect.value:
-            return run_detect(
-                config_path,
-            )
+            return run_detect(config_path, repo_dir=REPO_BASE_PATH)
         case LambdaCommand.run_git_apply.value:
-            return run_git_apply(config_path, REPO_BASE_PATH, None, FROM_SHA, TO_SHA)
+            return run_git_apply(
+                config_path, False, FROM_SHA, TO_SHA, repo_dir=REPO_BASE_PATH
+            )
         case LambdaCommand.run_git_plan.value:
-            return run_git_plan(config_path, None, REPO_BASE_PATH, PLAN_OUTPUT_PATH)
+            return run_git_plan(config_path, PLAN_OUTPUT_PATH, repo_dir=REPO_BASE_PATH)
         case LambdaCommand.run_clone_git_repos.value:
-            return run_clone_repos(config_path, REPO_BASE_PATH)
+            return run_clone_repos(config_path, repo_dir=REPO_BASE_PATH)
         case _:
             raise NotImplementedError(f"Unknown command {lambda_context.command}")
 
