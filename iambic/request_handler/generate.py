@@ -18,7 +18,6 @@ from iambic.okta.app.template_generation import generate_app_templates
 from iambic.okta.group.template_generation import (
     generate_group_templates as generate_okta_group_templates,
 )
-from iambic.okta.user.template_generation import generate_user_templates
 
 
 async def generate_templates(configs: list[Config], output_dir: str):
@@ -42,6 +41,5 @@ async def generate_templates(configs: list[Config], output_dir: str):
                 generate_okta_group_templates(config, output_dir, okta_organization)
             )
             tasks.append(generate_app_templates(config, output_dir, okta_organization))
-            tasks.append(generate_user_templates(config, output_dir, okta_organization))
 
     await asyncio.gather(*tasks)
