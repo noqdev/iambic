@@ -116,7 +116,6 @@ async def list_all_groups(okta_organization: OktaOrganization) -> List[Group]:
         groups.append(next_groups)
 
     tasks = []
-    groups_to_return = []
     for group_raw in groups:
         group = Group(
             idp_name=okta_organization.idp_name,
@@ -130,8 +129,7 @@ async def list_all_groups(okta_organization: OktaOrganization) -> List[Group]:
             ),
         )
         tasks.append(list_group_users(group, okta_organization))
-    groups_to_return = await asyncio.gather(*tasks)
-    return groups_to_return
+    return list(await asyncio.gather(*tasks))
 
 
 async def get_group(

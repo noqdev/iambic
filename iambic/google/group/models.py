@@ -41,6 +41,8 @@ from iambic.google.models import (
     WhoCanViewMembership,
 )
 
+GOOGLE_GROUP_TEMPLATE_TYPE = "NOQ::Google::Group"
+
 # TODO: Okta Applications and User/Group -> Application assignments
 
 
@@ -88,7 +90,7 @@ class GroupTemplateProperties(BaseModel):
 
 
 class GroupTemplate(GoogleTemplate, ExpiryModel):
-    template_type = "NOQ::Google::Group"
+    template_type = GOOGLE_GROUP_TEMPLATE_TYPE
     properties: GroupTemplateProperties
 
     def apply_resource_dict(
