@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import datetime
 import os
 import shutil
@@ -21,6 +22,23 @@ extends:
     value: arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/github-token-iambic-templates-itest
     hub_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
 version: '1'
+
+aws:
+  organizations:
+    - org_id: 'o-8t0mt0ybdd'
+      hub_role_arn: 'arn:aws:iam::580605962305:role/IambicHubRole'
+      org_name: 'iambic_test_org_account'
+      org_account_id: '580605962305'
+      identity_center_account:
+        region: 'us-east-1'
+      account_rules:
+        - included_accounts:
+            - '*'
+          enabled: true
+          iambic_managed: read_and_write
+      default_rule:
+        enabled: true
+        iambic_managed: read_and_write
 """
 
 iambic_role_yaml = """template_type: NOQ::AWS::IAM::Role
@@ -88,8 +106,8 @@ def test_github_cicd(filesystem, generate_templates_fixture):
         )
 
     temp_config_filename, temp_templates_directory = filesystem
-
     config = Config.load(temp_config_filename)
+    asyncio.run(config.setup_aws_accounts())
     github_token = config.secrets["github-token-iambic-templates-itest"]
     github_repo_name = "noqdev/iambic-templates-itest"
     repo_url = f"https://oauth2:{github_token}@github.com/{github_repo_name}.git"
