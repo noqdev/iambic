@@ -25,7 +25,7 @@ properties:
 """
     test_group_fp = os.path.join(
         temp_templates_directory,
-        "okta/groups/development/iambic_functional_test_group.yaml",
+        "resources/okta/groups/development/iambic_functional_test_group.yaml",
     )
 
     with open(test_group_fp, "w") as temp_file:
