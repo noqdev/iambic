@@ -1,0 +1,82 @@
+Overview
+
+Github integration is designed for team collaboration on iambic templates. A typical workflow would be the following:
+
+1. Developer Alice submits a pull request to iambic templates to create an application role.
+2. Upon the PR is created, iambic github action will run "iambic git-plan" to preview what is the impact of the PR and submits the proposed_changes.yaml back into the PR as comment.
+3. Reviewer Bob will review the templates change along with the proposed_changes. Reviewer Bob may request additional changes.
+4. Developer Alice updates the PR and iambic github action again run "iambic git-plan" to calculate changes_required.
+5. Reviewer Bob approved the PR.
+6. Developer Alice submits an  "iambic git-apply" comment in the PR.
+7. IAMbic github action will apply the changes in the PR. Upon git-apply is successful, the pull request is closed by the github action.
+
+Pre-requisite
+
+1. Github repository for iambic templates.
+2. An admin for this Github repository to perform the following action
+2a. configure repository to require approvals before merging PR
+2b. create fine grain access token to allow automatic import
+3. An AWS admin to configure federated login by iambic github actions
+
+Configure Github Repository require Approvals before merging
+
+1. Assuming this repository is called "noqdev/iambic-templates-example" where "noqdev" is the Github organization and "iambic-templates-example" is the short repository name within "noqdev" Github organization.
+2. Visit https://github.com/noqdev/iambic-templates-example/settings/branches
+3. Add branch protection rule
+4. For Branch name pattern, use `main`
+5. Check "Require a pull request before merging", and ensure "Require Approvals" is checked. Leave the default for "required number of approvals before merging"
+6. Check "Require status checks to pass before merging"
+
+Configure Access token for Github Action to update repository periodically.
+
+1. Visit https://github.com/settings/apps
+2. Select Personal access tokens
+3. Select Fine-grain tokens
+4. Select Generate new token
+5. For token name, input "iambic-templates-import"
+5a. For expiration, select custom, select a date that is one year from now. (Tip: use your ogranization preferred token valid length).
+5b. For Resource owner, select the Github organization that Github repository belongs to.
+5c. For Repository Access, select "Only select repositories", then click on "Select Repositories". In this tutorial, we select "noqdev/iambic-templates-example". You should use the repository name that you create for your Github organization.
+5d. Click on Repository permissions, Give "Access: Read and Write" for "Contents". (Tip: this allows the github action for import to push to the repository without approval. The intend is human changes require approval flow and auto import flow that inventory the cloud resources does not require approval flow.)
+5e. No action is needed, but you will notice previous action will automatically select "Access: Read" for "Metadata"
+5f. Click "Generate Token".
+6. If your organization has a password vault, you can optionally store it in your organization password vault. Otherwise, move to next step to allow the repository to use the newly generated token.
+7. Open a new tab and visit https://github.com/noqdev/iambic-templates-example/settings/secrets/actions. (Tip: you should modify the link to go your own repository)
+8. Select New repository secret
+9. For Name, input "AUTO_IMPORT_GH_TOKEN"
+10. For Secret, paste in the token generated in step 5f.
+
+Configure IambicHubRole AWS account to federated login for Github actions
+
+1. Log into the AWS Console using the account.
+2. Visit https://us-east-1.console.aws.amazon.com/iamv2/home?region=us-west-2#/identity_providers
+3. Select OpenID Connect
+4. For Provider name, input `https://token.actions.githubusercontent.com`
+5. Click Get Thumbprint
+6. For Audience, input `sts.amazonaws.com`
+7. Click Add provider
+
+Configure IambicHubRole AWS account to allow AssumeRoleWithWebIdentity
+
+1. We need to add a statement in IambicHubRole assume role policy to allow github action to autenticate and assume the IambicHubRole.
+
+Add the following statement into the Allow statement block
+```
+		{
+			"Effect": "Allow",
+			"Principal": {
+				"Federated": "arn:aws:iam::REPLACE_WITH_YOUR_AWS_ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
+			},
+			"Action": "sts:AssumeRoleWithWebIdentity",
+			"Condition": {
+				"StringLike": {
+					"token.actions.githubusercontent.com:sub": "repo:REPLACE_WITH_YOUR_GITHUB_ORG/REPLACE_WITH_YOUR_GITHUB_REPOSITORY_NAME:ref:refs/heads/main"
+					]
+				},
+				"ForAllValues:StringEquals": {
+					"token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+					"token.actions.githubusercontent.com:iss": "https://token.actions.githubusercontent.com"
+				}
+			}
+		}
+```
