@@ -254,7 +254,7 @@ async def create_spoke_role_stack_set(
 
     return await create_stack_set(
         cf_client,
-        stack_set_name="IambicSpokeRoleLocalTest",
+        stack_set_name="IambicSpokeRole",
         template_body=get_iambic_spoke_role_template_body(),
         parameters=[
             {
@@ -279,7 +279,7 @@ async def create_spoke_role_stack(
 
     return await create_stack(
         cf_client,
-        stack_name="IambicSpokeRoleLocalTest",
+        stack_name="IambicSpokeRole",
         template_body=get_iambic_spoke_role_template_body(),
         parameters=[
             {
@@ -299,7 +299,7 @@ async def create_hub_role_stack(
     additional_kwargs = {"RoleARN": role_arn} if role_arn else {}
     stack_created = await create_stack(
         cf_client,
-        stack_name="IambicHubRoleLocalTest",
+        stack_name="IambicHubRole",
         template_body=get_iambic_hub_role_template_body(),
         parameters=[
             {"ParameterKey": "HubRoleName", "ParameterValue": IAMBIC_HUB_ROLE_NAME},
