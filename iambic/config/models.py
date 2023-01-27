@@ -371,9 +371,7 @@ class Config(BaseTemplate):
             exclude_none=exclude_none,
         )
 
-    def write(
-        self, exclude_none=True, exclude_unset=False, exclude_defaults=True
-    ):
+    def write(self, exclude_none=True, exclude_unset=False, exclude_defaults=True):
         input_dict = self.dict(
             exclude_none=exclude_none,
             exclude_unset=exclude_unset,

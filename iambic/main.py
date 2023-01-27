@@ -66,9 +66,7 @@ def plan(templates: list[str], repo_dir: str):
     run_plan(templates, repo_dir=repo_dir)
 
 
-def run_plan(
-    templates: list[str], repo_dir: str = str(pathlib.Path.cwd())
-):
+def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
     if not templates:
         templates = asyncio.run(gather_templates(repo_dir))
 
