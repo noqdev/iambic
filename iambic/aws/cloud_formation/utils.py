@@ -42,6 +42,20 @@ def get_iambic_spoke_role_template_body() -> str:
 async def create_stack(
     client, stack_name: str, template_body: str, parameters: list[dict], **kwargs
 ) -> bool:
+    existing_stack = await legacy_paginated_search(
+        client.describe_stacks,
+        response_key="Stacks",
+        StackName=stack_name,
+    )
+    if existing_stack:
+        log.info(
+            "Stack already exists. Skipping creation. "
+            "If this is not the desired behavior, please delete the stack in the console and try again.\n",
+            stack_name=stack_name,
+            stack_url="https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks\n"
+        )
+        return True
+
     response = await boto_crud_call(
         client.create_stack,
         StackName=stack_name,
@@ -99,6 +113,21 @@ async def create_stack_set(
     deployment_regions: list[str],
     **kwargs,
 ) -> bool:
+    try:
+        await boto_crud_call(
+            client.describe_stack_set,
+            StackSetName=stack_set_name,
+        )
+        log.info(
+            "StackSet already exists. Skipping creation. "
+            "If this is not the desired behavior, please delete the stack in the console and try again.\n",
+            stack_set_name=stack_set_name,
+            stack_set_url="https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacksets\n"
+        )
+        return True
+    except client.exceptions.StackSetNotFoundException:
+        pass
+
     await boto_crud_call(
         client.create_stack_set,
         StackSetName=stack_set_name,

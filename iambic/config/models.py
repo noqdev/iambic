@@ -372,7 +372,7 @@ class Config(BaseTemplate):
         )
 
     def write(
-        self, file_path, exclude_none=True, exclude_unset=False, exclude_defaults=True
+        self, exclude_none=True, exclude_unset=False, exclude_defaults=True
     ):
         input_dict = self.dict(
             exclude_none=exclude_none,
@@ -387,7 +387,7 @@ class Config(BaseTemplate):
             ],
         )
 
-        file_path = os.path.expanduser(file_path)
+        file_path = os.path.expanduser(self.file_path)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, "w") as f:
             f.write(yaml.dump(sorted_input_dict))
