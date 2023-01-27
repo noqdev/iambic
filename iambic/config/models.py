@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import os
+import pathlib
 from enum import Enum
 from typing import Any, List, Optional
 
@@ -330,6 +331,8 @@ class Config(BaseTemplate):
 
     @classmethod
     def load(cls, file_path: str):
+        if isinstance(file_path, pathlib.Path):
+            file_path = str(file_path)
         c = cls(file_path=file_path, **yaml.load(open(file_path)))
         return c
 
