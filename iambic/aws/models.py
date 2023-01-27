@@ -96,6 +96,14 @@ class AccessModel(BaseModel):
         ),
     )
 
+    def access_model_sort_weight(self):
+        return (
+            str(self.included_accounts)
+            + str(self.excluded_accounts)
+            + str(self.included_orgs)
+            + str(self.excluded_orgs)
+        )
+
 
 class Tag(ExpiryModel, AccessModel):
     key: str
@@ -128,6 +136,9 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         description="The external id to use for assuming into a role when making calls to the account",
     )
     boto3_session_map: Optional[dict] = None
+
+    class Config:
+        fields = {"boto3_session_map": {"exclude": True}}
 
     @property
     def region_name(self):
@@ -169,10 +180,10 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         return self.boto3_session_map[region_name]
 
     async def get_boto3_client(self, service: str, region_name: Optional[str] = None):
+        region_name = region_name or self.region_name
+
         if self.boto3_session_map is None:
             self.boto3_session_map = {}
-
-        region_name = region_name or self.region_name
 
         if (
             client := self.boto3_session_map.get("client", {})
@@ -242,6 +253,9 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         None,
         description="(Auto-populated) The role arn to assume into when making calls to the account",
     )
+
+    class Config:
+        fields = {"hub_session_info": {"exclude": True}}
 
     async def get_boto3_session(self, region_name: str = None):
         region_name = region_name or self.region_name
@@ -469,6 +483,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         description="The AWS Account ID and region of the AWS Identity Center instance to use for this organization",
     )
     default_rule: BaseAWSOrgRule = Field(
+        BaseAWSOrgRule(enabled=True),
         description="The rule used to determine how an organization account should be handled if the account was not found in account_rules.",
     )
     account_rules: Optional[List[AWSOrgAccountRule]] = Field(

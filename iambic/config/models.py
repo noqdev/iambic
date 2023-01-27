@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import json
 import os
 from enum import Enum
 from typing import Any, List, Optional
@@ -17,7 +16,7 @@ from slack_bolt import App as SlackBoltApp
 from iambic.aws.models import AWSAccount, AWSOrganization
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
-from iambic.core.models import Variable
+from iambic.core.models import BaseTemplate, Variable
 from iambic.core.utils import aio_wrapper, sort_dict, yaml
 
 CURRENT_IAMBIC_VERSION = "1"
@@ -140,6 +139,7 @@ class GoogleProject(BaseModel):
 
 class ExtendsConfigKey(Enum):
     AWS_SECRETS_MANAGER = "AWS_SECRETS_MANAGER"
+    LOCAL_FILE = "LOCAL_FILE"
 
 
 class ExtendsConfig(BaseModel):
@@ -175,7 +175,7 @@ class AWSConfig(BaseModel):
             ][0]
 
 
-class Config(BaseModel):
+class Config(BaseTemplate):
     aws: AWSConfig = Field(
         AWSConfig(),
         description="AWS configuration for iambic to use when managing AWS resources",
@@ -183,7 +183,10 @@ class Config(BaseModel):
     google_projects: List[GoogleProject] = []
     okta_organizations: List[OktaOrganization] = []
     extends: List[ExtendsConfig] = []
-    secrets: Optional[dict] = None
+    secrets: Optional[dict] = Field(
+        description="secrets should only be used in memory and never serialized out",
+        exclude=True,
+    )
     variables: Optional[List[Variable]] = Field(
         [],
         description="A list of variables to be used when creating templates. "
@@ -197,11 +200,15 @@ class Config(BaseModel):
         description="Do not change! The version of iambic this repo is compatible with.",
     )
 
+    @property
+    def aws_is_setup(self) -> bool:
+        return bool(self.aws and (self.aws.accounts or self.aws.organizations))
+
     class Config:
         arbitrary_types_allowed = True
 
     async def setup_aws_accounts(self):
-        if not self.aws:
+        if not self.aws_is_setup:
             return
 
         for elem, account in enumerate(self.aws.accounts):
@@ -212,48 +219,44 @@ class Config(BaseModel):
         config_account_idx_map = {
             account.account_id: idx for idx, account in enumerate(self.aws.accounts)
         }
-
-        if self.aws:
-            if self.aws.organizations:
-                if any(account.hub_role_arn for account in self.aws.accounts):
-                    raise AttributeError(
-                        "You cannot specify a hub_role_arn on an AWS Account if you are using an AWS Organization"
-                    )
-
-                orgs_accounts = await asyncio.gather(
-                    *[org.get_accounts() for org in self.aws.organizations]
+        if self.aws.organizations:
+            if any(account.hub_role_arn for account in self.aws.accounts):
+                raise AttributeError(
+                    "You cannot specify a hub_role_arn on an AWS Account if you are using an AWS Organization"
                 )
-                for org_accounts in orgs_accounts:
-                    for account in org_accounts:
-                        if (
-                            account_elem := config_account_idx_map.get(
-                                account.account_id
-                            )
-                        ) is not None:
-                            self.aws.accounts[account_elem] = account
-                        else:
-                            self.aws.accounts.append(account)
-            elif self.aws.accounts:
-                hub_account = [
-                    account for account in self.aws.accounts if account.hub_role_arn
-                ]
-                if len(hub_account) > 1:
-                    raise AttributeError(
-                        "Only one AWS Account can specify the hub_role_arn"
-                    )
-                elif not hub_account:
-                    raise AttributeError(
-                        "One of the AWS Accounts must define the hub_role_arn"
-                    )
-                else:
-                    hub_account = hub_account[0]
-                    await hub_account.set_hub_session_info()
-                    hub_session_info = hub_account.hub_session_info
-                    if not hub_session_info:
-                        raise Exception("Unable to assume into the hub_role_arn")
-                    for account in self.aws.accounts:
-                        if account.account_id != hub_account.account_id:
-                            account.hub_session_info = hub_session_info
+
+            orgs_accounts = await asyncio.gather(
+                *[org.get_accounts() for org in self.aws.organizations]
+            )
+            for org_accounts in orgs_accounts:
+                for account in org_accounts:
+                    if (
+                        account_elem := config_account_idx_map.get(account.account_id)
+                    ) is not None:
+                        self.aws.accounts[account_elem] = account
+                    else:
+                        self.aws.accounts.append(account)
+        elif self.aws.accounts:
+            hub_account = [
+                account for account in self.aws.accounts if account.hub_role_arn
+            ]
+            if len(hub_account) > 1:
+                raise AttributeError(
+                    "Only one AWS Account can specify the hub_role_arn"
+                )
+            elif not hub_account:
+                raise AttributeError(
+                    "One of the AWS Accounts must define the hub_role_arn"
+                )
+            else:
+                hub_account = hub_account[0]
+                await hub_account.set_hub_session_info()
+                hub_session_info = hub_account.hub_session_info
+                if not hub_session_info:
+                    raise Exception("Unable to assume into the hub_role_arn")
+                for account in self.aws.accounts:
+                    if account.account_id != hub_account.account_id:
+                        account.hub_session_info = hub_session_info
 
         await self.configure_plugins()
 
@@ -303,6 +306,14 @@ class Config(BaseModel):
                     for k, v in (await self.get_aws_secret(extend)).items():
                         if not getattr(self, k, None):
                             setattr(self, k, v)
+                if extend.key == ExtendsConfigKey.LOCAL_FILE:
+                    dir_path = os.path.dirname(self.file_path)
+                    extend_path = os.path.join(dir_path, extend.value)
+                    with open(extend_path, "r") as ymlfile:
+                        extend_config = yaml.load(ymlfile)
+                    for k, v in extend_config.items():
+                        if not getattr(self, k, None):
+                            setattr(self, k, v)
 
     async def get_boto_session_from_arn(self, arn: str, region_name: str = None):
         region_name = region_name or arn.split(":")[3]
@@ -322,17 +333,52 @@ class Config(BaseModel):
         c = cls(file_path=file_path, **yaml.load(open(file_path)))
         return c
 
+    def dict(
+        self,
+        *,
+        include: Optional[
+            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
+        ] = None,
+        exclude: Optional[
+            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
+        ] = None,
+        by_alias: bool = False,
+        skip_defaults: Optional[bool] = None,
+        exclude_unset: bool = True,
+        exclude_defaults: bool = False,
+        exclude_none: bool = True,
+    ) -> "DictStrAny":  # noqa
+        required_exclude = {
+            "google_projects",
+            "okta_organizations",
+            "slack_app",
+            "secrets",
+            "file_path",
+        }
+
+        if exclude:
+            exclude.update(required_exclude)
+        else:
+            exclude = required_exclude
+
+        return super().dict(
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            skip_defaults=skip_defaults,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+        )
+
     def write(
         self, file_path, exclude_none=True, exclude_unset=False, exclude_defaults=True
     ):
-        input_dict = self.json(
+        input_dict = self.dict(
             exclude_none=exclude_none,
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
-            exclude={"google_projects", "okta_organizations", "slack_app", "secrets"},
         )
-        input_dict = json.loads(input_dict)
-        input_dict["template_type"] = self.template_type
         sorted_input_dict = sort_dict(
             input_dict,
             [

@@ -1,9 +1,19 @@
+# public.ecr.aws/l1s5s8m2 is the public ecr repository for integration testing
+IAMBIC_ITEST_PUBLIC_ECR_ALIAS := "l1s5s8m2"
+
 # skipping linux/arm64 to speed up functional_tests
 # our self-hosted runner is linux/amd64, cross-platform
 # building was really slow
 docker_buildx_itest := docker buildx build \
 	--platform=linux/amd64 \
-	-t "public.ecr.aws/s2p9s3r8/iambic:itest"
+	-t "public.ecr.aws/${IAMBIC_ITEST_PUBLIC_ECR_ALIAS}/iambic:itest"
+
+.PHONY: auth_to_ecr
+auth_to_ecr:
+	# Only run this target if you need to build your own IMAGE and push to your own ECR
+	# If you are, (most won't), you need to change the AWS_PROFILE to the one that has
+	# access to push to the desired registry.
+	bash -c "AWS_PROFILE=iambic_test_org_spoke_account_1/iambic_image_builder aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/${IAMBIC_ITEST_PUBLIC_ECR_ALIAS}"
 
 .PHONY: build_docker_itest
 build_docker_itest:
@@ -13,5 +23,4 @@ build_docker_itest:
 .PHONY: upload_docker_itest
 upload_docker_itest:
 	@echo "--> Uploading Iambic Docker image"
-	bash -c "AWS_PROFILE=development/development_admin aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/s2p9s3r"
 	$(docker_buildx_itest) --push .

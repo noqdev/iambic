@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 import ujson
@@ -58,7 +59,7 @@ def dumps(
     return result
 
 
-def loads(s: str, **kwargs) -> any:
+def loads(s: str, **kwargs) -> Any:
     try:
         result = ujson.loads(s, **kwargs)
     except ValueError:

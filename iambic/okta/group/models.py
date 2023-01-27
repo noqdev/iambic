@@ -36,6 +36,7 @@ class UserStatus(Enum):
     active = "active"
     provisioned = "provisioned"
     deprovisioned = "deprovisioned"
+    recovery = "recovery"
 
 
 class UserSimple(BaseModel, ExpiryModel):
@@ -181,7 +182,7 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
         )
         if current_group:
             change_details.current_value = current_group
-        # TODO: Check if deleted
+
         group_exists = bool(current_group)
         tasks = []
 

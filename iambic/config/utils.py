@@ -13,9 +13,14 @@ from iambic.core.utils import gather_templates, yaml
 
 async def resolve_config_template_path(repo_dir: str) -> pathlib.Path:
     config_template_file_path = await gather_templates(repo_dir, "Core::Config")
-    if len(config_template_file_path) > 1 or len(config_template_file_path) == 0:
+    if len(config_template_file_path) == 0:
         raise RuntimeError(
-            f"Invalid number of NOQ::Core::Config templates. Found ({len(config_template_file_path)}). Expected 1. Files: {','.join(config_template_file_path)}"
+            f"Unable to discover Iambic Configuration in {repo_dir}. "
+            "Please create a configuration with the `NOQ::Core::Config` template type."
+        )
+    if len(config_template_file_path) > 1:
+        raise RuntimeError(
+            f"Too many NOQ::Core::Config templates discovered. Found ({len(config_template_file_path)}). Expected 1. Files: {','.join(config_template_file_path)}"
         )
     # Currently NOQ supports 1 configuration per repo
     return pathlib.Path(config_template_file_path[0])
