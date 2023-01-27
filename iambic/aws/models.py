@@ -39,8 +39,8 @@ if TYPE_CHECKING:
 
 ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\*$"
 
-IAMBIC_HUB_ROLE_NAME = "IambicHubRole_LOCAL_TEST"
-IAMBIC_SPOKE_ROLE_NAME = "IambicSpokeRole_LOCAL_TEST"
+IAMBIC_HUB_ROLE_NAME = "IambicHubRole"
+IAMBIC_SPOKE_ROLE_NAME = "IambicSpokeRole"
 
 
 def get_hub_role_arn(account_id: str) -> str:

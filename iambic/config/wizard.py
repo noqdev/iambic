@@ -319,7 +319,6 @@ class ConfigurationWizard:
             profile_name = questionary.select(
                 question_text,
                 choices=available_profiles,
-                qmark="BRUH WTF IS GOING ON\n?",
             ).ask()
         else:
             profile_name = questionary.autocomplete(
