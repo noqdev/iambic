@@ -297,7 +297,7 @@ async def get_group_template(group: Group) -> OktaGroupTemplate:
     UserSimple.update_forward_refs()
     OktaGroupTemplate.update_forward_refs()
     return OktaGroupTemplate(
-        file_path=f"okta/groups/{group.idp_name}/{file_name}",
+        file_path=f"resources/okta/groups/{group.idp_name}/{file_name}",
         properties=dict(
             group_id=group.group_id,
             idp_name=group.idp_name,
