@@ -281,7 +281,7 @@ class ConfigurationWizard:
             self.config_path = asyncio.run(resolve_config_template_path(self.repo_dir))
         except RuntimeError:
             self.config_path = f"{self.repo_dir}/iambic_config.yaml"
-        self.config: Config = Config(version=CURRENT_IAMBIC_VERSION)
+        self.config: Config = Config(file_path=self.config_path, version=CURRENT_IAMBIC_VERSION)
 
         if os.path.exists(self.config_path) and os.path.getsize(self.config_path) != 0:
             log.info("Found existing configuration file", config_path=self.config_path)
@@ -403,7 +403,7 @@ class ConfigurationWizard:
             role_name=role_template.properties.role_name,
         )
 
-        self.config.write(self.config_path)
+        self.config.write()
         role_template.write(exclude_unset=False)
         await role_template.apply(self.config, ctx)
 
@@ -505,7 +505,7 @@ class ConfigurationWizard:
             sys.exit(0)
 
         self.config.aws.accounts.append(account)
-        self.config.write(self.config_path)
+        self.config.write()
 
         if is_hub_account:
             log.info("Importing AWS identities")
@@ -572,7 +572,7 @@ class ConfigurationWizard:
             self.config.aws.accounts[
                 account_id_to_config_elem_map[account.account_id]
             ] = account
-            self.config.write(self.config_path)
+            self.config.write()
 
     def configuration_wizard_aws_accounts(self):
         while True:
@@ -590,7 +590,7 @@ class ConfigurationWizard:
             else:
                 self.configuration_wizard_aws_account_add()
 
-            self.config.write(self.config_path)
+            self.config.write()
 
     def configuration_wizard_aws_organizations_edit(self):
         org_ids = [org.org_id for org in self.config.aws.organizations]
@@ -638,7 +638,7 @@ class ConfigurationWizard:
             self.config.aws.organizations[
                 org_id_to_config_elem_map[org_to_edit.org_id]
             ] = org_to_edit
-            self.config.write(self.config_path)
+            self.config.write()
 
     def configuration_wizard_aws_organizations_add(self):
         if not self.has_cf_permissions:
@@ -713,7 +713,7 @@ class ConfigurationWizard:
 
         log.info("Saving config and importing AWS identities")
 
-        self.config.write(self.config_path)
+        self.config.write()
 
         asyncio.run(self.attempt_aws_account_refresh())
         for account in self.config.aws.accounts:
@@ -733,7 +733,7 @@ class ConfigurationWizard:
         else:
             self.configuration_wizard_aws_organizations_add()
 
-        self.config.write(self.config_path)
+        self.config.write()
 
     def configuration_wizard_aws(self):
         while True:
@@ -788,7 +788,7 @@ class ConfigurationWizard:
                 assume_role_arn=role_arn,
             )
         ]
-        self.config.write(self.config_path)
+        self.config.write()
 
         if role_arn:
             role_template: RoleTemplate = self.existing_role_template_map.get(role_name)
@@ -968,7 +968,7 @@ class ConfigurationWizard:
                 project_id_to_config_elem_map[project_id]
             ] = project_to_edit
             self.update_secret()
-            self.config.write(self.config_path)
+            self.config.write()
 
     def configuration_wizard_google(self):
         log.info(
@@ -1055,7 +1055,7 @@ class ConfigurationWizard:
                 org_name_to_config_elem_map[org_name]
             ] = org_to_edit
             self.update_secret()
-            self.config.write(self.config_path)
+            self.config.write()
 
     def configuration_wizard_okta(self):
         log.info(
@@ -1191,7 +1191,7 @@ class ConfigurationWizard:
 
             # Let's try really hard not to use a switch statement since it depends on Python 3.10
             if action == "Done":
-                self.config.write(self.config_path)
+                self.config.write()
                 return
             elif action == "AWS":
                 self.configuration_wizard_aws()

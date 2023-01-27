@@ -44,14 +44,6 @@ def cli():
     ...
 
 
-@cli.command()
-@click.option(
-    "--config",
-    "-c",
-    "config_path",
-    type=click.Path(exists=True),
-    help="The config.yaml file path to apply. Example: ./prod/config.yaml",
-)
 @click.option(
     "--template",
     "-t",
@@ -70,33 +62,24 @@ def cli():
     default=str(pathlib.Path.cwd()),
     help="The repo directory containing the templates. Example: ~/noq-templates",
 )
-def plan(config_path: str, templates: list[str], repo_dir: str):
-    run_plan(config_path, templates, repo_dir=repo_dir)
+def plan(templates: list[str], repo_dir: str):
+    run_plan(templates, repo_dir=repo_dir)
 
 
 def run_plan(
-    config_path: str, templates: list[str], repo_dir: str = str(pathlib.Path.cwd())
+    templates: list[str], repo_dir: str = str(pathlib.Path.cwd())
 ):
     if not templates:
         templates = asyncio.run(gather_templates(repo_dir))
 
     asyncio.run(flag_expired_resources(templates))
-    if not config_path:
-        config_path = asyncio.run(resolve_config_template_path(repo_dir))
+    config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = Config.load(config_path)
     asyncio.run(config.setup_aws_accounts())
     ctx.eval_only = True
     output_proposed_changes(asyncio.run(apply_changes(config, templates, ctx)))
 
 
-@cli.command()
-@click.option(
-    "--config",
-    "-c",
-    "config_path",
-    type=click.Path(exists=True),
-    help="The config.yaml file path to apply. Example: ./prod/config.yaml",
-)
 @click.option(
     "--repo-dir",
     "-d",
@@ -105,26 +88,17 @@ def run_plan(
     type=click.Path(exists=True),
     help="The repo directory containing the templates. Example: ~/noq-templates",
 )
-def detect(config_path: str, repo_dir: str):
-    run_detect(config_path, repo_dir)
+def detect(repo_dir: str):
+    run_detect(repo_dir)
 
 
-def run_detect(config_path: str, repo_dir: str):
-    if not config_path:
-        config_path = asyncio.run(resolve_config_template_path(repo_dir))
+def run_detect(repo_dir: str):
+    config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = Config.load(config_path)
     asyncio.run(config.setup_aws_accounts())
     asyncio.run(detect_changes(config, repo_dir or str(pathlib.Path.cwd())))
 
 
-@cli.command()
-@click.option(
-    "--config",
-    "-c",
-    "config_path",
-    type=click.Path(exists=True),
-    help="The config.yaml file path to apply. Example: ./prod/config.yaml",
-)
 @click.option(
     "--repo_dir",
     "-d",
@@ -134,13 +108,12 @@ def run_detect(config_path: str, repo_dir: str):
     default=str(pathlib.Path.cwd()),
     help="The repo base directory that should contain the templates. Example: ~/iambic/templates",
 )
-def clone_repos(config_path: str, repo_dir: str):
-    run_clone_repos(config_path, repo_dir=repo_dir)
+def clone_repos(repo_dir: str):
+    run_clone_repos(repo_dir=repo_dir)
 
 
-def run_clone_repos(config_path: str, repo_dir: str = str(pathlib.Path.cwd())):
-    if not config_path:
-        config_path = asyncio.run(resolve_config_template_path(repo_dir))
+def run_clone_repos(repo_dir: str = str(pathlib.Path.cwd())):
+    config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = Config.load(config_path)
     asyncio.run(config.setup_aws_accounts())
     asyncio.run(clone_git_repos(config, repo_dir))
@@ -307,14 +280,6 @@ def run_git_plan(
 
 @cli.command(name="import")
 @click.option(
-    "--config",
-    "-c",
-    "config",  # config_paths to enable multiple config support
-    multiple=False,
-    type=click.Path(exists=True),
-    help="The config.yaml file paths. Example: ./prod/config.yaml",
-)
-@click.option(
     "--repo-dir",
     "-d",
     "repo_dir",
@@ -323,8 +288,9 @@ def run_git_plan(
     default=str(pathlib.Path.cwd()),
     help="The repo directory containing the templates. Example: ~/noq-templates",
 )
-def import_(config: str, repo_dir: str):
-    run_import([config], repo_dir=repo_dir)
+def import_(repo_dir: str):
+    config_path = asyncio.run(resolve_config_template_path(repo_dir))
+    run_import([config_path], repo_dir=repo_dir)
 
 
 def run_import(config_paths: list[str], repo_dir: str = str(pathlib.Path.cwd())):
