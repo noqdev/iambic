@@ -187,6 +187,10 @@ def is_regex_match(regex, test_string):
         return regex.lower() == test_string.lower()
 
 
+def is_valid_account_id(account_id: str):
+    return bool(re.match(r"^\d{12}$", account_id))
+
+
 def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> bool:
     from iambic.aws.models import AccessModel
 
@@ -306,6 +310,15 @@ async def remove_expired_resources(
                 setattr(resource, field_name, new_value)
 
     return resource
+
+
+def get_identity_arn(identity_arn: str, user_id: str) -> str:
+    current_arn = identity_arn.replace(":sts:", ":iam:").replace("assumed-role", "role")
+    if "assumed-role" in identity_arn:
+        session_name = user_id.split(":")[-1]
+        return current_arn.replace(f"/{session_name}", "")
+
+    return current_arn
 
 
 async def set_org_account_variables(client, account: dict) -> dict:

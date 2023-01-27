@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+from datetime import datetime, timedelta
 
 from iambic.aws.models import (
     IAMBIC_HUB_ROLE_NAME,
@@ -53,8 +54,16 @@ async def create_stack(
     stack_id = response.get("StackId")
     resource_status = "CREATE_IN_PROGRESS"
 
+    estimated_completion = (datetime.now() + timedelta(minutes=3)).strftime(
+        "%m/%d/%Y, %H:%M:%S"
+    )
+
     while resource_status == "CREATE_IN_PROGRESS":
-        log.info("Waiting for stack to be created", stack_name=stack_name)
+        log.info(
+            "Waiting for stack to be created.",
+            stack_name=stack_name,
+            estimated_completion=estimated_completion,
+        )
         await asyncio.sleep(30)
         response = await legacy_paginated_search(
             client.describe_stacks,
@@ -129,6 +138,9 @@ async def create_stack_set(
                 "Waiting for stack set instances to be created",
                 stack_set_name=stack_set_name,
                 pending_instances=pending_count,
+                estimated_completion=(
+                    datetime.now() + timedelta(minutes=pending_count * 1.5)
+                ).strftime("%m/%d/%Y, %H:%M:%S"),
             )
             await asyncio.sleep(30)
             continue
@@ -242,7 +254,7 @@ async def create_spoke_role_stack_set(
 
     return await create_stack_set(
         cf_client,
-        stack_set_name="IambicSpokeRole",
+        stack_set_name="IambicSpokeRoleLocalTest",
         template_body=get_iambic_spoke_role_template_body(),
         parameters=[
             {
@@ -267,7 +279,7 @@ async def create_spoke_role_stack(
 
     return await create_stack(
         cf_client,
-        stack_name="IambicSpokeRole",
+        stack_name="IambicSpokeRoleLocalTest",
         template_body=get_iambic_spoke_role_template_body(),
         parameters=[
             {
@@ -287,7 +299,7 @@ async def create_hub_role_stack(
     additional_kwargs = {"RoleARN": role_arn} if role_arn else {}
     stack_created = await create_stack(
         cf_client,
-        stack_name="IambicHubRole",
+        stack_name="IambicHubRoleLocalTest",
         template_body=get_iambic_hub_role_template_body(),
         parameters=[
             {"ParameterKey": "HubRoleName", "ParameterValue": IAMBIC_HUB_ROLE_NAME},

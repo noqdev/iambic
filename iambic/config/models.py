@@ -16,6 +16,7 @@ from slack_bolt import App as SlackBoltApp
 
 from iambic.aws.models import AWSAccount, AWSOrganization
 from iambic.core.iambic_enum import IambicManaged
+from iambic.core.logger import log
 from iambic.core.models import Variable
 from iambic.core.utils import aio_wrapper, sort_dict, yaml
 
@@ -340,6 +341,9 @@ class Config(BaseModel):
             ],
         )
 
-        os.makedirs(os.path.dirname(os.path.expanduser(file_path)), exist_ok=True)
+        file_path = os.path.expanduser(file_path)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, "w") as f:
             f.write(yaml.dump(sorted_input_dict))
+
+        log.info("Config successfully written", config_location=file_path)
