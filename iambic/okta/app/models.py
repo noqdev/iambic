@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-from enum import Enum
 from itertools import chain
 from typing import Any, List, Optional
 
 from pydantic import Field
 
+from iambic.aws.utils import remove_expired_resources
 from iambic.config.models import Config, OktaOrganization
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
@@ -16,82 +16,46 @@ from iambic.core.models import (
     BaseModel,
     BaseTemplate,
     ExpiryModel,
-    ProposedChange,
-    ProposedChangeType,
     TemplateChangeDetails,
 )
-from iambic.okta.group.utils import (
-    create_group,
-    get_group,
-    maybe_delete_group,
-    update_group_description,
-    update_group_members,
-    update_group_name,
+from iambic.okta.app.utils import (
+    get_app,
+    maybe_delete_app,
+    update_app_assignments,
+    update_app_name,
 )
-from iambic.okta.models import Group
-
-OKTA_GROUP_TEMPLATE_TYPE = "NOQ::Okta::Group"
+from iambic.okta.models import App, Assignment, Status
 
 
-class UserStatus(Enum):
-    active = "active"
-    provisioned = "provisioned"
-    deprovisioned = "deprovisioned"
-    recovery = "recovery"
-
-
-class UserSimple(BaseModel, ExpiryModel):
-    username: str
-    status: Optional[UserStatus] = UserStatus.active
-
-    @property
-    def resource_type(self) -> str:
-        return "okta:user"
-
-    @property
-    def resource_id(self) -> str:
-        return self.username
-
-
-class User(UserSimple):
-    idp_name: str
-    user_id: Optional[str]
-    domain: Optional[str]
-    fullname: Optional[str]
-    created: Optional[str]
-    updated: Optional[str]
-    groups: Optional[List[str]]
-    background_check_status: Optional[bool]
-    extra: Any = Field(None, description=("Extra attributes to store"))
-
-
-class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
-    name: str = Field(..., description="Name of the group")
-    owner: Optional[str] = Field(None, description="Owner of the group")
+class OktaAppTemplateProperties(ExpiryModel, BaseModel):
+    name: str = Field(..., description="Name of the app")
+    owner: Optional[str] = Field(None, description="Owner of the app")
+    status: Optional[Status] = Field(None, description="Status of the app")
     idp_name: str = Field(
         ...,
         description="Name of the identity provider that's associated with the group",
     )
-    group_id: str = Field(
-        "", description="Unique Group ID for the group. Usually it's {idp-name}-{name}"
+    id: Optional[str] = Field(
+        None, description="Unique App ID for the app. Usually it's {idp-name}-{name}"
     )
-    description: str = Field("", description="Description of the group")
+    description: Optional[str] = Field("", description="Description of the app")
     extra: Any = Field(None, description=("Extra attributes to store"))
-    members: List[UserSimple] = Field([], description="Users in the group")
+    created: Optional[str] = Field("", description="Date the app was created")
+    assignments: List[Assignment] = Field([], description="List of assignments")
 
     @property
     def resource_type(self) -> str:
-        return "okta:group"
+        return "okta:app"
 
     @property
     def resource_id(self) -> str:
-        return self.group_id
+        return self.app_id
 
 
-class OktaGroupTemplate(BaseTemplate, ExpiryModel):
-    template_type = OKTA_GROUP_TEMPLATE_TYPE
-    properties: OktaGroupTemplateProperties = Field(
-        ..., description="Properties for the Okta Group"
+class OktaAppTemplate(BaseTemplate, ExpiryModel):
+    template_type = "NOQ::Okta::App"
+    properties: OktaAppTemplateProperties = Field(
+        ..., description="Properties for the Okta App"
     )
 
     async def apply(
@@ -99,7 +63,7 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
     ) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
-            resource_id=self.properties.group_id,
+            resource_id=self.properties.id,
             resource_type=self.template_type,
             template_path=self.file_path,
         )
@@ -146,29 +110,34 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
 
     @property
     def resource_id(self) -> str:
-        return self.properties.group_id
+        return self.properties.id
 
     @property
     def resource_type(self) -> str:
-        return "okta:group"
+        return "okta:app"
 
     def apply_resource_dict(
         self, okta_organization: OktaOrganization, context: ExecutionContext
     ):
         return {
             "name": self.properties.name,
+            "owner": self.properties.owner,
+            "status": self.properties.status,
+            "idp_name": self.properties.idp_name,
             "description": self.properties.description,
-            "members": self.properties.members,
+            "extra": self.properties.extra,
+            "created": self.properties.created,
+            "assignments": self.properties.assignments,
         }
 
     async def _apply_to_account(
         self, okta_organization: OktaOrganization, context: ExecutionContext
     ) -> AccountChangeDetails:
-        proposed_group = self.apply_resource_dict(okta_organization, context)
+        proposed_app = self.apply_resource_dict(okta_organization, context)
         change_details = AccountChangeDetails(
             account=self.properties.idp_name,
-            resource_id=self.properties.group_id,
-            new_value=proposed_group,  # TODO fix
+            resource_id=self.properties.id,
+            new_value=proposed_app,
             proposed_changes=[],
         )
 
@@ -178,81 +147,62 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
             organization=str(self.properties.idp_name),
         )
 
-        current_group: Optional[Group] = await get_group(
-            self.properties.group_id, self.properties.name, okta_organization
+        current_app: Optional[App] = await get_app(
+            okta_organization,
+            self.properties.id,
         )
-        if current_group:
-            change_details.current_value = current_group
+        if current_app:
+            change_details.current_value = current_app
 
-        group_exists = bool(current_group)
+        app_exists = bool(current_app)
         tasks = []
 
-        await self.remove_expired_resources(context)
+        self = await remove_expired_resources(
+            self, self.resource_type, self.resource_id
+        )
 
-        if not group_exists and not self.deleted:
-            change_details.proposed_changes.append(
-                ProposedChange(
-                    change_type=ProposedChangeType.CREATE,
-                    resource_id=self.properties.group_id,
-                    resource_type=self.properties.resource_type,
-                )
+        if not app_exists and not self.deleted:
+            log.error(
+                "Iambic does not support creating new apps. "
+                "Please create the app in Okta and then import it.",
+                **log_params,
             )
-            log_str = "New resource found in code."
-            if not context.execute:
-                log.info(log_str, **log_params)
-                # Exit now because apply functions won't work if resource doesn't exist
-                return change_details
+            return change_details
 
-            log_str = f"{log_str} Creating resource..."
-            log.info(log_str, **log_params)
-
-            current_group: Group = await create_group(
-                group_name=self.properties.name,
-                idp_name=self.properties.idp_name,
-                description=self.properties.description,
-                okta_organization=okta_organization,
-                context=context,
+        if self.deleted:
+            log.info(
+                "App is marked for deletion. Please delete manually in Okta",
+                **log_params,
             )
-            if current_group:
-                change_details.current_value = current_group
+            return change_details
 
-        # TODO: Support group expansion
         tasks.extend(
             [
-                update_group_name(
-                    current_group,
+                update_app_name(
+                    current_app,
                     self.properties.name,
                     okta_organization,
                     log_params,
                     context,
                 ),
-                update_group_description(
-                    current_group,
-                    self.properties.description,
-                    okta_organization,
-                    log_params,
-                    context,
-                ),
-                update_group_members(
-                    current_group,
+                update_app_assignments(
+                    current_app,
                     [
-                        member
-                        for member in self.properties.members
-                        if not member.deleted
+                        assignment
+                        for assignment in self.properties.assignments
+                        if not assignment.deleted
                     ],
                     okta_organization,
                     log_params,
                     context,
                 ),
-                maybe_delete_group(
+                maybe_delete_app(
                     self.deleted,
-                    current_group,
+                    current_app,
                     okta_organization,
                     log_params,
                     context,
                 ),
-                # TODO
-                # upgrade_group_application_assignments
             ]
         )
 
@@ -280,3 +230,22 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
             )
 
         return change_details
+
+
+async def get_app_template(okta_app) -> OktaAppTemplate:
+    """Get a template for an app"""
+    file_name = f"{okta_app.name}.yaml"
+    app = OktaAppTemplate(
+        file_path=f"resources/okta/apps/{okta_app.idp_name}/{file_name}",
+        template_type="NOQ::Okta::App",
+        properties=OktaAppTemplateProperties(
+            name=okta_app.name,
+            status=okta_app.status,
+            idp_name=okta_app.idp_name,
+            id=okta_app.id,
+            file_path="{}.yaml".format(okta_app.name),
+            attributes=dict(),
+            assignments=okta_app.assignments,
+        ),
+    )
+    return app

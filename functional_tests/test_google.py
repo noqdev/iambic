@@ -23,7 +23,7 @@ properties:
 """
     test_group_fp = os.path.join(
         IAMBIC_TEST_DETAILS.template_dir_path,
-        "google/groups/noq.dev/iambic_functional_test_group.yaml",
+        "resources/google/groups/noq_dev/iambic_functional_test_group.yaml",
     )
 
     with open(test_group_fp, "w") as temp_file:
