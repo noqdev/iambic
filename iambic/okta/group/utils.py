@@ -116,7 +116,6 @@ async def list_all_groups(okta_organization: OktaOrganization) -> List[Group]:
         groups.append(next_groups)
 
     tasks = []
-    groups_to_return = []
     for group_raw in groups:
         group = Group(
             idp_name=okta_organization.idp_name,
@@ -130,8 +129,7 @@ async def list_all_groups(okta_organization: OktaOrganization) -> List[Group]:
             ),
         )
         tasks.append(list_group_users(group, okta_organization))
-    groups_to_return = await asyncio.gather(*tasks)
-    return groups_to_return
+    return list(await asyncio.gather(*tasks))
 
 
 async def get_group(
@@ -150,7 +148,9 @@ async def get_group(
     """
     # Get a group from Okta using the okta library
     client = await okta_organization.get_okta_client()
-    group, resp, err = await client.get_group(group_id)
+    group = None
+    if group_id:
+        group, resp, err = await client.get_group(group_id)
     if not group:
         # Try to get group by name
         groups, resp, err = await client.list_groups(query_params={"q": group_name})
@@ -278,7 +278,6 @@ async def update_group_name(
             new_value=new_name,
         )
     )
-    client = await okta_organization.get_okta_client()
     group_model = models.Group(
         {
             "profile": models.GroupProfile(
@@ -290,6 +289,7 @@ async def update_group_name(
         }
     )
     if context.execute:
+        client = await okta_organization.get_okta_client()
         updated_group, resp, err = await client.update_group(
             group.extra["okta_group_id"], group_model
         )
