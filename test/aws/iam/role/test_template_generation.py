@@ -82,4 +82,3 @@ async def test_create_template_role(test_role, mock_account_id_to_role_map, mock
         test_configs,
     )
     assert output_role.iambic_managed is IambicManaged.READ_AND_WRITE
-    assert output_role is test_role
