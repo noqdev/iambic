@@ -3,9 +3,16 @@ from __future__ import annotations
 import json
 import os
 
+from iambic.core.template_generation import (
+    create_or_update_template as common_create_or_update_template,
+)
 from iambic.core.template_generation import get_existing_template_map
-from iambic.okta.group.models import OKTA_GROUP_TEMPLATE_TYPE, OktaGroupTemplate, OktaGroupTemplateProperties, \
-    UserSimple
+from iambic.okta.group.models import (
+    OKTA_GROUP_TEMPLATE_TYPE,
+    OktaGroupTemplate,
+    OktaGroupTemplateProperties,
+    UserSimple,
+)
 from iambic.okta.group.utils import list_all_groups
 from iambic.okta.models import Group
 
@@ -30,9 +37,7 @@ def get_templated_resource_file_path(
 
 
 async def update_or_create_group_template(
-        group: Group,
-        existing_template_map: dict,
-        group_dir: str
+    group: Group, existing_template_map: dict, group_dir: str
 ):
     """
     Update or create an OktaGroupTemplate object from the provided Group object.
@@ -50,33 +55,32 @@ async def update_or_create_group_template(
         members=[json.loads(m.json()) for m in group.members],
     )
 
-    if existing_template := existing_template_map.get(group.group_id):
-        existing_template.properties = properties
-        existing_template.write()
-        return
-
     file_path = get_templated_resource_file_path(group_dir, group.idp_name, group.name)
     UserSimple.update_forward_refs()
     OktaGroupTemplate.update_forward_refs()
-    okta_group_template = OktaGroupTemplate(
-        file_path=file_path,
-        properties=properties,
+
+    common_create_or_update_template(
+        file_path,
+        existing_template_map,
+        group.group_id,
+        OktaGroupTemplate,
+        {},
+        properties,
     )
-    okta_group_template.write()
 
 
 async def generate_group_templates(config, output_dir, okta_organization):
     groups = await list_all_groups(okta_organization)
     base_path = os.path.expanduser(output_dir)
-    existing_template_map = await get_existing_template_map(base_path, OKTA_GROUP_TEMPLATE_TYPE)
+    existing_template_map = await get_existing_template_map(
+        base_path, OKTA_GROUP_TEMPLATE_TYPE
+    )
     group_dir = get_group_dir(base_path)
 
     # Update or create templates
     for okta_group in groups:
         await update_or_create_group_template(
-            okta_group,
-            existing_template_map,
-            group_dir
+            okta_group, existing_template_map, group_dir
         )
 
     # Delete templates that no longer exist

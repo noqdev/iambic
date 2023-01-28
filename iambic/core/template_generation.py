@@ -7,6 +7,8 @@ import xxhash
 
 from iambic.aws.models import AWSAccount
 from iambic.core import noq_json as json
+from iambic.core.logger import log
+from iambic.core.models import merge_model
 from iambic.core.parser import load_templates
 from iambic.core.utils import gather_templates
 
@@ -425,3 +427,45 @@ async def group_dict_attribute(
         response.append(attr_val)
 
     return response
+
+
+def create_or_update_template(
+    file_path,
+    existing_template_map,
+    identifier,
+    template_cls,
+    template_params,
+    properties,
+):
+
+    new_template = template_cls(
+        file_path=file_path,
+        properties=properties,
+        **template_params,
+    )
+
+    # iambic-specific knowledge requires us to load the existing template
+    # because it will not be reflected by AWS API.
+    if existing_template := existing_template_map.get(identifier, None):
+
+        merged_template = merge_model(existing_template, new_template)
+
+        try:
+            merged_template.write()
+            return merged_template
+        except Exception as err:
+            log.exception(
+                f"Unable to update {template_cls} template.",
+                error=str(err),
+                template_params=template_params,
+            )
+    else:
+        try:
+            new_template.write()
+            return new_template
+        except Exception as err:
+            log.exception(
+                f"Unable to create {template_cls} template.",
+                error=str(err),
+                template_params=template_params,
+            )
