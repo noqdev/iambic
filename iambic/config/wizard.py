@@ -198,7 +198,9 @@ class ConfigurationWizard:
                 default_caller_identity = self.boto3_session.client(
                     "sts"
                 ).get_caller_identity()
-                default_hub_account_id = self.caller_identity.get("Arn").split(":")[4]
+                default_hub_account_id = default_caller_identity.get("Arn").split(":")[
+                    4
+                ]
             except botocore.exceptions.ClientError:
                 default_hub_account_id = None
                 default_caller_identity = {}
@@ -209,9 +211,9 @@ class ConfigurationWizard:
         if not self.hub_account_id:
             while True:
                 self.hub_account_id = set_required_text_value(
-                    "What is the account ID of your AWS hub account? "
+                    "Please provide the Account ID where you would like to deploy the Iambic hub role. "
                     "This is the account that will be used to assume into all other accounts by IAMbic. "
-                    "If you have an AWS Organization, that would be the hub account.\n"
+                    "If you have an AWS Organization, that would be your hub account.\n"
                     "However, if you are just trying IAMbic out, you can provide any account. "
                     "Just be sure to remove any delete all IAMbic stacks when/if you decide to use a different account as your hub.",
                     default_val=default_hub_account_id,
@@ -225,9 +227,9 @@ class ConfigurationWizard:
             )
             if questionary.confirm(
                 f"IAMbic detected you are using {identity_arn} for AWS access. "
-                f"This profile will require the ability to create"
+                f"This role will require the ability to create"
                 f"CloudFormation stacks, stack sets, and stack set instances. "
-                f"Would you like to use this profile?"
+                f"Would you like to use this role?"
             ).ask():
                 self.caller_identity = default_caller_identity
             else:
@@ -247,7 +249,7 @@ class ConfigurationWizard:
                 f"create CloudFormation stacks, stack sets, and stack set instances. "
                 f"If you are using an AWS Organization, be sure that trusted access is enabled. "
                 f"You can check this using the AWS Console "
-                f"https://{self.default_region}.console.aws.amazon.com/organizations/v2/home/services/CloudFormation%20StackSets"
+                f"https://{self.default_region}.console.aws.amazon.com/organizations/v2/home/services/CloudFormation%20StackSets . "
                 f"Proceed?"
             ).ask()
 
@@ -307,7 +309,7 @@ class ConfigurationWizard:
                 f"Unable to detect default AWS credentials or "
                 f"they are not for the Hub Account ({self.hub_account_id}).\n"
                 f"Please specify the profile to use with access to the Hub Account.\n"
-                f"This profile will require the ability to create "
+                f"This role will require the ability to create "
                 f"CloudFormation stacks, stack sets, and stack set instances."
             )
 
@@ -321,12 +323,14 @@ class ConfigurationWizard:
             profile_name = questionary.select(
                 question_text,
                 choices=available_profiles,
+                default=os.getenv("AWS_PROFILE", None),
             ).ask()
         else:
             profile_name = questionary.autocomplete(
                 question_text,
                 choices=available_profiles,
                 style=CUSTOM_AUTO_COMPLETE_STYLE,
+                default=os.getenv("AWS_PROFILE", None),
             ).ask()
 
         return profile_name if profile_name != "None" else None
@@ -581,13 +585,13 @@ class ConfigurationWizard:
             if self.config.aws and self.config.aws.accounts:
                 action = questionary.select(
                     "What would you like to do?",
-                    choices=["Go back", "Add", "Edit"],
+                    choices=["Go back", "Add AWS Account", "Edit AWS Account"],
                 ).ask()
                 if action == "Go back":
                     return
-                elif action == "Add":
+                elif action == "Add AWS Account":
                     self.configuration_wizard_aws_account_add()
-                elif action == "Edit":
+                elif action == "Edit AWS Account":
                     self.configuration_wizard_aws_account_edit()
             else:
                 self.configuration_wizard_aws_account_add()
@@ -1087,14 +1091,14 @@ class ConfigurationWizard:
         if questionary.confirm("Proceed?").ask():
             commit_email = set_required_text_value("E-Mail address to use for commits")
             repo_name = set_required_text_value(
-                "Name of the repository, including the organization."
+                "Name of the repository, including the organization (example: github_org/repo_name)"
             )
             if self.config.aws and self.config.aws.organizations:
                 aws_org = self.config.aws.organizations[0]
                 region = aws_org.region_name
             else:
                 region = set_aws_region(
-                    "What region should the workflow run in?",
+                    "What AWS region should the workflow run in?",
                     default_val=RegionName.us_east_1,
                 )
 
@@ -1175,7 +1179,7 @@ class ConfigurationWizard:
                         "AWS",
                         "Google",
                         "Okta",
-                        "Generate Git Workflows",
+                        "Generate Github Action Workflows",
                         "Done",
                     ]
 
@@ -1203,7 +1207,7 @@ class ConfigurationWizard:
             elif action == "Okta":
                 if questionary.confirm(f"{secret_question_text} Proceed?").ask():
                     self.configuration_wizard_okta()
-            elif action == "Generate Git Workflows":
+            elif action == "Generate Github Action Workflows":
                 self.configuration_wizard_github_workflow()
             elif action == "Setup AWS change detection":
                 if self.has_cf_permissions:
