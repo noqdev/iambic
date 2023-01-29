@@ -27,6 +27,7 @@ from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
     base_group_str_attribute,
+    create_or_update_template,
     get_existing_template_map,
     group_dict_attribute,
     group_int_or_str_attribute,
@@ -347,40 +348,17 @@ async def create_templated_permission_set(  # noqa: C901
             aws_account_map, num_of_accounts, relay_state_resources, "relay_state"
         )
 
-    # iambic-specific knowledge requires us to load the existing template
-    # because it will not be reflected by AWS API.
-    if existing_template := existing_template_map.get(permission_set_name, None):
-        existing_template.included_orgs = template_params.get("included_orgs", ["*"])
-        existing_template.excluded_orgs = template_params.get("excluded_orgs", [])
-        existing_template.properties = AWSIdentityCenterPermissionSetProperties(
-            **template_properties
-        )
-        try:
-            existing_template.write()
-            return existing_template
-        except Exception as err:
-            log.exception(
-                "Unable to update permission set template.",
-                error=str(err),
-                permission_set_params=template_params,
-            )
-    else:
-        try:
-            permission_set = AWSIdentityCenterPermissionSetTemplate(
-                file_path=get_templated_permission_set_file_path(
-                    permission_set_dir, permission_set_name
-                ),
-                properties=template_properties,
-                **template_params,
-            )
-            permission_set.write()
-            return permission_set
-        except Exception as err:
-            log.error(
-                "Unable to create permission set template.",
-                error=str(err),
-                template_params=template_params,
-            )
+    file_path = get_templated_permission_set_file_path(
+        permission_set_dir, permission_set_name
+    )
+    return create_or_update_template(
+        file_path,
+        existing_template_map,
+        permission_set_name,
+        AWSIdentityCenterPermissionSetTemplate,
+        template_params,
+        AWSIdentityCenterPermissionSetProperties(**template_properties),
+    )
 
 
 async def generate_aws_permission_set_templates(

@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 import re
 from itertools import chain
-from typing import List, Optional, Union
+from typing import Callable, List, Optional, Union
 
-from pydantic import Field
+from pydantic import Field, validator
 
 from iambic.aws.iam.policy.models import PolicyStatement
 from iambic.aws.identity_center.permission_set.utils import (
@@ -160,6 +160,30 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
     def resource_id(self) -> str:
         return self.name
 
+    @classmethod
+    def sort_func(cls, attribute_name: str) -> Callable:
+        def _sort_func(obj):
+            return f"{getattr(obj, attribute_name)}!{obj.access_model_sort_weight()}"
+
+        return _sort_func
+
+    @validator("managed_policies")
+    def sort_managed_policy_refs(cls, v: list[ManagedPolicyArn]):
+        sorted_v = sorted(v, key=lambda o: o.resource_id)
+        return sorted_v
+
+    @validator("customer_managed_policy_references")
+    def sort_customer_managed_policy_references(
+        cls, v: list[CustomerManagedPolicyReference]
+    ):
+        sorted_v = sorted(v, key=lambda o: o.resource_id)
+        return sorted_v
+
+    @validator("tags")
+    def sort_tags(cls, v: list[Tag]):
+        sorted_v = sorted(v, key=cls.sort_func("key"))
+        return sorted_v
+
 
 class AWSIdentityCenterPermissionSetTemplate(AWSTemplate, ExpiryModel):
     template_type: str = AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
@@ -179,6 +203,15 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate, ExpiryModel):
             "Org ids can be represented as a regex and string"
         ),
     )
+
+    @classmethod
+    def iambic_specific_knowledge(cls) -> set[str]:
+        return set(["access_rules"])
+
+    @validator("access_rules")
+    def sort_access_rules(cls, v: list[PermissionSetAccess]):
+        sorted_v = sorted(v, key=lambda o: o.access_model_sort_weight())
+        return sorted_v
 
     async def _access_rules_for_account(  # noqa: C901
         self,
