@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from enum import Enum
 from itertools import chain
 from typing import Any, List, Optional
@@ -30,6 +29,8 @@ from iambic.okta.group.utils import (
     update_group_name,
 )
 from iambic.okta.models import Group
+
+OKTA_GROUP_TEMPLATE_TYPE = "NOQ::Okta::Group"
 
 
 class UserStatus(Enum):
@@ -88,7 +89,7 @@ class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
 
 
 class OktaGroupTemplate(BaseTemplate, ExpiryModel):
-    template_type = "NOQ::Okta::Group"
+    template_type = OKTA_GROUP_TEMPLATE_TYPE
     properties: OktaGroupTemplateProperties = Field(
         ..., description="Properties for the Okta Group"
     )
@@ -279,30 +280,3 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
             )
 
         return change_details
-
-
-async def get_group_template(group: Group) -> OktaGroupTemplate:
-    """
-    Generate an OktaGroupTemplate object from the provided Group object.
-
-    Args:
-        group (Group): The Group object to generate the template from.
-
-    Returns:
-        OktaGroupTemplate: The generated OktaGroupTemplate object.
-    """
-
-    file_name = f"{group.name}.yaml"
-    group_members = [json.loads(m.json()) for m in group.members]
-    UserSimple.update_forward_refs()
-    OktaGroupTemplate.update_forward_refs()
-    return OktaGroupTemplate(
-        file_path=f"okta/groups/{group.idp_name}/{file_name}",
-        properties=dict(
-            group_id=group.group_id,
-            idp_name=group.idp_name,
-            name=group.name,
-            description=group.description,
-            members=group_members,
-        ),
-    )

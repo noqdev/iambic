@@ -28,6 +28,7 @@ from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
     base_group_str_attribute,
+    create_or_update_template,
     get_existing_template_map,
     group_dict_attribute,
     group_int_or_str_attribute,
@@ -196,7 +197,7 @@ async def _account_id_to_role_map(role_refs):
         async with aiofiles.open(role_ref["path"], mode="r") as f:
             content_dict = json.loads(await f.read())
 
-            # handle strange unstable response with deleted princiapls
+            # handle strange unstable response with deleted principals
             assume_role_policy_document = content_dict.get(
                 "AssumeRolePolicyDocument", None
             )
@@ -369,46 +370,19 @@ async def create_templated_role(  # noqa: C901
 
         role_template_properties["tags"] = tags
 
-    # iambic-specific knowledge requires us to load the existing template
-    # because it will not be reflected by AWS API.
-    if existing_template := existing_template_map.get(role_name, None):
-        existing_template.included_accounts = role_template_params["included_accounts"]
-        existing_template.excluded_accounts = role_template_params.get(
-            "excluded_accounts", []
-        )
-        existing_template.included_orgs = role_template_params.get(
-            "included_orgs", ["*"]
-        )
-        existing_template.excluded_orgs = role_template_params.get("excluded_orgs", [])
-        existing_template.properties = RoleProperties(**role_template_properties)
-        try:
-            existing_template.write()
-            return existing_template
-        except Exception as err:
-            log.exception(
-                "Unable to update role template.",
-                error=str(err),
-                role_params=role_template_params,
-            )
-    else:
-        try:
-            role = RoleTemplate(
-                file_path=get_templated_role_file_path(
-                    role_dir,
-                    role_name,
-                    role_template_params.get("included_accounts"),
-                ),
-                properties=role_template_properties,
-                **role_template_params,
-            )
-            role.write()
-            return role
-        except Exception as err:
-            log.exception(
-                "Unable to create role template.",
-                error=str(err),
-                role_params=role_template_params,
-            )
+    file_path = get_templated_role_file_path(
+        role_dir,
+        role_name,
+        role_template_params.get("included_accounts"),
+    )
+    return create_or_update_template(
+        file_path,
+        existing_template_map,
+        role_name,
+        RoleTemplate,
+        role_template_params,
+        RoleProperties(**role_template_properties),
+    )
 
 
 async def generate_aws_role_templates(
