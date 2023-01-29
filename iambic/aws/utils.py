@@ -36,6 +36,8 @@ async def boto_crud_call(boto_fnc, **kwargs) -> Union[list, dict]:
                 retry_count += 1
                 await asyncio.sleep(retry_count / 2)
                 continue
+            elif "AccessDenied" in err.response["Error"]["Code"]:
+                raise
             else:
                 raise
 
