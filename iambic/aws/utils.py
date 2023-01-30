@@ -80,6 +80,20 @@ async def paginated_search(
             search_kwargs["Marker"] = response["Marker"]
 
 
+def get_identity_arn(caller_identity: dict) -> str:
+    arn = caller_identity.get("Arn")
+    if "sts" in arn:
+        identity_arn_with_session_name = arn.replace(":sts:", ":iam:").replace(
+            "assumed-role", "role"
+        )
+        return "/".join(identity_arn_with_session_name.split("/")[:-1])
+    return arn
+
+
+def get_current_role_arn(sts_client) -> str:
+    return get_identity_arn(sts_client.get_caller_identity())
+
+
 async def legacy_paginated_search(
     search_fnc,
     response_key: str,
@@ -128,7 +142,7 @@ class RegionName(Enum):
     ap_northeast_1 = "ap-northeast-1"
     ap_northeast_2 = "ap-northeast-2"
     sa_east_1 = "sa-east-1"
-    cn_north_1 = "cn-north-1"
+    # cn_north_1 = "cn-north-1"
 
 
 def normalize_boto3_resp(obj):
@@ -309,15 +323,6 @@ async def remove_expired_resources(
                 setattr(resource, field_name, new_value)
 
     return resource
-
-
-def get_identity_arn(identity_arn: str, user_id: str) -> str:
-    current_arn = identity_arn.replace(":sts:", ":iam:").replace("assumed-role", "role")
-    if "assumed-role" in identity_arn:
-        session_name = user_id.split(":")[-1]
-        return current_arn.replace(f"/{session_name}", "")
-
-    return current_arn
 
 
 async def set_org_account_variables(client, account: dict) -> dict:

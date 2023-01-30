@@ -3,6 +3,8 @@ from __future__ import annotations
 import glob
 import os
 
+from iambic.core.logger import log
+
 
 def create_workflow_files(
     repo_dir: str, repo_name: str, commit_email: str, assume_role_arn: str, region: str
@@ -28,3 +30,5 @@ def create_workflow_files(
 
         with open(f"{workflows_dir}/{os.path.basename(file_path)}", mode="w") as f:
             f.write(file_content)
+
+    log.info("Created workflow files successfully.", file_location=workflows_dir)
