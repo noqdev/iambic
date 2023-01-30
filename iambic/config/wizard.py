@@ -50,7 +50,7 @@ from iambic.github.utils import create_workflow_files
 
 CUSTOM_AUTO_COMPLETE_STYLE = questionary.Style(
     [
-        ("answer", "fg:#077544"),
+        ("answer", "fg:#0A886A"),
         ("selected", "bold bg:#000000"),
     ]
 )
@@ -198,10 +198,9 @@ class ConfigurationWizard:
                 default_caller_identity = self.boto3_session.client(
                     "sts"
                 ).get_caller_identity()
-                default_hub_account_id = default_caller_identity.get("Arn").split(":")[
-                    4
-                ]
-            except botocore.exceptions.ClientError:
+                caller_arn = get_identity_arn(default_caller_identity)
+                default_hub_account_id = caller_arn.split(":")[4]
+            except (botocore.exceptions.ClientError, AttributeError, IndexError):
                 default_hub_account_id = None
                 default_caller_identity = {}
         else:
@@ -222,9 +221,7 @@ class ConfigurationWizard:
                     break
 
         if self.hub_account_id == default_hub_account_id:
-            identity_arn = get_identity_arn(
-                default_caller_identity["Arn"], default_caller_identity["UserId"]
-            )
+            identity_arn = get_identity_arn(default_caller_identity)
             if questionary.confirm(
                 f"IAMbic detected you are using {identity_arn} for AWS access. "
                 f"This role will require the ability to create"
@@ -258,11 +255,7 @@ class ConfigurationWizard:
     @property
     def assume_as_arn(self):
         if self._assume_as_arn is None:
-            if current_arn := self.caller_identity.get("Arn", ""):
-                current_arn = get_identity_arn(
-                    current_arn, self.caller_identity["UserId"]
-                )
-
+            current_arn = get_identity_arn(self.caller_identity)
             self._assume_as_arn = questionary.text(
                 "Provide a user or role ARN that will be able to access the hub role. "
                 "Note: Access to this identity is required to use IAMbic locally.",
@@ -280,7 +273,9 @@ class ConfigurationWizard:
 
     def set_config_details(self):
         try:
-            self.config_path = asyncio.run(resolve_config_template_path(self.repo_dir))
+            self.config_path = str(
+                asyncio.run(resolve_config_template_path(self.repo_dir))
+            )
         except RuntimeError:
             self.config_path = f"{self.repo_dir}/iambic_config.yaml"
         self.config: Config = Config(
@@ -323,14 +318,14 @@ class ConfigurationWizard:
             profile_name = questionary.select(
                 question_text,
                 choices=available_profiles,
-                default=os.getenv("AWS_PROFILE", None),
+                default=os.getenv("AWS_PROFILE", ""),
             ).ask()
         else:
             profile_name = questionary.autocomplete(
                 question_text,
                 choices=available_profiles,
                 style=CUSTOM_AUTO_COMPLETE_STYLE,
-                default=os.getenv("AWS_PROFILE", None),
+                default=os.getenv("AWS_PROFILE", ""),
             ).ask()
 
         return profile_name if profile_name != "None" else None
@@ -413,7 +408,7 @@ class ConfigurationWizard:
         role_template.write(exclude_unset=False)
         await role_template.apply(self.config, ctx)
 
-    def configuration_wizard_aws_account_add(self):
+    def configuration_wizard_aws_account_add(self):  # noqa: C901
         if not self.has_cf_permissions:
             log.info(
                 "Unable to edit this attribute without CloudFormation permissions."
@@ -505,10 +500,15 @@ class ConfigurationWizard:
             account.hub_role_arn = get_hub_role_arn(account_id)
 
         account.aws_profile = profile_name
-        account.partition = set_aws_account_partition(account.partition)
+        # account.partition = set_aws_account_partition(account.partition)
 
         if not questionary.confirm("Keep these settings?").ask():
-            sys.exit(0)
+            if questionary.confirm(
+                "The AWS account will not be added to the config and wizard will exit. "
+                "Proceed?"
+            ).ask():
+                log.info("Exiting")
+                sys.exit(0)
 
         self.config.aws.accounts.append(account)
         self.config.write()
@@ -556,7 +556,7 @@ class ConfigurationWizard:
         else:
             account = self.config.aws.accounts[0]
 
-        choices = ["Go back", "Update partition", "Update Iambic control"]
+        choices = ["Go back", "Update Iambic control"]
         if not account.org_id:
             choices.append("Update name")
 
@@ -572,8 +572,6 @@ class ConfigurationWizard:
                     "What is the name of the AWS Account?",
                     default=account.account_name,
                 ).ask()
-            elif action == "Update partition":
-                account.partition = set_aws_account_partition(account.partition)
 
             self.config.aws.accounts[
                 account_id_to_config_elem_map[account.account_id]
@@ -715,7 +713,12 @@ class ConfigurationWizard:
             aws_org.identity_center_account = set_identity_center_account()
 
         if not questionary.confirm("Keep these settings?").ask():
-            sys.exit(0)
+            if questionary.confirm(
+                "The AWS Org will not be added to the config and wizard will exit. "
+                "Proceed?"
+            ).ask():
+                log.info("Exiting")
+                sys.exit(0)
 
         log.info("Saving config and importing AWS identities")
 
