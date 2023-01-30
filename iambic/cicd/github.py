@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 from enum import Enum
 from typing import Any, Callable
 from urllib.parse import urlparse
 
 import yaml
-from github import Github, PullRequest
+from github import Github
+from github.PullRequest import PullRequest
 
 from iambic.core.git import Repo, clone_git_repo
 from iambic.core.logger import log
@@ -161,6 +163,34 @@ def copy_data_to_data_directory() -> None:
         shutil.copy(filepath, f"{dest_dir}/proposed_changes.yaml")
 
 
+IAMBIC_SESSION_NAME_TEMPLATE = "org={org},repo={repo},pr={number}"
+SESSION_NAME_REGEX = re.compile("[\\w=,.@-]+")
+
+
+def get_session_name(repo_name: str, pull_request_number: str) -> str:
+    org = ""
+    repo = ""
+    repo_parts = repo_name.split("/")
+    if len(repo_parts) == 2:
+        repo = repo_parts[1]
+        org = repo_parts[0]
+    else:
+        repo = repo_name
+    pending_session_name = IAMBIC_SESSION_NAME_TEMPLATE.format(
+        org=org, repo=repo, number=pull_request_number
+    )
+    session_name = "".join(
+        [c for c in pending_session_name if SESSION_NAME_REGEX.match(c)]
+    )
+    if session_name != pending_session_name:
+        log_params = {
+            "pending_session_name": pending_session_name,
+            "session_name": session_name,
+        }
+        log.error("lossy-session-name", **log_params)
+    return session_name
+
+
 def handle_issue_comment(
     github_client: Github, context: dict[str, Any]
 ) -> HandleIssueCommentReturnCode:
@@ -190,6 +220,10 @@ def handle_issue_comment(
             "mergeable_state is {0}".format(pull_request.mergeable_state)
         )
         return HandleIssueCommentReturnCode.MERGEABLE_STATE_NOT_CLEAN
+
+    session_name = get_session_name(repo_name, pull_number)
+    os.environ["IAMBIC_SESSION_NAME"] = session_name
+
     try:
         prepare_local_repo(repo_url, lambda_repo_path, pull_request_branch_name)
         lambda_run_handler(None, {"command": "git_apply"})
@@ -220,6 +254,9 @@ def handle_pull_request(github_client: Github, context: dict[str, Any]) -> None:
     pull_request_branch_name = pull_request.head.ref
     log_params = {"pull_request_branch_name": pull_request_branch_name}
     log.info("PR remote branch name", **log_params)
+
+    session_name = get_session_name(repo_name, pull_number)
+    os.environ["IAMBIC_SESSION_NAME"] = session_name
 
     try:
         prepare_local_repo_from_remote_branch(
