@@ -16,7 +16,9 @@ if TYPE_CHECKING:
     from iambic.google.group.models import GroupMember, GroupTemplate
 
 
-async def list_groups(domain: str, google_project: GoogleProject):
+async def list_groups(
+    domain: str, google_project: GoogleProject
+) -> list[GroupTemplate]:
     from iambic.google.group.models import get_group_template
 
     groups = []
