@@ -28,6 +28,7 @@ from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
     base_group_str_attribute,
+    create_or_update_template,
     get_existing_template_map,
     group_dict_attribute,
     group_int_or_str_attribute,
@@ -348,46 +349,19 @@ async def create_templated_user(  # noqa: C901
 
         user_template_properties["tags"] = tags
 
-    # iambic-specific knowledge requires us to load the existing template
-    # because it will not be reflected by AWS API.
-    if existing_template := existing_template_map.get(user_name, None):
-        existing_template.included_accounts = user_template_params["included_accounts"]
-        existing_template.excluded_accounts = user_template_params.get(
-            "excluded_accounts", []
-        )
-        existing_template.included_orgs = user_template_params.get(
-            "included_orgs", ["*"]
-        )
-        existing_template.excluded_orgs = user_template_params.get("excluded_orgs", [])
-        existing_template.properties = UserProperties(**user_template_properties)
-        try:
-            existing_template.write()
-            return existing_template
-        except Exception as err:
-            log.exception(
-                "Unable to update user template.",
-                error=str(err),
-                user_params=user_template_params,
-            )
-    else:
-        try:
-            user = UserTemplate(
-                file_path=get_templated_user_file_path(
-                    user_dir,
-                    user_name,
-                    user_template_params.get("included_accounts"),
-                ),
-                properties=user_template_properties,
-                **user_template_params,
-            )
-            user.write()
-            return user
-        except Exception as err:
-            log.exception(
-                "Unable to create user template.",
-                error=str(err),
-                user_params=user_template_params,
-            )
+    file_path = get_templated_user_file_path(
+        user_dir,
+        user_name,
+        user_template_params.get("included_accounts"),
+    )
+    return create_or_update_template(
+        file_path,
+        existing_template_map,
+        user_name,
+        UserTemplate,
+        user_template_params,
+        UserProperties(**user_template_properties),
+    )
 
 
 async def generate_aws_user_templates(

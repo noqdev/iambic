@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import inspect
 import json
 import os
 from enum import Enum
@@ -20,14 +21,45 @@ from iambic.aws.utils import apply_to_account
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
-from iambic.core.utils import snake_to_camelcap, sort_dict, yaml
+from iambic.core.utils import (
+    create_commented_map,
+    snake_to_camelcap,
+    sort_dict,
+    transform_commments,
+    yaml,
+)
 
 if TYPE_CHECKING:
     from iambic.aws.models import AWSAccount
     from iambic.config.models import Config
 
 
-class BaseModel(PydanticBaseModel):
+class IambicPydanticBaseModel(PydanticBaseModel):
+
+    metadata_iambic_fields = Field(
+        set(), description="metadata for iambic", exclude=True
+    )
+    metadata_commented_dict: dict = Field({}, description="yaml inline comments")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        ancestors = inspect.getmro(type(self))
+        for ancestor in ancestors:
+            if getattr(ancestor, "iambic_specific_knowledge", None):
+                self.metadata_iambic_fields = self.metadata_iambic_fields.union(
+                    ancestor.iambic_specific_knowledge()
+                )
+
+    class Config:
+        json_encoders = {Set: list}
+
+    @classmethod
+    def iambic_specific_knowledge(cls) -> set[str]:
+        return set(["metadata_commented_dict"])
+
+
+class BaseModel(IambicPydanticBaseModel):
     @classmethod
     def update_forward_refs(cls, **kwargs):
         kwargs.update({"Union": Union})
@@ -113,6 +145,8 @@ class BaseModel(PydanticBaseModel):
             "owner",
             "template_type",
             "file_path",
+            "metadata_iambic_fields",
+            "metadata_commented_dict",
         }
         exclude_keys.update(self.exclude_keys)
         has_properties = hasattr(self, "properties")
@@ -199,6 +233,68 @@ class BaseModel(PydanticBaseModel):
     @property
     def resource_id(self) -> str:
         raise NotImplementedError
+
+
+def get_resource_id_to_model_map(models: list[BaseModel]) -> dict[str, BaseModel]:
+    resource_id_to_model_map = {}
+    for existing_model in models:
+        existing_resource_id = None
+        try:
+            existing_resource_id = existing_model.resource_id
+        except NotImplementedError:
+            pass
+        if existing_resource_id:
+            resource_id_to_model_map[existing_resource_id] = existing_model
+    return resource_id_to_model_map
+
+
+def merge_model_list(existing_list: list[BaseModel], new_list: list[BaseModel]) -> list:
+    existing_resource_id_to_model_map = get_resource_id_to_model_map(existing_list)
+    merged_list = []
+    for new_index, new_model in enumerate(new_list):
+        new_model_resource_id = None
+        try:
+            new_model_resource_id = new_model.resource_id
+        except NotImplementedError:
+            pass
+        if (
+            new_model_resource_id
+            and new_model_resource_id in existing_resource_id_to_model_map
+        ):
+            existing_model = existing_resource_id_to_model_map[new_model_resource_id]
+            merged_list.append(merge_model(existing_model, new_model))
+        elif not new_model_resource_id and new_index < len(existing_list):
+            # when we cannot use
+            existing_model = existing_list[new_index]
+            merged_list.append(merge_model(existing_model, new_model))
+        else:
+            merged_list.append(new_model.copy())
+    return merged_list
+
+
+def merge_model(existing_model: BaseModel, new_model: BaseModel) -> BaseModel:
+    merged_model = existing_model.copy()
+    iambic_fields = existing_model.metadata_iambic_fields
+    field_names = new_model.__fields__.keys()
+    for key in field_names:
+        new_value = getattr(new_model, key)
+        existing_value = getattr(existing_model, key)
+        if isinstance(existing_value, list):
+            if len(existing_value) > 0:
+                inner_element = existing_value[0]
+                if isinstance(inner_element, BaseModel):
+                    setattr(
+                        merged_model, key, merge_model_list(existing_value, new_value)
+                    )
+                else:
+                    setattr(merged_model, key, new_value)
+            else:
+                setattr(merged_model, key, new_value)
+        elif isinstance(existing_value, BaseModel):
+            setattr(merged_model, key, merge_model(existing_value, new_value))
+        elif key not in iambic_fields:
+            setattr(merged_model, key, new_value)
+    return merged_model
 
 
 class ProposedChangeType(Enum):
@@ -321,6 +417,7 @@ class BaseTemplate(
             exclude={"file_path"},
         )
         sorted_input_dict = sort_dict(input_dict)
+        sorted_input_dict = create_commented_map(sorted_input_dict)
         as_yaml = yaml.dump(sorted_input_dict)
         # Force template_type to be at the top of the yaml
         template_type_str = f"template_type: {self.template_type}"
@@ -351,7 +448,13 @@ class BaseTemplate(
 
     @classmethod
     def load(cls, file_path: str):
-        return cls(file_path=file_path, **yaml.load(open(file_path)))
+        return cls(
+            file_path=file_path, **transform_commments(yaml.load(open(file_path)))
+        )
+
+    @classmethod
+    def iambic_specific_knowledge(cls) -> set[str]:
+        return set(["iambic_managed", "file_path"])
 
 
 class Variable(PydanticBaseModel):
@@ -359,7 +462,7 @@ class Variable(PydanticBaseModel):
     value: str
 
 
-class ExpiryModel(PydanticBaseModel):
+class ExpiryModel(IambicPydanticBaseModel):
     expires_at: Optional[Union[str, datetime.datetime, datetime.date]] = Field(
         None, description="The date and time the resource will be/was set to deleted."
     )
@@ -390,3 +493,7 @@ class ExpiryModel(PydanticBaseModel):
             value, settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True}
         )
         return dt
+
+    @classmethod
+    def iambic_specific_knowledge(cls) -> set[str]:
+        return set(["expires_at", "deleted"])

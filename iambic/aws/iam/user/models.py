@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import asyncio
 from itertools import chain
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import botocore
-from pydantic import Field, constr
+from pydantic import Field, constr, validator
 
 from iambic.aws.iam.models import Path
 from iambic.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
@@ -101,6 +101,33 @@ class UserProperties(BaseModel):
     @property
     def resource_id(self):
         return self.user_name
+
+    @classmethod
+    def sort_func(cls, attribute_name: str) -> Callable:
+        def _sort_func(obj):
+            return f"{getattr(obj, attribute_name)}!{obj.access_model_sort_weight()}"
+
+        return _sort_func
+
+    @validator("tags")
+    def sort_tags(cls, v: list[Tag]):
+        sorted_v = sorted(v, key=cls.sort_func("key"))
+        return sorted_v
+
+    @validator("groups")
+    def sort_groups(cls, v: list[Group]):
+        sorted_v = sorted(v, key=cls.sort_func("group_name"))
+        return sorted_v
+
+    @validator("managed_policies")
+    def sort_managed_policy_refs(cls, v: list[ManagedPolicyRef]):
+        sorted_v = sorted(v, key=cls.sort_func("policy_arn"))
+        return sorted_v
+
+    @validator("inline_policies")
+    def sort_inline_policies(cls, v: list[PolicyDocument]):
+        sorted_v = sorted(v, key=cls.sort_func("policy_name"))
+        return sorted_v
 
 
 class UserTemplate(AWSTemplate, AccessModel):
