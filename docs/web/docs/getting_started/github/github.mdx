@@ -12,11 +12,12 @@ Github integration is designed for team collaboration on iambic templates. A typ
 
 Pre-requisite
 
-1. Github repository for iambic templates.
-2. An admin for this Github repository to perform the following action
-2a. configure repository to require approvals before merging PR
-2b. create fine grain access token to allow automatic import
-3. An AWS admin to configure federated login by iambic github actions
+1. You have run the iambic tutorial to import your own environment in a local repository.
+2. Github repository for iambic templates.
+3. An admin for this Github repository to perform the following action
+3a. configure repository to require approvals before merging PR
+3b. create fine grain access token to allow automatic import
+4. An AWS admin to configure federated login by iambic github actions
 
 Configure Github Repository require Approvals before merging
 
@@ -34,7 +35,7 @@ Configure Access token for Github Action to update repository periodically.
 3. Select Fine-grain tokens
 4. Select Generate new token
 5. For token name, input "iambic-templates-import"
-5a. For expiration, select custom, select a date that is one year from now. (Tip: use your ogranization preferred token valid length).
+5a. For expiration, select custom, select a date that is one year from now. (Tip: use your organization preferred token valid length).
 5b. For Resource owner, select the Github organization that Github repository belongs to.
 5c. For Repository Access, select "Only select repositories", then click on "Select Repositories". In this tutorial, we select "noqdev/iambic-templates-example". You should use the repository name that you create for your Github organization.
 5d. Click on Repository permissions, Give "Access: Read and Write" for "Contents". (Tip: this allows the github action for import to push to the repository without approval. The intend is human changes require approval flow and auto import flow that inventory the cloud resources does not require approval flow.)
@@ -45,6 +46,15 @@ Configure Access token for Github Action to update repository periodically.
 8. Select New repository secret
 9. For Name, input "AUTO_IMPORT_GH_TOKEN"
 10. For Secret, paste in the token generated in step 5f.
+
+Configure Variable for Github Action to target the right AWS account
+
+1. Visit https://github.com/noqdev/iambic-templates-example/settings/variables/actions (Tip change the repo name to reflect to your organization and repo)
+2. Click "New repository variable"
+3. For name, input "AWS_ACCOUNT_WITH_HUB_ROLE"
+4. For value, input the AWS account number where you install the IambicHubRole, for example, it maybe 123456789012
+5. For name, input "AWS_ACCOUNT_WITH_SECRETS"
+6. For value, input the AWS account number where you store the secrets to be used for IAMbic., for example, it maybe 234567890123
 
 Configure IambicHubRole AWS account to federated login for Github actions
 
@@ -80,3 +90,23 @@ Add the following statement into the Allow statement block
 			}
 		}
 ```
+
+Install the iambic github actions to iambic-templates repo
+
+1. Copy the following .github/workflows folder into your template directory
+2. mkdir -p ~/github
+3. git clone https://github.com/noqdev/iambic-templates-example/ iambic-templates-example
+4. git clone <YOUR OWN IAMBIC repo> iambic-templates
+5. cd iambic-templates
+6. git checkout -b task/install_gh_actions origin/main
+7. cp -R ../iambic-templates-example/.github .
+8. git add .github
+9. git commit -m "Install github actions"
+10. git push origin HEAD
+11. Review the pull request in your repository and merge the pull request.
+
+Open a pull request on your iambic-template repo
+
+1. git checkout -b task/change_description origin/main
+2. Edit one of your templates change_description
+3.
