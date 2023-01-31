@@ -14,7 +14,7 @@ from github.PullRequest import PullRequest
 
 from iambic.core.git import Repo, clone_git_repo
 from iambic.core.logger import log
-from iambic.main import run_detect
+from iambic.main import run_detect, run_import
 
 iambic_app = __import__("iambic.lambda.app", globals(), locals(), [], 0)
 lambda_run_handler = getattr(iambic_app, "lambda").app.run_handler
@@ -56,7 +56,7 @@ def run_handler(context: dict[str, Any]):
 
 
 def handle_iambic_command(github_client: Github, context: dict[str, Any]) -> None:
-    github_token: str = context["GH_OVERRIDE_TOKEN"]
+    github_token: str = context["iambic"]["GH_OVERRIDE_TOKEN"]
     command: str = context["iambic"]["IAMBIC_CLOUD_IMPORT_CMD"]
     github_client = Github(github_token)
     f: Callable[[Github, dict[str, Any]]] = IAMBIC_CLOUD_IMPORT_DISPATCH_MAP.get(
@@ -83,14 +83,6 @@ def prepare_local_repo_for_new_commits(
         raise Exception(f"{repo_path} already exists. This is unexpected.")
     cloned_repo = clone_git_repo(repo_url, repo_path, None)
     cloned_repo.git.checkout("-b", f"attempt/{purpose}")
-
-    # Note, this is for local usage, we don't actually
-    # forward this commit upstream
-    repo_config_writer = cloned_repo.config_writer()
-    # TODO customize the name and email
-    repo_config_writer.set_value("user", "name", "Iambic Merger")
-    repo_config_writer.set_value("user", "email", "iambic-merger@iambic.org")
-    repo_config_writer.release()
 
     return cloned_repo
 
@@ -352,7 +344,9 @@ def handle_detect_changes_from_eventbridge(
     github_client: Github, context: dict[str, Any]
 ) -> None:
 
-    github_token = context["token"]
+    # we need a different github token because we will need to push to main without PR
+    github_token = context["iambic"]["GH_OVERRIDE_TOKEN"]
+
     # repo_name is already in the format {repo_owner}/{repo_short_name}
     repository_url = context["event"]["repository"]["clone_url"]
     repo_url = format_github_url(repository_url, github_token)
@@ -361,14 +355,68 @@ def handle_detect_changes_from_eventbridge(
     # log.info("PR remote branch name", **log_params)
 
     try:
-        repo = prepare_local_repo(repo_url, lambda_repo_path, "detect")
-        # TODO customize config.yaml filename
-        config_path = f"{lambda_repo_path}/config.yaml"
-        run_detect(config_path, lambda_repo_path)
-        repo.git.add(".")
-        repo.git.commit(
-            "-m", "Detect changes from EventBridge", author="sunilt@xxx.com"
+        repo = prepare_local_repo_for_new_commits(repo_url, lambda_repo_path, "detect")
+
+        repo_config_writer = repo.config_writer()
+        repo_config_writer.set_value(
+            "user", "name", context["iambic"]["IAMBIC_COMMIT_USERNAME"]
         )
+        repo_config_writer.set_value(
+            "user", "email", context["iambic"]["IAMBIC_COMMIT_EMAIL"]
+        )
+        repo_config_writer.release()
+
+        # TODO customize config.yaml filename
+        config_file = context["iambic"]["IAMBIC_CONFIG_FILE"]
+        config_path = f"{lambda_repo_path}/config/{config_file}"
+        run_detect(config_path, lambda_repo_path)
+        diff_list = repo.head.commit.diff()
+        if len(diff_list) > 0:
+            repo.git.add(".")
+            repo.git.commit("-m", github_context["iambic"]["IAMBIC_COMMIT_MESSAGE"])
+            repo.remotes.origin.push(refspec="HEAD:main")
+        else:
+            log.info("handle_import no changes")
+    except Exception as e:
+        log.error("fault", exception=str(e))
+        raise e
+
+
+def handle_import(github_client: Github, context: dict[str, Any]) -> None:
+
+    # we need a different github token because we will need to push to main without PR
+    github_token = context["iambic"]["GH_OVERRIDE_TOKEN"]
+
+    # repo_name is already in the format {repo_owner}/{repo_short_name}
+    repository_url = context["event"]["repository"]["clone_url"]
+    repo_url = format_github_url(repository_url, github_token)
+    # repository_url_token
+    # log_params = {"pull_request_branch_name": pull_request_branch_name}
+    # log.info("PR remote branch name", **log_params)
+
+    try:
+        repo = prepare_local_repo_for_new_commits(repo_url, lambda_repo_path, "import")
+
+        repo_config_writer = repo.config_writer()
+        repo_config_writer.set_value(
+            "user", "name", context["iambic"]["IAMBIC_COMMIT_USERNAME"]
+        )
+        repo_config_writer.set_value(
+            "user", "email", context["iambic"]["IAMBIC_COMMIT_EMAIL"]
+        )
+        repo_config_writer.release()
+
+        # TODO customize config.yaml filename
+        config_file = context["iambic"]["IAMBIC_CONFIG_FILE"]
+        config_path = f"{lambda_repo_path}/config/{config_file}"
+        run_import([config_path], lambda_repo_path)
+        diff_list = repo.head.commit.diff()
+        if len(diff_list) > 0:
+            repo.git.add(".")
+            repo.git.commit("-m", github_context["iambic"]["IAMBIC_COMMIT_MESSAGE"])
+            repo.remotes.origin.push(refspec="HEAD:main")
+        else:
+            log.info("handle_import no changes")
     except Exception as e:
         log.error("fault", exception=str(e))
         raise e
@@ -383,7 +431,7 @@ EVENT_DISPATCH_MAP: dict[str, Callable] = {
 
 IAMBIC_CLOUD_IMPORT_DISPATCH_MAP: dict[str, Callable] = {
     "detect": handle_detect_changes_from_eventbridge,
-    "import": handle_detect_changes_from_eventbridge,
+    "import": handle_import,
 }
 
 
@@ -396,12 +444,20 @@ if __name__ == "__main__":
     github_context_json_str = os.environ.get("GITHUB_CONTEXT")
     github_override_token = os.environ.get("GH_OVERRIDE_TOKEN")
     iambic_integration_str = os.environ.get("IAMBIC_CLOUD_IMPORT_CMD")
+    iambic_commit_email = os.environ.get("IAMBIC_COMMIT_EMAIL")
+    iambic_commit_username = os.environ.get("IAMBIC_COMMIT_USERNAME")
+    iambic_commit_message = os.environ.get("IAMBIC_COMMIT_MESSAGE")
+    iambic_config_file = os.environ.get("IAMBIC_CONFIG_FILE")
 
     with open("/root/github_context/github_context.json", "r") as f:
         github_context = json.load(f)
         github_context["iambic"] = {}
         github_context["iambic"]["GH_OVERRIDE_TOKEN"] = github_override_token
         github_context["iambic"]["IAMBIC_CLOUD_IMPORT_CMD"] = iambic_integration_str
+        github_context["iambic"]["IAMBIC_COMMIT_EMAIL"] = iambic_commit_email
+        github_context["iambic"]["IAMBIC_COMMIT_USERNAME"] = iambic_commit_username
+        github_context["iambic"]["IAMBIC_COMMIT_MESSAGE"] = iambic_commit_message
+        github_context["iambic"]["IAMBIC_CONFIG_FILE"] = iambic_config_file
 
     if iambic_integration_str:
         github_context["event_name"] = "iambic_command"

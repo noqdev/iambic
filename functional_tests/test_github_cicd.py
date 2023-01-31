@@ -69,12 +69,8 @@ def generate_templates_fixture():
     pass
 
 
-# Opens a PR on noqdev/iambic-templates-test. The workflow on the repo will
-# pull container with "test label". It will then approve the PR and trigger
-# the "iambic git-apply" command on the PR. If the flow is successful, the PR
-# will be merged and we will check the workflow to be completed state.
-def test_github_cicd(filesystem, generate_templates_fixture):
-
+@pytest.fixture(scope="session")
+def build_push_container():
     if not os.environ.get("GITHUB_ACTIONS", None):
         # If we are running locally on developer machine, we need to ensure
         # the payload is packed into a container image for the test templates repo
@@ -86,6 +82,13 @@ def test_github_cicd(filesystem, generate_templates_fixture):
         subprocess.run(
             "make -f Makefile.itest upload_docker_itest", shell=True, check=True
         )
+
+
+# Opens a PR on noqdev/iambic-templates-test. The workflow on the repo will
+# pull container with "test label". It will then approve the PR and trigger
+# the "iambic git-apply" command on the PR. If the flow is successful, the PR
+# will be merged and we will check the workflow to be completed state.
+def test_github_cicd(filesystem, generate_templates_fixture, build_push_container):
 
     temp_config_filename, temp_templates_directory = filesystem
 
@@ -223,3 +226,34 @@ def test_github_cicd(filesystem, generate_templates_fixture):
             break
     check_pull_request = github_repo.get_pull(pr_number)
     assert check_pull_request.merged
+
+
+def test_github_import(filesystem, generate_templates_fixture, build_push_container):
+
+    temp_config_filename, temp_templates_directory = filesystem
+
+    config = Config.load(temp_config_filename)
+    github_token = config.secrets["github-token-iambic-templates-itest"]
+    github_repo_name = "noqdev/iambic-templates-itest"
+    github_client = Github(github_token)
+    github_repo = github_client.get_repo(github_repo_name)
+    workflow = github_repo.get_workflow("iambic-import.yml")
+    workflow.create_dispatch(github_repo.default_branch)
+
+    # test full import
+    utc_obj = datetime.datetime.utcnow()
+    is_workflow_run_successful = False
+    datetime_since_comment_issued = datetime.datetime.utcnow()
+    while (datetime.datetime.utcnow() - datetime_since_comment_issued).seconds < 120:
+        runs = github_repo.get_workflow_runs(event="workflow_dispatch", branch="main")
+        runs = [run for run in runs if run.created_at >= utc_obj]
+        runs = [run for run in runs if run.conclusion == "success"]
+        if len(runs) != 1:
+            time.sleep(10)
+            print("sleeping")
+            continue
+        else:
+            is_workflow_run_successful = True
+            break
+
+    assert is_workflow_run_successful
