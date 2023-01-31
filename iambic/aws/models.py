@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from enum import Enum
 from typing import TYPE_CHECKING, List, Optional, Union
 
@@ -16,6 +17,7 @@ from iambic.aws.utils import (
     create_assume_role_session,
     evaluate_on_account,
     get_account_value,
+    get_current_role_arn,
     legacy_paginated_search,
     set_org_account_variables,
 )
@@ -165,12 +167,15 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
             except Exception as err:
                 log.warning(err)
 
-        if self.hub_role_arn:
+        if self.hub_role_arn and self.hub_role_arn != get_current_role_arn(
+            session.client("sts")
+        ):
             boto3_session = await create_assume_role_session(
                 session,
                 self.hub_role_arn,
                 region_name,
                 external_id=self.external_id,
+                session_name=os.environ.get("IAMBIC_SESSION_NAME", None),
             )
             if boto3_session:
                 self.boto3_session_map[region_name] = boto3_session
@@ -289,12 +294,15 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
                 log.warning(err)
 
         self.hub_session_info = dict(boto3_session=session)
-        if self.hub_role_arn:
+        if self.hub_role_arn and self.hub_role_arn != get_current_role_arn(
+            session.client("sts")
+        ):
             session = await create_assume_role_session(
                 session,
                 self.hub_role_arn,
                 region_name,
                 external_id=self.external_id,
+                session_name=os.environ.get("IAMBIC_SESSION_NAME", None),
             )
             if session:
                 self.hub_session_info = dict(boto3_session=session)
