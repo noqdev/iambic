@@ -409,7 +409,7 @@ class BaseTemplate(
         template_dict["template_type"] = self.template_type
         return template_dict
 
-    def write(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
+    def get_body(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
         input_dict = self.dict(
             exclude_none=exclude_none,
             exclude_unset=exclude_unset,
@@ -424,6 +424,10 @@ class BaseTemplate(
         as_yaml = as_yaml.replace(f"{template_type_str}\n", "")
         as_yaml = as_yaml.replace(f"\n{template_type_str}", "")
         as_yaml = f"{template_type_str}\n{as_yaml}"
+        return as_yaml
+
+    def write(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
+        as_yaml = self.get_body(exclude_none, exclude_unset, exclude_defaults)
         os.makedirs(os.path.dirname(os.path.expanduser(self.file_path)), exist_ok=True)
         with open(self.file_path, "w") as f:
             f.write(as_yaml)
