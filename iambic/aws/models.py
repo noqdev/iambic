@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from enum import Enum
 from typing import TYPE_CHECKING, List, Optional, Union
 
@@ -174,6 +175,7 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
                 self.hub_role_arn,
                 region_name,
                 external_id=self.external_id,
+                session_name=os.environ.get("IAMBIC_SESSION_NAME", None),
             )
             if boto3_session:
                 self.boto3_session_map[region_name] = boto3_session
@@ -300,6 +302,7 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
                 self.hub_role_arn,
                 region_name,
                 external_id=self.external_id,
+                session_name=os.environ.get("IAMBIC_SESSION_NAME", None),
             )
             if session:
                 self.hub_session_info = dict(boto3_session=session)
