@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  This template creates the IAMbic hub role.
+Parameters:
+  HubRoleName:
+    Type: String
+  SpokeRoleName:
+    Type: String
+  AssumeAsArn:
+    Type: String
+    Default: ""
+Conditions:
+  IsAssumeAsArnProvided: !Not [!Equals [!Ref AssumeAsArn, ""]]
+Resources:
+  IambicHubRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Ref HubRoleName
+      Description: >-
+        This role is used by IAMbic to assume into the spoke role of every account defined in the IAMbic config.
+        Managed via CloudFormation.
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          !If
+          - IsAssumeAsArnProvided
+          -
+            - Effect: Allow
+              Action:
+                - sts:AssumeRole
+                - sts:TagSession
+              Principal:
+                AWS: !Ref AssumeAsArn
+          -
+            - Effect: Deny
+              Action: sts:AssumeRole
+              Principal:
+                Service: ec2.amazonaws.com
+      Policies:
+        - PolicyName: assume_spoke_role
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sts:assumerole
+                Resource:
+                  - !Sub 'arn:aws:iam::*:role/${SpokeRoleName}'
+        - PolicyName: list_spoke_account_info
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - organizations:ListAccounts
+                  - organizations:ListTagsForResource
+                Resource: '*'

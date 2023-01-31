@@ -19,10 +19,11 @@ from iambic.core.git import clone_git_repo
 
 os.environ["TESTING"] = "true"
 
+
 github_config = ExtendsConfig(
     key="AWS_SECRETS_MANAGER",
     value="arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/github-token-iambic-templates-itest",
-    assume_role_arn="arn:aws:iam::442632209887:role/IambicSpokeRole",
+    hub_role_arn="arn:aws:iam::442632209887:role/IambicSpokeRole",
 )
 
 
@@ -109,6 +110,7 @@ def test_github_cicd(filesystem, generate_templates_fixture, build_push_containe
     temp_config_filename, temp_templates_directory, config = filesystem
 
     github_token = get_github_token(config)
+
     github_repo_name = "noqdev/iambic-templates-itest"
     repo_url = f"https://oauth2:{github_token}@github.com/{github_repo_name}.git"
     repo = clone_git_repo(repo_url, temp_templates_directory, None)
