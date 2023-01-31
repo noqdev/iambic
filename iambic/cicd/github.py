@@ -370,9 +370,9 @@ def handle_detect_changes_from_eventbridge(
         config_file = context["iambic"]["IAMBIC_CONFIG_FILE"]
         config_path = f"{lambda_repo_path}/config/{config_file}"
         run_detect(config_path, lambda_repo_path)
+        repo.git.add(".")
         diff_list = repo.head.commit.diff()
         if len(diff_list) > 0:
-            repo.git.add(".")
             repo.git.commit("-m", github_context["iambic"]["IAMBIC_COMMIT_MESSAGE"])
             repo.remotes.origin.push(refspec="HEAD:main")
         else:
@@ -410,9 +410,9 @@ def handle_import(github_client: Github, context: dict[str, Any]) -> None:
         config_file = context["iambic"]["IAMBIC_CONFIG_FILE"]
         config_path = f"{lambda_repo_path}/config/{config_file}"
         run_import([config_path], lambda_repo_path)
+        repo.git.add(".")
         diff_list = repo.head.commit.diff()
         if len(diff_list) > 0:
-            repo.git.add(".")
             repo.git.commit("-m", github_context["iambic"]["IAMBIC_COMMIT_MESSAGE"])
             repo.remotes.origin.push(refspec="HEAD:main")
         else:

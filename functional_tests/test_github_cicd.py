@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import datetime
 import os
 import shutil
@@ -7,26 +8,28 @@ import subprocess
 import tempfile
 import time
 
+import boto3.session
 import pytest
 from github import Github
 
-from iambic.config.models import Config
+from functional_tests.conftest import all_config
+from iambic.aws.iam.role.models import RoleTemplate
+from iambic.config.models import Config, ExtendsConfig
 from iambic.core.git import clone_git_repo
 
 os.environ["TESTING"] = "true"
 
-github_config = """
-extends:
-  - key: AWS_SECRETS_MANAGER
-    value: arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/github-token-iambic-templates-itest
-    assume_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
-version: '1'
-"""
+github_config = ExtendsConfig(
+    key="AWS_SECRETS_MANAGER",
+    value="arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/github-token-iambic-templates-itest",
+    assume_role_arn="arn:aws:iam::442632209887:role/IambicSpokeRole",
+)
+
 
 iambic_role_yaml = """template_type: NOQ::AWS::IAM::Role
 identifier: iambic_itest_for_github_cicd
 included_accounts:
-  - dev
+  - iambic_test_spoke_account_1
 properties:
   assume_role_policy_document:
     statement:
@@ -50,10 +53,13 @@ def filesystem():
     )
 
     with open(fd, "w") as temp_file:
-        temp_file.write(github_config)
+        temp_file.write(all_config)
 
     try:
-        yield (temp_config_filename, temp_templates_directory)
+        config: Config = Config.load(temp_config_filename)
+        config.combine_extended_configs()
+        asyncio.run(config.setup_aws_accounts())
+        yield (temp_config_filename, temp_templates_directory, config)
     finally:
         try:
             os.close(fd)
@@ -84,16 +90,25 @@ def build_push_container():
         )
 
 
+def get_github_token(config) -> str:
+    github_secret = config.get_aws_secret(github_config)
+    return github_secret["secrets"]["github-token-iambic-templates-itest"]
+
+
+def get_aws_key_dict(config) -> str:
+    github_secret = config.get_aws_secret(github_config)
+    return github_secret["secrets"]["aws-iambic-github-cicid-itest"]
+
+
 # Opens a PR on noqdev/iambic-templates-test. The workflow on the repo will
 # pull container with "test label". It will then approve the PR and trigger
 # the "iambic git-apply" command on the PR. If the flow is successful, the PR
 # will be merged and we will check the workflow to be completed state.
 def test_github_cicd(filesystem, generate_templates_fixture, build_push_container):
 
-    temp_config_filename, temp_templates_directory = filesystem
+    temp_config_filename, temp_templates_directory, config = filesystem
 
-    config = Config.load(temp_config_filename)
-    github_token = config.secrets["github-token-iambic-templates-itest"]
+    github_token = get_github_token(config)
     github_repo_name = "noqdev/iambic-templates-itest"
     repo_url = f"https://oauth2:{github_token}@github.com/{github_repo_name}.git"
     repo = clone_git_repo(repo_url, temp_templates_directory, None)
@@ -230,10 +245,9 @@ def test_github_cicd(filesystem, generate_templates_fixture, build_push_containe
 
 def test_github_import(filesystem, generate_templates_fixture, build_push_container):
 
-    temp_config_filename, temp_templates_directory = filesystem
+    temp_config_filename, temp_templates_directory, config = filesystem
 
-    config = Config.load(temp_config_filename)
-    github_token = config.secrets["github-token-iambic-templates-itest"]
+    github_token = get_github_token(config)
     github_repo_name = "noqdev/iambic-templates-itest"
     github_client = Github(github_token)
     github_repo = github_client.get_repo(github_repo_name)
@@ -261,17 +275,53 @@ def test_github_import(filesystem, generate_templates_fixture, build_push_contai
 
 def test_github_detect(filesystem, generate_templates_fixture, build_push_container):
 
-    temp_config_filename, temp_templates_directory = filesystem
+    temp_config_filename, temp_templates_directory, config = filesystem
 
-    config = Config.load(temp_config_filename)
-    github_token = config.secrets["github-token-iambic-templates-itest"]
+    github_token = get_github_token(config)
+
+    # emulate iam changes
+    # the arn target is from https://github.com/noqdev/iambic-templates-itest/blob/main/resources/aws/roles/dev/iambic_itest_github_cicd.yaml
+    region_name = "us-east-1"
+
+    # this is the preferred way to make out-of-band changes using iam role but
+    # iambic detect intentionally filters out iambic related actor. so i have
+    # to resort to use a static access key that is scope to aws user only able
+    # UpdateRoleDescription to a particular arn
+    # session = asyncio.run(config.get_boto_session_from_arn("arn:aws:iam::442632209887:role/iambic_itest_for_github_cicd", region_name))
+    # identity = session.client("sts").get_caller_identity()
+    # identity_arn_with_session_name = (
+    #     identity["Arn"].replace(":sts:", ":iam:").replace("assumed-role", "role")
+    # )
+    # iam_client = session.client("iam", region_name=region_name)
+
+    aws_key_dict = get_aws_key_dict(config)
+    session = boto3.session.Session(
+        aws_access_key_id=aws_key_dict["access_key"],
+        aws_secret_access_key=aws_key_dict["secret_key"],
+        region_name=region_name,
+    )
+    iam_client = session.client("iam", region_name=region_name)
+
+    utc_obj = datetime.datetime.utcnow()
+    date_isoformat = utc_obj.isoformat()
+    new_description = date_isoformat.replace(":", "_")
+    response = iam_client.update_role_description(
+        RoleName="iambic_itest_for_github_cicd", Description=new_description
+    )
+    assert response["Role"]["Description"] == new_description
+
+    # hack sleep 10 seconds to hope eventbridge has picked up the event...
+    # this test can still break if eventbridge is not setup correctly
+    # or detect is not doing what we expect.
+    time.sleep(10)
+
     github_repo_name = "noqdev/iambic-templates-itest"
     github_client = Github(github_token)
     github_repo = github_client.get_repo(github_repo_name)
     workflow = github_repo.get_workflow("iambic-detect.yml")
     workflow.create_dispatch(github_repo.default_branch)
 
-    # test full detect
+    # test iambic detect
     utc_obj = datetime.datetime.utcnow()
     is_workflow_run_successful = False
     datetime_since_comment_issued = datetime.datetime.utcnow()
@@ -288,3 +338,21 @@ def test_github_detect(filesystem, generate_templates_fixture, build_push_contai
             break
 
     assert is_workflow_run_successful
+
+    github_repo_name = "noqdev/iambic-templates-itest"
+    repo_url = f"https://oauth2:{github_token}@github.com/{github_repo_name}.git"
+    repo = clone_git_repo(repo_url, temp_templates_directory, None)
+
+    new_branch = f"itest/github_cicd_run_{new_description}"
+    current = repo.create_head(new_branch)
+    current.checkout()
+
+    test_role_path = os.path.join(
+        temp_templates_directory,
+        "resources/aws/roles/dev/iambic_itest_github_cicd.yaml",
+    )
+
+    role_template = RoleTemplate.load(file_path=test_role_path)
+
+    # this is prone to race condition since we are using the same resource for test
+    assert role_template.properties.description == new_description
