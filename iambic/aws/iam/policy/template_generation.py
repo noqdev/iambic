@@ -20,6 +20,7 @@ from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
     base_group_str_attribute,
+    create_or_update_template,
     get_existing_template_map,
     group_dict_attribute,
     group_int_or_str_attribute,
@@ -261,45 +262,20 @@ async def create_templated_managed_policy(  # noqa: C901
             tags = [tags]
         template_properties["tags"] = tags
 
-    if existing_template := existing_template_map.get(managed_policy_name):
-        existing_template.included_accounts = template_params["included_accounts"]
-        existing_template.excluded_accounts = template_params.get(
-            "excluded_accounts", []
-        )
-        existing_template.included_orgs = template_params.get("included_orgs", ["*"])
-        existing_template.excluded_orgs = template_params.get("excluded_orgs", [])
-        existing_template.properties = ManagedPolicyProperties(**template_properties)
-        try:
-            existing_template.write()
-            return existing_template
-        except Exception as err:
-            log.exception(
-                "Unable to update managed policy template.",
-                error=str(err),
-                managed_policy_params=template_params,
-            )
-    else:
-        try:
-            managed_policy = ManagedPolicyTemplate(
-                file_path=existing_template_map.get(
-                    managed_policy_name,
-                    get_templated_managed_policy_file_path(
-                        managed_policy_dir,
-                        managed_policy_name,
-                        template_params.get("included_accounts"),
-                        aws_account_map,
-                    ),
-                ),
-                properties=template_properties,
-                **template_params,
-            )
-            managed_policy.write()
-        except Exception as err:
-            log.info(
-                str(err),
-                managed_policy_params=template_params,
-                template_properties=template_properties,
-            )
+    file_path = get_templated_managed_policy_file_path(
+        managed_policy_dir,
+        managed_policy_name,
+        template_params.get("included_accounts"),
+        aws_account_map,
+    )
+    return create_or_update_template(
+        file_path,
+        existing_template_map,
+        managed_policy_name,
+        ManagedPolicyTemplate,
+        template_params,
+        ManagedPolicyProperties(**template_properties),
+    )
 
 
 async def generate_aws_managed_policy_templates(

@@ -4,7 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from iambic.google.group.models import get_group_template
+from iambic.core.models import merge_model
+from iambic.google.group.models import GroupTemplateProperties, get_group_template
 
 VALUE_UNDER_TEST = {
     "members": [
@@ -50,3 +51,43 @@ async def test_get_group_template(google_group_service):
         google_group_service, TEST_GOOGLE_GROUP, "example-com"
     )
     assert len(template.properties.members) == len(VALUE_UNDER_TEST["members"])
+
+
+def test_merge_list_group_members_expires_at():
+    existing_members = [
+        {
+            "email": "user@example.com",
+            "expires_at": "in 3 days",
+        }
+    ]
+    existing_document = GroupTemplateProperties(
+        name="bar",
+        domain="foo",
+        description="baz",
+        email="bar@example.com",
+        members=existing_members,
+    )
+    new_members = [
+        {
+            "email": "user@example.com",
+        },
+        {
+            "email": "someone_else@example.com",
+        },
+    ]
+    new_document = GroupTemplateProperties(
+        name="bar",
+        domain="foo",
+        description="baz",
+        email="bar@example.com",
+        members=new_members,
+    )
+    merged_document: GroupTemplateProperties = merge_model(
+        existing_document, new_document
+    )
+    assert existing_members != new_members
+    assert merged_document.members[0].email == "user@example.com"
+    assert (
+        merged_document.members[0].expires_at == existing_document.members[0].expires_at
+    )
+    assert merged_document.members[0].email == "user@example.com"

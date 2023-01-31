@@ -14,6 +14,7 @@ from iambic.config.models import Config
 
 # TODO: This is a plugin anti-pattern. We need to make a real plugin architecture.
 from iambic.google.group.template_generation import generate_group_templates
+from iambic.okta.app.template_generation import generate_app_templates
 from iambic.okta.group.template_generation import (
     generate_group_templates as generate_okta_group_templates,
 )
@@ -34,9 +35,11 @@ async def generate_templates(configs: list[Config], output_dir: str):
                         config, subject.domain, output_dir, project
                     )
                 )
+    for config in configs:
         for okta_organization in config.okta_organizations:
             tasks.append(
                 generate_okta_group_templates(config, output_dir, okta_organization)
             )
+            tasks.append(generate_app_templates(config, output_dir, okta_organization))
 
     await asyncio.gather(*tasks)
