@@ -363,6 +363,8 @@ async def create_assume_role_session(
     external_id: Optional[str] = None,
     session_name: str = "iambic",
 ) -> boto3.Session:
+    if session_name is None:
+        session_name = "iambic"
     try:
         sts = boto3_session.client(
             "sts",
