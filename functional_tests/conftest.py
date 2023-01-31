@@ -24,6 +24,7 @@ os.environ["TESTING"] = "true"
 FUNCTIONAL_TEST_TEMPLATE_DIR = os.getenv("FUNCTIONAL_TEST_TEMPLATE_DIR", None)
 
 all_config = """
+template_type: NOQ::Core::Config
 version: '1'
 
 extends:
@@ -34,19 +35,19 @@ extends:
 aws:
   organizations:
     - org_id: 'o-8t0mt0ybdd'
-      assume_role_arn: 'arn:aws:iam::580605962305:role/IambicSpokeRole'
+      hub_role_arn: 'arn:aws:iam::580605962305:role/IambicHubRole'
       org_name: 'iambic_test_org_account'
+      org_account_id: '580605962305'
       identity_center_account:
-        account_id: '580605962305'
         region: 'us-east-1'
       account_rules:
         - included_accounts:
             - '*'
           enabled: true
-          read_only: false
+          iambic_managed: read_and_write
       default_rule:
         enabled: true
-        read_only: false
+        iambic_managed: read_and_write
 """
 
 

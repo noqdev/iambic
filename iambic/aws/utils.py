@@ -36,6 +36,8 @@ async def boto_crud_call(boto_fnc, **kwargs) -> Union[list, dict]:
                 retry_count += 1
                 await asyncio.sleep(retry_count / 2)
                 continue
+            elif "AccessDenied" in err.response["Error"]["Code"]:
+                raise
             else:
                 raise
 
@@ -76,6 +78,20 @@ async def paginated_search(
             return results if retain_key else results[response_key]
         else:
             search_kwargs["Marker"] = response["Marker"]
+
+
+def get_identity_arn(caller_identity: dict) -> str:
+    arn = caller_identity.get("Arn")
+    if "sts" in arn:
+        identity_arn_with_session_name = arn.replace(":sts:", ":iam:").replace(
+            "assumed-role", "role"
+        )
+        return "/".join(identity_arn_with_session_name.split("/")[:-1])
+    return arn
+
+
+def get_current_role_arn(sts_client) -> str:
+    return get_identity_arn(sts_client.get_caller_identity())
 
 
 async def legacy_paginated_search(
@@ -126,7 +142,7 @@ class RegionName(Enum):
     ap_northeast_1 = "ap-northeast-1"
     ap_northeast_2 = "ap-northeast-2"
     sa_east_1 = "sa-east-1"
-    cn_north_1 = "cn-north-1"
+    # cn_north_1 = "cn-north-1"
 
 
 def normalize_boto3_resp(obj):
@@ -185,6 +201,10 @@ def is_regex_match(regex, test_string):
     else:
         # it is not an actual regex string, just string comparison
         return regex.lower() == test_string.lower()
+
+
+def is_valid_account_id(account_id: str):
+    return bool(re.match(r"^\d{12}$", account_id))
 
 
 def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> bool:
