@@ -32,6 +32,7 @@ class HandleIssueCommentReturnCode(Enum):
     NO_MATCHING_BODY = 2
     MERGEABLE_STATE_NOT_CLEAN = 3
     MERGED = 4
+    PLANNED = 5
 
 
 # context is a dictionary structure published by Github Action
@@ -40,7 +41,7 @@ def run_handler(context: dict[str, Any]):
     github_token: str = context["token"]
     event_name: str = context["event_name"]
     log_params = {"event_name": event_name}
-    log.info("no op", **log_params)
+    log.info("run_handler", **log_params)
     github_client = Github(github_token)
     # TODO Support Github Enterprise with custom hostname
     # g = Github(base_url="https://{hostname}/api/v3", login_or_token="access_token")
@@ -196,9 +197,11 @@ def handle_issue_comment(
 ) -> HandleIssueCommentReturnCode:
 
     comment_body = context["event"]["comment"]["body"]
-    if comment_body != "iambic git-apply":
+    log_params = {"COMMENT_DISPATCH_MAP_KEYS": COMMENT_DISPATCH_MAP.keys()}
+    log.info("COMMENT_DISPATCH_MAP keys", **log_params)
+    if comment_body not in COMMENT_DISPATCH_MAP:
         log_params = {"comment_body": comment_body}
-        log.info("no op", **log_params)
+        log.error("handle_issue_comment: no op", **log_params)
         return HandleIssueCommentReturnCode.NO_MATCHING_BODY
 
     github_token = context["token"]
@@ -214,6 +217,25 @@ def handle_issue_comment(
     log_params = {"pull_request_branch_name": pull_request_branch_name}
     log.info("PR remote branch name", **log_params)
 
+    comment_func: Callable = COMMENT_DISPATCH_MAP[comment_body]
+    return comment_func(
+        context,
+        pull_request,
+        repo_name,
+        pull_number,
+        pull_request_branch_name,
+        repo_url,
+    )
+
+
+def handle_iambic_git_apply(
+    context: dict[str, Any],
+    pull_request: PullRequest,
+    repo_name: str,
+    pull_number: str,
+    pull_request_branch_name: str,
+    repo_url: str,
+):
     if pull_request.mergeable_state != MERGEABLE_STATE_CLEAN:
         # TODO log error and also make a comment to PR
         pull_request.create_issue_comment(
@@ -241,34 +263,51 @@ def handle_issue_comment(
         raise e
 
 
-def handle_pull_request(github_client: Github, context: dict[str, Any]) -> None:
-    github_token = context["token"]
-    # repo_name is already in the format {repo_owner}/{repo_short_name}
-    repo_name = context["repository"]
-    pull_number = context["event"]["pull_request"]["number"]
-    repository_url = context["event"]["repository"]["clone_url"]
-    repo_url = format_github_url(repository_url, github_token)
-    # repository_url_token
-    templates_repo = github_client.get_repo(repo_name)
-    pull_request = templates_repo.get_pull(pull_number)
-    pull_request_branch_name = pull_request.head.ref
-    log_params = {"pull_request_branch_name": pull_request_branch_name}
-    log.info("PR remote branch name", **log_params)
-
+def handle_iambic_git_plan(
+    context: dict[str, Any],
+    pull_request: PullRequest,
+    repo_name: str,
+    pull_number: str,
+    pull_request_branch_name: str,
+    repo_url: str,
+):
     session_name = get_session_name(repo_name, pull_number)
     os.environ["IAMBIC_SESSION_NAME"] = session_name
 
     try:
-        prepare_local_repo_from_remote_branch(
-            repo_url, lambda_repo_path, pull_request_branch_name
-        )
+        prepare_local_repo(repo_url, lambda_repo_path, pull_request_branch_name)
         lambda_run_handler(None, {"command": "git_plan"})
         post_result_as_pr_comment(pull_request, context, "git-plan")
         copy_data_to_data_directory()
+        return HandleIssueCommentReturnCode.PLANNED
     except Exception as e:
         log.error("fault", exception=str(e))
         pull_request.create_issue_comment(
-            "exception during git-apply is {0} \n {1}".format(
+            "exception during git-plan is {0} \n {1}".format(
+                pull_request.mergeable_state, e
+            )
+        )
+        raise e
+
+
+def handle_pull_request(github_client: Github, context: dict[str, Any]) -> None:
+    # replace with a different github client because we need a different
+    # identity to leave the "iambic git-plan". Otherwise, it won't be able
+    # to trigger the correct react-to-comment workflow.
+    github_client = Github(context["iambic"]["GH_OVERRIDE_TOKEN"])
+    # repo_name is already in the format {repo_owner}/{repo_short_name}
+    repo_name = context["repository"]
+    pull_number = context["event"]["pull_request"]["number"]
+    # repository_url_token
+    templates_repo = github_client.get_repo(repo_name)
+    pull_request = templates_repo.get_pull(pull_number)
+
+    try:
+        pull_request.create_issue_comment("iambic git-plan")
+    except Exception as e:
+        log.error("fault", exception=str(e))
+        pull_request.create_issue_comment(
+            "exception during pull-request is {0} \n {1}".format(
                 pull_request.mergeable_state, e
             )
         )
@@ -281,8 +320,17 @@ EVENT_DISPATCH_MAP: dict[str, Callable] = {
 }
 
 
+COMMENT_DISPATCH_MAP: dict[str, Callable] = {
+    "iambic git-apply": handle_iambic_git_apply,
+    "iambic git-plan": handle_iambic_git_plan,
+}
+
+
 if __name__ == "__main__":
     github_context_json_str = os.environ.get("GITHUB_CONTEXT")
+    github_override_token = os.environ.get("GH_OVERRIDE_TOKEN")
     with open("/root/github_context/github_context.json", "r") as f:
         github_context = json.load(f)
+        github_context["iambic"] = {}
+        github_context["iambic"]["GH_OVERRIDE_TOKEN"] = github_override_token
     run_handler(github_context)

@@ -139,11 +139,28 @@ def test_github_cicd(filesystem, generate_templates_fixture):
     )
     pr_number = pr.number
 
-    # test git-plan
+    # test react to pull_request
     is_workflow_run_successful = False
     datetime_since_comment_issued = datetime.datetime.utcnow()
     while (datetime.datetime.utcnow() - datetime_since_comment_issued).seconds < 120:
         runs = github_repo.get_workflow_runs(event="pull_request", branch=new_branch)
+        runs = [run for run in runs if run.created_at >= utc_obj]
+        runs = [run for run in runs if run.conclusion == "success"]
+        if len(runs) != 1:
+            time.sleep(10)
+            print("sleeping")
+            continue
+        else:
+            is_workflow_run_successful = True
+            break
+
+    assert is_workflow_run_successful
+
+    # test git-plan
+    is_workflow_run_successful = False
+    datetime_since_comment_issued = datetime.datetime.utcnow()
+    while (datetime.datetime.utcnow() - datetime_since_comment_issued).seconds < 120:
+        runs = github_repo.get_workflow_runs(event="issue_comment", branch="main")
         runs = [run for run in runs if run.created_at >= utc_obj]
         runs = [run for run in runs if run.conclusion == "success"]
         if len(runs) != 1:
@@ -191,5 +208,18 @@ def test_github_cicd(filesystem, generate_templates_fixture):
             break
 
     assert is_workflow_run_successful
+
+    # ensure it is merged
+    is_workflow_run_successful = False
+    datetime_since_comment_issued = datetime.datetime.utcnow()
+    while (datetime.datetime.utcnow() - datetime_since_comment_issued).seconds < 120:
+        check_pull_request = github_repo.get_pull(pr_number)
+        if not check_pull_request.merged:
+            time.sleep(10)
+            print("sleeping")
+            continue
+        else:
+            is_workflow_run_successful = True
+            break
     check_pull_request = github_repo.get_pull(pr_number)
     assert check_pull_request.merged
