@@ -39,14 +39,18 @@ async def load_template(repo_dir: str, plugins_configured: bool = False) -> Conf
     )
     repo.git.checkout(previous_head)
     if plugins_configured:
-        c.configure_plugins()
+        await c.configure_plugins()
     return c
 
 
 async def store_template(config: Config, repo_dir: str, repo_name: str):
     # clone_git_repos will pull if repos exist versus cloning
     repo_path = pathlib.Path(repo_dir)
-    config_path = repo_path / "config" / "config.yml"
+    try:
+        config_path = await resolve_config_template_path(str(repo_path))
+    except RuntimeError:
+        config_path = repo_path / "config" / "config.yml"
+
     repo_base_path = repo_path.parent
     if not config.secrets:
         raise ValueError("No secrets configured")
@@ -67,9 +71,8 @@ async def store_template(config: Config, repo_dir: str, repo_name: str):
     main_branch = get_origin_head(repo)
     if previous_head != main_branch:
         repo.git.checkout(main_branch)
-    config_template_file_path = config_path
-    with open(config_template_file_path, "w") as fp:
-        yaml.dump(config.dict(), fp)
+
+    config.write()
     # TODO: Setup a PR request
     repo.git.checkout(previous_head)
 
