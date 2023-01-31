@@ -515,9 +515,6 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         ):
             account_rule = new_rule
 
-        if not account_rule.enabled:
-            return
-
         region_name = self.region_name
         if self.identity_center_account and self.org_account_id == account_id:
             identity_center_details = IdentityCenterDetails(
