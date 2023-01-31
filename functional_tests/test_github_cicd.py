@@ -257,3 +257,34 @@ def test_github_import(filesystem, generate_templates_fixture, build_push_contai
             break
 
     assert is_workflow_run_successful
+
+
+def test_github_detect(filesystem, generate_templates_fixture, build_push_container):
+
+    temp_config_filename, temp_templates_directory = filesystem
+
+    config = Config.load(temp_config_filename)
+    github_token = config.secrets["github-token-iambic-templates-itest"]
+    github_repo_name = "noqdev/iambic-templates-itest"
+    github_client = Github(github_token)
+    github_repo = github_client.get_repo(github_repo_name)
+    workflow = github_repo.get_workflow("iambic-detect.yml")
+    workflow.create_dispatch(github_repo.default_branch)
+
+    # test full detect
+    utc_obj = datetime.datetime.utcnow()
+    is_workflow_run_successful = False
+    datetime_since_comment_issued = datetime.datetime.utcnow()
+    while (datetime.datetime.utcnow() - datetime_since_comment_issued).seconds < 120:
+        runs = github_repo.get_workflow_runs(event="workflow_dispatch", branch="main")
+        runs = [run for run in runs if run.created_at >= utc_obj]
+        runs = [run for run in runs if run.conclusion == "success"]
+        if len(runs) != 1:
+            time.sleep(10)
+            print("sleeping")
+            continue
+        else:
+            is_workflow_run_successful = True
+            break
+
+    assert is_workflow_run_successful
