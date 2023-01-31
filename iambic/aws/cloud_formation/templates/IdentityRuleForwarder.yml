@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Setup IAMbic Event forwarding.
+  This template creates the rule responsible for forwarding Events in the default bus to the org wide IAMbicEventBus.
+Parameters:
+  TargetEventBusArn:
+    Type: String
+Resources:
+  IAMbicEventForwardingRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: 'IAMbicEventForwardingRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: IAMbicEventForwardingRolePolicy
+          PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+              - Effect: Allow
+                Action:
+                  - 'events:PutEvents'
+                Resource:
+                  - !Ref TargetEventBusArn
+  IAMbicEventForwardingRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: IAMbicEventForwardingRule
+      Description: 'Captures IAM and SSO events and forwards the events to the IAMbicEventBus for processing.'
+      EventBusName: default
+      EventPattern:
+        detail-type:
+          - AWS API Call via CloudTrail
+        detail:
+          eventSource:
+            - iam.amazonaws.com
+            - sso.amazonaws.com
+          eventName:
+            - prefix: Create
+            - prefix: Update
+            - prefix: Attach
+            - prefix: Detach
+            - prefix: Add
+            - prefix: Delete
+            - prefix: Put
+            - prefix: Remove
+            - prefix: Tag
+            - prefix: Untag
+      State: ENABLED
+      Targets:
+        - Arn: !Ref TargetEventBusArn
+          Id: Id-iambic-change-detection-event-bus-target
+          RoleArn: !GetAtt IAMbicEventForwardingRole.Arn
+    DependsOn:
+      - IAMbicEventForwardingRole

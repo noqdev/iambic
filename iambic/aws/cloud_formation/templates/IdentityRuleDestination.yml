@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Setup IAMbic EventBridge Bus and Queue.
+  This template creates an EventBridge Bus w/ Policy, an EventBridge Rule, and an SQS Queue.
+Parameters:
+  OrgID:
+    Type: String
+    Description: AWS Organization ID.
+Resources:
+  IAMbicEventBus:
+    Type: 'AWS::Events::EventBus'
+    Properties:
+      Name: 'IAMbicChangeDetectionEventBus'
+  IAMbicEventBusPolicy:
+    Type: 'AWS::Events::EventBusPolicy'
+    Properties:
+      StatementId: 'IAMbicEventBusPolicy'
+      EventBusName: !Ref IAMbicEventBus
+      Statement:
+        Effect: "Allow"
+        Principal: "*"
+        Action: 'events:PutEvents'
+        Resource: !GetAtt IAMbicEventBus.Arn
+        Condition:
+          StringEquals:
+            aws:PrincipalOrgID: !Ref OrgID
+    DependsOn:
+      - IAMbicEventBus
+  IAMbicEventRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: IAMbicChangeDetectionRule
+      Description: 'Captures changes when an Identity is created/Updated/deleted.'
+      EventBusName: !Ref IAMbicEventBus
+      EventPattern:
+        detail-type:
+          - AWS API Call via CloudTrail
+        detail:
+          eventSource:
+            - iam.amazonaws.com
+            - sso.amazonaws.com
+          eventName:
+            - prefix: Create
+            - prefix: Update
+            - prefix: Attach
+            - prefix: Detach
+            - prefix: Add
+            - prefix: Delete
+            - prefix: Put
+            - prefix: Remove
+            - prefix: Tag
+            - prefix: Untag
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt IAMbicChangeDetectionQueue.Arn
+          Id: IAMbicChangeDetectionQueue
+    DependsOn:
+      - IAMbicEventBus
+      - IAMbicChangeDetectionQueue
+  IAMbicChangeDetectionQueue:
+    Type: 'AWS::SQS::Queue'
+    Properties:
+      QueueName: IAMbicChangeDetectionQueue
+      MessageRetentionPeriod: 604800
+

@@ -26,7 +26,7 @@ async def detect_changes(  # noqa: C901
     config: Config, repo_dir: str
 ) -> Union[str, None]:
     if not config.sqs_cloudtrail_changes_queues:
-        log.info("No cloudtrail changes queue arn found. Returning")
+        log.debug("No cloudtrail changes queue arn found. Returning")
         return
 
     role_messages = []
