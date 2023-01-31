@@ -7,6 +7,7 @@ from iambic.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetTemplate,
 )
 from iambic.google.group.models import GroupTemplate
+from iambic.okta.app.models import OktaAppTemplate
 from iambic.okta.group.models import OktaGroupTemplate
 
 TEMPLATES = [
@@ -15,6 +16,7 @@ TEMPLATES = [
     UserTemplate,
     GroupTemplate,
     OktaGroupTemplate,
+    OktaAppTemplate,
     ManagedPolicyTemplate,
 ]
 TEMPLATE_TYPE_MAP = {

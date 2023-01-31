@@ -248,6 +248,36 @@ def sort_dict(original, prioritize=None):
     return d
 
 
+def transform_commments(yaml_dict):
+
+    comment_dict = {}
+    yaml_dict["metadata_commented_dict"] = comment_dict
+    for key, comment in yaml_dict.ca.items.items():
+        comment_dict[key] = comment[2].value
+        value = yaml_dict[key]
+        if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
+            yaml_dict[key] = [transform_commments(n) for n in value]
+        elif isinstance(value, dict):
+            yaml_dict[key] = transform_commments(value)
+    return yaml_dict
+
+
+def create_commented_map(_dict: dict):
+    from ruamel.yaml import CommentedMap
+
+    commented_map = CommentedMap()
+    index = 0
+    comment_key_to_comment = _dict.pop("metadata_commented_dict", {})
+    for key, value in _dict.items():
+        if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
+            value = [create_commented_map(n) for n in value]
+        elif isinstance(value, dict):
+            value = create_commented_map(value)
+        commented_map.insert(index, key, value, comment_key_to_comment.get(key, None))
+        index = index + 1
+    return commented_map
+
+
 typ = "rt"
 yaml = NoqYaml(typ=typ)
 yaml.preserve_quotes = True
