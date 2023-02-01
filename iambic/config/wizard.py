@@ -40,7 +40,10 @@ from iambic.config.models import (
     GoogleProject,
     OktaOrganization,
 )
-from iambic.config.utils import resolve_config_template_path
+from iambic.config.utils import (
+    aws_account_update_and_discovery,
+    resolve_config_template_path,
+)
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -728,12 +731,20 @@ class ConfigurationWizard:
         for account in self.config.aws.accounts:
             if account.identity_center_details:
                 asyncio.run(account.set_identity_center_details())
-        asyncio.run(
-            generate_aws_role_templates(
-                [self.config],
-                self.repo_dir,
+
+        if questionary.confirm(
+            "Would you like to update the config to include the Organization's accounts?"
+        ).ask():
+            asyncio.run(aws_account_update_and_discovery(self.config, self.repo_dir))
+        else:
+            # We at least need to import the hub accounts roles to make any required changes to the spoke role
+            # Examples would be granting access to the change detection queue or decoding the secret
+            asyncio.run(
+                generate_aws_role_templates(
+                    [self.config],
+                    self.repo_dir,
+                )
             )
-        )
 
     def configuration_wizard_aws_organizations(self):
         # Currently only 1 org per config is supported.

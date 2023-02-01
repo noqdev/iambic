@@ -17,11 +17,13 @@ from iambic.core.git import clone_git_repo
 os.environ["TESTING"] = "true"
 
 github_config = """
+template_type: NOQ::Core::Config
+version: '1'
+
 extends:
   - key: AWS_SECRETS_MANAGER
     value: arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/github-token-iambic-templates-itest
     assume_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
-version: '1'
 
 aws:
   organizations:
@@ -65,7 +67,7 @@ aws:
 iambic_role_yaml = """template_type: NOQ::AWS::IAM::Role
 identifier: iambic_itest_for_github_cicd
 included_accounts:
-  - dev
+  - iambic_test_spoke_account_1
 properties:
   assume_role_policy_document:
     statement:
@@ -155,7 +157,7 @@ def test_github_cicd(filesystem, generate_templates_fixture):
         f.write(date_string.encode("utf-8"))
     test_role_path = os.path.join(
         temp_templates_directory,
-        "resources/aws/roles/dev/iambic_itest_github_cicd.yaml",
+        "resources/aws/roles/iambic_test_spoke_account_1/iambic_itest_github_cicd.yaml",
     )
 
     with open(test_role_path, "w") as temp_role_file:
