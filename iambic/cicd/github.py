@@ -367,9 +367,7 @@ def handle_detect_changes_from_eventbridge(
         repo_config_writer.release()
 
         # TODO customize config.yaml filename
-        config_file = context["iambic"]["IAMBIC_CONFIG_FILE"]
-        config_path = f"{lambda_repo_path}/config/{config_file}"
-        run_detect(config_path, lambda_repo_path)
+        run_detect(lambda_repo_path)
         repo.git.add(".")
         diff_list = repo.head.commit.diff()
         if len(diff_list) > 0:
