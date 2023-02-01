@@ -210,6 +210,7 @@ class Config(BaseTemplate):
 
     async def setup_aws_accounts(self):
         if not self.aws_is_setup:
+            await self.configure_plugins()
             return
 
         for elem, account in enumerate(self.aws.accounts):

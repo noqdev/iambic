@@ -45,7 +45,7 @@ async def load_template(repo_dir: str, plugins_configured: bool = False) -> Conf
     )
     repo.git.checkout(previous_head)
     if plugins_configured:
-        await c.configure_plugins()
+        await c.setup_aws_accounts()
     return c
 
 
