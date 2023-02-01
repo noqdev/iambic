@@ -28,7 +28,7 @@ github_config = ExtendsConfig(
 
 
 GITHUB_CICID_TEMPLATE_TARGET_PATH = (
-    "resources/aws/roles/iambic_test_spoke_account_1/iambic_itest_for_github_cicd.yaml"
+    "resources/aws/roles/iambic_test_spoke_account_1/iambic_itest_github_cicd.yaml"
 )
 
 iambic_role_yaml = """template_type: NOQ::AWS::IAM::Role
@@ -82,7 +82,7 @@ def generate_templates_fixture():
 
 @pytest.fixture(scope="session")
 def build_push_container():
-    if not os.environ.get("GITHUB_ACTIONS", None) and False:
+    if not os.environ.get("GITHUB_ACTIONS", None):
         # If we are running locally on developer machine, we need to ensure
         # the payload is packed into a container image for the test templates repo
         # to run against, so this is why we are building the container images on-the-fly
