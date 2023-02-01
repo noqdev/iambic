@@ -6,15 +6,15 @@ import pathlib
 
 from git import Repo
 
-from iambic.request_handler.apply import apply_changes
 from iambic.aws.models import AWSAccount
 from iambic.config.models import Config
-from iambic.core.git import clone_git_repos, get_origin_head
 from iambic.core.context import ctx
-from iambic.core.utils import gather_templates, yaml
-from iambic.request_handler.generate import generate_templates, GenerateTemplateScope
+from iambic.core.git import clone_git_repos, get_origin_head
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
+from iambic.core.utils import gather_templates, yaml
+from iambic.request_handler.apply import apply_changes
+from iambic.request_handler.generate import GenerateTemplateScope, generate_templates
 
 
 async def resolve_config_template_path(repo_dir: str) -> pathlib.Path:
@@ -107,10 +107,10 @@ async def multi_config_loader(config_paths: list[str]) -> list[Config]:
 
 
 async def discover_new_aws_accounts(
-        config: Config,
-        config_account_idx_map: dict[str, int],
-        orgs_accounts: list[list[AWSAccount]],
-        repo_dir: str
+    config: Config,
+    config_account_idx_map: dict[str, int],
+    orgs_accounts: list[list[AWSAccount]],
+    repo_dir: str,
 ) -> bool:
     accounts_discovered = False
     run_apply = False
@@ -125,7 +125,10 @@ async def discover_new_aws_accounts(
                     account_id=account.account_id,
                     account_name=account.account_name,
                 )
-                if account.iambic_managed not in [IambicManaged.DISABLED, IambicManaged.IMPORT_ONLY]:
+                if account.iambic_managed not in [
+                    IambicManaged.DISABLED,
+                    IambicManaged.IMPORT_ONLY,
+                ]:
                     run_apply = True
 
                 if account.iambic_managed != IambicManaged.DISABLED:
@@ -145,15 +148,17 @@ async def discover_new_aws_accounts(
 
 
 async def discover_aws_account_attribute_changes(
-        config: Config,
-        config_account_idx_map: dict[str, int],
-        orgs_accounts: list[list[AWSAccount]]
+    config: Config,
+    config_account_idx_map: dict[str, int],
+    orgs_accounts: list[list[AWSAccount]],
 ) -> bool:
     account_updated = False
     run_import = False
     for org_accounts in orgs_accounts:
         for account in org_accounts:
-            if (account_elem := config_account_idx_map.get(account.account_id)) is not None:
+            if (
+                account_elem := config_account_idx_map.get(account.account_id)
+            ) is not None:
                 config_account = config.aws.accounts[account_elem]
                 config_account_var_map = {
                     var["key"]: {"elem": idx, "value": var["value"]}
@@ -167,12 +172,16 @@ async def discover_aws_account_attribute_changes(
                         account_name=account.account_name,
                     )
                     account_updated = True
-                    config.aws.accounts[account_elem].account_name = account.account_name
+                    config.aws.accounts[
+                        account_elem
+                    ].account_name = account.account_name
                     if account.iambic_managed != IambicManaged.DISABLED:
                         run_import = True
 
                 for org_account_var in account.variables:
-                    if config_account_var := config_account_var_map.get(org_account_var.key):
+                    if config_account_var := config_account_var_map.get(
+                        org_account_var.key
+                    ):
                         if config_account_var["value"] != org_account_var.value:
                             account_updated = True
                             log.warning(
@@ -184,7 +193,8 @@ async def discover_aws_account_attribute_changes(
                                 config_value=config_account_var["value"],
                             )
                             config.aws.accounts[account_elem].variables[
-                                config_account_var["elem"]].value = org_account_var.value
+                                config_account_var["elem"]
+                            ].value = org_account_var.value
                             if account.iambic_managed != IambicManaged.DISABLED:
                                 run_import = True
 
@@ -207,15 +217,10 @@ async def aws_account_update_and_discovery(config: Config, repo_dir: str):
         *[org.get_accounts() for org in config.aws.organizations]
     )
     import_new_account = await discover_new_aws_accounts(
-        config,
-        config_account_idx_map,
-        orgs_accounts,
-        repo_dir
+        config, config_account_idx_map, orgs_accounts, repo_dir
     )
     import_updated_account = await discover_aws_account_attribute_changes(
-        config,
-        config_account_idx_map,
-        orgs_accounts
+        config, config_account_idx_map, orgs_accounts
     )
     if import_new_account or import_updated_account:
         log.warning(

@@ -8,7 +8,6 @@ from iambic.config.utils import aws_account_update_and_discovery
 
 
 class ConfigDiscoveryTestCase(IsolatedAsyncioTestCase):
-
     async def test_aws_account_name_updated(self):
         config = Config.load(IAMBIC_TEST_DETAILS.config_path)
         await config.setup_aws_accounts()
@@ -36,4 +35,7 @@ class ConfigDiscoveryTestCase(IsolatedAsyncioTestCase):
             config, IAMBIC_TEST_DETAILS.template_dir_path
         )
         self.assertEqual(len(config.aws.accounts), original_aws_count)
-        self.assertIn(removed_account.account_id, [account.account_id for account in config.aws.accounts])
+        self.assertIn(
+            removed_account.account_id,
+            [account.account_id for account in config.aws.accounts],
+        )

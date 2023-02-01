@@ -235,8 +235,12 @@ class Config(BaseTemplate):
                     if (
                         account_elem := config_account_idx_map.get(account.account_id)
                     ) is not None:
-                        self.aws.accounts[account_elem].hub_session_info = account.hub_session_info
-                        self.aws.accounts[account_elem].identity_center_details = account.identity_center_details
+                        self.aws.accounts[
+                            account_elem
+                        ].hub_session_info = account.hub_session_info
+                        self.aws.accounts[
+                            account_elem
+                        ].identity_center_details = account.identity_center_details
                     else:
                         log.warning(
                             "Account not found in config. Account will be ignored.",

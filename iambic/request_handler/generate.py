@@ -28,9 +28,9 @@ class GenerateTemplateScope(Enum):
 
 
 async def generate_templates(
-        configs: list[Config],
-        output_dir: str,
-        scope: GenerateTemplateScope = GenerateTemplateScope.ALL
+    configs: list[Config],
+    output_dir: str,
+    scope: GenerateTemplateScope = GenerateTemplateScope.ALL,
 ):
     if scope == GenerateTemplateScope.OKTA_AND_GOOGLE:
         tasks = []
@@ -54,7 +54,9 @@ async def generate_templates(
                 tasks.append(
                     generate_okta_group_templates(config, output_dir, okta_organization)
                 )
-                tasks.append(generate_app_templates(config, output_dir, okta_organization))
+                tasks.append(
+                    generate_app_templates(config, output_dir, okta_organization)
+                )
 
     await asyncio.gather(*tasks)
 
@@ -66,4 +68,3 @@ async def generate_templates(
         ]
         for iam_task in iam_tasks:
             await iam_task
-
