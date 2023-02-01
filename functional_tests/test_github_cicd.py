@@ -27,6 +27,10 @@ github_config = ExtendsConfig(
 )
 
 
+GITHUB_CICID_TEMPLATE_TARGET_PATH = (
+    "resources/aws/roles/iambic_test_spoke_account_1/iambic_itest_for_github_cicd.yaml"
+)
+
 iambic_role_yaml = """template_type: NOQ::AWS::IAM::Role
 identifier: iambic_itest_for_github_cicd
 included_accounts:
@@ -78,7 +82,7 @@ def generate_templates_fixture():
 
 @pytest.fixture(scope="session")
 def build_push_container():
-    if not os.environ.get("GITHUB_ACTIONS", None):
+    if not os.environ.get("GITHUB_ACTIONS", None) and False:
         # If we are running locally on developer machine, we need to ensure
         # the payload is packed into a container image for the test templates repo
         # to run against, so this is why we are building the container images on-the-fly
@@ -91,13 +95,13 @@ def build_push_container():
         )
 
 
-def get_github_token(config) -> str:
-    github_secret = config.get_aws_secret(github_config)
+def get_github_token(config: Config) -> str:
+    github_secret = asyncio.run(config.get_aws_secret(github_config))
     return github_secret["secrets"]["github-token-iambic-templates-itest"]
 
 
-def get_aws_key_dict(config) -> str:
-    github_secret = config.get_aws_secret(github_config)
+def get_aws_key_dict(config: Config) -> str:
+    github_secret = asyncio.run(config.get_aws_secret(github_config))
     return github_secret["secrets"]["aws-iambic-github-cicid-itest"]
 
 
@@ -136,7 +140,7 @@ def test_github_cicd(filesystem, generate_templates_fixture, build_push_containe
         f.write(date_string.encode("utf-8"))
     test_role_path = os.path.join(
         temp_templates_directory,
-        "resources/aws/roles/dev/iambic_itest_github_cicd.yaml",
+        GITHUB_CICID_TEMPLATE_TARGET_PATH,
     )
 
     with open(test_role_path, "w") as temp_role_file:
@@ -351,7 +355,7 @@ def test_github_detect(filesystem, generate_templates_fixture, build_push_contai
 
     test_role_path = os.path.join(
         temp_templates_directory,
-        "resources/aws/roles/dev/iambic_itest_github_cicd.yaml",
+        GITHUB_CICID_TEMPLATE_TARGET_PATH,
     )
 
     role_template = RoleTemplate.load(file_path=test_role_path)
