@@ -7,6 +7,7 @@ import pathlib
 from enum import Enum
 from typing import Any, List, Optional
 
+import boto3
 import googleapiclient.discovery
 from google.oauth2 import service_account
 from okta.client import Client as OktaClient
@@ -287,8 +288,15 @@ class Config(BaseTemplate):
             if assume_role_arn == aws_account.spoke_role_arn:
                 session = await aws_account.get_boto3_session(region_name=region_name)
 
-        if not session:
-            boto3_session = await self.aws.organizations[0].get_boto3_session()
+        if not session and self.aws_is_setup:
+            if self.aws.organizations:
+                boto3_session = await self.aws.organizations[0].get_boto3_session()
+            else:
+                hub_account = [
+                    account for account in self.aws.accounts if account.hub_role_arn
+                ][0]
+                boto3_session = await hub_account.get_boto3_session()
+
             secret_account = AWSAccount(
                 account_id=secret_account_id,
                 account_name="Secret_Account",
@@ -297,6 +305,8 @@ class Config(BaseTemplate):
                 boto3_session_map={},
             )
             session = await secret_account.get_boto3_session(region_name=region_name)
+        elif not session:
+            session = boto3.Session(region_name=region_name)
 
         try:
             client = session.client(service_name="secretsmanager")
