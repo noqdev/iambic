@@ -6,15 +6,17 @@ from iambic.aws.iam.user.models import UserTemplate
 from iambic.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetTemplate,
 )
-from iambic.google.group.models import GroupTemplate
+from iambic.aws.iam.group.models import GroupTemplate as AWSGroupTemplate
+from iambic.google.group.models import GroupTemplate as GoogleGroupTemplate
 from iambic.okta.app.models import OktaAppTemplate
 from iambic.okta.group.models import OktaGroupTemplate
 
 TEMPLATES = [
+    AWSGroupTemplate,
     AWSIdentityCenterPermissionSetTemplate,
     RoleTemplate,
     UserTemplate,
-    GroupTemplate,
+    GoogleGroupTemplate,
     OktaGroupTemplate,
     OktaAppTemplate,
     ManagedPolicyTemplate,

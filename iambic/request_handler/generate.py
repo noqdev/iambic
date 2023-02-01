@@ -8,6 +8,7 @@ from iambic.aws.iam.policy.template_generation import (
 )
 from iambic.aws.iam.role.template_generation import generate_aws_role_templates
 from iambic.aws.iam.user.template_generation import generate_aws_user_templates
+from iambic.aws.iam.group.template_generation import generate_aws_group_templates
 from iambic.aws.identity_center.permission_set.template_generation import (
     generate_aws_permission_set_templates,
 )
@@ -65,6 +66,7 @@ async def generate_templates(
         iam_tasks = [
             generate_aws_role_templates(configs, output_dir),
             generate_aws_user_templates(configs, output_dir),
+            generate_aws_group_templates(configs, output_dir),
         ]
         for iam_task in iam_tasks:
             await iam_task
