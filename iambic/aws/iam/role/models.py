@@ -401,4 +401,4 @@ class RoleTemplate(AWSTemplate, AccessModel):
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
-        return set(["access_rules"])
+        return {"access_rules", "file_path", "iambic_managed"}
