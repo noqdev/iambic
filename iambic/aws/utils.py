@@ -356,7 +356,7 @@ async def get_aws_account_map(configs: list[Config]) -> dict:
             elif aws_account.iambic_managed == IambicManaged.DISABLED:
                 log.info(
                     "IAMbic awareness disabled for the account. Skipping.",
-                    account_id=aws_account.account_id
+                    account_id=aws_account.account_id,
                 )
                 continue
 
