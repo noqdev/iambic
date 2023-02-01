@@ -20,7 +20,7 @@ github_config = """
 extends:
   - key: AWS_SECRETS_MANAGER
     value: arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/github-token-iambic-templates-itest
-    hub_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
+    assume_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
 version: '1'
 
 aws:

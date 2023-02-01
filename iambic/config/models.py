@@ -7,7 +7,6 @@ import pathlib
 from enum import Enum
 from typing import Any, List, Optional
 
-import boto3
 import googleapiclient.discovery
 from google.oauth2 import service_account
 from okta.client import Client as OktaClient
@@ -277,18 +276,39 @@ class Config(BaseTemplate):
         Example: If the secret is in prod
           A build in the staging account won't work unless it has access to the prod secret
         """
+        assume_role_arn = extend.assume_role_arn
         secret_arn = extend.value
         region_name = secret_arn.split(":")[3]
         secret_account_id = secret_arn.split(":")[4]
         aws_account_map = {account.account_id: account for account in self.aws.accounts}
+        session = None
 
         if aws_account := aws_account_map.get(secret_account_id):
-            session = await aws_account.get_boto3_session(region_name=region_name)
-        else:
-            session = boto3.Session(region_name=region_name)
+            if assume_role_arn == aws_account.spoke_role_arn:
+                session = await aws_account.get_boto3_session(region_name=region_name)
 
-        client = session.client(service_name="secretsmanager")
-        get_secret_value_response = client.get_secret_value(SecretId=secret_arn)
+        if not session:
+            boto3_session = await self.aws.organizations[0].get_boto3_session()
+            secret_account = AWSAccount(
+                account_id=secret_account_id,
+                account_name="Secret_Account",
+                spoke_role_arn=assume_role_arn,
+                hub_session_info=dict(boto3_session=boto3_session),
+                boto3_session_map={},
+            )
+            session = await secret_account.get_boto3_session(region_name=region_name)
+
+        try:
+            client = session.client(service_name="secretsmanager")
+            get_secret_value_response = client.get_secret_value(SecretId=secret_arn)
+        except Exception:
+            log.exception(
+                "Unable to retrieve the AWS secret using the provided assume_role_arn",
+                assume_role_arn=assume_role_arn,
+                secret_arn=extend.value,
+            )
+            raise
+
         if "SecretString" in get_secret_value_response:
             return_val = get_secret_value_response["SecretString"]
         else:
