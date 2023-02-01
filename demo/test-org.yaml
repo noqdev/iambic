@@ -1,9 +1,0 @@
-version: '1'
-aws:
-  accounts:
-    - account_id: '442632209887'
-      account_name: dev
-      assume_role_arn: 'arn:aws:iam::442632209887:role/IambicSpokeRole'
-
-sqs_cloudtrail_changes_queues:
-  - arn:aws:sqs:us-east-1:442632209887:iambic-itest-iam-mutation-events
