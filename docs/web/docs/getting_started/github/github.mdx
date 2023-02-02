@@ -42,8 +42,32 @@ Configure Access token for Github Action to update repository periodically.
 5e. No action is needed, but you will notice previous action will automatically select "Access: Read" for "Metadata"
 5f. Click "Generate Token".
 6. If your organization has a password vault, you can optionally store it in your organization password vault. Otherwise, move to next step to allow the repository to use the newly generated token.
+7. Open a new tab and visit https://github.com/noqdev/iambic-templates-example/settings/environments. (Tip: you should modify the link to go your own repository)
+8. Add new environment
+9. For name, type in `production`
+10. Click `Configure environment`
+11. Change Deployment branches to `Selected Branches`
+12. Add Deployment Branch Rule, type in `main` for Branch name pattern. Click Add Rule
+13. Click Add Secret
+14. For Name, input "AUTO_IMPORT_GH_TOKEN"
+15. For Secret, paste in the token generated in step 5f.
+
+Configure Access token for Github Action to automatically comment on new/edit pull request for iambic planning and application.
+
+1. Visit https://github.com/settings/apps
+2. Select Personal access tokens
+3. Select Fine-grain tokens
+4. Select Generate new token
+5. For token name, input "iambic-templates-comment"
+5a. For expiration, select custom, select a date that is one year from now. (Tip: use your organization preferred token valid length).
+5b. For Resource owner, select the Github organization that Github repository belongs to.
+5c. For Repository Access, select "Only select repositories", then click on "Select Repositories". In this tutorial, we select "noqdev/iambic-templates-example". You should use the repository name that you create for your Github organization.
+5d. Click on Repository permissions, Give "Pull Request: Read and Write" for "Contents". (Tip: this allows the github action for comment on pull requests. The intend is the main branch can watch for any pull request comment to automatically plan the changes.)
+5e. No action is needed, but you will notice previous action will automatically select "Access: Read" for "Metadata"
+5f. Click "Generate Token".
+6. If your organization has a password vault, you can optionally store it in your organization password vault. Otherwise, move to next step to allow the repository to use the newly generated token.
 7. Open a new tab and visit https://github.com/noqdev/iambic-templates-example/settings/secrets/actions. (Tip: you should modify the link to go your own repository)
-8. Select New repository secret
+8. Click Add New Repository Secret
 9. For Name, input "AUTO_IMPORT_GH_TOKEN"
 10. For Secret, paste in the token generated in step 5f.
 
@@ -80,8 +104,10 @@ Add the following statement into the Allow statement block
 			"Action": "sts:AssumeRoleWithWebIdentity",
 			"Condition": {
 				"StringLike": {
-					"token.actions.githubusercontent.com:sub": "repo:REPLACE_WITH_YOUR_GITHUB_ORG/REPLACE_WITH_YOUR_GITHUB_REPOSITORY_NAME:ref:refs/heads/main"
-					]
+					"token.actions.githubusercontent.com:sub": [
+                        "repo:REPLACE_WITH_YOUR_GITHUB_ORG/REPLACE_WITH_YOUR_GITHUB_REPOSITORY_NAME:ref:refs/heads/main",
+                        "repo:REPLACE_WITH_YOUR_GITHUB_ORG/REPLACE_WITH_YOUR_GITHUB_REPOSITORY_NAME:environment:production"
+                    ]
 				},
 				"ForAllValues:StringEquals": {
 					"token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
@@ -109,4 +135,13 @@ Open a pull request on your iambic-template repo
 
 1. git checkout -b task/change_description origin/main
 2. Edit one of your templates change_description
-3.
+3. git push origin HEAD
+4. Create a pull request.
+5. The installed pull request action will comment with "iambic git-plan" to place the changes. At any time, you want iambic github action to re-plan the changes, you can comment "iambic git-plan"
+6. The plan will be comment in line (as long as it is less than 65kilobytes. Be very careful with big plan because those are difficult for reviewers to review.)
+7. Add reviewers to review your PR and plan that is in the PR comments.
+8. Once your reviewer approve your changes. Add comment "iambic git-apply" to have iambic apply the changes. If the changes can be successfully applied, the PR will be automatically merged into main as well.
+
+FAQ
+
+1. The git-plan and git-apply process are performed via merge workflow. main branch is first checked out and then merge the changes requested in the PR. This is to ensure the plan is as up-to-date as possible. At any time if there is conflict, the requester should pull origin/main into the PR branch and allow iambic github action to replan the changes.
