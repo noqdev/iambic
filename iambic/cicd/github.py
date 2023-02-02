@@ -14,7 +14,7 @@ from github.PullRequest import PullRequest
 
 from iambic.core.git import Repo, clone_git_repo
 from iambic.core.logger import log
-from iambic.main import run_detect, run_import
+from iambic.main import run_detect, run_expire, run_import
 
 iambic_app = __import__("iambic.lambda.app", globals(), locals(), [], 0)
 lambda_run_handler = getattr(iambic_app, "lambda").app.run_handler
@@ -420,6 +420,57 @@ def handle_import(github_client: Github, context: dict[str, Any]) -> None:
         raise e
 
 
+def handle_expire(github_client: Github, context: dict[str, Any]) -> None:
+
+    # we need a different github token because we will need to push to main without PR
+    github_token = context["iambic"]["GH_OVERRIDE_TOKEN"]
+
+    # repo_name is already in the format {repo_owner}/{repo_short_name}
+    repository_url = context["event"]["repository"]["clone_url"]
+    repo_url = format_github_url(repository_url, github_token)
+    # repository_url_token
+    # log_params = {"pull_request_branch_name": pull_request_branch_name}
+    # log.info("PR remote branch name", **log_params)
+
+    try:
+        repo = prepare_local_repo_for_new_commits(repo_url, lambda_repo_path, "expire")
+
+        repo_config_writer = repo.config_writer()
+        repo_config_writer.set_value(
+            "user", "name", context["iambic"]["IAMBIC_COMMIT_USERNAME"]
+        )
+        repo_config_writer.set_value(
+            "user", "email", context["iambic"]["IAMBIC_COMMIT_EMAIL"]
+        )
+        repo_config_writer.release()
+
+        # TODO customize config.yaml filename
+        run_expire(None, lambda_repo_path)
+        repo.git.add(".")
+        diff_list = repo.head.commit.diff()
+        if len(diff_list) > 0:
+            repo.git.commit("-m", github_context["iambic"]["IAMBIC_COMMIT_MESSAGE"])
+            lambda_run_handler(None, {"command": "git_apply"})
+
+            # if it's in a PR, it's more natural to upload the proposed_changes.yaml to somewhere
+            # current implementation, it's just logging to standard out
+            lines = []
+            cwd = os.getcwd()
+            filepath = f"{cwd}/proposed_changes.yaml"
+            if os.path.exists(filepath):
+                with open(filepath) as f:
+                    lines = f.readlines()
+            log_params = {"proposed_changes": lines}
+            log.info("handle_expire ran", **log_params)
+
+            repo.remotes.origin.push(refspec="HEAD:main")
+        else:
+            log.info("handle_expire no changes")
+    except Exception as e:
+        log.error("fault", exception=str(e))
+        raise e
+
+
 EVENT_DISPATCH_MAP: dict[str, Callable] = {
     "issue_comment": handle_issue_comment,
     "pull_request": handle_pull_request,
@@ -430,6 +481,7 @@ EVENT_DISPATCH_MAP: dict[str, Callable] = {
 IAMBIC_CLOUD_IMPORT_DISPATCH_MAP: dict[str, Callable] = {
     "detect": handle_detect_changes_from_eventbridge,
     "import": handle_import,
+    "expire": handle_expire,
 }
 
 
