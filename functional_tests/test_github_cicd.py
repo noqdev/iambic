@@ -352,7 +352,7 @@ def test_github_detect(filesystem, generate_templates_fixture, build_push_contai
     is_workflow_run_successful = False
     datetime_since_comment_issued = datetime.datetime.utcnow()
     while (datetime.datetime.utcnow() - datetime_since_comment_issued).seconds < 120:
-        runs = github_repo.get_workflow_runs(event="workflow_dispatch", branch="main")
+        runs = workflow.get_runs(event="workflow_dispatch", branch="main")
         runs = [run for run in runs if run.created_at >= utc_obj]
         runs = [run for run in runs if run.conclusion == "success"]
         if len(runs) != 1:
@@ -433,12 +433,12 @@ def test_github_expire(filesystem, generate_templates_fixture, build_push_contai
     workflow = github_repo.get_workflow("iambic-expire.yml")
     workflow.create_dispatch(github_repo.default_branch)
 
-    # test iambic detect
+    # test iambic expire
     utc_obj = datetime.datetime.utcnow()
     is_workflow_run_successful = False
     datetime_since_comment_issued = datetime.datetime.utcnow()
     while (datetime.datetime.utcnow() - datetime_since_comment_issued).seconds < 120:
-        runs = github_repo.get_workflow_runs(event="workflow_dispatch", branch="main")
+        runs = workflow.get_runs(event="workflow_dispatch", branch="main")
         runs = [run for run in runs if run.created_at >= utc_obj]
         runs = [run for run in runs if run.conclusion == "success"]
         if len(runs) != 1:
