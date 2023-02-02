@@ -79,6 +79,35 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
 
 
 @click.option(
+    "--template",
+    "-t",
+    "templates",
+    required=False,
+    multiple=True,
+    type=click.Path(exists=True),
+    help="The template file path(s) to expire. Example: ./aws/roles/engineering.yaml",
+)
+@click.option(
+    "--repo-dir",
+    "-d",
+    "repo_dir",
+    required=False,
+    type=click.Path(exists=True),
+    default=str(pathlib.Path.cwd()),
+    help="The repo directory containing the templates. Example: ~/noq-templates",
+)
+def expire(templates: list[str], repo_dir: str):
+    run_expire(templates, repo_dir=repo_dir)
+
+
+def run_expire(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
+    if not templates:
+        templates = asyncio.run(gather_templates(repo_dir))
+
+    asyncio.run(flag_expired_resources(templates))
+
+
+@click.option(
     "--repo-dir",
     "-d",
     "repo_dir",

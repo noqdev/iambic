@@ -48,6 +48,26 @@ properties:
 """
 
 
+GITHUB_EXPIRING_TEMPLATE_TARGET_PATH = "resources/aws/roles/iambic_test_spoke_account_1/iambic_expiring_itest_for_github_cicd.yaml"
+
+expiring_iambic_role_yaml = """template_type: NOQ::AWS::IAM::Role
+identifier: iambic_expiring_itest_for_github_cicd
+expires_at: {relative_time}
+included_accounts:
+  - iambic_test_spoke_account_1
+properties:
+  assume_role_policy_document:
+    statement:
+      - action: sts:AssumeRole
+        effect: Deny
+        principal:
+          service: ec2.amazonaws.com
+    version: '2012-10-17'
+  description: itest github for expiring
+  role_name: iambic_expiring_itest_for_github_cicd
+"""
+
+
 @pytest.fixture
 def filesystem():
     fd, temp_config_filename = tempfile.mkstemp(
@@ -355,10 +375,95 @@ def test_github_detect(filesystem, generate_templates_fixture, build_push_contai
 
     test_role_path = os.path.join(
         temp_templates_directory,
-        GITHUB_CICID_TEMPLATE_TARGET_PATH,
+        GITHUB_EXPIRING_TEMPLATE_TARGET_PATH,
     )
 
     role_template = RoleTemplate.load(file_path=test_role_path)
 
     # this is prone to race condition since we are using the same resource for test
     assert role_template.properties.description == new_description
+
+
+def test_github_expire(filesystem, generate_templates_fixture, build_push_container):
+
+    temp_config_filename, temp_templates_directory, config = filesystem
+
+    github_token = get_github_token(config)
+    github_repo_name = "noqdev/iambic-templates-itest"
+    repo_url = f"https://oauth2:{github_token}@github.com/{github_repo_name}.git"
+    repo = clone_git_repo(repo_url, temp_templates_directory, None)
+
+    repo_config_writer = repo.config_writer()
+    repo_config_writer.set_value(
+        "user", "name", "Iambic Github Functional Test for Github"
+    )
+    repo_config_writer.set_value(
+        "user", "email", "github-cicd-functional-test@iambic.org"
+    )
+    repo_config_writer.release()
+
+    utc_obj = datetime.datetime.utcnow()
+    date_isoformat = utc_obj.isoformat()
+    date_string = date_isoformat.replace(":", "_")
+    new_branch = f"itest/github_expiring_{date_string}"
+    current = repo.create_head(new_branch)
+    current.checkout()
+    test_role_path = os.path.join(
+        temp_templates_directory,
+        GITHUB_EXPIRING_TEMPLATE_TARGET_PATH,
+    )
+
+    with open(test_role_path, "w") as temp_role_file:
+        utc_obj = datetime.datetime.utcnow()
+        date_isoformat = utc_obj.isoformat()
+        date_string = date_isoformat.replace(":", "_")
+        temp_role_file.write(
+            expiring_iambic_role_yaml.format(relative_time="yesterday")
+        )
+
+    if repo.index.diff(None) or repo.untracked_files:
+        repo.git.add(A=True)
+        repo.git.commit(m="adding template expiring tomorrow")
+        repo.remotes.origin.push(refspec="HEAD:main")
+        print("git push to origin/main")
+
+    github_repo_name = "noqdev/iambic-templates-itest"
+    github_client = Github(github_token)
+    github_repo = github_client.get_repo(github_repo_name)
+    workflow = github_repo.get_workflow("iambic-expire.yml")
+    workflow.create_dispatch(github_repo.default_branch)
+
+    # test iambic detect
+    utc_obj = datetime.datetime.utcnow()
+    is_workflow_run_successful = False
+    datetime_since_comment_issued = datetime.datetime.utcnow()
+    while (datetime.datetime.utcnow() - datetime_since_comment_issued).seconds < 120:
+        runs = github_repo.get_workflow_runs(event="workflow_dispatch", branch="main")
+        runs = [run for run in runs if run.created_at >= utc_obj]
+        runs = [run for run in runs if run.conclusion == "success"]
+        if len(runs) != 1:
+            time.sleep(10)
+            print("sleeping")
+            continue
+        else:
+            is_workflow_run_successful = True
+            break
+
+    assert is_workflow_run_successful
+
+    new_branch = "itest/github_expiring_verification"
+    for remote in repo.remotes:
+        remote.fetch()
+    current = repo.create_head(new_branch)
+    current.checkout()
+    repo.git.pull("origin", "main")
+
+    test_role_path = os.path.join(
+        temp_templates_directory,
+        GITHUB_EXPIRING_TEMPLATE_TARGET_PATH,
+    )
+
+    role_template = RoleTemplate.load(file_path=test_role_path)
+
+    # this is prone to race condition since we are using the same resource for test
+    assert role_template.deleted
