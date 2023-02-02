@@ -401,7 +401,7 @@ async def generate_aws_role_templates(
     set_role_resource_managed_policies_semaphore = NoqSemaphore(
         set_role_resource_managed_policies, 30
     )
-    set_role_resource_tags_semaphore = NoqSemaphore(set_role_resource_tags, 50)
+    set_role_resource_tags_semaphore = NoqSemaphore(set_role_resource_tags, 45)
 
     log.info("Generating AWS role templates.")
     log.info(
@@ -411,7 +411,7 @@ async def generate_aws_role_templates(
     if role_messages:
         aws_accounts = list(aws_account_map.values())
         generate_role_resource_file_for_all_accounts_semaphore = NoqSemaphore(
-            generate_role_resource_file_for_all_accounts, 50
+            generate_role_resource_file_for_all_accounts, 45
         )
         tasks = [
             {"aws_accounts": aws_accounts, "role_name": role.role_name}
