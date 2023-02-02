@@ -285,7 +285,7 @@ def test_github_import(filesystem, generate_templates_fixture, build_push_contai
     is_workflow_run_successful = False
     datetime_since_comment_issued = datetime.datetime.utcnow()
     while (datetime.datetime.utcnow() - datetime_since_comment_issued).seconds < 120:
-        runs = github_repo.get_workflow_runs(event="workflow_dispatch", branch="main")
+        runs = workflow.get_runs(event="workflow_dispatch", branch="main")
         runs = [run for run in runs if run.created_at >= utc_obj]
         runs = [run for run in runs if run.conclusion == "success"]
         if len(runs) != 1:
@@ -375,7 +375,7 @@ def test_github_detect(filesystem, generate_templates_fixture, build_push_contai
 
     test_role_path = os.path.join(
         temp_templates_directory,
-        GITHUB_EXPIRING_TEMPLATE_TARGET_PATH,
+        GITHUB_CICID_TEMPLATE_TARGET_PATH,
     )
 
     role_template = RoleTemplate.load(file_path=test_role_path)
@@ -457,11 +457,6 @@ def test_github_expire(filesystem, generate_templates_fixture, build_push_contai
     current = repo.create_head(new_branch)
     current.checkout()
     repo.git.pull("origin", "main")
-
-    test_role_path = os.path.join(
-        temp_templates_directory,
-        GITHUB_EXPIRING_TEMPLATE_TARGET_PATH,
-    )
 
     role_template = RoleTemplate.load(file_path=test_role_path)
 
