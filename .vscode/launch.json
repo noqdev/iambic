@@ -200,8 +200,6 @@
             },
             "args": [
                 "import",
-                "--config",
-                "demo/config.yaml",
                 "--repo-dir",
                 "../noq-templates"
             ],

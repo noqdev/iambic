@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from enum import Enum
 from typing import TYPE_CHECKING, List, Optional, Union
 
@@ -16,6 +17,7 @@ from iambic.aws.utils import (
     create_assume_role_session,
     evaluate_on_account,
     get_account_value,
+    get_current_role_arn,
     legacy_paginated_search,
     set_org_account_variables,
 )
@@ -30,7 +32,7 @@ from iambic.core.models import (
     TemplateChangeDetails,
     Variable,
 )
-from iambic.core.utils import NoqSemaphore, aio_wrapper
+from iambic.core.utils import NoqSemaphore, sort_dict
 
 yaml = YAML()
 
@@ -38,6 +40,17 @@ if TYPE_CHECKING:
     from iambic.config.models import Config
 
 ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\*$"
+
+IAMBIC_HUB_ROLE_NAME = "IambicHubRole"
+IAMBIC_SPOKE_ROLE_NAME = "IambicSpokeRole"
+
+
+def get_hub_role_arn(account_id: str) -> str:
+    return f"arn:aws:iam::{account_id}:role/{IAMBIC_HUB_ROLE_NAME}"
+
+
+def get_spoke_role_arn(account_id: str) -> str:
+    return f"arn:aws:iam::{account_id}:role/{IAMBIC_SPOKE_ROLE_NAME}"
 
 
 @yaml_object(yaml)
@@ -116,7 +129,7 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         None,
         description="The AWS profile used when making calls to the account",
     )
-    assume_role_arn: Optional[str] = Field(
+    hub_role_arn: Optional[str] = Field(
         None,
         description="The role arn to assume into when making calls to the account",
     )
@@ -129,31 +142,40 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
     class Config:
         fields = {"boto3_session_map": {"exclude": True}}
 
+    @property
+    def region_name(self):
+        return (
+            self.default_region
+            if isinstance(self.default_region, str)
+            else self.default_region.value
+        )
+
     async def get_boto3_session(self, region_name: Optional[str] = None):
-        region_name = region_name or self.default_region
+        region_name = region_name or self.region_name
 
         if self.boto3_session_map is None:
             self.boto3_session_map = {}
         elif boto3_session := self.boto3_session_map.get(region_name):
             return boto3_session
 
+        session = boto3.Session(region_name=region_name)
         if self.aws_profile:
             try:
-                self.boto3_session_map[region_name] = boto3.Session(
+                session = boto3.Session(
                     profile_name=self.aws_profile, region_name=region_name
                 )
             except Exception as err:
-                log.exception(err)
-            else:
-                return self.boto3_session_map[region_name]
+                log.warning(err)
 
-        session = boto3.Session(region_name=region_name)
-        if self.assume_role_arn:
+        if self.hub_role_arn and self.hub_role_arn != get_current_role_arn(
+            session.client("sts")
+        ):
             boto3_session = await create_assume_role_session(
                 session,
-                self.assume_role_arn,
+                self.hub_role_arn,
                 region_name,
                 external_id=self.external_id,
+                session_name=os.environ.get("IAMBIC_SESSION_NAME", None),
             )
             if boto3_session:
                 self.boto3_session_map[region_name] = boto3_session
@@ -163,7 +185,10 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         return self.boto3_session_map[region_name]
 
     async def get_boto3_client(self, service: str, region_name: Optional[str] = None):
-        region_name = region_name or self.default_region
+        region_name = region_name or self.region_name
+
+        if self.boto3_session_map is None:
+            self.boto3_session_map = {}
 
         if (
             client := self.boto3_session_map.get("client", {})
@@ -185,19 +210,19 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         res = await boto_crud_call(client.describe_regions)
         return [region["RegionName"] for region in res["Regions"]]
 
-    def __init__(self, **kwargs):
-        super(BaseAWSAccountAndOrgModel, self).__init__(**kwargs)
-        self.default_region = self.default_region.value
-
 
 class IdentityCenterDetails(PydanticBaseModel):
-    region: str
+    region: RegionName = Field(RegionName.us_east_1)
     instance_arn: Optional[str] = None
     identity_store_id: Optional[str] = None
     permission_set_map: Optional[Union[dict, None]] = None
     user_map: Optional[Union[dict, None]] = None
     group_map: Optional[Union[dict, None]] = None
     org_account_map: Optional[Union[dict, None]] = None
+
+    @property
+    def region_name(self):
+        return self.region if isinstance(self.region, str) else self.region.value
 
     def get_resource_name(self, resource_type: str, resource_id: str):
         resource_type = resource_type.lower()
@@ -219,10 +244,6 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         Partition.AWS,
         description="The AWS partition the account is in. Options are aws, aws-us-gov, and aws-cn",
     )
-    role_access_tag: Optional[str] = Field(
-        None,
-        description="The key of the tag used to store users and groups that can assume into the role the tag is on",
-    )
     iambic_managed: Optional[IambicManaged] = Field(
         IambicManaged.UNDEFINED,
         description="Controls the directionality of iambic changes",
@@ -231,38 +252,69 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         [],
         description="A list of variables to be used when creating templates",
     )
-    org_session_info: Optional[dict] = None
+    hub_session_info: Optional[dict] = None
     identity_center_details: Optional[Union[IdentityCenterDetails, None]] = None
+    spoke_role_arn: str = Field(
+        None,
+        description="(Auto-populated) The role arn to assume into when making calls to the account",
+    )
 
     class Config:
-        fields = {"org_session_info": {"exclude": True}}
+        fields = {"hub_session_info": {"exclude": True}}
 
     async def get_boto3_session(self, region_name: str = None):
-        region_name = region_name or self.default_region
+        region_name = region_name or self.region_name
 
         if self.boto3_session_map is None:
             self.boto3_session_map = {}
         elif boto3_session := self.boto3_session_map.get(region_name):
             return boto3_session
 
-        if self.org_session_info:
-            boto3_session = await create_assume_role_session(
-                self.org_session_info["boto3_session"],
-                self.assume_role_arn,
+        boto3_session = await create_assume_role_session(
+            self.hub_session_info["boto3_session"],
+            self.spoke_role_arn,
+            region_name,
+            external_id=self.external_id,
+        )
+        if boto3_session:
+            self.boto3_session_map[region_name] = boto3_session
+            return boto3_session
+
+        return await super().get_boto3_session(region_name)
+
+    async def set_hub_session_info(self):
+        region_name = self.region_name
+        session = boto3.Session(region_name=region_name)
+        if self.aws_profile:
+            try:
+                session = boto3.Session(
+                    profile_name=self.aws_profile, region_name=region_name
+                )
+            except Exception as err:
+                log.warning(err)
+
+        self.hub_session_info = dict(boto3_session=session)
+        if self.hub_role_arn and self.hub_role_arn != get_current_role_arn(
+            session.client("sts")
+        ):
+            session = await create_assume_role_session(
+                session,
+                self.hub_role_arn,
                 region_name,
                 external_id=self.external_id,
+                session_name=os.environ.get("IAMBIC_SESSION_NAME", None),
             )
-            if boto3_session:
-                self.boto3_session_map[region_name] = boto3_session
-                return boto3_session
+            if session:
+                self.hub_session_info = dict(boto3_session=session)
+                return session
 
-        return await super(AWSAccount, self).get_boto3_session(region_name)
+        return session
 
     async def set_identity_center_details(
         self, set_identity_center_map: bool = True
     ) -> None:
         if self.identity_center_details:
-            region = self.identity_center_details.region
+            region = self.identity_center_details.region_name
             identity_center_client = await self.get_boto3_client(
                 "sso-admin", region_name=region
             )
@@ -338,13 +390,53 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
                         group["GroupId"]: group for group in user_or_group["Groups"]
                     }
 
+    def dict(
+        self,
+        *,
+        include: Optional[
+            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
+        ] = None,
+        exclude: Optional[
+            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
+        ] = None,
+        by_alias: bool = False,
+        skip_defaults: Optional[bool] = None,
+        exclude_unset: bool = True,
+        exclude_defaults: bool = False,
+        exclude_none: bool = True,
+    ) -> "DictStrAny":  # noqa
+        required_exclude = {
+            "boto3_session_map",
+            "hub_session_info",
+            "identity_center_details",
+        }
+        if exclude:
+            exclude.update(required_exclude)
+        else:
+            exclude = required_exclude
+
+        resp = super(AWSAccount, self).dict(
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            skip_defaults=skip_defaults,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+        )
+        return sort_dict(
+            resp,
+            [
+                "account_id",
+                "account_name",
+                "org_id",
+                "identity_center_account",
+                "default_rule",
+            ],
+        )
+
     def __str__(self):
         return f"{self.account_name} - ({self.account_id})"
-
-    def __init__(self, **kwargs):
-        super(AWSAccount, self).__init__(**kwargs)
-        if not isinstance(self.default_region, str):
-            self.default_region = self.default_region.value
 
 
 class BaseAWSOrgRule(BaseModel):
@@ -355,11 +447,6 @@ class BaseAWSOrgRule(BaseModel):
     iambic_managed: Optional[IambicManaged] = Field(
         IambicManaged.UNDEFINED,
         description="Controls the directionality of iambic changes",
-    )
-    assume_role_name: Optional[Union[str, list[str]]] = Field(
-        default=["OrganizationAccountAccessRole", "AWSControlTowerExecution"],
-        description="The role name(s) to use when assuming into an included account. "
-        "If not provided, this iambic will use the default AWS organization role(s).",
     )
 
 
@@ -381,10 +468,14 @@ class AWSOrgAccountRule(BaseAWSOrgRule):
 
 
 class AWSIdentityCenterAccount(PydanticBaseModel):
-    account_id: constr(min_length=12, max_length=12) = Field(
-        None, description="The AWS Account ID"
+    region: Optional[RegionName] = Field(
+        RegionName.us_east_1,
+        description="Region identity center is configured on",
     )
-    region: str
+
+    @property
+    def region_name(self):
+        return self.region if isinstance(self.region, str) else self.region.value
 
 
 class AWSOrganization(BaseAWSAccountAndOrgModel):
@@ -392,7 +483,9 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         None,
         description="A unique identifier designating the identity of the organization",
     )
-    org_name: Optional[str] = None
+    org_account_id: constr(min_length=12, max_length=12) = Field(
+        description="The AWS Organization's master account ID"
+    )
     identity_center_account: Optional[AWSIdentityCenterAccount] = Field(
         default=None,
         description="The AWS Account ID and region of the AWS Identity Center instance to use for this organization",
@@ -404,6 +497,9 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
     account_rules: Optional[List[AWSOrgAccountRule]] = Field(
         [],
         description="A list of rules used to determine how organization accounts are handled",
+    )
+    hub_role_arn: str = Field(
+        description="The role arn to assume into when making calls to the account",
     )
 
     async def _create_org_account_instance(
@@ -425,8 +521,8 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         if not account_rule.enabled:
             return
 
-        region_name = str(self.default_region)
-        if getattr(self.identity_center_account, "account_id", None) == account_id:
+        region_name = self.region_name
+        if self.identity_center_account and self.org_account_id == account_id:
             identity_center_details = IdentityCenterDetails(
                 region=self.identity_center_account.region
             )
@@ -440,35 +536,20 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
             variables=account["variables"],
             identity_center_details=identity_center_details,
             iambic_managed=account_rule.iambic_managed,
+            spoke_role_arn=get_spoke_role_arn(account_id),
+            hub_session_info=dict(boto3_session=session),
+            default_region=region_name,
+            boto3_session_map={},
         )
-        aws_account.boto3_session_map = {}
-        assume_role_names = account_rule.assume_role_name
-        if not isinstance(assume_role_names, list):
-            assume_role_names = [assume_role_names]
-
-        # Determine the assume_role_arn by attempting to assume into the provided assume_role_names.
-        for assume_role_name in assume_role_names:
-            assume_role_arn = f"arn:aws:iam::{account_id}:role/{assume_role_name}"
-            boto3_session = await create_assume_role_session(
-                session,
-                assume_role_arn,
-                region_name,
-                external_id=self.external_id,
+        try:
+            await aws_account.get_boto3_session()
+            return aws_account
+        except Exception as err:
+            log.debug(
+                "Failed to assume role",
+                assume_role_arn=aws_account.spoke_role_arn,
+                error=err,
             )
-            if boto3_session:
-                try:
-                    await aio_wrapper(boto3_session.get_credentials)
-                    aws_account.boto3_session_map[region_name] = boto3_session
-                    aws_account.org_session_info = dict(boto3_session=boto3_session)
-                    aws_account.assume_role_arn = assume_role_arn
-                    return aws_account
-                except Exception as err:
-                    log.debug(
-                        "Failed to assume role",
-                        assume_role_arn=assume_role_arn,
-                        error=err,
-                    )
-                    continue
 
     async def get_accounts(self) -> list[AWSAccount]:
         """Get all accounts in an AWS Organization
@@ -504,15 +585,46 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
 
         if self.identity_center_account:
             for elem, account in enumerate(response):
-                if account.account_id == self.identity_center_account.account_id:
+                if account.account_id == self.org_account_id:
                     response[elem].identity_center_details.org_account_map = {
                         account["Id"]: account["Name"] for account in active_accounts
                     }
 
         return response
 
+    def dict(
+        self,
+        *,
+        include: Optional[
+            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
+        ] = None,
+        exclude: Optional[
+            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
+        ] = None,
+        by_alias: bool = False,
+        skip_defaults: Optional[bool] = None,
+        exclude_unset: bool = True,
+        exclude_defaults: bool = False,
+        exclude_none: bool = True,
+    ) -> "DictStrAny":  # noqa
+        if exclude:
+            exclude.add("boto3_session_map")
+        else:
+            exclude = {"boto3_session_map"}
+
+        resp = super(AWSOrganization, self).dict(
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            skip_defaults=skip_defaults,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+        )
+        return sort_dict(resp, ["org_id"])
+
     def __str__(self):
-        return f"{self.org_name} - ({self.org_id})"
+        return self.org_id
 
 
 class AWSTemplate(BaseTemplate, ExpiryModel):

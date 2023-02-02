@@ -34,13 +34,13 @@ def get_origin_head(repo: Repo) -> bool:
         )
 
 
-async def clone_git_repos(config, repo_base_path: str) -> dict[str, Repo]:
+async def clone_git_repos(config, repo_dir: str) -> dict[str, Repo]:
     # TODO: Formalize the model for secrets
     repos = {}
     for repository in config.secrets.get("git", {}).get("repositories", []):
         repo_name = repository["name"]
         git_uri = repository["uri"]
-        repo_path = os.path.join(repo_base_path, repo_name)
+        repo_path = os.path.join(repo_dir, repo_name)
         try:
             repo = Repo.clone_from(git_uri, repo_path)
             repos[repo_name] = repo

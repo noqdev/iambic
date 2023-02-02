@@ -131,13 +131,13 @@ async def apply_role_tags(
     tags_to_apply = [
         tag
         for tag in template_tags
-        if tag.get("Value") != existing_tag_map.get(tag["Key"])
+        if tag.get("Value", "") != existing_tag_map.get(tag["Key"], "")
     ]
     tasks = []
     response = []
 
     if tags_to_remove := [
-        tag["Key"] for tag in existing_tags if not template_tag_map.get(tag["Key"])
+        tag["Key"] for tag in existing_tags if tag["Key"] not in template_tag_map.keys()
     ]:
         log_str = "Stale tags discovered."
         response.append(
