@@ -2,24 +2,34 @@
 title: Okta
 ---
 
-## 1. Configure Okta
+Configure Okta
 
-In this tutorial, you will configure IAMbic for an Okta Organization. By the end of this tutorial,
-you will have performed the following steps:
+In this tutorial, you will configure IAMbic to manage an Okta Organization, and then practice using IAMbic to to create, manipulate <!-- #TODO and expire? --> a test group. These are the steps you will complete. 
 
+<!-- #TODO we can make the wordning nearly identical with the google setup page, if appropriate -->
+#### Setup
 1. Create a basic Okta configuration for Iambic
-2. Import existing Okta Groups
-3. Create an Okta Group
-4. Create
+2. Import existing Okta Groups into your IAMbic templates repository
 
+#### Practice
+3. Create an Okta Group with one or more users
+4. Add a user to the group
+5. Provide temporary ("break-glass") access to a Google Group <!-- #TODO Okta group? -->
+6. <!-- #TODO do we want to expire the group also? And is the above actually a breakglass situation? -->
+
+<!-- #TODO As with the google page, these headings should link to, and match, headings below -->
 
 ## Prerequisities
 
-You will need administrative access to an existing Okta organization. If you do not have one, you can
-create a developer organization at [developer.okta.com](https://developer.okta.com/).
+Before you begin, you will need the following:
 
-* Set the following environment variables in the terminal you will be using to run Iambic commands.
+* A local Git repository to store your IAMbic templates (See [Getting Started](/getting_started/index.html) for guidance on setting this up)
+* Administrative access to an existing Okta organization. If you do not have one, you can
+create a developer organization at [developer.okta.com](https://developer.okta.com/).
+* The following environment variables set in the terminal you will be using to run Iambic commands.
   These are only needed for the duration of this tutorial. They are not required for the normal usage of Iambic:
+<!-- we probably want copy icons here  -->
+
 
 ```bash
 export EMAIL=<your_okta_email_address>
@@ -28,17 +38,19 @@ export OKTA_ORG_NAME=<your_okta_org_name> # ex: development. This is a friendly 
 export OKTA_API_TOKEN=<your_okta_api_token> # An administrative API token for your Okta organization, follow the instructions in the following steps to create one.
 ```
 
-## 1.1 Create a basic Okta configuration for Iambic
+## Setup
 
-First, you'll need to create an API token that allows Okta to manage group memberships by
-signing in to Okta and following these steps:
+###  1. Configure iambic for Okta management
 
+In this section, you will create an API token that allows iambic to manage group memberships by
+signing in to Okta.
+
+From within Okta
 1. Click on Security
 2. Click on API
 3. Click on Tokens
 4. Click on "Create Token"
-5. Create a token for Iambic. This token will be used to authenticate
-   Iambic with Okta.
+5. Create a token for Iambic. This token will be used to authenticate Iambic with Okta.
 6. Copy the value of the token.
 
 
@@ -54,8 +66,7 @@ in your `iambic-templates` Git repo if it doesn't already exist:
 
 :::danger
 
-Never commit secrets Git. Ensure that you have a  `.gitignore` file in the root directory of your `iambic-templates` repository that
-is configured to ignore secrets.yaml files with `**/secrets.yaml`. Learn more about `.gitignore` files [here](https://git-scm.com/docs/gitignore).
+Never commit secrets Git. Ensure that you have a  `.gitignore` file in the root directory of your `iambic-templates` repository that is configured to ignore secrets.yaml files with `**/secrets.yaml`. [Learn more](https://git-scm.com/docs/gitignore) about `.gitignore` files.
 
 :::
 
@@ -69,7 +80,7 @@ secrets:
       api_token: $OKTA_API_TOKEN
 EOF
 ```
-
+<!-- #TODO when do we incorporate the value of the token? This looks like environment varables, not the token itself. -->
 
 From the base directory of your IAMbic templates repository, your directory structure should resemble the following. You may
 have more files if you've recently imported your cloud resources.
@@ -82,13 +93,11 @@ tree .
 │   └── secrets.yaml
 ```
 
-## Import existing Okta Groups
+### 2. Import existing Okta Groups
 
 
-In this section, you will manually import existing Okta Groups into your IAMbic templates repository.
-In a production environment, automation provided by Iambic would ensure that Git is updated with the
-cloud resources in your production environment. This allows you to monitor the history of
-these groups via Git History.
+In this section, you will manually import existing Okta Groups into your IAMbic templates repository. In a production environment, automation provided by Iambic would ensure that Git is updated with the
+cloud resources in your production environment. This allows you to monitor the history of these groups via Git History.
 
 Run the following command in the root of your `iambic-templates` repository to import your existing Okta Groups:
 
@@ -96,16 +105,16 @@ Run the following command in the root of your `iambic-templates` repository to i
 iambic import
 ```
 
-If you have Okta Groups defined, your iambic-templates repository should have a `okta/groups` directory with a
-subdirectory for each Okta organization you have defined.
+If you have Okta Groups defined, your iambic-templates repository should have a `okta/groups` directory with a subdirectory for each Okta organization you have defined.
 
-## Create an Okta Group
+That's it, you've completed the setup configuration connecting your Okta Groups to IAMBic. Now you will practice using IAMbic to execute basic group management skills.
 
-Iambic uses a YAML file to describe the desired state of a Google Group. In this section, we will create a group called
-`iambic-test-group` in your domain. Ensure that the environment variables you've set previously are still configured,
-and also ensure that your credentials are working properly by running the import process from the previous section.
+## Practice
+### 3. Create an Okta Group
 
-Run the following set of commands from the root of your `iambic-templates` repository to create a new Google Group template:
+Iambic uses a YAML file to describe the desired state of an Okta Group. In this section, we will create a group called `iambic-test-group` in your domain. Ensure that the environment variables you've set previously are still configured, and also ensure that your credentials are working properly by running the import process from the previous section.
+
+Run the following set of commands from the root of your `iambic-templates` repository to create a new Okta Group template:
 
 ```bash
 mkdir -p okta/groups/$OKTA_ORG_NAME
@@ -120,6 +129,9 @@ properties:
 EOF
 ```
 
+<!-- #TODO Inspect the file to confirm? Do we want the same subgroup tip as in the google tutorial? -->
+
+
 Apply the template to your Okta Organization by running the following command:
 
 :::info
@@ -132,14 +144,13 @@ In a production environment, this would be handled by a command issued on a Gith
 iambic apply -t okta/groups/$OKTA_ORG_NAME/iambic-test-group.yaml
 ```
 
-Confirm that the group has been created by running the following in your terminal, and visiting the URL in your browser:
+Confirm that the group has been created by running the following command and visiting the URL in your browser:
 
 ```bash
 echo https://$OKTA_DOMAIN/admin/groups
 ```
 
-By now the directory of your `iambic-templates` repository should resemble the following,
-and may include other resources that you've imported:
+By now the directory of your `iambic-templates` repository should resemble the following, and may include other resources that you've imported:
 
 ```bash
 $ tree .
@@ -153,15 +164,16 @@ $ tree .
 │           ├── iambic-test-group.yaml
 ```
 
-## Add a user to the group
+### 4. Add a user to the group
 
-In this section, we will add your user to the group we created in the previous section.
+In this section, we will add a user (`testuser@example.com`) to the group we created in the previous section.
+`example.com` is a reserved domain for tests and example use cases, and `testuser@example.com` is not a real user.
 
 Run the following command to replace the previous group you created with a new one that includes the new user:
 
 ```bash
-cat <<EOF > google/groups/$DOMAIN/iambic-test-group.yaml
-template_type: NOQ::Google::Group
+cat <<EOF > okta/groups/$OKTA_ORG_NAME/iambic-test-group.yaml
+template_type: NOQ::Okta::Group
 properties:
   name: iambic-test-group
   description: ''
@@ -170,9 +182,10 @@ properties:
   members:
     - email: $EMAIL
       role: OWNER
-    - email: fakeuser@example.com
+    - email: testuser@example.com
 EOF
 ```
+<!-- #TODO I assume one of these code blocks is extra. -->
 
 ```bash
 cat <<EOF > okta/groups/$OKTA_ORG_NAME/iambic-test-group.yaml
@@ -186,19 +199,17 @@ properties:
 EOF
 ```
 
-Run the `apply` command again to update the group:
+Run the `apply` command to have IAMbic update the group:
 
 ```bash
-iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply -t okta/groups/$DOMAIN/iambic-test-group.yaml
 ```
+<!-- #TODO Not sure if this wants to be $OKTA_DOMAIN ro $OKTA_ORG_NAME See above for assorted usage of both in different places.-->
 
-## Provide temporary ("break-glass") access to a Google Group
+### 5. Provide temporary ("break-glass") access to an Okta Group
 
-In this section, we will update the group membership added in the previous section
-to configure the access to expire in two minutes, simulating a very short breakglass request.
-In order to facilitate this request,
-we will add an expiration date to the user's membership in the group. Run the following command to replace the previous group you
-created with a new one that includes the additional user and an expiration date:
+In this section, we will update the group added in the previous section to configure the access to expire in two minutes, simulating a very short breakglass request. In order to strive for least privilege while accomodating this request, we will add an expiration date to the user's membership in the group. Run the following command to replace the previous group you created with a new one that includes the additional user and an expiration date, and then apply that change:
+<!-- #TODO Do we want to make this about a specific user, or the entire group?  -->
 
 :::tip
 
@@ -224,8 +235,7 @@ EOF
 iambic apply -t okta/groups/$OKTA_ORG_NAME/iambic-test-group.yaml
 ```
 
-After applying the change, notice that the `expires_at` date in the template was converted from a relative expiration time ("in two minutes")
-to an absolute date (Example: "2021-05-20T15:00:00-04:00"). This allows Iambic to know exactly when the request should be expired.
+After applying the change, notice that the `expires_at` date in the template was converted from a relative expiration time ("in two minutes") to an absolute date (Example: "2021-05-20T15:00:00-04:00"). This allows Iambic to know exactly when the request should be expired.
 
 Confirm that the user was added by visiting the following URL in your browser:
 
@@ -233,9 +243,16 @@ Confirm that the user was added by visiting the following URL in your browser:
 echo https://$OKTA_DOMAIN/admin/groups
 ```
 
-After a couple of minutes, the request should expire. In a production deployment, this process would be automatic. But for the purposes
-of testing, you can manually expire the request by re-running the apply command:
+After a couple of minutes, the request should expire. In a production deployment, this process would be automatic. But for the purposes of testing, you can manually expire the request by re-running the apply command after two minutes have passed:
 
 ```bash
 iambic apply -t okta/groups/$OKTA_ORG_NAME/iambic-test-group.yaml
 ```
+
+
+### Expire? Maybe? #TODO 
+
+<!-- #TODO Do something here to confrim it's expired properly -->
+
+## Conclusion 
+That's it! You've now connected Okta to IAMbic, and are able to create and edit your groups, and expire users and groups. <!-- #TODO or whichever subset of users and groups we actaully are demonstrating. -->
