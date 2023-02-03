@@ -197,7 +197,10 @@ def get_account_value(matching_values: list, account_id: str, account_name: str 
 
 def is_regex_match(regex, test_string):
     if "*" in regex:
-        return re.match(regex.lower(), test_string)
+        try:
+            return re.match(regex.lower(), test_string)
+        except re.error:
+            return regex.lower() == test_string.lower()
     else:
         # it is not an actual regex string, just string comparison
         return regex.lower() == test_string.lower()

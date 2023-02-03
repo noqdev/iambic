@@ -465,6 +465,9 @@ class Variable(PydanticBaseModel):
     key: str
     value: str
 
+    def __getitem__(self, item):
+        return getattr(self, item)
+
 
 class ExpiryModel(IambicPydanticBaseModel):
     expires_at: Optional[Union[str, datetime.datetime, datetime.date]] = Field(
