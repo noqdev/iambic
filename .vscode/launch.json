@@ -120,14 +120,12 @@
             "module": "iambic.main",
             "console": "integratedTerminal",
             "env": {
-                "AWS_PROFILE": "staging/IambicHubRole"
+                "AWS_PROFILE": "staging/staging_admin"
             },
             "args": [
                 "apply",
                 "-d",
                 "../noq-templates/",
-                "--config",
-                "demo/config.yaml"
             ],
             "justMyCode": true
         },
