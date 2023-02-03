@@ -27,6 +27,9 @@ github_config = ExtendsConfig(
 )
 
 
+TEMPLATE_REPO_NAME = "noqdev/iambic-templates-itest"
+
+
 GITHUB_CICID_TEMPLATE_TARGET_PATH = (
     "resources/aws/roles/iambic_test_spoke_account_1/iambic_itest_github_cicd.yaml"
 )
@@ -64,6 +67,38 @@ properties:
           service: ec2.amazonaws.com
     version: '2012-10-17'
   description: itest github for expiring
+  role_name: iambic_expiring_itest_for_github_cicd
+"""
+
+expiring_iambic_role_inner_properties_yaml = """template_type: NOQ::AWS::IAM::Role
+identifier: iambic_expiring_itest_for_github_cicd
+included_accounts:
+  - iambic_test_spoke_account_1
+properties:
+  assume_role_policy_document:
+    statement:
+      - action: sts:AssumeRole
+        effect: Deny
+        principal:
+          service: ec2.amazonaws.com
+      - action: s3:AssumeRole
+        expires_at: {relative_time}
+        effect: Deny
+        principal:
+          service: athena.amazonaws.com
+    version: '2012-10-17'
+  description: itest github for expiring
+  inline_policies:
+    - policy_name: spoke-acct-policy
+      statement:
+      - expires_at: {relative_time}
+        action:
+          - s3:ListBucket
+        effect: Deny
+        resource: "*"
+  managed_policies:
+    - policy_arn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+      expires_at: {relative_time}
   role_name: iambic_expiring_itest_for_github_cicd
 """
 
@@ -125,21 +160,9 @@ def get_aws_key_dict(config: Config) -> str:
     return github_secret["secrets"]["aws-iambic-github-cicid-itest"]
 
 
-# Opens a PR on noqdev/iambic-templates-test. The workflow on the repo will
-# pull container with "test label". It will then approve the PR and trigger
-# the "iambic git-apply" command on the PR. If the flow is successful, the PR
-# will be merged and we will check the workflow to be completed state.
-def test_github_cicd(filesystem, generate_templates_fixture, build_push_container):
-
-    temp_config_filename, temp_templates_directory, config = filesystem
-
-    github_token = get_github_token(config)
-
-    github_repo_name = "noqdev/iambic-templates-itest"
-    repo_url = f"https://oauth2:{github_token}@github.com/{github_repo_name}.git"
+def prepare_template_repo(github_token: str, temp_templates_directory: str):
+    repo_url = f"https://oauth2:{github_token}@github.com/{TEMPLATE_REPO_NAME}.git"
     repo = clone_git_repo(repo_url, temp_templates_directory, None)
-    head_sha = repo.head.commit.hexsha
-    print(repo)
 
     repo_config_writer = repo.config_writer()
     repo_config_writer.set_value(
@@ -149,6 +172,20 @@ def test_github_cicd(filesystem, generate_templates_fixture, build_push_containe
         "user", "email", "github-cicd-functional-test@iambic.org"
     )
     repo_config_writer.release()
+    return repo
+
+
+# Opens a PR on noqdev/iambic-templates-test. The workflow on the repo will
+# pull container with "test label". It will then approve the PR and trigger
+# the "iambic git-apply" command on the PR. If the flow is successful, the PR
+# will be merged and we will check the workflow to be completed state.
+def test_github_cicd(filesystem, generate_templates_fixture, build_push_container):
+
+    temp_config_filename, temp_templates_directory, config = filesystem
+
+    github_token = get_github_token(config)
+    repo = prepare_template_repo(github_token, temp_templates_directory)
+    head_sha = repo.head.commit.hexsha
 
     utc_obj = datetime.datetime.utcnow()
     date_isoformat = utc_obj.isoformat()
@@ -176,7 +213,7 @@ def test_github_cicd(filesystem, generate_templates_fixture, build_push_containe
         print("git push")
 
     github_client = Github(github_token)
-    github_repo = github_client.get_repo(github_repo_name)
+    github_repo = github_client.get_repo(TEMPLATE_REPO_NAME)
     pull_request_body = "itest"
     pr = github_repo.create_pull(
         title="itest", body=pull_request_body, head=new_branch, base="main"
@@ -274,9 +311,8 @@ def test_github_import(filesystem, generate_templates_fixture, build_push_contai
     temp_config_filename, temp_templates_directory, config = filesystem
 
     github_token = get_github_token(config)
-    github_repo_name = "noqdev/iambic-templates-itest"
     github_client = Github(github_token)
-    github_repo = github_client.get_repo(github_repo_name)
+    github_repo = github_client.get_repo(TEMPLATE_REPO_NAME)
     workflow = github_repo.get_workflow("iambic-import.yml")
     workflow.create_dispatch(github_repo.default_branch)
 
@@ -341,9 +377,8 @@ def test_github_detect(filesystem, generate_templates_fixture, build_push_contai
     # or detect is not doing what we expect.
     time.sleep(10)
 
-    github_repo_name = "noqdev/iambic-templates-itest"
     github_client = Github(github_token)
-    github_repo = github_client.get_repo(github_repo_name)
+    github_repo = github_client.get_repo(TEMPLATE_REPO_NAME)
     workflow = github_repo.get_workflow("iambic-detect.yml")
     workflow.create_dispatch(github_repo.default_branch)
 
@@ -365,8 +400,7 @@ def test_github_detect(filesystem, generate_templates_fixture, build_push_contai
 
     assert is_workflow_run_successful
 
-    github_repo_name = "noqdev/iambic-templates-itest"
-    repo_url = f"https://oauth2:{github_token}@github.com/{github_repo_name}.git"
+    repo_url = f"https://oauth2:{github_token}@github.com/{TEMPLATE_REPO_NAME}.git"
     repo = clone_git_repo(repo_url, temp_templates_directory, None)
 
     new_branch = f"itest/github_cicd_run_{new_description}"
@@ -384,23 +418,57 @@ def test_github_detect(filesystem, generate_templates_fixture, build_push_contai
     assert role_template.properties.description == new_description
 
 
-def test_github_expire(filesystem, generate_templates_fixture, build_push_container):
+def verify_func_before_action_delete_role(role_template: RoleTemplate):
+    assert not role_template.deleted
+
+
+def verify_func_after_action_delete_role(role_template: RoleTemplate):
+    assert role_template.deleted
+
+
+def verify_func_before_action_inner_properties(role_template: RoleTemplate):
+    assert len(role_template.properties.assume_role_policy_document.statement) == 2
+    assert len(role_template.properties.inline_policies[0].statement) == 1
+    assert len(role_template.properties.managed_policies) == 1
+
+
+def verify_func_after_action_inner_properties(role_template: RoleTemplate):
+    assert len(role_template.properties.assume_role_policy_document.statement) == 1
+    assert len(role_template.properties.inline_policies[0].statement) == 0
+    assert len(role_template.properties.managed_policies) == 0
+
+
+# The expire workflow tests have to be separated into two main test cases.
+# 1. The resource is expired. None of the inner properties will be examined as resource level deletion short circuit the rest
+# 2. Inner properties are expired.
+@pytest.mark.parametrize(
+    "test_template, verify_func_before_action, verify_func_after_action",
+    [
+        (
+            expiring_iambic_role_yaml,
+            verify_func_before_action_delete_role,
+            verify_func_after_action_delete_role,
+        ),
+        (
+            expiring_iambic_role_inner_properties_yaml,
+            verify_func_before_action_inner_properties,
+            verify_func_after_action_inner_properties,
+        ),
+    ],
+)
+def test_github_expire_base(
+    filesystem,
+    generate_templates_fixture,
+    build_push_container,
+    test_template,
+    verify_func_before_action,
+    verify_func_after_action,
+):
 
     temp_config_filename, temp_templates_directory, config = filesystem
 
     github_token = get_github_token(config)
-    github_repo_name = "noqdev/iambic-templates-itest"
-    repo_url = f"https://oauth2:{github_token}@github.com/{github_repo_name}.git"
-    repo = clone_git_repo(repo_url, temp_templates_directory, None)
-
-    repo_config_writer = repo.config_writer()
-    repo_config_writer.set_value(
-        "user", "name", "Iambic Github Functional Test for Github"
-    )
-    repo_config_writer.set_value(
-        "user", "email", "github-cicd-functional-test@iambic.org"
-    )
-    repo_config_writer.release()
+    repo = prepare_template_repo(github_token, temp_templates_directory)
 
     utc_obj = datetime.datetime.utcnow()
     date_isoformat = utc_obj.isoformat()
@@ -417,9 +485,7 @@ def test_github_expire(filesystem, generate_templates_fixture, build_push_contai
         utc_obj = datetime.datetime.utcnow()
         date_isoformat = utc_obj.isoformat()
         date_string = date_isoformat.replace(":", "_")
-        temp_role_file.write(
-            expiring_iambic_role_yaml.format(relative_time="yesterday")
-        )
+        temp_role_file.write(test_template.format(relative_time="yesterday"))
 
     if repo.index.diff(None) or repo.untracked_files:
         repo.git.add(A=True)
@@ -427,9 +493,12 @@ def test_github_expire(filesystem, generate_templates_fixture, build_push_contai
         repo.remotes.origin.push(refspec="HEAD:main")
         print("git push to origin/main")
 
-    github_repo_name = "noqdev/iambic-templates-itest"
+    # testing specific expire section
+    role_template = RoleTemplate.load(file_path=test_role_path)
+    verify_func_before_action(role_template)
+
     github_client = Github(github_token)
-    github_repo = github_client.get_repo(github_repo_name)
+    github_repo = github_client.get_repo(TEMPLATE_REPO_NAME)
     workflow = github_repo.get_workflow("iambic-expire.yml")
     workflow.create_dispatch(github_repo.default_branch)
 
@@ -458,7 +527,6 @@ def test_github_expire(filesystem, generate_templates_fixture, build_push_contai
     current.checkout()
     repo.git.pull("origin", "main")
 
+    # testing specific verification
     role_template = RoleTemplate.load(file_path=test_role_path)
-
-    # this is prone to race condition since we are using the same resource for test
-    assert role_template.deleted
+    verify_func_after_action(role_template)
