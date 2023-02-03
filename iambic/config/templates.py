@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from iambic.aws.iam.group.models import GroupTemplate as AWSGroupTemplate
 from iambic.aws.iam.policy.models import ManagedPolicyTemplate
 from iambic.aws.iam.role.models import RoleTemplate
 from iambic.aws.iam.user.models import UserTemplate
 from iambic.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetTemplate,
 )
-from iambic.aws.iam.group.models import GroupTemplate as AWSGroupTemplate
 from iambic.google.group.models import GroupTemplate as GoogleGroupTemplate
 from iambic.okta.app.models import OktaAppTemplate
 from iambic.okta.group.models import OktaGroupTemplate
