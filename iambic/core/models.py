@@ -273,9 +273,46 @@ def merge_model_list(existing_list: list[BaseModel], new_list: list[BaseModel]) 
 
 
 def merge_model(existing_model: BaseModel, new_model: BaseModel) -> BaseModel:
+    from iambic.aws.models import AccessModel
+
     merged_model = existing_model.copy()
     iambic_fields = existing_model.metadata_iambic_fields
     field_names = new_model.__fields__.keys()
+
+    if isinstance(merged_model, AccessModel):
+        """
+        if the field inherits from AccessModel:
+        for each included account in the new value:
+            Check if the account would be excluded by the existing value
+                Either implicitly or explicitly
+                    For this to work would require weighting on excluded/included account str
+            If it would be excluded, add it to included_accounts
+
+
+        for every known account that is not in included_accounts:
+            Check if the account would be included by the existing value
+            If it would be included, add it to excluded_accounts
+
+
+        If the field is a list of objects that inherit from AccessModel:
+        Attempt to resolve the matching model between the 2 lists
+            If found, refer to "if the field inherits from AccessModel"
+            If not found in the existing value, add the new model to the list
+            If not found in the new value, remove the existing model from the list
+
+
+        If the new value is a list while the existing value is not:
+            Preserve the rule if the existing value can match one of the elements in the new value
+
+
+        If the existing value is a list while the new value is not:
+            Will not attempt to preserve the rule
+            Too much confusion on how to merge 2 different access models
+
+
+        """
+        ...
+
     for key in field_names:
         new_value = getattr(new_model, key)
         existing_value = getattr(existing_model, key)

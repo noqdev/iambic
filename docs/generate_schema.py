@@ -4,9 +4,9 @@ import os
 
 import jsonschema2md2
 
+from iambic.aws.iam.group.models import GroupTemplate as AWSGroupTemplate
 from iambic.aws.iam.policy.models import ManagedPolicyTemplate
 from iambic.aws.iam.role.models import RoleTemplate
-from iambic.aws.iam.group.models import GroupTemplate as AWSGroupTemplate
 from iambic.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetTemplate,
 )
