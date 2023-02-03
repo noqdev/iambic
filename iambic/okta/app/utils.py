@@ -4,6 +4,7 @@ import asyncio
 from typing import TYPE_CHECKING, List
 
 import okta.models as models
+import tenacity
 
 from iambic.config.models import OktaOrganization
 from iambic.core.context import ExecutionContext
@@ -40,12 +41,16 @@ async def list_app_user_assignments(
     }
 
 
+@tenacity.retry(
+    wait=tenacity.wait_exponential(multiplier=1, min=4, max=10),
+    stop=tenacity.stop_after_attempt(10),
+)
 async def get_app(okta_organization: OktaOrganization, app_id: str) -> App:
     client = await okta_organization.get_okta_client()
     app_raw, _, err = await client.get_application(app_id)
     if err:
         log.error("Error encountered when getting app", error=str(err))
-        raise Exception("Error encountered when getting app")
+        raise Exception(f"Error encountered when getting app: {str(err)}")
 
     app = App(
         id=app_raw.id,
