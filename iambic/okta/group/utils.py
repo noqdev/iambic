@@ -39,13 +39,16 @@ async def list_all_users(okta_organization: OktaOrganization) -> List[User]:
     for user in users:
         users_to_return.append(
             User(
+                user_id=user.id,
                 idp_name=okta_organization.idp_name,
                 username=user.profile.login,
                 status=user.status.value.lower(),
                 extra=dict(
-                    okta_user_id=user.id,
                     created=user.created,
                 ),
+                profile={
+                    k: v for (k, v) in user.profile.__dict__.items() if v is not None
+                },
             )
         )
     return users_to_return

@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from enum import Enum
 from itertools import chain
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import Field
 
@@ -15,6 +15,7 @@ from iambic.core.models import (
     AccountChangeDetails,
     BaseModel,
     BaseTemplate,
+    ExpiryModel,
     ProposedChange,
     ProposedChangeType,
     TemplateChangeDetails,
@@ -24,6 +25,7 @@ from iambic.okta.user.utils import (
     create_user,
     get_user,
     maybe_delete_user,
+    update_user_profile,
     update_user_status,
 )
 
@@ -35,6 +37,7 @@ class UserStatus(Enum):
     provisioned = "provisioned"
     deprovisioned = "deprovisioned"
     recovery = "recovery"
+    suspended = "suspended"
 
 
 class Assignment(BaseModel):
@@ -49,21 +52,9 @@ class OktaUserTemplateProperties(BaseModel):
         description="Name of the identity provider that's associated with the user",
     )
     user_id: str = Field("", description="Unique User ID for the user")
-    first_name: str = Field(..., description="First name of the user")
-    last_name: str = Field(..., description="Last name of the user")
-    email: str = Field(..., description="Email of the user")
     status: UserStatus = Field(UserStatus.active, description="Status of the user")
-    address: Optional[str] = Field(None, description="Address of the user")
-    phone_number: Optional[str] = Field(None, description="Phone number of the user")
-    job_title: Optional[str] = Field(None, description="Job title of the user")
-    assignments: Optional[List[Assignment]] = Field(
-        None, description="Assignments assigned to the user"
-    )
-    devices: Optional[List[str]] = Field(
-        None, description="Devices associated with the user"
-    )
-    profile: Dict[str, Any]
-    extra: Optional[Dict[str, Any]] = Field(
+    profile: dict[str, Any]
+    extra: Optional[dict[str, Any]] = Field(
         None, description=("Extra attributes to store for the user")
     )
 
@@ -76,7 +67,7 @@ class OktaUserTemplateProperties(BaseModel):
         return self.user_id
 
 
-class OktaUserTemplate(BaseTemplate):
+class OktaUserTemplate(BaseTemplate, ExpiryModel):
     template_type: str = "NOQ::Okta::User"
     properties: OktaUserTemplateProperties
 
@@ -142,9 +133,6 @@ class OktaUserTemplate(BaseTemplate):
     ):
         return {
             "username": self.properties.username,
-            "email": self.properties.email,
-            "first_name": self.properties.first_name,
-            "last_name": self.properties.last_name,
             "status": self.properties.status,
             "profile": self.properties.profile,
         }
@@ -167,7 +155,7 @@ class OktaUserTemplate(BaseTemplate):
         )
 
         current_user: Optional[User] = await get_user(
-            self.properties.username, okta_organization
+            self.properties.username, self.properties.user_id, okta_organization
         )
         if current_user:
             change_details.current_value = current_user
@@ -195,9 +183,7 @@ class OktaUserTemplate(BaseTemplate):
             log.info(log_str, **log_params)
 
             current_user: User = await create_user(
-                username=self.properties.username,
-                idp_name=self.properties.idp_name,
-                status=self.properties.status,
+                self,
                 okta_organization=okta_organization,
                 context=context,
             )
@@ -209,6 +195,14 @@ class OktaUserTemplate(BaseTemplate):
                 update_user_status(
                     current_user,
                     self.properties.status.value,
+                    okta_organization,
+                    log_params,
+                    context,
+                ),
+                update_user_profile(
+                    self,
+                    current_user,
+                    self.properties.profile,
                     okta_organization,
                     log_params,
                     context,
@@ -231,4 +225,13 @@ class OktaUserTemplate(BaseTemplate):
                 changes_made=bool(change_details.proposed_changes),
                 **log_params,
             )
-            # TODO: Check if deleted, remove git commit the change to ratify it
+            if self.deleted:
+                self.delete()
+            self.write()
+        else:
+            log.debug(
+                "Successfully finished scanning for drift for resource",
+                requires_changes=bool(change_details.proposed_changes),
+                **log_params,
+            )
+        return change_details
