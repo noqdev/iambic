@@ -5,7 +5,9 @@ import contextlib
 import glob
 import os
 import pathlib
+import random
 import re
+import string
 from datetime import datetime
 from io import StringIO
 from typing import Any, Union
@@ -276,6 +278,26 @@ def create_commented_map(_dict: dict):
         commented_map.insert(index, key, value, comment_key_to_comment.get(key, None))
         index = index + 1
     return commented_map
+
+
+async def generate_random_password(uchars=3, lchars=3, dchars=2, schars=2):
+    str_uchars, str_lchars, str_dchars, str_schars = "", "", "", ""
+
+    for i in range(uchars):
+        str_uchars += random.SystemRandom().choice(string.ascii_uppercase)
+
+    for i in range(lchars):
+        str_uchars += random.SystemRandom().choice(string.ascii_lowercase)
+
+    for i in range(dchars):
+        str_uchars += random.SystemRandom().choice(string.digits)
+
+    for i in range(schars):
+        str_uchars += random.SystemRandom().choice(string.punctuation)
+
+    random_str = str_uchars + str_lchars + str_dchars + str_schars
+    random_str = "".join(random.sample(random_str, len(random_str)))
+    return random_str
 
 
 typ = "rt"

@@ -1,23 +1,22 @@
 from __future__ import annotations
 
-import logging
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 import okta.models as models
-from okta.models import User
 
 from iambic.config.models import OktaOrganization
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
+from iambic.core.utils import generate_random_password
 from iambic.okta.models import User
 
-log = logging.getLogger(__name__)
+if TYPE_CHECKING:
+    from iambic.okta.user.models import OktaUserTemplate
 
 
 async def create_user(
-    username: str,
-    attributes: Dict[str, Any],
+    user_template: OktaUserTemplate,
     okta_organization: OktaOrganization,
     context: ExecutionContext,
 ) -> Optional[User]:
@@ -36,31 +35,27 @@ async def create_user(
     # TODO: Need ProposedChanges, support context.execute = False
     client = await okta_organization.get_okta_client()
 
-    user_profile = models.UserProfile(attributes)
-    user_profile.login = username
+    user_model = {
+        "profile": user_template.properties.profile,
+        "credentials": {"password": {"value": await generate_random_password()}},
+    }
 
     # Create the user
-    user_model = models.User({"profile": user_profile})
     if context.execute:
-        user, resp, err = await client.create_user(user_model)
+        user, _, err = await client.create_user(user_model)
         if err:
-            raise Exception("Error creating user")
-        user = User(
-            idp_name=okta_organization.idp_name,
-            username=username,
-            attributes=attributes,
-            status=user.status,
-            extra=dict(
-                okta_user_id=user.id,
-                created=user.created,
-            ),
+            raise Exception(f"Error creating user: {err}")
+        return await get_user(
+            username=user.profile.login,
+            user_id=user.id,
+            okta_organization=okta_organization,
         )
-        return user
     return None
 
 
 async def get_user(
     username: str,
+    user_id: Optional[str],
     okta_organization: OktaOrganization,
 ) -> Optional[User]:
     """
@@ -75,18 +70,24 @@ async def get_user(
     """
 
     client = await okta_organization.get_okta_client()
-    user, _, err = await client.get_user(username)
+    if user_id:
+        user, _, err = await client.get_user(user_id)
+    else:
+        user, _, err = await client.get_user(username)
     if err:
+        if err.error_code == "E0000007":
+            return None  # No user exists
         raise Exception(f"Error retrieving user: {err}")
+
     return User(
+        user_id=user.id,
         idp_name=okta_organization.idp_name,
         username=user.profile.login,
-        attributes=user.profile,
-        status=user.status,
+        status=user.status.value.lower(),
         extra=dict(
-            okta_user_id=user.id,
             created=user.created,
         ),
+        profile={k: v for (k, v) in user.profile.__dict__.items() if v is not None},
     )
 
 
@@ -127,12 +128,65 @@ async def change_user_status(
 
     if context.execute:
         updated_user, resp, err = await client.update_user(
-            user.extra["okta_user_id"],
+            user.user_id,
             {"status": new_status},
         )
         if err:
             raise Exception("Error updating user status")
         user.status = updated_user.status
+    return response
+
+
+async def update_user_profile(
+    proposed_user: OktaUserTemplate,
+    user: User,
+    new_profile: dict[str, Any],
+    okta_organization: OktaOrganization,
+    log_params: dict[str, Any],
+    context: ExecutionContext,
+) -> List[ProposedChange]:
+    """
+    Update a user's profile in Okta.
+
+    Args:
+        user (User): The user to update the profile of.
+        new_profile (dict): The new profile for the user.
+        okta_organization (OktaOrganization): The Okta organization to update the user in.
+        context (ExecutionContext): The context object containing the execution flag.
+    """
+    client = await okta_organization.get_okta_client()
+    response: list = []
+    current_profile: str = user.profile
+    if current_profile == new_profile:
+        return response
+    response.append(
+        ProposedChange(
+            change_type=ProposedChangeType.UPDATE,
+            resource_id=user.user_id,
+            resource_type=user.resource_type,
+            attribute="profile",
+            change_summary={
+                "current_profile": current_profile,
+                "new_profile": new_profile,
+            },
+        )
+    )
+    if context.execute:
+        updated_user_obj = models.User({"profile": new_profile})
+        _, _, err = await client.update_user(user.user_id, updated_user_obj)
+        if err:
+            log.error(
+                "Error updating user profile",
+                error=err,
+                user=user.username,
+                current_profile=current_profile,
+                new_profile=new_profile,
+                **log_params,
+            )
+            if not proposed_user.deleted:
+                raise Exception("Error updating user profile")
+        log.info("Updated user profile", user=user.username, **log_params)
+
     return response
 
 
@@ -158,7 +212,8 @@ async def update_user_status(
     """
     client = await okta_organization.get_okta_client()
     response: list = []
-    if user.status == new_status:
+    current_status: str = user.status.value
+    if current_status == new_status:
         return response
     response.append(
         ProposedChange(
@@ -167,19 +222,78 @@ async def update_user_status(
             resource_type=user.resource_type,
             attribute="status",
             change_summary={
-                "current_status": user.status,
+                "current_status": current_status,
                 "proposed_status": new_status,
             },
         )
     )
     if context.execute:
-        _, err = await client.update_user_status(user.user_id, new_status)
-        if err:
+        method = "POST"
+        base_endpoint = f"/api/v1/users/{user.user_id}"
+        if current_status == "suspended" and new_status == "active":
+            api_endpoint = f"{base_endpoint}/lifecycle/unsuspend"
+        elif current_status == "active" and new_status == "suspended":
+            api_endpoint = f"{base_endpoint}/lifecycle/suspend"
+        elif new_status == "deprovisioned" and current_status != "deprovisioned":
+            api_endpoint = f"{base_endpoint}/lifecycle/deactivate"
+        elif current_status in ["staged", "deprovisioned"] and new_status in [
+            "active",
+            "provisioned",
+        ]:
+            api_endpoint = f"{base_endpoint}/lifecycle/activate"
+        elif current_status in "provisioned" and new_status == "active":
+            api_endpoint = f"{base_endpoint}/lifecycle/reactivate"
+        elif current_status == "locked_out" and new_status == "active":
+            api_endpoint = f"{base_endpoint}/lifecycle/unlock"
+        elif new_status == "recovery":
+            api_endpoint = f"{base_endpoint}/lifecycle/reset_password"
+        elif new_status == "password_expired":
+            api_endpoint = f"{base_endpoint}/lifecycle/expire_password"
+        elif new_status == "deleted":
+            api_endpoint = f"{base_endpoint}"
+            method = "DELETE"
+        else:
             log.error(
                 "Error updating user status",
                 user=user.username,
-                status=new_status,
+                current_status=current_status,
+                new_status=new_status,
                 **log_params,
+            )
+            raise Exception(
+                f"Error updating user status. Invalid transition from {current_status} to {new_status}"
+            )
+        request, error = await client.get_request_executor().create_request(
+            method=method, url=api_endpoint, body={}, headers={}, oauth=False
+        )
+        if error:
+            log.error(
+                "Error updating user status",
+                error=error,
+                user=user.username,
+                current_status=current_status,
+                new_status=new_status,
+                **log_params,
+            )
+            raise Exception("Error updating user status")
+        okta_response, error = await client.get_request_executor().execute(
+            request, None
+        )
+        if error:
+            log.error(
+                "Error updating user status",
+                error=error,
+                user=user.username,
+                current_status=current_status,
+                new_status=new_status,
+                **log_params,
+            )
+            raise Exception(f"Error updating user profile: {error}")
+        if okta_response:
+            response_body = client.form_response_body(okta_response.get_body())
+            log.info(
+                "Received Response from Okta: ",
+                response_body=response_body,
             )
     return response
 
@@ -222,11 +336,10 @@ async def update_user_attribute(
     user_model = models.User({"profile": user_profile})
     if context.execute:
         client = await okta_organization.get_okta_client()
-        updated_user, resp, err = await client.update_user(
-            user.extra["okta_user_id"], user_model
-        )
+        updated_user, resp, err = await client.update_user(user.user_id, user_model)
         if err:
             raise Exception(f"Error updating user's {attribute_name}")
+        # TODO: Update
         user = User(
             idp_name=okta_organization.idp_name,
             username=updated_user.profile.login,
@@ -275,7 +388,11 @@ async def maybe_delete_user(
         )
     )
     if context.execute:
-        r, err = await client.deactivate_or_delete_user(user.extra["okta_user_id"])
+        _, err = await client.deactivate_or_delete_user(user.user_id)
+        if err:
+            raise Exception("Error deleting user")
+        # Run again to delete
+        _, err = await client.deactivate_or_delete_user(user.user_id)
         if err:
             raise Exception("Error deleting user")
     return response
