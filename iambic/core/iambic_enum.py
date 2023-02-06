@@ -12,6 +12,7 @@ class IambicManaged(Enum):
     UNDEFINED = "undefined"
     READ_AND_WRITE = "read_and_write"
     IMPORT_ONLY = "import_only"
+    DISABLED = "disabled"
 
     @classmethod
     def to_yaml(cls, representer, node):
