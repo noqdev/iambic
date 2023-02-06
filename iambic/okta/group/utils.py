@@ -10,6 +10,7 @@ from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.okta.models import Group, User
+from iambic.okta.utils import generate_user_profile
 
 if TYPE_CHECKING:
     from iambic.okta.group.models import UserSimple
@@ -46,9 +47,7 @@ async def list_all_users(okta_organization: OktaOrganization) -> List[User]:
                 extra=dict(
                     created=user.created,
                 ),
-                profile={
-                    k: v for (k, v) in user.profile.__dict__.items() if v is not None
-                },
+                profile=await generate_user_profile(user),
             )
         )
     return users_to_return
@@ -91,9 +90,7 @@ async def list_group_users(group: Group, okta_organization: OktaOrganization) ->
                 extra=dict(
                     created=user.created,
                 ),
-                profile={
-                    k: v for (k, v) in user.profile.__dict__.items() if v is not None
-                },
+                profile=await generate_user_profile(user),
             )
         )
     group.members = users_to_return
