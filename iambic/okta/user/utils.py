@@ -8,7 +8,6 @@ from iambic.config.models import OktaOrganization
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
-from iambic.core.utils import generate_random_password
 from iambic.okta.models import User
 from iambic.okta.utils import generate_user_profile
 
@@ -38,7 +37,6 @@ async def create_user(
 
     user_model = {
         "profile": user_template.properties.profile,
-        "credentials": {"password": {"value": await generate_random_password()}},
     }
 
     # Create the user
