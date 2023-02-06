@@ -16,6 +16,8 @@ from asgiref.sync import sync_to_async
 from ruamel.yaml import YAML
 
 from iambic.core import noq_json as json
+from iambic.core.context import ExecutionContext
+from iambic.core.iambic_enum import IambicManaged
 
 NOQ_TEMPLATE_REGEX = r".*template_type:\n?.*NOQ::"
 
@@ -284,3 +286,79 @@ yaml.preserve_quotes = True
 yaml.indent(mapping=2, sequence=4, offset=2)
 yaml.representer.ignore_aliases = lambda *data: True
 yaml.width = 4096
+
+
+def evaluate_on_account(
+    resource,
+    provider_details,
+    context: ExecutionContext,
+    exclude_import_only: bool = True,
+) -> bool:
+    from iambic.core.models import AccessModelMixin
+
+    no_op_values = [IambicManaged.DISABLED]
+    if exclude_import_only:
+        no_op_values.append(IambicManaged.IMPORT_ONLY)
+
+    if (
+        provider_details.iambic_managed in no_op_values
+        or getattr(resource, "iambic_managed", None) in no_op_values
+    ):
+        return False
+
+    if not isinstance(resource, AccessModelMixin):
+        return True
+
+    if provider_details.parent_id:
+        if provider_details.parent_id in resource.excluded_parents:
+            return False
+        elif "*" not in resource.included_parents and not any(
+            re.match(parent_id, provider_details.parent_id)
+            for parent_id in resource.included_parents
+        ):
+            return False
+
+    if not resource.included_children:
+        return True
+
+    provider_ids = sorted(provider_details.all_identifiers, key=len, reverse=True)
+    included_children = sorted(
+        [rule.lower() for rule in resource.included_children], key=len, reverse=True
+    )
+    excluded_children = sorted(
+        [rule.lower() for rule in resource.excluded_children], key=len, reverse=True
+    )
+    exclude_weight = 0
+
+    for exclude_rule in excluded_children:
+        if exclude_rule == "*" or any(
+            is_regex_match(exclude_rule, provider_id) for provider_id in provider_ids
+        ):
+            exclude_weight = len(exclude_rule)
+            break
+
+    for include_rule in included_children:
+        if include_rule == "*" or any(
+            is_regex_match(include_rule, provider_id) for provider_id in provider_ids
+        ):
+            return bool(len(include_rule) > exclude_weight)
+
+    return False
+
+
+def apply_to_account(resource, provider_details, context: ExecutionContext) -> bool:
+    if hasattr(resource, "deleted") and resource.deleted:
+        return False
+
+    return evaluate_on_account(resource, provider_details, context)
+
+
+def is_regex_match(regex, test_string):
+    if "*" in regex:
+        try:
+            return re.match(regex.lower(), test_string)
+        except re.error:
+            return regex.lower() == test_string.lower()
+    else:
+        # it is not an actual regex string, just string comparison
+        return regex.lower() == test_string.lower()

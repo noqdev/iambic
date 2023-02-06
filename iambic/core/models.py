@@ -366,6 +366,78 @@ class TemplateChangeDetails(PydanticBaseModel):
         return json.loads(response)
 
 
+class ProviderChild(PydanticBaseModel):
+    """
+    Inherited by the provider class to provide a consistent interface for AccessModelMixin
+
+    For AWS, this is the AWS account
+    For GCP, this is the GCP project
+    For Okta, this is the IDP domain
+    """
+
+    iambic_managed: Optional[IambicManaged] = Field(
+        IambicManaged.UNDEFINED,
+        description="Controls the directionality of iambic changes",
+    )
+
+    @property
+    def parent_id(self) -> Optional[str]:
+        """
+        For example, the parent_id of an AWS account is the AWS organization ID
+        """
+        raise NotImplementedError
+
+    @property
+    def preferred_identifier(self) -> str:
+        raise NotImplementedError
+
+    @property
+    def all_identifiers(self) -> set[str]:
+        raise NotImplementedError
+
+
+class AccessModelMixin:
+    @property
+    def included_children(self):
+        raise NotImplementedError
+
+    @included_children.setter
+    def included_children(self, value):
+        raise NotImplementedError
+
+    @property
+    def excluded_children(self):
+        raise NotImplementedError
+
+    @excluded_children.setter
+    def excluded_children(self, value):
+        raise NotImplementedError
+
+    @property
+    def included_parents(self):
+        raise NotImplementedError
+
+    @included_parents.setter
+    def included_parents(self, value):
+        raise NotImplementedError
+
+    @property
+    def excluded_parents(self):
+        raise NotImplementedError
+
+    @excluded_parents.setter
+    def excluded_parents(self, value):
+        raise NotImplementedError
+
+    def access_model_sort_weight(self):
+        return (
+            str(self.included_children)
+            + str(self.excluded_children)
+            + str(self.included_parents)
+            + str(self.excluded_parents)
+        )
+
+
 class BaseTemplate(
     BaseModel,
 ):
@@ -500,4 +572,4 @@ class ExpiryModel(IambicPydanticBaseModel):
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
-        return set(["expires_at", "deleted"])
+        return {"expires_at", "deleted"}
