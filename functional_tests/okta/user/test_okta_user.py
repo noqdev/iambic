@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import os
+import time
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.iambic_enum import IambicManaged
@@ -47,6 +48,8 @@ properties:
     # Test Updating Template
     user_template.properties.profile["firstName"] = "TestNameChange"
     user_template.write()
+    # Sleep to give profile time to propagate
+    time.sleep(30)
     run_apply(
         True,
         temp_config_filename,
@@ -104,3 +107,12 @@ properties:
     )
     user_template = load_templates([test_user_fp])[0]
     assert user_template.deleted is True
+    # Needed to really delete the user and file
+    user_template.force_delete = True
+    user_template.write()
+    run_apply(
+        True,
+        temp_config_filename,
+        [test_user_fp],
+        temp_templates_directory,
+    )

@@ -3,11 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, List, Optional
 
 import okta.models as models
+import tenacity
 
 from iambic.config.models import OktaOrganization
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
+from iambic.okta.exceptions import UserProfileNotUpdatableYet
 from iambic.okta.models import User
 from iambic.okta.utils import generate_user_profile
 
@@ -136,6 +138,11 @@ async def change_user_status(
     return response
 
 
+@tenacity.retry(
+    wait=tenacity.wait_fixed(10),
+    stop=tenacity.stop_after_attempt(25),
+    retry=(tenacity.retry_if_exception_type(UserProfileNotUpdatableYet)),
+)
 async def update_user_profile(
     proposed_user: OktaUserTemplate,
     user: User,
@@ -185,7 +192,12 @@ async def update_user_profile(
                 **log_params,
             )
             if not proposed_user.deleted:
-                raise Exception("Error updating user profile")
+                if err.error_code == "E0000112":
+                    raise UserProfileNotUpdatableYet(
+                        "Unable to update profile, user is not fully provisioned"
+                    )
+                log.error("Error updating user profile", error=err, **log_params)
+                raise Exception(f"Error updating user profile: {err}")
         log.info("Updated user profile", user=user.username, **log_params)
 
     return response
@@ -216,6 +228,10 @@ async def update_user_status(
         return response
     current_status: str = user.status.value
     if current_status == new_status:
+        return response
+    if new_status == "deprovisioned":
+        # maybe_deprovision_user is called in the main loop
+        # and handles this use case
         return response
     response.append(
         ProposedChange(
@@ -291,12 +307,17 @@ async def update_user_status(
                 new_status=new_status,
                 **log_params,
             )
-            raise Exception(f"Error updating user profile: {error}")
+            raise Exception(
+                f"Error updating user profile: {error}, "
+                f"current_status: {current_status}, "
+                f"new_status: {new_status}"
+            )
         if okta_response:
             response_body = client.form_response_body(okta_response.get_body())
             log.info(
                 "Received Response from Okta: ",
                 response_body=response_body,
+                **log_params,
             )
     return response
 
@@ -358,7 +379,7 @@ async def update_user_attribute(
     return response
 
 
-async def maybe_delete_user(
+async def maybe_deprovision_user(
     delete: bool,
     user: User,
     okta_organization: OktaOrganization,
@@ -395,10 +416,18 @@ async def maybe_delete_user(
         client = await okta_organization.get_okta_client()
         _, err = await client.deactivate_or_delete_user(user.user_id)
         if err:
-            raise Exception("Error deleting user")
-        # Run again to delete
-        _, err = await client.deactivate_or_delete_user(user.user_id)
-        if err:
+            if err.error_code == "E0000007":
+                log.info(
+                    "User already deleted",
+                    user=user.username,
+                    **log_params,
+                )
+                return response
+            log.error(
+                "Error deleting user",
+                error=err,
+                **log_params,
+            )
             raise Exception("Error deleting user")
     return response
 
