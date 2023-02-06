@@ -23,7 +23,7 @@ from iambic.okta.models import User, UserStatus
 from iambic.okta.user.utils import (
     create_user,
     get_user,
-    maybe_delete_user,
+    maybe_deprovision_user,
     update_user_profile,
     update_user_status,
 )
@@ -61,6 +61,12 @@ class OktaUserTemplateProperties(BaseModel):
 class OktaUserTemplate(BaseTemplate, ExpiryModel):
     template_type: str = "NOQ::Okta::User"
     properties: OktaUserTemplateProperties
+    force_delete: bool = Field(
+        False,
+        description=(
+            "If `self.deleted` is true, the user will be force deleted from Okta. "
+        ),
+    )
 
     async def apply(
         self, config: Config, context: ExecutionContext
@@ -129,8 +135,11 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
         }
 
     async def _apply_to_account(
-        self, okta_organization: OktaOrganization, context: ExecutionContext
+        self,
+        okta_organization: OktaOrganization,
+        context: ExecutionContext,
     ) -> AccountChangeDetails:
+        await self.remove_expired_resources(context)
         proposed_user = self.apply_resource_dict(okta_organization, context)
         change_details = AccountChangeDetails(
             account=self.properties.idp_name,
@@ -153,8 +162,8 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
 
         user_exists = bool(current_user)
         tasks = []
-
-        await self.remove_expired_resources(context)
+        if self.deleted:
+            self.properties.status = UserStatus.deprovisioned
 
         if not user_exists and not self.deleted:
             change_details.proposed_changes.append(
@@ -180,6 +189,18 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
             )
             if current_user:
                 change_details.current_value = current_user
+        if (
+            current_user
+            and self.deleted
+            and current_user.status == UserStatus.deprovisioned
+            and proposed_user.get("status") == "deprovisioned"
+            and not self.force_delete
+        ):
+            log.info(
+                "User is already deprovisioned. Please delete the user in Okta.",
+                **log_params,
+            )
+            return change_details
 
         tasks.extend(
             [
@@ -198,7 +219,7 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
                     log_params,
                     context,
                 ),
-                maybe_delete_user(
+                maybe_deprovision_user(
                     self.deleted, current_user, okta_organization, log_params, context
                 ),
             ]
@@ -216,8 +237,6 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
                 changes_made=bool(change_details.proposed_changes),
                 **log_params,
             )
-            if self.deleted:
-                self.delete()
             self.write()
         else:
             log.debug(
