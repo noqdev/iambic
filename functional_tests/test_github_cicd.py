@@ -23,13 +23,14 @@ os.environ["TESTING"] = "true"
 github_config = ExtendsConfig(
     key="AWS_SECRETS_MANAGER",
     value="arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/github-token-iambic-templates-itest",
-    hub_role_arn="arn:aws:iam::442632209887:role/IambicSpokeRole",
+    assume_role_arn="arn:aws:iam::442632209887:role/IambicSpokeRole",
 )
 
 
 GITHUB_CICID_TEMPLATE_TARGET_PATH = (
     "resources/aws/roles/iambic_test_spoke_account_1/iambic_itest_github_cicd.yaml"
 )
+
 
 iambic_role_yaml = """template_type: NOQ::AWS::IAM::Role
 identifier: iambic_itest_for_github_cicd
