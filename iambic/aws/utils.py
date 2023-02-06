@@ -9,10 +9,9 @@ from typing import TYPE_CHECKING, Optional, Union
 import boto3
 from botocore.exceptions import ClientError
 
-from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
-from iambic.core.utils import aio_wrapper, camel_to_snake
+from iambic.core.utils import aio_wrapper, camel_to_snake, is_regex_match
 
 if TYPE_CHECKING:
     from iambic.config.models import Config
@@ -164,108 +163,42 @@ def normalize_boto3_resp(obj):
         return obj
 
 
-def get_account_value(matching_values: list, account_id: str, account_name: str = None):
-    account_reprs = [account_id]
-    if account_name:
-        account_reprs.append(account_name.lower())
-
+def get_account_value(matching_values: list, identifiers: set[str]):
     included_account_map = dict()
     included_account_lists = list()
 
     for matching_val in matching_values:
-        for included_account in matching_val.included_accounts:
+        for included_account in matching_val.included_children:
             included_account_map[included_account] = matching_val
             included_account_lists.append(included_account)
 
     for included_account in sorted(included_account_lists, key=len, reverse=True):
         cur_val = included_account_map[included_account]
-        if any(
-            any(
-                re.match(excluded_account.lower(), account_repr)
-                for account_repr in account_reprs
-            )
-            for excluded_account in cur_val.excluded_accounts
-        ):
-            log.debug("Hit an excluded account rule", account_id=account_id)
-            continue
-        elif included_account == "*" or any(
-            re.match(included_account.lower(), account_repr)
-            for account_repr in account_reprs
-        ):
-            return cur_val
+        included_children = sorted(
+            [rule.lower() for rule in cur_val.included_children], key=len, reverse=True
+        )
+        excluded_children = sorted(
+            [rule.lower() for rule in cur_val.excluded_children], key=len, reverse=True
+        )
+        exclude_weight = 0
 
+        for exclude_rule in excluded_children:
+            if exclude_rule == "*" or any(
+                is_regex_match(exclude_rule, provider_id) for provider_id in identifiers
+            ):
+                exclude_weight = len(exclude_rule)
+                break
 
-def is_regex_match(regex, test_string):
-    if "*" in regex:
-        return re.match(regex.lower(), test_string)
-    else:
-        # it is not an actual regex string, just string comparison
-        return regex.lower() == test_string.lower()
+        for include_rule in included_children:
+            if include_rule == "*" or any(
+                is_regex_match(include_rule, provider_id) for provider_id in identifiers
+            ):
+                if len(include_rule) > exclude_weight:
+                    return cur_val
 
 
 def is_valid_account_id(account_id: str):
     return bool(re.match(r"^\d{12}$", account_id))
-
-
-def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> bool:
-    from iambic.aws.models import AccessModel
-
-    no_op_values = [IambicManaged.IMPORT_ONLY, IambicManaged.DISABLED]
-
-    if (
-        aws_account.iambic_managed in no_op_values
-        or getattr(resource, "iambic_managed", None) in no_op_values
-    ):
-        return False
-
-    # IdentityCenter Models don't inherit from AccessModel and rely only on included/excluded orgs.
-    # hasattr is how we are currently handling this special case.
-    if not issubclass(type(resource), AccessModel) and not hasattr(
-        resource, "included_orgs"
-    ):
-        return True
-
-    if aws_account.org_id:
-        if aws_account.org_id in resource.excluded_orgs:
-            return False
-        elif "*" not in resource.included_orgs and not any(
-            re.match(org_id, aws_account.org_id) for org_id in resource.included_orgs
-        ):
-            return False
-
-    if not hasattr(resource, "included_accounts"):
-        return True
-
-    account_ids = [aws_account.account_id]
-    if account_name := aws_account.account_name:
-        account_ids.append(account_name.lower())
-
-    for account_id in account_ids:
-        if any(
-            re.match(resource_account.lower(), account_id)
-            for resource_account in resource.excluded_accounts
-        ):
-            return False
-
-    for account_id in account_ids:
-        if any(
-            resource_account == "*" for resource_account in resource.included_accounts
-        ):
-            return True
-        elif any(
-            is_regex_match(resource_account.lower(), account_id)
-            for resource_account in resource.included_accounts
-        ):
-            return True
-
-    return False
-
-
-def apply_to_account(resource, aws_account, context: ExecutionContext) -> bool:
-    if hasattr(resource, "deleted") and resource.deleted:
-        return False
-
-    return evaluate_on_account(resource, aws_account, context)
 
 
 async def remove_expired_resources(
@@ -290,7 +223,7 @@ async def remove_expired_resources(
         log_params["parent_resource_type"] = template_resource_type
         log_params["parent_resource_id"] = template_resource_id
 
-    if issubclass(type(resource), BaseModel) and hasattr(resource, "expires_at"):
+    if isinstance(resource, BaseModel) and hasattr(resource, "expires_at"):
         if resource.expires_at:
             cur_time = datetime.now(tz=timezone.utc)
             if resource.expires_at < cur_time:

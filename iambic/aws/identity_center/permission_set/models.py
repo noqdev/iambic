@@ -27,23 +27,20 @@ from iambic.aws.models import (
     ExpiryModel,
     Tag,
 )
-from iambic.aws.utils import (
-    boto_crud_call,
-    evaluate_on_account,
-    remove_expired_resources,
-)
+from iambic.aws.utils import boto_crud_call, remove_expired_resources
 from iambic.config.models import Config
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
+    AccessModelMixin,
     AccountChangeDetails,
     BaseModel,
     ProposedChange,
     ProposedChangeType,
     TemplateChangeDetails,
 )
-from iambic.core.utils import aio_wrapper
+from iambic.core.utils import aio_wrapper, evaluate_on_account
 
 AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE = (
     "NOQ::AWS::IdentityCenter::PermissionSet"
@@ -185,7 +182,9 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
         return sorted_v
 
 
-class AWSIdentityCenterPermissionSetTemplate(AWSTemplate, ExpiryModel):
+class AWSIdentityCenterPermissionSetTemplate(
+    AccessModelMixin, AWSTemplate, ExpiryModel
+):
     template_type: str = AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
     properties: AWSIdentityCenterPermissionSetProperties
     access_rules: Optional[list[PermissionSetAccess]] = []
@@ -206,7 +205,7 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate, ExpiryModel):
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
-        return set(["access_rules"])
+        return {"access_rules"}
 
     @validator("access_rules")
     def sort_access_rules(cls, v: list[PermissionSetAccess]):
@@ -746,3 +745,19 @@ class AWSIdentityCenterPermissionSetTemplate(AWSTemplate, ExpiryModel):
     @property
     def resource_id(self) -> str:
         return self.identifier
+
+    @property
+    def included_children(self):
+        return []
+
+    @property
+    def excluded_children(self):
+        return []
+
+    @property
+    def included_parents(self):
+        return self.included_orgs
+
+    @property
+    def excluded_parents(self):
+        return self.excluded_orgs
