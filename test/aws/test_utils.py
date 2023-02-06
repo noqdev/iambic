@@ -4,9 +4,9 @@ import pytest
 import yaml
 
 from iambic.aws.models import AWSAccount
-from iambic.aws.utils import evaluate_on_account
 from iambic.config.templates import TEMPLATE_TYPE_MAP
 from iambic.core.context import ExecutionContext
+from iambic.core.utils import evaluate_on_account
 
 TEMPLATE_UNDER_TEST = """
 template_type: NOQ::AWS::IAM::Role
@@ -38,7 +38,7 @@ eval_only_context.eval_only = True
     [
         (
             resource_under_test,
-            AWSAccount(account_id="123456789012"),
+            AWSAccount(account_id="123456789012", account_name="something"),
             eval_only_context,
             False,
         ),
