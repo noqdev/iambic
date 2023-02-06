@@ -154,8 +154,9 @@ async def update_user_profile(
         okta_organization (OktaOrganization): The Okta organization to update the user in.
         context (ExecutionContext): The context object containing the execution flag.
     """
-    client = await okta_organization.get_okta_client()
     response: list = []
+    if not user:
+        return response
     current_profile: str = user.profile
     if current_profile == new_profile:
         return response
@@ -172,6 +173,7 @@ async def update_user_profile(
         )
     )
     if context.execute:
+        client = await okta_organization.get_okta_client()
         updated_user_obj = models.User({"profile": new_profile})
         _, _, err = await client.update_user(user.user_id, updated_user_obj)
         if err:
@@ -210,8 +212,9 @@ async def update_user_status(
     Returns:
         List[ProposedChange]: A list of proposed changes to be applied.
     """
-    client = await okta_organization.get_okta_client()
     response: list = []
+    if not user:
+        return response
     current_status: str = user.status.value
     if current_status == new_status:
         return response
@@ -228,6 +231,7 @@ async def update_user_status(
         )
     )
     if context.execute:
+        client = await okta_organization.get_okta_client()
         method = "POST"
         base_endpoint = f"/api/v1/users/{user.user_id}"
         if current_status == "suspended" and new_status == "active":
@@ -375,7 +379,8 @@ async def maybe_delete_user(
         List[ProposedChange]: A list of proposed changes to be applied.
     """
     response: list[ProposedChange] = []
-    client = await okta_organization.get_okta_client()
+    if not user:
+        return response
     if not delete:
         return response
     response.append(
@@ -388,6 +393,7 @@ async def maybe_delete_user(
         )
     )
     if context.execute:
+        client = await okta_organization.get_okta_client()
         _, err = await client.deactivate_or_delete_user(user.user_id)
         if err:
             raise Exception("Error deleting user")
