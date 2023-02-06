@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from enum import Enum
 from itertools import chain
 from typing import Any, Optional
 
@@ -20,7 +19,7 @@ from iambic.core.models import (
     ProposedChangeType,
     TemplateChangeDetails,
 )
-from iambic.okta.models import User
+from iambic.okta.models import User, UserStatus
 from iambic.okta.user.utils import (
     create_user,
     get_user,
@@ -30,14 +29,6 @@ from iambic.okta.user.utils import (
 )
 
 OKTA_USER_TEMPLATE_TYPE = "NOQ::Okta::User"
-
-
-class UserStatus(Enum):
-    active = "active"
-    provisioned = "provisioned"
-    deprovisioned = "deprovisioned"
-    recovery = "recovery"
-    suspended = "suspended"
 
 
 class Assignment(BaseModel):
