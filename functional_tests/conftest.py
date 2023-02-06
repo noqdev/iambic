@@ -48,6 +48,27 @@ aws:
       default_rule:
         enabled: true
         iambic_managed: read_and_write
+  accounts:
+    - account_id: '192455039954'
+      account_name: iambic_test_spoke_account_2
+      iambic_managed: read_and_write
+      org_id: o-8t0mt0ybdd
+      spoke_role_arn: arn:aws:iam::192455039954:role/IambicSpokeRole
+    - account_id: '333972133479'
+      account_name: iambic_test_spoke_account_3
+      iambic_managed: read_and_write
+      org_id: o-8t0mt0ybdd
+      spoke_role_arn: arn:aws:iam::333972133479:role/IambicSpokeRole
+    - account_id: '580605962305'
+      account_name: iambic_test_org_account
+      iambic_managed: read_and_write
+      org_id: o-8t0mt0ybdd
+      spoke_role_arn: arn:aws:iam::580605962305:role/IambicSpokeRole
+    - account_id: '442632209887'
+      account_name: iambic_test_spoke_account_1
+      iambic_managed: read_and_write
+      org_id: o-8t0mt0ybdd
+      spoke_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
 """
 
 
