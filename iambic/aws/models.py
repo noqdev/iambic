@@ -239,7 +239,7 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         None,
         description="A unique identifier designating the identity of the organization",
     )
-    account_name: Optional[str] = None
+    account_name: str
     partition: Optional[Partition] = Field(
         Partition.AWS,
         description="The AWS partition the account is in. Options are aws, aws-us-gov, and aws-cn",
