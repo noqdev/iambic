@@ -84,14 +84,16 @@ async def list_group_users(group: Group, okta_organization: OktaOrganization) ->
     for user in users:
         users_to_return.append(
             User(
+                user_id=user.id,
                 idp_name=okta_organization.idp_name,
                 username=user.profile.login,
                 status=user.status.value.lower(),
-                attributes={},
                 extra=dict(
-                    okta_user_id=user.id,
                     created=user.created,
                 ),
+                profile={
+                    k: v for (k, v) in user.profile.__dict__.items() if v is not None
+                },
             )
         )
     group.members = users_to_return
