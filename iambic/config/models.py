@@ -210,6 +210,7 @@ class Config(BaseTemplate):
 
     async def setup_aws_accounts(self):
         if not self.aws_is_setup:
+            await self.configure_plugins()
             return
 
         for elem, account in enumerate(self.aws.accounts):
@@ -234,9 +235,18 @@ class Config(BaseTemplate):
                     if (
                         account_elem := config_account_idx_map.get(account.account_id)
                     ) is not None:
-                        self.aws.accounts[account_elem] = account
+                        self.aws.accounts[
+                            account_elem
+                        ].hub_session_info = account.hub_session_info
+                        self.aws.accounts[
+                            account_elem
+                        ].identity_center_details = account.identity_center_details
                     else:
-                        self.aws.accounts.append(account)
+                        log.warning(
+                            "Account not found in config. Account will be ignored.",
+                            account_id=account.account_id,
+                            account_name=account.account_name,
+                        )
         elif self.aws.accounts:
             hub_account = [
                 account for account in self.aws.accounts if account.hub_role_arn
@@ -267,18 +277,48 @@ class Config(BaseTemplate):
         Example: If the secret is in prod
           A build in the staging account won't work unless it has access to the prod secret
         """
+        assume_role_arn = extend.assume_role_arn
         secret_arn = extend.value
         region_name = secret_arn.split(":")[3]
         secret_account_id = secret_arn.split(":")[4]
         aws_account_map = {account.account_id: account for account in self.aws.accounts}
+        session = None
 
         if aws_account := aws_account_map.get(secret_account_id):
-            session = await aws_account.get_boto3_session(region_name=region_name)
-        else:
+            if assume_role_arn == aws_account.spoke_role_arn:
+                session = await aws_account.get_boto3_session(region_name=region_name)
+
+        if not session and self.aws_is_setup:
+            if self.aws.organizations:
+                boto3_session = await self.aws.organizations[0].get_boto3_session()
+            else:
+                hub_account = [
+                    account for account in self.aws.accounts if account.hub_role_arn
+                ][0]
+                boto3_session = await hub_account.get_boto3_session()
+
+            secret_account = AWSAccount(
+                account_id=secret_account_id,
+                account_name="Secret_Account",
+                spoke_role_arn=assume_role_arn,
+                hub_session_info=dict(boto3_session=boto3_session),
+                boto3_session_map={},
+            )
+            session = await secret_account.get_boto3_session(region_name=region_name)
+        elif not session:
             session = boto3.Session(region_name=region_name)
 
-        client = session.client(service_name="secretsmanager")
-        get_secret_value_response = client.get_secret_value(SecretId=secret_arn)
+        try:
+            client = session.client(service_name="secretsmanager")
+            get_secret_value_response = client.get_secret_value(SecretId=secret_arn)
+        except Exception:
+            log.exception(
+                "Unable to retrieve the AWS secret using the provided assume_role_arn",
+                assume_role_arn=assume_role_arn,
+                secret_arn=extend.value,
+            )
+            raise
+
         if "SecretString" in get_secret_value_response:
             return_val = get_secret_value_response["SecretString"]
         else:
