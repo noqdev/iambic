@@ -6,7 +6,8 @@ IAMBIC_ITEST_PUBLIC_ECR_ALIAS := "l1s5s8m2"
 # building was really slow
 docker_buildx_itest := docker buildx build \
 	--platform=linux/amd64 \
-	-t "public.ecr.aws/${IAMBIC_ITEST_PUBLIC_ECR_ALIAS}/iambic:itest"
+	-t "public.ecr.aws/${IAMBIC_ITEST_PUBLIC_ECR_ALIAS}/iambic:itest" \
+        -t "ghcr.io/noqdev/iambic:itest"
 
 .PHONY: auth_to_ecr
 auth_to_ecr:

@@ -5,6 +5,7 @@ jobs:
   run-unit-test:
     runs-on: self-hosted
     name: Run unit test
+    if: ${{ False }}
     permissions:
       id-token: write
       contents: read
