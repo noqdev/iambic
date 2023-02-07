@@ -40,9 +40,6 @@ async def get_user_groups(
     groups = await paginated_search(
         iam_client.list_groups_for_user, "Groups", UserName=user_name
     )
-    for group in groups:
-        # TODO: Remove
-        print("here")
     if as_dict:
         return {group["GroupName"]: group for group in groups}
     else:
