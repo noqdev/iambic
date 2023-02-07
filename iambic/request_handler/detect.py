@@ -5,11 +5,13 @@ import json
 from typing import Union
 
 from iambic.aws.event_bridge.models import (
+    GroupMessageDetails,
     ManagedPolicyMessageDetails,
     PermissionSetMessageDetails,
     RoleMessageDetails,
     UserMessageDetails,
 )
+from iambic.aws.iam.group.template_generation import generate_aws_group_templates
 from iambic.aws.iam.policy.template_generation import (
     generate_aws_managed_policy_templates,
 )
@@ -31,6 +33,7 @@ async def detect_changes(  # noqa: C901
 
     role_messages = []
     user_messages = []
+    group_messages = []
     managed_policy_messages = []
     permission_set_messages = []
     commit_message = "Out of band changes detected.\nSummary:\n"
@@ -121,6 +124,16 @@ async def detect_changes(  # noqa: C901
                                     delete=bool(event == "DeleteUser"),
                                 )
                             )
+                        elif group_name := request_params.get("groupName"):
+                            resource_id = group_name
+                            resource_type = "Group"
+                            group_messages.append(
+                                GroupMessageDetails(
+                                    account_id=account_id,
+                                    group_name=group_name,
+                                    delete=bool(event == "DeleteGroup"),
+                                )
+                            )
                         elif policy_arn := request_params.get("policyArn"):
                             split_policy = policy_arn.split("/")
                             policy_name = split_policy[-1]
@@ -175,6 +188,8 @@ async def detect_changes(  # noqa: C901
         tasks.append(generate_aws_role_templates([config], repo_dir, role_messages))
     if user_messages:
         tasks.append(generate_aws_user_templates([config], repo_dir, user_messages))
+    if group_messages:
+        tasks.append(generate_aws_group_templates([config], repo_dir, group_messages))
     if managed_policy_messages:
         tasks.append(
             generate_aws_managed_policy_templates(

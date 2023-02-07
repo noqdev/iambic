@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from enum import Enum
 
+from iambic.aws.iam.group.template_generation import generate_aws_group_templates
 from iambic.aws.iam.policy.template_generation import (
     generate_aws_managed_policy_templates,
 )
@@ -69,6 +70,7 @@ async def generate_templates(
         iam_tasks = [
             generate_aws_role_templates(configs, output_dir),
             generate_aws_user_templates(configs, output_dir),
+            generate_aws_group_templates(configs, output_dir),
         ]
         for iam_task in iam_tasks:
             await iam_task

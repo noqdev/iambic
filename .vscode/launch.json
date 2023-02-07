@@ -138,14 +138,12 @@
             "module": "iambic.main",
             "console": "integratedTerminal",
             "env": {
-                "AWS_PROFILE": "staging/IambicHubRole"
+                "AWS_PROFILE": "staging/staging_admin"
             },
             "args": [
                 "apply",
                 "-d",
                 "../noq-templates/",
-                "--config",
-                "demo/config.yaml"
             ],
             "justMyCode": true
         },
@@ -218,6 +216,22 @@
             },
             "args": [
                 "import",
+                "--repo-dir",
+                "../noq-templates"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "Iambic Config Discovery",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "env": {
+                "AWS_PROFILE": "staging/staging_admin"
+            },
+            "args": [
+                "config-discovery",
                 "--repo-dir",
                 "../noq-templates"
             ],
