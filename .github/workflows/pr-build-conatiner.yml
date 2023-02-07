@@ -37,4 +37,4 @@ jobs:
       - name: build container
         id: build-container
         run: |
-          . env/bin/activate && make -f Makefile.itest build_docker_itest upload_docker_itest
+          . build-env/bin/activate && make -f Makefile.itest build_docker_itest upload_docker_itest
