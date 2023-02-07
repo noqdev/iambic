@@ -6,7 +6,7 @@ from iambic.aws.identity_center.permission_set.models import (
 from iambic.core.models import merge_model
 
 
-def test_merge_template_access_rules():
+def test_merge_template_access_rules(aws_accounts):
     existing_properties = {
         "name": "bar",
     }
@@ -41,7 +41,7 @@ def test_merge_template_access_rules():
         access_rules=new_access_rules,
     )
     merged_document: AWSIdentityCenterPermissionSetTemplate = merge_model(
-        existing_document, new_document
+        new_document, existing_document, aws_accounts
     )
     assert existing_access_rules != new_access_rules
     assert merged_document.access_rules == existing_document.access_rules

@@ -13,7 +13,7 @@ def test_merge_model():
         file_path="bar_new",
         iambic_managed=IambicManaged.UNDEFINED,
     )
-    merged_template = merge_model(existing_template, new_template)
+    merged_template = merge_model(new_template, existing_template, [])
     assert merged_template.template_type == new_template.template_type
     assert merged_template.iambic_managed == IambicManaged.IMPORT_ONLY
     assert merged_template.file_path == existing_template.file_path
