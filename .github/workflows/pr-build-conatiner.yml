@@ -34,6 +34,9 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::442632209887:role/iambic_image_builder
           aws-region: us-east-1
+      - name: Log in to GHCR registry
+        # This is where you will update the personal access token to GITHUB_TOKEN
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
       - name: build container
         id: build-container
         run: |
