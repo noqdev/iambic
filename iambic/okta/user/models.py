@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from itertools import chain
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from pydantic import Field
 
@@ -19,22 +19,35 @@ from iambic.core.models import (
     ProposedChangeType,
     TemplateChangeDetails,
 )
-from iambic.okta.group.utils import (
-    create_group,
-    get_group,
-    maybe_delete_group,
-    update_group_description,
-    update_group_members,
-    update_group_name,
+from iambic.okta.models import User, UserStatus
+from iambic.okta.user.utils import (
+    create_user,
+    get_user,
+    maybe_deprovision_user,
+    update_user_profile,
+    update_user_status,
 )
-from iambic.okta.models import Group, UserStatus
 
-OKTA_GROUP_TEMPLATE_TYPE = "NOQ::Okta::Group"
+OKTA_USER_TEMPLATE_TYPE = "NOQ::Okta::User"
 
 
-class UserSimple(BaseModel, ExpiryModel):
-    username: str
-    status: Optional[UserStatus] = UserStatus.active
+class Assignment(BaseModel):
+    role: str
+    resource_set: str
+
+
+class OktaUserTemplateProperties(BaseModel):
+    username: str = Field(..., description="Username of the user")
+    idp_name: str = Field(
+        ...,
+        description="Name of the identity provider that's associated with the user",
+    )
+    user_id: str = Field("", description="Unique User ID for the user")
+    status: UserStatus = Field(UserStatus.active, description="Status of the user")
+    profile: dict[str, Any]
+    extra: Optional[dict[str, Any]] = Field(
+        None, description=("Extra attributes to store for the user")
+    )
 
     @property
     def resource_type(self) -> str:
@@ -42,48 +55,17 @@ class UserSimple(BaseModel, ExpiryModel):
 
     @property
     def resource_id(self) -> str:
-        return self.username
+        return self.user_id
 
 
-class User(UserSimple):
-    idp_name: str
-    user_id: Optional[str]
-    domain: Optional[str]
-    fullname: Optional[str]
-    created: Optional[str]
-    updated: Optional[str]
-    groups: Optional[List[str]]
-    background_check_status: Optional[bool]
-    extra: Any = Field(None, description=("Extra attributes to store"))
-
-
-class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
-    name: str = Field(..., description="Name of the group")
-    owner: Optional[str] = Field(None, description="Owner of the group")
-    idp_name: str = Field(
-        ...,
-        description="Name of the identity provider that's associated with the group",
-    )
-    group_id: str = Field(
-        "", description="Unique Group ID for the group. Usually it's {idp-name}-{name}"
-    )
-    description: str = Field("", description="Description of the group")
-    extra: Any = Field(None, description=("Extra attributes to store"))
-    members: List[UserSimple] = Field([], description="Users in the group")
-
-    @property
-    def resource_type(self) -> str:
-        return "okta:group"
-
-    @property
-    def resource_id(self) -> str:
-        return self.group_id
-
-
-class OktaGroupTemplate(BaseTemplate, ExpiryModel):
-    template_type = OKTA_GROUP_TEMPLATE_TYPE
-    properties: OktaGroupTemplateProperties = Field(
-        ..., description="Properties for the Okta Group"
+class OktaUserTemplate(BaseTemplate, ExpiryModel):
+    template_type: str = "NOQ::Okta::User"
+    properties: OktaUserTemplateProperties
+    force_delete: bool = Field(
+        False,
+        description=(
+            "If `self.deleted` is true, the user will be force deleted from Okta. "
+        ),
     )
 
     async def apply(
@@ -91,13 +73,13 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
     ) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
-            resource_id=self.properties.group_id,
+            resource_id=self.properties.user_id,
             resource_type=self.template_type,
             template_path=self.file_path,
         )
         log_params = dict(
             resource_type=self.resource_type,
-            resource_name=self.properties.name,
+            resource_name=self.properties.username,
         )
 
         if self.iambic_managed == IambicManaged.IMPORT_ONLY:
@@ -107,7 +89,6 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
             return template_changes
 
         for okta_organization in config.okta_organizations:
-            # if evaluate_on_google_account(self, account):
             if context.execute:
                 log_str = "Applying changes to resource."
             else:
@@ -138,54 +119,58 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
 
     @property
     def resource_id(self) -> str:
-        return self.properties.group_id
+        return self.properties.user_id
 
     @property
     def resource_type(self) -> str:
-        return "okta:group"
+        return "okta:user"
 
     def apply_resource_dict(
         self, okta_organization: OktaOrganization, context: ExecutionContext
     ):
         return {
-            "name": self.properties.name,
-            "description": self.properties.description,
-            "members": self.properties.members,
+            "username": self.properties.username,
+            "status": self.properties.status,
+            "profile": self.properties.profile,
         }
 
     async def _apply_to_account(
-        self, okta_organization: OktaOrganization, context: ExecutionContext
+        self,
+        okta_organization: OktaOrganization,
+        context: ExecutionContext,
     ) -> AccountChangeDetails:
-        proposed_group = self.apply_resource_dict(okta_organization, context)
+        await self.remove_expired_resources(context)
+        proposed_user = self.apply_resource_dict(okta_organization, context)
         change_details = AccountChangeDetails(
             account=self.properties.idp_name,
-            resource_id=self.properties.group_id,
-            new_value=proposed_group,  # TODO fix
+            resource_id=self.properties.username,
+            new_value=proposed_user,
             proposed_changes=[],
         )
 
         log_params = dict(
             resource_type=self.properties.resource_type,
-            resource_id=self.properties.name,
+            resource_id=self.properties.username,
             organization=str(self.properties.idp_name),
         )
 
-        current_group: Optional[Group] = await get_group(
-            self.properties.group_id, self.properties.name, okta_organization
+        current_user: Optional[User] = await get_user(
+            self.properties.username, self.properties.user_id, okta_organization
         )
-        if current_group:
-            change_details.current_value = current_group
+        if current_user:
+            change_details.current_value = current_user
 
-        group_exists = bool(current_group)
+        user_exists = bool(current_user)
         tasks = []
+        if self.deleted:
+            self.properties.status = UserStatus.deprovisioned
+            proposed_user["status"] = "deprovisioned"
 
-        await self.remove_expired_resources(context)
-
-        if not group_exists and not self.deleted:
+        if not user_exists and not self.deleted:
             change_details.proposed_changes.append(
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
-                    resource_id=self.properties.group_id,
+                    resource_id=self.properties.username,
                     resource_type=self.properties.resource_type,
                 )
             )
@@ -198,53 +183,46 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
             log_str = f"{log_str} Creating resource..."
             log.info(log_str, **log_params)
 
-            current_group: Group = await create_group(
-                group_name=self.properties.name,
-                idp_name=self.properties.idp_name,
-                description=self.properties.description,
+            current_user: User = await create_user(
+                self,
                 okta_organization=okta_organization,
                 context=context,
             )
-            if current_group:
-                change_details.current_value = current_group
+            if current_user:
+                change_details.current_value = current_user
+        if (
+            current_user
+            and self.deleted
+            and current_user.status == UserStatus.deprovisioned
+            and proposed_user.get("status") == "deprovisioned"
+            and not self.force_delete
+        ):
+            log.info(
+                "User is already deprovisioned. Please delete the user in Okta.",
+                **log_params,
+            )
+            return change_details
 
-        # TODO: Support group expansion
         tasks.extend(
             [
-                update_group_name(
-                    current_group,
-                    self.properties.name,
+                update_user_status(
+                    current_user,
+                    self.properties.status.value,
                     okta_organization,
                     log_params,
                     context,
                 ),
-                update_group_description(
-                    current_group,
-                    self.properties.description,
+                update_user_profile(
+                    self,
+                    current_user,
+                    self.properties.profile,
                     okta_organization,
                     log_params,
                     context,
                 ),
-                update_group_members(
-                    current_group,
-                    [
-                        member
-                        for member in self.properties.members
-                        if not member.deleted
-                    ],
-                    okta_organization,
-                    log_params,
-                    context,
+                maybe_deprovision_user(
+                    self.deleted, current_user, okta_organization, log_params, context
                 ),
-                maybe_delete_group(
-                    self.deleted,
-                    current_group,
-                    okta_organization,
-                    log_params,
-                    context,
-                ),
-                # TODO
-                # upgrade_group_application_assignments
             ]
         )
 
@@ -260,9 +238,6 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
                 changes_made=bool(change_details.proposed_changes),
                 **log_params,
             )
-            # TODO: Check if deleted, remove git commit the change to ratify it
-            if self.deleted:
-                self.delete()
             self.write()
         else:
             log.debug(
@@ -270,5 +245,4 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
                 requires_changes=bool(change_details.proposed_changes),
                 **log_params,
             )
-
         return change_details

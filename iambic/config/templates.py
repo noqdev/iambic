@@ -10,6 +10,7 @@ from iambic.config.models import Config
 from iambic.google.group.models import GroupTemplate
 from iambic.okta.app.models import OktaAppTemplate
 from iambic.okta.group.models import OktaGroupTemplate
+from iambic.okta.user.models import OktaUserTemplate
 
 TEMPLATES = [
     AWSIdentityCenterPermissionSetTemplate,
@@ -18,6 +19,7 @@ TEMPLATES = [
     GroupTemplate,
     OktaGroupTemplate,
     OktaAppTemplate,
+    OktaUserTemplate,
     ManagedPolicyTemplate,
     Config,
 ]
