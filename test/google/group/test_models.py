@@ -83,7 +83,7 @@ def test_merge_list_group_members_expires_at():
         members=new_members,
     )
     merged_document: GroupTemplateProperties = merge_model(
-        existing_document, new_document
+        new_document, existing_document, []
     )
     assert existing_members != new_members
     assert merged_document.members[0].email == "user@example.com"

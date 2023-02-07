@@ -6,7 +6,7 @@ import yaml
 from iambic.aws.models import AWSAccount
 from iambic.config.templates import TEMPLATE_TYPE_MAP
 from iambic.core.context import ExecutionContext
-from iambic.core.utils import evaluate_on_account
+from iambic.core.utils import evaluate_on_provider
 
 TEMPLATE_UNDER_TEST = """
 template_type: NOQ::AWS::IAM::Role
@@ -63,5 +63,5 @@ eval_only_context.eval_only = True
     ],
 )
 def test_evaluate_on_account(resource, aws_account, context, expected_value):
-    value = evaluate_on_account(resource, aws_account, context)
+    value = evaluate_on_provider(resource, aws_account, context)
     assert value == expected_value

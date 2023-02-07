@@ -26,7 +26,7 @@ def test_merge_template_access_rules():
         members=new_members,
     )
     merged_document: OktaGroupTemplateProperties = merge_model(
-        existing_document, new_document
+        new_document, existing_document, []
     )
     assert existing_members != new_members
     assert merged_document.members[0].username == "user@example.com"
