@@ -40,7 +40,7 @@ from iambic.core.models import (
     ProposedChangeType,
     TemplateChangeDetails,
 )
-from iambic.core.utils import aio_wrapper, evaluate_on_account
+from iambic.core.utils import aio_wrapper, evaluate_on_provider
 
 AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE = (
     "NOQ::AWS::IdentityCenter::PermissionSet"
@@ -713,7 +713,7 @@ class AWSIdentityCenterPermissionSetTemplate(
             if not account.identity_center_details:
                 continue
 
-            if evaluate_on_account(self, account, context):
+            if evaluate_on_provider(self, account, context):
                 if context.execute:
                     log_str = "Applying changes to resource."
                 else:
@@ -750,14 +750,26 @@ class AWSIdentityCenterPermissionSetTemplate(
     def included_children(self):
         return []
 
+    def set_included_children(self, value):
+        pass
+
     @property
     def excluded_children(self):
         return []
+
+    def set_excluded_children(self, value):
+        pass
 
     @property
     def included_parents(self):
         return self.included_orgs
 
+    def set_included_parents(self, value):
+        self.included_orgs = value
+
     @property
     def excluded_parents(self):
         return self.excluded_orgs
+
+    def set_excluded_parents(self, value):
+        self.excluded_orgs = value

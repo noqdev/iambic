@@ -15,7 +15,6 @@ from iambic.aws.utils import (
     RegionName,
     boto_crud_call,
     create_assume_role_session,
-    get_account_value,
     get_current_role_arn,
     legacy_paginated_search,
     set_org_account_variables,
@@ -33,7 +32,12 @@ from iambic.core.models import (
     TemplateChangeDetails,
     Variable,
 )
-from iambic.core.utils import NoqSemaphore, evaluate_on_account, sort_dict
+from iambic.core.utils import (
+    NoqSemaphore,
+    evaluate_on_provider,
+    get_provider_value,
+    sort_dict,
+)
 
 yaml = YAML()
 
@@ -103,32 +107,28 @@ class AccessModel(AccessModelMixin, BaseModel):
     def included_children(self):
         return self.included_accounts
 
-    @included_children.setter
-    def included_children(self, value):
+    def set_included_children(self, value):
         self.included_accounts = value
 
     @property
     def excluded_children(self):
         return self.excluded_accounts
 
-    @excluded_children.setter
-    def excluded_children(self, value):
+    def set_excluded_children(self, value):
         self.excluded_accounts = value
 
     @property
     def included_parents(self):
         return self.included_orgs
 
-    @included_parents.setter
-    def included_parents(self, value):
+    def set_included_parents(self, value):
         self.included_orgs = value
 
     @property
     def excluded_parents(self):
         return self.excluded_orgs
 
-    @excluded_parents.setter
-    def excluded_parents(self, value):
+    def set_excluded_parents(self, value):
         self.excluded_orgs = value
 
 
@@ -566,7 +566,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         account_rule = self.default_rule
 
         if self.account_rules and (
-            new_rule := get_account_value(
+            new_rule := get_provider_value(
                 self.account_rules, {account_id, account_name}
             )
         ):
@@ -699,7 +699,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
             resource_type=self.resource_type, resource_id=self.resource_id
         )
         for account in config.aws.accounts:
-            if evaluate_on_account(self, account, context):
+            if evaluate_on_provider(self, account, context):
                 if context.execute:
                     log_str = "Applying changes to resource."
                 else:
