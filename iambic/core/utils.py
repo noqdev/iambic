@@ -288,7 +288,7 @@ yaml.representer.ignore_aliases = lambda *data: True
 yaml.width = 4096
 
 
-def evaluate_on_account(
+def evaluate_on_provider(
     resource,
     provider_details,
     context: ExecutionContext,
@@ -346,11 +346,11 @@ def evaluate_on_account(
     return False
 
 
-def apply_to_account(resource, provider_details, context: ExecutionContext) -> bool:
+def apply_to_provider(resource, provider_details, context: ExecutionContext) -> bool:
     if hasattr(resource, "deleted") and resource.deleted:
         return False
 
-    return evaluate_on_account(resource, provider_details, context)
+    return evaluate_on_provider(resource, provider_details, context)
 
 
 def is_regex_match(regex, test_string):
@@ -362,3 +362,39 @@ def is_regex_match(regex, test_string):
     else:
         # it is not an actual regex string, just string comparison
         return regex.lower() == test_string.lower()
+
+
+def get_provider_value(matching_values: list, identifiers: set[str]):
+    included_account_map = dict()
+    included_account_lists = list()
+
+    for matching_val in matching_values:
+        for included_account in matching_val.included_children:
+            included_account_map[included_account] = matching_val
+            included_account_lists.append(included_account)
+
+    for included_account in sorted(included_account_lists, key=len, reverse=True):
+        cur_val = included_account_map[included_account]
+        included_children = sorted(
+            [rule.lower() for rule in cur_val.included_children], key=len, reverse=True
+        )
+        excluded_children = sorted(
+            [rule.lower() for rule in cur_val.excluded_children], key=len, reverse=True
+        )
+        exclude_weight = 0
+
+        for exclude_rule in excluded_children:
+            if exclude_rule == "*" or any(
+                is_regex_match(exclude_rule, provider_id) for provider_id in identifiers
+            ):
+                exclude_weight = len(exclude_rule)
+                break
+
+        for include_rule in included_children:
+            if include_rule == "*" or any(
+                is_regex_match(include_rule, provider_id) for provider_id in identifiers
+            ):
+                if len(include_rule) > exclude_weight:
+                    return cur_val
+                else:
+                    break

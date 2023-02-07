@@ -8,7 +8,7 @@ import xxhash
 from iambic.aws.models import AWSAccount
 from iambic.core import noq_json as json
 from iambic.core.logger import log
-from iambic.core.models import merge_model
+from iambic.core.models import ProviderChild, merge_model
 from iambic.core.parser import load_templates
 from iambic.core.utils import gather_templates
 
@@ -436,6 +436,7 @@ def create_or_update_template(
     template_cls,
     template_params,
     properties,
+    all_provider_children: list[ProviderChild],
 ):
 
     new_template = template_cls(
@@ -447,8 +448,9 @@ def create_or_update_template(
     # iambic-specific knowledge requires us to load the existing template
     # because it will not be reflected by AWS API.
     if existing_template := existing_template_map.get(identifier, None):
-
-        merged_template = merge_model(existing_template, new_template)
+        merged_template = merge_model(
+            new_template, existing_template, all_provider_children
+        )
 
         try:
             merged_template.write()

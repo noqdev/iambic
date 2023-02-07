@@ -11,7 +11,7 @@ from botocore.exceptions import ClientError
 
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
-from iambic.core.utils import aio_wrapper, camel_to_snake, is_regex_match
+from iambic.core.utils import aio_wrapper, camel_to_snake
 
 if TYPE_CHECKING:
     from iambic.config.models import Config
@@ -161,40 +161,6 @@ def normalize_boto3_resp(obj):
         return [normalize_boto3_resp(x) for x in obj]
     else:
         return obj
-
-
-def get_account_value(matching_values: list, identifiers: set[str]):
-    included_account_map = dict()
-    included_account_lists = list()
-
-    for matching_val in matching_values:
-        for included_account in matching_val.included_children:
-            included_account_map[included_account] = matching_val
-            included_account_lists.append(included_account)
-
-    for included_account in sorted(included_account_lists, key=len, reverse=True):
-        cur_val = included_account_map[included_account]
-        included_children = sorted(
-            [rule.lower() for rule in cur_val.included_children], key=len, reverse=True
-        )
-        excluded_children = sorted(
-            [rule.lower() for rule in cur_val.excluded_children], key=len, reverse=True
-        )
-        exclude_weight = 0
-
-        for exclude_rule in excluded_children:
-            if exclude_rule == "*" or any(
-                is_regex_match(exclude_rule, provider_id) for provider_id in identifiers
-            ):
-                exclude_weight = len(exclude_rule)
-                break
-
-        for include_rule in included_children:
-            if include_rule == "*" or any(
-                is_regex_match(include_rule, provider_id) for provider_id in identifiers
-            ):
-                if len(include_rule) > exclude_weight:
-                    return cur_val
 
 
 def is_valid_account_id(account_id: str):
