@@ -96,6 +96,24 @@
             "justMyCode": true
         },
         {
+            "name": "Iambic Apply Okta User Template",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "env": {
+                "AWS_PROFILE": "staging/staging_admin"
+            },
+            "args": [
+                "apply",
+                "--template",
+                "../noq-templates/resources/okta/development/users/curtis@noq_dev.yaml",
+                "--repo-dir",
+                "../noq-templates/",
+            ],
+            "justMyCode": true
+        },
+        {
             "name": "Iambic Apply Okta App Template",
             "type": "python",
             "request": "launch",
@@ -194,7 +212,7 @@
             "module": "iambic.main",
             "console": "integratedTerminal",
             "env": {
-                "AWS_PROFILE": "staging/IambicHubRole"
+                "AWS_PROFILE": "staging/staging_admin"
             },
             "args": [
                 "import",
