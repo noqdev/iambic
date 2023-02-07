@@ -273,6 +273,16 @@ def merge_model_list(existing_list: list[BaseModel], new_list: list[BaseModel]) 
 
 
 def merge_model(existing_model: BaseModel, new_model: BaseModel) -> BaseModel:
+    if new_model is None:
+        # if new_model is None, and existing_model is not None, we will lose
+        # metadata. It can be argued what's the preferred behavior, just return
+        # none and keep teh old model and then mark it as deleted.
+        if existing_model:
+            log.warn(
+                "merge_model: the incoming value is None when existing value is not None"
+            )
+        return new_model
+
     merged_model = existing_model.copy()
     iambic_fields = existing_model.metadata_iambic_fields
     field_names = new_model.__fields__.keys()
