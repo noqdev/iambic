@@ -164,6 +164,7 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
         tasks = []
         if self.deleted:
             self.properties.status = UserStatus.deprovisioned
+            proposed_user["status"] = "deprovisioned"
 
         if not user_exists and not self.deleted:
             change_details.proposed_changes.append(
