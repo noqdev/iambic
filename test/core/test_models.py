@@ -19,7 +19,7 @@ def test_merge_model():
     assert merged_template.file_path == existing_template.file_path
 
 
-def test_morge_model_with_none():
+def test_merge_model_with_none():
     existing_template = BaseTemplate(
         template_type="foo", file_path="bar", iambic_managed=IambicManaged.IMPORT_ONLY
     )
