@@ -213,7 +213,7 @@ class ConfigurationWizard:
         if not self.hub_account_id:
             while True:
                 self.hub_account_id = set_required_text_value(
-                    "Please provide the Account ID where you would like to deploy the Iambic hub role. "
+                    " the Account ID where you would like to deploy the Iambic hub role. "
                     "This is the account that will be used to assume into all other accounts by IAMbic. "
                     "If you have an AWS Organization, that would be your hub account.\n"
                     "However, if you are just trying IAMbic out, you can provide any account. "
@@ -783,7 +783,7 @@ class ConfigurationWizard:
         role_account_id = self.hub_account_id
 
         if role_name:
-            question_text += f" and update the {role_name} template"
+            question_text += f" and update the {role_name} IAMbic template"
 
         if not questionary.confirm(f"{question_text}?").ask():
             self.config.secrets = {}
@@ -796,7 +796,7 @@ class ConfigurationWizard:
 
         client = session.client(service_name="secretsmanager")
         response = client.create_secret(
-            Name="iambic-config-secrets-test-2",
+            Name="iambic-config-secrets",
             Description="IAMbic managed secret used to store protected config values",
             SecretString=yaml.dump({"secrets": self.config.secrets}),
         )

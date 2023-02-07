@@ -4,6 +4,7 @@ import os
 
 import jsonschema2md2
 
+from iambic.aws.iam.group.models import GroupTemplate as AWSGroupTemplate
 from iambic.aws.iam.policy.models import ManagedPolicyTemplate
 from iambic.aws.iam.role.models import RoleTemplate
 from iambic.aws.identity_center.permission_set.models import (
@@ -40,6 +41,7 @@ def generate_docs():
         RoleTemplate,
         ManagedPolicyTemplate,
         AWSIdentityCenterPermissionSetTemplate,
+        AWSGroupTemplate,
     ]
     google_template_models = [GroupTemplate]
     okta_template_models = [OktaGroupTemplate]

@@ -680,4 +680,12 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
 
 
 class Description(AccessModel):
-    description: Optional[str] = ""
+    description: str = ""
+
+    @property
+    def resource_type(self) -> str:
+        return "aws::description"
+
+    @property
+    def resource_id(self) -> str:
+        return self.description
