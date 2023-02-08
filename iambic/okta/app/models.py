@@ -236,7 +236,7 @@ async def get_app_template(okta_app) -> OktaAppTemplate:
     """Get a template for an app"""
     file_name = f"{okta_app.name}.yaml"
     app = OktaAppTemplate(
-        file_path=f"resources/okta/apps/{okta_app.idp_name}/{file_name}",
+        file_path=f"resources/okta/{okta_app.idp_name}/apps/{file_name}",
         template_type="NOQ::Okta::App",
         properties=OktaAppTemplateProperties(
             name=okta_app.name,
