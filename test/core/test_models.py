@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from iambic.core.iambic_enum import IambicManaged
-from iambic.core.models import BaseTemplate, merge_model
+from iambic.core.models import BaseTemplate
+from iambic.core.template_generation import merge_model
 
 
 def test_merge_model():

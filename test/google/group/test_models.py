@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from iambic.core.models import merge_model
+from iambic.core.template_generation import merge_model
 from iambic.google.group.models import GroupTemplateProperties, get_group_template
 
 VALUE_UNDER_TEST = {
