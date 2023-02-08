@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from iambic.core.models import merge_model
+from iambic.core.template_generation import merge_model
 from iambic.okta.group.models import OktaGroupTemplateProperties
 
 
