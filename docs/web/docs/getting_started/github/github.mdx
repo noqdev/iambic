@@ -1,56 +1,56 @@
 Overview
 
-Github integration is designed for team collaboration on iambic templates. A typical workflow would be the following:
+Iambic's Github integration is designed to facilitate team collaboration on Iambic templates. Here's the typical workflow for this integration:
 
-1. Developer Alice submits a pull request to iambic templates to create an application role.
-2. Upon the PR is created, iambic github action will run "iambic git-plan" to preview what is the impact of the PR and submits the proposed_changes.yaml back into the PR as comment.
-3. Reviewer Bob will review the templates change along with the proposed_changes. Reviewer Bob may request additional changes.
-4. Developer Alice updates the PR and iambic github action again run "iambic git-plan" to calculate changes_required.
-5. Reviewer Bob approved the PR.
-6. Developer Alice submits an  "iambic git-apply" comment in the PR.
-7. IAMbic github action will apply the changes in the PR. Upon git-apply is successful, the pull request is closed by the github action.
+1. Developer Alice submits a pull request to Iambic templates to create an application role.
+2. Once the PR is created, the Iambic Github action will run "iambic git-plan" to preview the impact of the PR and submit the proposed_changes.yaml back into the PR as a comment.
+3. Reviewer Bob will review the template changes along with the proposed_changes. They may request additional changes.
+4. Developer Alice updates the PR and the Iambic Github action will run "iambic git-plan" again to calculate the changes required.
+5. Reviewer Bob approves the PR.
+6. Developer Alice submits an "iambic git-apply" comment in the PR.
+7. The Iambic Github action will apply the changes in the PR. Once git-apply is successful, the Github action will close the pull request.
 
-Pre-requisite
+Prior to using Iambic, there are a few steps you need to take:
 
-1. You have run the iambic tutorial to import your own environment in a local repository.
-2. Github repository for iambic templates.
-3. An admin for this Github repository to perform the following action
-3a. configure repository to require approvals before merging PR
-3b. create fine grain access token to allow automatic import
-4. An AWS admin to configure federated login by iambic github actions
+1. Complete the Iambic tutorial to import your own environment into a local repository.
+2. Set up a Github repository for your Iambic templates.
+3. Make sure you have an admin for this Github repository who can perform the following tasks:
+3a. Configure the repository to require approvals before merging pull requests.
+3b. Create a fine-grained access token to allow automatic import.
+4. Have an AWS admin configure federated login for Iambic Github actions.
 
-Configure Github Repository require Approvals before merging
+Configure your Github Repository to require approvals before merging
 
-1. Assuming this repository is called "noqdev/iambic-templates-example" where "noqdev" is the Github organization and "iambic-templates-example" is the short repository name within "noqdev" Github organization.
-2. Visit https://github.com/noqdev/iambic-templates-example/settings/branches
-3. Add branch protection rule
-4. For Branch name pattern, use `main`
-5. Check "Require a pull request before merging", and ensure "Require Approvals" is checked. Leave the default for "required number of approvals before merging"
-6. Check "Require status checks to pass before merging"
+1. Go to the Github repository "noqdev/iambic-templates-example", where "noqdev" is the Github organization and "iambic-templates-example" is the repository name within the "noqdev" organization.
+2. Navigate to the "branches" settings page at https://github.com/noqdev/iambic-templates-example/settings/branches
+3. Add a branch protection rule.
+4. Set the branch name pattern to "main".
+5. Enable the options "Require a pull request before merging" and "Require Approvals". Leave the default value for "required number of approvals".
+6. Enable the option "Require status checks to pass before merging".
 
-Configure Access token for Github Action to update repository periodically.
+Configure Access Token for Github Action to Update Repository Periodically
 
-1. Visit https://github.com/settings/apps
-2. Select Personal access tokens
-3. Select Fine-grain tokens
-4. Select Generate new token
-5. For token name, input "iambic-templates-import"
-5a. For expiration, select custom, select a date that is one year from now. (Tip: use your organization preferred token valid length).
-5b. For Resource owner, select the Github organization that Github repository belongs to.
-5c. For Repository Access, select "Only select repositories", then click on "Select Repositories". In this tutorial, we select "noqdev/iambic-templates-example". You should use the repository name that you create for your Github organization.
-5d. Click on Repository permissions, Give "Access: Read and Write" for "Contents". (Tip: this allows the github action for import to push to the repository without approval. The intend is human changes require approval flow and auto import flow that inventory the cloud resources does not require approval flow.)
-5e. No action is needed, but you will notice previous action will automatically select "Access: Read" for "Metadata"
-5f. Click "Generate Token".
-6. If your organization has a password vault, you can optionally store it in your organization password vault. Otherwise, move to next step to allow the repository to use the newly generated token.
-7. Open a new tab and visit https://github.com/noqdev/iambic-templates-example/settings/environments. (Tip: you should modify the link to go your own repository)
-8. Add new environment
-9. For name, type in `production`
+1. Go to https://github.com/settings/apps
+2. Click on "Personal access tokens"
+3. Select "Fine-grain tokens"
+4. Generate a new token
+5. For the token name, input "iambic-templates-import"
+5a. For expiration, select custom and choose a date that is one year from now (Tip: use your organization's preferred token validity length)
+5b. For resource owner, select the Github organization that the Github repository belongs to
+5c. For Repository Access, select "Only select repositories" and click on "Select Repositories". For this tutorial, select "noqdev/iambic-templates-example". Use the repository name for your own Github organization.
+5d. For repository permissions, give "Access: Read and Write" for "Contents" (Tip: this allows the Github action for import to push to the repository without approval. The intention is that human changes require an approval flow and the auto-import flow that inventories the cloud resources does not require an approval flow)
+5e. Automatically select "Access: Read" for "Metadata"
+5f. Generate the token
+6. If your organization has a password vault, store the token in it. Otherwise, proceed to the next step to allow the repository to use the newly generated token.
+7. Open a new tab and go to https://github.com/noqdev/iambic-templates-example/settings/environments (Tip: modify the link to go to your own repository)
+8. Add a new environment
+9. Name the environment `production`
 10. Click `Configure environment`
 11. Change Deployment branches to `Selected Branches`
-12. Add Deployment Branch Rule, type in `main` for Branch name pattern. Click Add Rule
-13. Click Add Secret
-14. For Name, input "AUTO_IMPORT_GH_TOKEN"
-15. For Secret, paste in the token generated in step 5f.
+12. Add a Deployment Branch Rule and type in `main` for the Branch name pattern. Click "Add Rule"
+13. Click "Add Secret"
+14. Name the secret "AUTO_IMPORT_GH_TOKEN"
+15. Paste the token generated in step 5f as the secret.
 
 Configure Access token for Github Action to automatically comment on new/edit pull request for iambic planning and application.
 
@@ -70,6 +70,25 @@ Configure Access token for Github Action to automatically comment on new/edit pu
 8. Click Add New Repository Secret
 9. For Name, input "AUTO_IMPORT_GH_TOKEN"
 10. For Secret, paste in the token generated in step 5f.
+
+To set up an access token for Github Action to automatically comment on new/edited pull requests for iambic planning and application:
+
+1. Go to https://github.com/settings/apps
+2. Click on Personal access tokens
+3. Select Fine-grain tokens
+4. Generate a new token
+5. Give the token the name "iambic-templates-comment"
+5a. Set an expiration date for the token, a year from now for example.
+5b. Choose the Github organization that the Github repository belongs to as the Resource owner.
+5c. For Repository Access, select "Only select repositories" and select the repository "noqdev/iambic-templates-example".
+5d. Under Repository permissions, give "Pull Request: Read and Write" for "Contents".
+5e. The previous action will also automatically give "Access: Read" for "Metadata".
+5f. Generate the token.
+6. Store the token in your organization's password vault, if available.
+7. Go to https://github.com/noqdev/iambic-templates-example/settings/secrets/actions and add a new repository secret.
+8. Give the secret the name "AUTO_IMPORT_GH_TOKEN".
+9. Paste the token generated in step 5f as the secret.
+
 
 Configure Variable for Github Action to target the right AWS account
 
