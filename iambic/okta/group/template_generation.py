@@ -66,6 +66,7 @@ async def update_or_create_group_template(
         OktaGroupTemplate,
         {},
         properties,
+        []
     )
 
 
