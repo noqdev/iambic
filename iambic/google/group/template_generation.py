@@ -47,6 +47,7 @@ async def update_or_create_group_template(
         GroupTemplate,
         {},
         discovered_group_template.properties,
+        []
     )
 
 
