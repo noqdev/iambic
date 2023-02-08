@@ -7,7 +7,11 @@ import warnings
 import click
 
 from iambic.config.models import Config
-from iambic.config.utils import multi_config_loader, resolve_config_template_path
+from iambic.config.utils import (
+    aws_account_update_and_discovery,
+    multi_config_loader,
+    resolve_config_template_path,
+)
 from iambic.config.wizard import ConfigurationWizard
 from iambic.core.context import ctx
 from iambic.core.git import clone_git_repos
@@ -76,6 +80,35 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
     asyncio.run(config.setup_aws_accounts())
     ctx.eval_only = True
     output_proposed_changes(asyncio.run(apply_changes(config, templates, ctx)))
+
+
+@click.option(
+    "--template",
+    "-t",
+    "templates",
+    required=False,
+    multiple=True,
+    type=click.Path(exists=True),
+    help="The template file path(s) to expire. Example: ./aws/roles/engineering.yaml",
+)
+@click.option(
+    "--repo-dir",
+    "-d",
+    "repo_dir",
+    required=False,
+    type=click.Path(exists=True),
+    default=str(pathlib.Path.cwd()),
+    help="The repo directory containing the templates. Example: ~/noq-templates",
+)
+def expire(templates: list[str], repo_dir: str):
+    run_expire(templates, repo_dir=repo_dir)
+
+
+def run_expire(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
+    if not templates:
+        templates = asyncio.run(gather_templates(repo_dir))
+
+    asyncio.run(flag_expired_resources(templates))
 
 
 @click.option(
@@ -274,6 +307,23 @@ def run_git_plan(
 ):
     template_changes = asyncio.run(plan_git_changes(config_path, repo_dir))
     output_proposed_changes(template_changes, output_path=output_path)
+
+
+@cli.command()
+@click.option(
+    "--repo-dir",
+    "-d",
+    "repo_dir",
+    required=False,
+    type=click.Path(exists=True),
+    default=str(pathlib.Path.cwd()),
+    help="The repo directory containing the templates. Example: ~/noq-templates",
+)
+def config_discovery(repo_dir: str):
+    config_path = asyncio.run(resolve_config_template_path(repo_dir))
+    config = Config.load(config_path)
+    asyncio.run(config.setup_aws_accounts())
+    asyncio.run(aws_account_update_and_discovery(config, repo_dir=repo_dir))
 
 
 @cli.command(name="import")

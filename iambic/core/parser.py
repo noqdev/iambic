@@ -25,7 +25,8 @@ def load_templates(template_paths: list[str]) -> list[BaseTemplate]:
                 file_path=template_path,
                 template_type=template_dict["template_type"],
             )
-            raise
+            # We should allow to continue to allow unknown template type; otherwise,
+            # we cannot support forward or backward compatibility during version changes.
         except ValidationError:
             log.critical("Invalid template structure", file_path=template_path)
             raise

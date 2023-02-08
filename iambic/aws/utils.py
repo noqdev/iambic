@@ -197,7 +197,10 @@ def get_account_value(matching_values: list, account_id: str, account_name: str 
 
 def is_regex_match(regex, test_string):
     if "*" in regex:
-        return re.match(regex.lower(), test_string)
+        try:
+            return re.match(regex.lower(), test_string)
+        except re.error:
+            return regex.lower() == test_string.lower()
     else:
         # it is not an actual regex string, just string comparison
         return regex.lower() == test_string.lower()
@@ -210,9 +213,11 @@ def is_valid_account_id(account_id: str):
 def evaluate_on_account(resource, aws_account, context: ExecutionContext) -> bool:
     from iambic.aws.models import AccessModel
 
+    no_op_values = [IambicManaged.IMPORT_ONLY, IambicManaged.DISABLED]
+
     if (
-        aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
-        or getattr(resource, "iambic_managed", None) == IambicManaged.IMPORT_ONLY
+        aws_account.iambic_managed in no_op_values
+        or getattr(resource, "iambic_managed", None) in no_op_values
     ):
         return False
 
@@ -336,7 +341,7 @@ async def set_org_account_variables(client, account: dict) -> dict:
 
 
 async def get_aws_account_map(configs: list[Config]) -> dict:
-    """Returns a map containing all account configs across all provided config instances
+    """Returns a map containing all enabled account configs across all provided config instances
 
     :param configs:
     :return: dict(account_id:str = AWSAccount)
@@ -351,6 +356,13 @@ async def get_aws_account_map(configs: list[Config]) -> dict:
                     account_name=aws_account.account_name,
                 )
                 raise ValueError
+            elif aws_account.iambic_managed == IambicManaged.DISABLED:
+                log.info(
+                    "IAMbic awareness disabled for the account. Skipping.",
+                    account_id=aws_account.account_id,
+                )
+                continue
+
             aws_account_map[aws_account.account_id] = aws_account
 
     return aws_account_map

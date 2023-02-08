@@ -40,7 +40,10 @@ from iambic.config.models import (
     GoogleProject,
     OktaOrganization,
 )
-from iambic.config.utils import resolve_config_template_path
+from iambic.config.utils import (
+    aws_account_update_and_discovery,
+    resolve_config_template_path,
+)
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -210,7 +213,7 @@ class ConfigurationWizard:
         if not self.hub_account_id:
             while True:
                 self.hub_account_id = set_required_text_value(
-                    "Please provide the Account ID where you would like to deploy the Iambic hub role. "
+                    " the Account ID where you would like to deploy the Iambic hub role. "
                     "This is the account that will be used to assume into all other accounts by IAMbic. "
                     "If you have an AWS Organization, that would be your hub account.\n"
                     "However, if you are just trying IAMbic out, you can provide any account. "
@@ -728,12 +731,20 @@ class ConfigurationWizard:
         for account in self.config.aws.accounts:
             if account.identity_center_details:
                 asyncio.run(account.set_identity_center_details())
-        asyncio.run(
-            generate_aws_role_templates(
-                [self.config],
-                self.repo_dir,
+
+        if questionary.confirm(
+            "Would you like to update the config to include the Organization's accounts?"
+        ).ask():
+            asyncio.run(aws_account_update_and_discovery(self.config, self.repo_dir))
+        else:
+            # We at least need to import the hub accounts roles to make any required changes to the spoke role
+            # Examples would be granting access to the change detection queue or decoding the secret
+            asyncio.run(
+                generate_aws_role_templates(
+                    [self.config],
+                    self.repo_dir,
+                )
             )
-        )
 
     def configuration_wizard_aws_organizations(self):
         # Currently only 1 org per config is supported.
@@ -772,7 +783,7 @@ class ConfigurationWizard:
         role_account_id = self.hub_account_id
 
         if role_name:
-            question_text += f" and update the {role_name} template"
+            question_text += f" and update the {role_name} IAMbic template"
 
         if not questionary.confirm(f"{question_text}?").ask():
             self.config.secrets = {}
@@ -785,7 +796,7 @@ class ConfigurationWizard:
 
         client = session.client(service_name="secretsmanager")
         response = client.create_secret(
-            Name="iambic-config-secrets-test-2",
+            Name="iambic-config-secrets",
             Description="IAMbic managed secret used to store protected config values",
             SecretString=yaml.dump({"secrets": self.config.secrets}),
         )
