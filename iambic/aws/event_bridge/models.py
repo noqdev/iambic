@@ -22,6 +22,12 @@ class RoleMessageDetails(PydanticBaseModel):
     delete: bool
 
 
+class GroupMessageDetails(PydanticBaseModel):
+    account_id: str
+    group_name: str
+    delete: bool
+
+
 class UserMessageDetails(PydanticBaseModel):
     account_id: str
     user_name: str

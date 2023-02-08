@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from enum import Enum
 from itertools import chain
 from typing import Any, List, Optional
 
@@ -28,16 +27,9 @@ from iambic.okta.group.utils import (
     update_group_members,
     update_group_name,
 )
-from iambic.okta.models import Group
+from iambic.okta.models import Group, UserStatus
 
 OKTA_GROUP_TEMPLATE_TYPE = "NOQ::Okta::Group"
-
-
-class UserStatus(Enum):
-    active = "active"
-    provisioned = "provisioned"
-    deprovisioned = "deprovisioned"
-    recovery = "recovery"
 
 
 class UserSimple(BaseModel, ExpiryModel):

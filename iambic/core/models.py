@@ -5,9 +5,20 @@ import datetime
 import inspect
 import json
 import os
+import typing
 from enum import Enum
 from types import GenericAlias
-from typing import TYPE_CHECKING, List, Optional, Set, Union, get_args, get_origin
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Union,
+    get_args,
+    get_origin,
+)
 
 import dateparser
 from deepdiff.model import PrettyOrderedSet
@@ -33,6 +44,9 @@ if TYPE_CHECKING:
     from iambic.aws.models import AWSAccount
     from iambic.config.models import Config
 
+    MappingIntStrAny = typing.Mapping[int | str, Any]
+    AbstractSetIntStr = typing.AbstractSet[int | str]
+
 
 class IambicPydanticBaseModel(PydanticBaseModel):
 
@@ -56,13 +70,13 @@ class IambicPydanticBaseModel(PydanticBaseModel):
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
-        return set(["metadata_commented_dict"])
+        return {"metadata_commented_dict"}
 
 
 class BaseModel(IambicPydanticBaseModel):
     @classmethod
     def update_forward_refs(cls, **kwargs):
-        kwargs.update({"Union": Union})
+        kwargs["Union"] = Union
         super().update_forward_refs(**kwargs)
 
     class Config:
@@ -78,7 +92,7 @@ class BaseModel(IambicPydanticBaseModel):
         ]
 
     @staticmethod
-    def get_field_type(field: any) -> any:
+    def get_field_type(field: Any) -> Any:
         """
         Resolves the base field type for a model
         """
@@ -273,6 +287,16 @@ def merge_model_list(existing_list: list[BaseModel], new_list: list[BaseModel]) 
 
 
 def merge_model(existing_model: BaseModel, new_model: BaseModel) -> BaseModel:
+    if new_model is None:
+        # if new_model is None, and existing_model is not None, we will lose
+        # metadata. It can be argued what's the preferred behavior, just return
+        # none and keep teh old model and then mark it as deleted.
+        if existing_model:
+            log.warn(
+                "merge_model: the incoming value is None when existing value is not None"
+            )
+        return new_model
+
     merged_model = existing_model.copy()
     iambic_fields = existing_model.metadata_iambic_fields
     field_names = new_model.__fields__.keys()
@@ -332,9 +356,7 @@ class TemplateChangeDetails(PydanticBaseModel):
     resource_type: str
     template_path: str
     # Supports multi-account providers and single-account providers
-    proposed_changes: Optional[
-        Union[list[AccountChangeDetails], list[ProposedChange]]
-    ] = None
+    proposed_changes: list[Union[AccountChangeDetails, ProposedChange]] = []
 
     class Config:
         json_encoders = {PrettyOrderedSet: list}
@@ -342,18 +364,14 @@ class TemplateChangeDetails(PydanticBaseModel):
     def dict(
         self,
         *,
-        include: Optional[
-            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
-        ] = None,
-        exclude: Optional[
-            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
-        ] = None,
+        include: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
+        exclude: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
         by_alias: bool = False,
         skip_defaults: Optional[bool] = None,
         exclude_unset: bool = True,
         exclude_defaults: bool = False,
         exclude_none: bool = True,
-    ) -> "DictStrAny":  # noqa
+    ) -> Dict[str, Any]:  # noqa
         response = self.json(
             include=include,
             exclude=exclude,
@@ -379,12 +397,8 @@ class BaseTemplate(
     def dict(
         self,
         *,
-        include: Optional[
-            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
-        ] = None,
-        exclude: Optional[
-            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
-        ] = None,
+        include: Optional[Union["AbstractSetIntStr", "MappingIntStrAny"]] = None,
+        exclude: Optional[Union["AbstractSetIntStr", "MappingIntStrAny"]] = None,
         by_alias: bool = False,
         skip_defaults: Optional[bool] = None,
         exclude_unset: bool = True,
@@ -409,7 +423,7 @@ class BaseTemplate(
         template_dict["template_type"] = self.template_type
         return template_dict
 
-    def write(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
+    def get_body(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
         input_dict = self.dict(
             exclude_none=exclude_none,
             exclude_unset=exclude_unset,
@@ -424,6 +438,10 @@ class BaseTemplate(
         as_yaml = as_yaml.replace(f"{template_type_str}\n", "")
         as_yaml = as_yaml.replace(f"\n{template_type_str}", "")
         as_yaml = f"{template_type_str}\n{as_yaml}"
+        return as_yaml
+
+    def write(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
+        as_yaml = self.get_body(exclude_none, exclude_unset, exclude_defaults)
         os.makedirs(os.path.dirname(os.path.expanduser(self.file_path)), exist_ok=True)
         with open(self.file_path, "w") as f:
             f.write(as_yaml)
@@ -460,6 +478,9 @@ class BaseTemplate(
 class Variable(PydanticBaseModel):
     key: str
     value: str
+
+    def __getitem__(self, item):
+        return getattr(self, item)
 
 
 class ExpiryModel(IambicPydanticBaseModel):
