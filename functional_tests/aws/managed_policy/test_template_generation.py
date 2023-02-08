@@ -88,7 +88,8 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
     async def test_delete_managed_policy_from_one_account(self):
         deleted_account = self.all_account_ids[0]
         deleted_account_obj = [
-            aws_account for aws_account in IAMBIC_TEST_DETAILS.config.aws.accounts
+            aws_account
+            for aws_account in IAMBIC_TEST_DETAILS.config.aws.accounts
             if aws_account.account_id == deleted_account
         ][0]
         self.template.included_accounts = ["*"]
@@ -121,4 +122,6 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
 
         file_sys_template = ManagedPolicyTemplate.load(self.template.file_path)
         self.assertEqual(file_sys_template.included_accounts, ["*"])
-        self.assertEqual(file_sys_template.excluded_accounts, [deleted_account_obj.account_name])
+        self.assertEqual(
+            file_sys_template.excluded_accounts, [deleted_account_obj.account_name]
+        )

@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "iambic"
-version = "0.1.11"
+version = "0.1.17"
 description = "The python package used to generate, parse, and execute noqform yaml templates."
 authors = ["Handsome Engineer <engineering@noq.dev>"]
 readme = "README.md"
@@ -47,6 +47,8 @@ dateparser = "^1.1.4"
 pytest-mock = "^3.10.0"
 asynctest = "^0.13.0"
 questionary = "^1.10.0"
+types-dateparser = "^1.1.4.5"
+tenacity = "^8.1.0"
 
 [tool.poetry.scripts]
 iambic = "iambic.main:cli"

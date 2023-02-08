@@ -19,6 +19,10 @@ class UserStatus(Enum):
     provisioned = "provisioned"
     deprovisioned = "deprovisioned"
     recovery = "recovery"
+    suspended = "suspended"
+    staged = "staged"
+    locked_out = "locked_out"
+    password_expired = "password_expired"
 
 
 class User(BaseModel, ExpiryModel):
@@ -33,6 +37,15 @@ class User(BaseModel, ExpiryModel):
     groups: Optional[List[str]]
     background_check_status: Optional[bool]
     extra: Any = Field(None, description=("Extra attributes to store"))
+    profile: dict[str, Any]
+
+    @property
+    def resource_type(self) -> str:
+        return "okta:user"
+
+    @property
+    def resource_id(self) -> str:
+        return self.username
 
 
 class GroupAttributes(BaseModel):

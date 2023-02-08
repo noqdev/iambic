@@ -9,7 +9,7 @@ from iambic.core.parser import load_templates
 from iambic.main import run_apply
 
 
-def test_okta():
+def test_okta_group():
     temp_config_filename = IAMBIC_TEST_DETAILS.config_path
     temp_templates_directory = IAMBIC_TEST_DETAILS.template_dir_path
 
@@ -25,7 +25,7 @@ properties:
 """
     test_group_fp = os.path.join(
         temp_templates_directory,
-        "resources/okta/groups/development/iambic_functional_test_group.yaml",
+        "resources/okta/development/groups/iambic_functional_test_group.yaml",
     )
 
     with open(test_group_fp, "w") as temp_file:
