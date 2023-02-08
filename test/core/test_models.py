@@ -18,3 +18,12 @@ def test_merge_model():
     assert merged_template.template_type == new_template.template_type
     assert merged_template.iambic_managed == IambicManaged.IMPORT_ONLY
     assert merged_template.file_path == existing_template.file_path
+
+
+def test_merge_model_with_none():
+    existing_template = BaseTemplate(
+        template_type="foo", file_path="bar", iambic_managed=IambicManaged.IMPORT_ONLY
+    )
+    new_template = None
+    merged_template = merge_model(new_template, existing_template, [])
+    assert merged_template is None

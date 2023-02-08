@@ -786,6 +786,10 @@ def merge_model(
 ) -> Union[BaseModel, list[BaseModel], None]:
     if new_model is None:
         # The attribute was set to None
+        if existing_model:
+            log.warn(
+                "merge_model: the incoming value is None when existing value is not None"
+            )
         return new_model
 
     merged_model = existing_model.copy()

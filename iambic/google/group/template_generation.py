@@ -10,22 +10,22 @@ from iambic.google.group.models import GOOGLE_GROUP_TEMPLATE_TYPE, GroupTemplate
 from iambic.google.group.utils import list_groups
 
 
-def get_group_dir(base_dir: str) -> str:
-    return str(os.path.join(base_dir, "resources", "google", "groups"))
+def get_group_dir(
+    base_dir: str,
+    idp_name: str,
+) -> str:
+    return str(os.path.join(base_dir, "resources", "google", idp_name, "groups"))
 
 
 def get_templated_resource_file_path(
     resource_dir: str,
-    resource_domain: str,
     resource_email: str,
 ) -> str:
     unwanted_chars = ["}}_", "}}", ".", "-", " "]
-    resource_domain.replace("{{", "").lower()
     resource_name = resource_email.split("@")[0].replace("{{", "").lower()
     for unwanted_char in unwanted_chars:
-        resource_domain = resource_domain.replace(unwanted_char, "_")
         resource_name = resource_name.replace(unwanted_char, "_")
-    return str(os.path.join(resource_dir, resource_domain, f"{resource_name}.yaml"))
+    return str(os.path.join(resource_dir, f"{resource_name}.yaml"))
 
 
 async def update_or_create_group_template(
@@ -36,7 +36,6 @@ async def update_or_create_group_template(
 
     discovered_group_template.file_path = get_templated_resource_file_path(
         group_dir,
-        discovered_group_template.properties.domain,
         discovered_group_template.properties.email,
     )
 
@@ -47,7 +46,7 @@ async def update_or_create_group_template(
         GroupTemplate,
         {},
         discovered_group_template.properties,
-        []
+        [],
     )
 
 
@@ -60,7 +59,7 @@ async def generate_group_templates(config, domain, output_dir, google_project):
     existing_template_map = await get_existing_template_map(
         base_path, GOOGLE_GROUP_TEMPLATE_TYPE
     )
-    group_dir = get_group_dir(base_path)
+    group_dir = get_group_dir(base_path, domain)
 
     # Update or create templates
     for group in groups:

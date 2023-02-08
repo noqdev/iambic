@@ -17,23 +17,20 @@ from iambic.okta.group.utils import list_all_groups
 from iambic.okta.models import Group
 
 
-def get_group_dir(base_dir: str) -> str:
-    return str(os.path.join(base_dir, "resources", "okta", "groups"))
+def get_group_dir(base_dir: str, idp_name: str) -> str:
+    return str(os.path.join(base_dir, "resources", "okta", idp_name, "groups"))
 
 
 def get_templated_resource_file_path(
     resource_dir: str,
-    resource_idp_name: str,
     resource_name: str,
 ) -> str:
     unwanted_chars = ["}}_", "}}", ".", "-", " "]
-    resource_idp_name = resource_idp_name.replace("{{", "").lower()
     resource_name = resource_name.replace("{{", "").lower()
     for unwanted_char in unwanted_chars:
-        resource_idp_name = resource_idp_name.replace(unwanted_char, "_")
         resource_name = resource_name.replace(unwanted_char, "_")
 
-    return str(os.path.join(resource_dir, resource_idp_name, f"{resource_name}.yaml"))
+    return str(os.path.join(resource_dir, f"{resource_name}.yaml"))
 
 
 async def update_or_create_group_template(
@@ -55,7 +52,7 @@ async def update_or_create_group_template(
         members=[json.loads(m.json()) for m in group.members],
     )
 
-    file_path = get_templated_resource_file_path(group_dir, group.idp_name, group.name)
+    file_path = get_templated_resource_file_path(group_dir, group.name)
     UserSimple.update_forward_refs()
     OktaGroupTemplate.update_forward_refs()
 
@@ -66,7 +63,7 @@ async def update_or_create_group_template(
         OktaGroupTemplate,
         {},
         properties,
-        []
+        [],
     )
 
 
@@ -76,7 +73,7 @@ async def generate_group_templates(config, output_dir, okta_organization):
     existing_template_map = await get_existing_template_map(
         base_path, OKTA_GROUP_TEMPLATE_TYPE
     )
-    group_dir = get_group_dir(base_path)
+    group_dir = get_group_dir(base_path, okta_organization.idp_name)
 
     # Update or create templates
     for okta_group in groups:
