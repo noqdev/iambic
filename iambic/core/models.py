@@ -25,7 +25,7 @@ from deepdiff.model import PrettyOrderedSet
 from git import Repo
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, validator
+from pydantic import Field, validate_model, validator
 from pydantic.fields import ModelField
 
 from iambic.aws.utils import apply_to_account
@@ -71,6 +71,23 @@ class IambicPydanticBaseModel(PydanticBaseModel):
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
         return {"metadata_commented_dict"}
+
+    # https://github.com/pydantic/pydantic/issues/1864#issuecomment-1118485697
+    # Use this to validate post creation
+    def validate_model_afterward(self):
+        values, fields_set, validation_error = validate_model(
+            self.__class__, self.__dict__
+        )
+        if validation_error:
+            raise validation_error
+        try:
+            object.__setattr__(self, "__dict__", values)
+        except TypeError as e:
+            raise TypeError(
+                "Model values must be a dict; you may not have returned "
+                + "a dictionary from a root validator"
+            ) from e
+        object.__setattr__(self, "__fields_set__", fields_set)
 
 
 class BaseModel(IambicPydanticBaseModel):
@@ -249,16 +266,28 @@ class BaseModel(IambicPydanticBaseModel):
         raise NotImplementedError
 
 
+def get_model_lookup_key(model: BaseModel) -> str:
+    from iambic.aws.models import AccessModel
+
+    resource_id = None
+    access_model_str = ""
+    try:
+        resource_id = model.resource_id
+    except NotImplementedError:
+        return None
+
+    if isinstance(model, AccessModel):
+        access_model_str = model.access_model_sort_weight()
+    map_key = f"{resource_id}!{access_model_str}"
+    return map_key
+
+
 def get_resource_id_to_model_map(models: list[BaseModel]) -> dict[str, BaseModel]:
     resource_id_to_model_map = {}
     for existing_model in models:
-        existing_resource_id = None
-        try:
-            existing_resource_id = existing_model.resource_id
-        except NotImplementedError:
-            pass
-        if existing_resource_id:
-            resource_id_to_model_map[existing_resource_id] = existing_model
+        map_key = get_model_lookup_key(existing_model)
+        if map_key:
+            resource_id_to_model_map[map_key] = existing_model
     return resource_id_to_model_map
 
 
@@ -266,18 +295,14 @@ def merge_model_list(existing_list: list[BaseModel], new_list: list[BaseModel]) 
     existing_resource_id_to_model_map = get_resource_id_to_model_map(existing_list)
     merged_list = []
     for new_index, new_model in enumerate(new_list):
-        new_model_resource_id = None
-        try:
-            new_model_resource_id = new_model.resource_id
-        except NotImplementedError:
-            pass
+        new_model_lookup_key = get_model_lookup_key(new_model)
         if (
-            new_model_resource_id
-            and new_model_resource_id in existing_resource_id_to_model_map
+            new_model_lookup_key
+            and new_model_lookup_key in existing_resource_id_to_model_map
         ):
-            existing_model = existing_resource_id_to_model_map[new_model_resource_id]
+            existing_model = existing_resource_id_to_model_map[new_model_lookup_key]
             merged_list.append(merge_model(existing_model, new_model))
-        elif not new_model_resource_id and new_index < len(existing_list):
+        elif not new_model_lookup_key and new_index < len(existing_list):
             # when we cannot use
             existing_model = existing_list[new_index]
             merged_list.append(merge_model(existing_model, new_model))
@@ -441,6 +466,10 @@ class BaseTemplate(
         return as_yaml
 
     def write(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
+
+        # pay the cost of validating the models once more.
+        self.validate_model_afterward()
+
         as_yaml = self.get_body(exclude_none, exclude_unset, exclude_defaults)
         os.makedirs(os.path.dirname(os.path.expanduser(self.file_path)), exist_ok=True)
         with open(self.file_path, "w") as f:
