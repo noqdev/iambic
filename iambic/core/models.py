@@ -402,6 +402,7 @@ class BaseTemplate(
 ):
     template_type: str
     file_path: str
+    owner: Optional[str]
     iambic_managed: Optional[IambicManaged] = Field(
         IambicManaged.UNDEFINED,
         description="Controls the directionality of Iambic changes",
