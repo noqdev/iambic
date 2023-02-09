@@ -205,13 +205,17 @@ def create_templates_for_modified_files(
 
         main_template = template_cls(file_path=git_diff.path, **main_template_dict)
 
+        template_dict = yaml.load(open(git_diff.path))
+        template = template_cls(file_path=git_diff.path, **template_dict)
+
         # EN-1634 dealing with providers that have no concept of multi-accounts
         # a hack to just ignore template that does not have included_accounts attribute
         if getattr(main_template, "included_accounts", None) is None:
+            templates.append(template)
+            # The rest of the account inclusion/exclusion logic does not apply
+            # plugin that does not have concept of included_accounts
             continue
 
-        template_dict = yaml.load(open(git_diff.path))
-        template = template_cls(file_path=git_diff.path, **template_dict)
         deleted_included_accounts = []
         # deleted_exclude_accounts are aws_accounts that are included in the current commit so can't be deleted
         deleted_exclude_accounts = [*template.included_accounts]
