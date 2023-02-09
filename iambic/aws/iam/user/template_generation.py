@@ -361,6 +361,7 @@ async def create_templated_user(  # noqa: C901
         UserTemplate,
         user_template_params,
         UserProperties(**user_template_properties),
+        list(aws_account_map.values()),
     )
 
 

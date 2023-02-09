@@ -61,6 +61,7 @@ async def update_or_create_user_template(
         OktaUserTemplate,
         {},
         properties,
+        [],
     )
 
 

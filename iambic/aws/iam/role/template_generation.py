@@ -382,6 +382,7 @@ async def create_templated_role(  # noqa: C901
         RoleTemplate,
         role_template_params,
         RoleProperties(**role_template_properties),
+        list(aws_account_map.values()),
     )
 
 

@@ -275,6 +275,7 @@ async def create_templated_managed_policy(  # noqa: C901
         ManagedPolicyTemplate,
         template_params,
         ManagedPolicyProperties(**template_properties),
+        list(aws_account_map.values()),
     )
 
 

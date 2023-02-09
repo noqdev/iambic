@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from iambic.aws.iam.policy.models import PolicyDocument
-from iambic.core.models import merge_model
+from iambic.core.template_generation import merge_model
 
 
-def test_merge_policy_document_with_sid():
+def test_merge_policy_document_with_sid(aws_accounts):
     existing_statement_list = [
         {
             "effect": "Allow",
@@ -19,14 +19,17 @@ def test_merge_policy_document_with_sid():
     new_document = PolicyDocument(
         policy_name="foo", version="bar", statement=new_statement_list
     )
-    merged_document: PolicyDocument = merge_model(existing_document, new_document)
+    merged_document: PolicyDocument = merge_model(
+        new_document, existing_document, aws_accounts
+    )
+
     assert (
         merged_document.statement[0].expires_at
         == existing_document.statement[0].expires_at
     )
 
 
-def test_merge_policy_document_without_sid():
+def test_merge_policy_document_without_sid(aws_accounts):
     existing_statement_list = [
         {
             "effect": "Allow",
@@ -40,7 +43,9 @@ def test_merge_policy_document_without_sid():
     new_document = PolicyDocument(
         policy_name="foo", version="bar", statement=new_statement_list
     )
-    merged_document: PolicyDocument = merge_model(existing_document, new_document)
+    merged_document: PolicyDocument = merge_model(
+        new_document, existing_document, aws_accounts
+    )
     assert (
         merged_document.statement[0].expires_at
         == existing_document.statement[0].expires_at

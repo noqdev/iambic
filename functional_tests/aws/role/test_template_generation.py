@@ -110,5 +110,5 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
         )
 
         file_sys_template = RoleTemplate.load(self.template.file_path)
-        self.assertNotIn("*", file_sys_template.included_accounts)
-        self.assertNotIn(deleted_account, file_sys_template.included_accounts)
+        self.assertEqual(file_sys_template.included_accounts, ["*"])
+        self.assertEqual(file_sys_template.excluded_accounts, [deleted_account])
