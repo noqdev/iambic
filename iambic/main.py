@@ -11,6 +11,7 @@ import click
 from iambic.config.models import Config
 from iambic.config.utils import (
     aws_account_update_and_discovery,
+    load_aws_details,
     resolve_config_template_path,
 )
 from iambic.config.wizard import ConfigurationWizard
@@ -351,6 +352,7 @@ def run_import(
     if not config_path:
         config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = Config.load(config_path)
+    asyncio.run(load_aws_details(config))
     asyncio.run(generate_templates(config, repo_dir or str(pathlib.Path.cwd())))
 
 
