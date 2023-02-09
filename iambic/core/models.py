@@ -25,7 +25,7 @@ from deepdiff.model import PrettyOrderedSet
 from git import Repo
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, validator
+from pydantic import Field, validate_model, validator
 from pydantic.fields import ModelField
 
 from iambic.core.context import ExecutionContext
@@ -71,6 +71,23 @@ class IambicPydanticBaseModel(PydanticBaseModel):
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
         return {"metadata_commented_dict"}
+
+    # https://github.com/pydantic/pydantic/issues/1864#issuecomment-1118485697
+    # Use this to validate post creation
+    def validate_model_afterward(self):
+        values, fields_set, validation_error = validate_model(
+            self.__class__, self.__dict__
+        )
+        if validation_error:
+            raise validation_error
+        try:
+            object.__setattr__(self, "__dict__", values)
+        except TypeError as e:
+            raise TypeError(
+                "Model values must be a dict; you may not have returned "
+                + "a dictionary from a root validator"
+            ) from e
+        object.__setattr__(self, "__fields_set__", fields_set)
 
 
 class BaseModel(IambicPydanticBaseModel):
@@ -437,6 +454,10 @@ class BaseTemplate(
         return as_yaml
 
     def write(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
+
+        # pay the cost of validating the models once more.
+        self.validate_model_afterward()
+
         as_yaml = self.get_body(exclude_none, exclude_unset, exclude_defaults)
         os.makedirs(os.path.dirname(os.path.expanduser(self.file_path)), exist_ok=True)
         with open(self.file_path, "w") as f:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from iambic.aws.iam.role.models import RoleTemplate
+from iambic.aws.iam.role.models import RoleProperties, RoleTemplate
 from iambic.core.template_generation import merge_model
 
 
@@ -513,3 +513,34 @@ def test_merge_role_with_multiple_access_removals(aws_accounts):
                 sorted(inline_policy.statement[0].action)
                 == sorted(dev_statement[0]["action"])
             )
+
+
+def test_role_properties_tags():
+
+    tags_1 = [
+        {"key": "apple", "value": "red", "included_accounts": ["ses"]},
+        {"key": "apple", "value": "yellow", "included_accounts": ["development"]},
+    ]
+    tags_2 = list(reversed(tags_1))
+    assert tags_1 != tags_2
+    properties_1 = RoleProperties(role_name="foo", tags=tags_1)
+    properties_2 = RoleProperties(role_name="foo", tags=tags_2)
+    assert properties_1.tags == properties_2.tags
+
+
+def test_role_proerties_validation():
+
+    tags_1 = [
+        {"key": "apple", "value": "red", "included_accounts": ["ses"]},
+        {"key": "apple", "value": "yellow", "included_accounts": ["development"]},
+    ]
+    properties_1 = RoleProperties(role_name="foo", tags=tags_1)
+    tag_models_1 = properties_1.tags
+    tag_models_2 = list(reversed(properties_1.tags))
+    assert tag_models_1 != tag_models_2  # because we reverse the list
+    properties_1.tags = tag_models_2
+    assert (
+        properties_1.tags == tag_models_2
+    )  # double check the list is reversed because validation doesn't happen after creation
+    properties_1.validate_model_afterward()
+    assert properties_1.tags == tag_models_1
