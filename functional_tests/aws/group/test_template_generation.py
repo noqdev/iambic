@@ -34,7 +34,7 @@ class PartialImportGroupTestCase(IsolatedAsyncioTestCase):
         self.assertTrue(os.path.exists(self.template.file_path))
 
         await generate_aws_group_templates(
-            [IAMBIC_TEST_DETAILS.config],
+            IAMBIC_TEST_DETAILS.config,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 GroupMessageDetails(
@@ -65,7 +65,7 @@ class PartialImportGroupTestCase(IsolatedAsyncioTestCase):
 
         # Refresh the template
         await generate_aws_group_templates(
-            [IAMBIC_TEST_DETAILS.config],
+            IAMBIC_TEST_DETAILS.config,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 GroupMessageDetails(

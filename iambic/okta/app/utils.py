@@ -17,6 +17,11 @@ if TYPE_CHECKING:
     pass
 
 
+@tenacity.retry(
+    wait=tenacity.wait_fixed(10),
+    stop=tenacity.stop_after_attempt(25),
+    retry=(tenacity.retry_if_exception_type(asyncio.exceptions.TimeoutError)),
+)
 async def list_app_user_assignments(
     okta_organization: OktaOrganization, app: App
 ) -> dict:
@@ -31,6 +36,8 @@ async def list_app_user_assignments(
             continue
         user_okta, _, err = await client.get_user(user.id)
         if err:
+            if isinstance(err, asyncio.exceptions.TimeoutError):
+                raise err
             log.error("Error encountered when getting user", error=str(err))
             raise Exception("Error encountered when getting user")
         user_assignments.append(user_okta.profile.login)
@@ -42,13 +49,16 @@ async def list_app_user_assignments(
 
 
 @tenacity.retry(
-    wait=tenacity.wait_exponential(multiplier=1, min=4, max=10),
-    stop=tenacity.stop_after_attempt(10),
+    wait=tenacity.wait_fixed(10),
+    stop=tenacity.stop_after_attempt(25),
+    retry=(tenacity.retry_if_exception_type(asyncio.exceptions.TimeoutError)),
 )
 async def get_app(okta_organization: OktaOrganization, app_id: str) -> App:
     client = await okta_organization.get_okta_client()
     app_raw, _, err = await client.get_application(app_id)
     if err:
+        if isinstance(err, asyncio.exceptions.TimeoutError):
+            raise err
         log.error("Error encountered when getting app", error=str(err))
         raise Exception(f"Error encountered when getting app: {str(err)}")
 

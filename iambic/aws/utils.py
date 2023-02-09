@@ -236,30 +236,29 @@ async def set_org_account_variables(client, account: dict) -> dict:
     return account
 
 
-async def get_aws_account_map(configs: list[Config]) -> dict:
+async def get_aws_account_map(config: Config) -> dict:
     """Returns a map containing all enabled account configs across all provided config instances
 
-    :param configs:
+    :param config:
     :return: dict(account_id:str = AWSAccount)
     """
     aws_account_map = dict()
-    for config in configs:
-        for aws_account in config.aws.accounts:
-            if aws_account_map.get(aws_account.account_id):
-                log.critical(
-                    "Account definition found in multiple configs",
-                    account_id=aws_account.account_id,
-                    account_name=aws_account.account_name,
-                )
-                raise ValueError
-            elif aws_account.iambic_managed == IambicManaged.DISABLED:
-                log.info(
-                    "IAMbic awareness disabled for the account. Skipping.",
-                    account_id=aws_account.account_id,
-                )
-                continue
+    for aws_account in config.aws.accounts:
+        if aws_account_map.get(aws_account.account_id):
+            log.critical(
+                "Account definition found in multiple configs",
+                account_id=aws_account.account_id,
+                account_name=aws_account.account_name,
+            )
+            raise ValueError
+        elif aws_account.iambic_managed == IambicManaged.DISABLED:
+            log.info(
+                "IAMbic awareness disabled for the account. Skipping.",
+                account_id=aws_account.account_id,
+            )
+            continue
 
-            aws_account_map[aws_account.account_id] = aws_account
+        aws_account_map[aws_account.account_id] = aws_account
 
     return aws_account_map
 
