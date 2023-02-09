@@ -407,7 +407,7 @@ def handle_import(github_client: Github, context: dict[str, Any]) -> None:
         # TODO customize config.yaml filename
         config_file = context["iambic"]["IAMBIC_CONFIG_FILE"]
         config_path = f"{lambda_repo_path}/config/{config_file}"
-        run_import([config_path], lambda_repo_path)
+        run_import(lambda_repo_path, config_path)
         repo.git.add(".")
         diff_list = repo.head.commit.diff()
         if len(diff_list) > 0:

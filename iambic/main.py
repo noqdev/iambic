@@ -4,6 +4,7 @@ import asyncio
 import os
 import pathlib
 import warnings
+from typing import Optional
 
 import click
 
@@ -344,8 +345,11 @@ def import_(repo_dir: str):
     run_import(repo_dir=repo_dir)
 
 
-def run_import(repo_dir: str = str(pathlib.Path.cwd())):
-    config_path = asyncio.run(resolve_config_template_path(repo_dir))
+def run_import(
+    repo_dir: str = str(pathlib.Path.cwd()), config_path: Optional[str] = None
+):
+    if not config_path:
+        config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = Config.load(config_path)
     asyncio.run(generate_templates(config, repo_dir or str(pathlib.Path.cwd())))
 
