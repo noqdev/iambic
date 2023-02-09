@@ -196,22 +196,18 @@ async def _account_id_to_group_map(group_refs):
 
 
 async def create_templated_group(  # noqa: C901
-    global_config: Config,
     aws_account_map: dict[str, AWSAccount],
     group_name: str,
     group_refs: list[dict],
     group_dir: str,
     existing_template_map: dict,
-    configs: list[Config],
+    config: Config,
 ) -> GroupTemplate:
     account_id_to_group_map = await _account_id_to_group_map(group_refs)
     num_of_accounts = len(group_refs)
 
-    min_accounts_required_for_wildcard_included_accounts = max(
-        [
-            config.aws.min_accounts_required_for_wildcard_included_accounts
-            for config in configs
-        ]
+    min_accounts_required_for_wildcard_included_accounts = (
+        config.aws.min_accounts_required_for_wildcard_included_accounts
     )
 
     # Generate the params used for attribute creation
@@ -295,11 +291,11 @@ async def create_templated_group(  # noqa: C901
 
 
 async def generate_aws_group_templates(
-    configs: list[Config],
+    config: Config,
     base_output_dir: str,
     group_messages: list[GroupMessageDetails] = None,
 ):
-    aws_account_map = await get_aws_account_map(configs)
+    aws_account_map = await get_aws_account_map(config)
     existing_template_map = await get_existing_template_map(
         base_output_dir, AWS_IAM_GROUP_TEMPLATE_TYPE
     )
@@ -431,13 +427,12 @@ async def generate_aws_group_templates(
     log.info("Writing templated groups")
     for group_name, group_refs in grouped_group_map.items():
         await create_templated_group(
-            configs[0],
             aws_account_map,
             group_name,
             group_refs,
             group_dir,
             existing_template_map,
-            configs,
+            config,
         )
 
     log.info("Finished templated group generation")

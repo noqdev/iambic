@@ -34,7 +34,7 @@ class PartialImportUserTestCase(IsolatedAsyncioTestCase):
         self.assertTrue(os.path.exists(self.template.file_path))
 
         await generate_aws_user_templates(
-            [IAMBIC_TEST_DETAILS.config],
+            IAMBIC_TEST_DETAILS.config,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 UserMessageDetails(
@@ -65,7 +65,7 @@ class PartialImportUserTestCase(IsolatedAsyncioTestCase):
 
         # Refresh the template
         await generate_aws_user_templates(
-            [IAMBIC_TEST_DETAILS.config],
+            IAMBIC_TEST_DETAILS.config,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 UserMessageDetails(

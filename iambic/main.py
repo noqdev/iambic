@@ -4,13 +4,14 @@ import asyncio
 import os
 import pathlib
 import warnings
+from typing import Optional
 
 import click
 
 from iambic.config.models import Config
 from iambic.config.utils import (
     aws_account_update_and_discovery,
-    multi_config_loader,
+    load_aws_details,
     resolve_config_template_path,
 )
 from iambic.config.wizard import ConfigurationWizard
@@ -342,15 +343,17 @@ def config_discovery(repo_dir: str):
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
 def import_(repo_dir: str):
-    config_path = asyncio.run(resolve_config_template_path(repo_dir))
-    run_import([config_path], repo_dir=repo_dir)
+    run_import(repo_dir=repo_dir)
 
 
-def run_import(config_paths: list[str], repo_dir: str = str(pathlib.Path.cwd())):
-    if not config_paths or config_paths == [None]:
-        config_paths = [asyncio.run(resolve_config_template_path(repo_dir))]
-    configs = asyncio.run(multi_config_loader(config_paths))
-    asyncio.run(generate_templates(configs, repo_dir or str(pathlib.Path.cwd())))
+def run_import(
+    repo_dir: str = str(pathlib.Path.cwd()), config_path: Optional[str] = None
+):
+    if not config_path:
+        config_path = asyncio.run(resolve_config_template_path(repo_dir))
+    config = Config.load(config_path)
+    asyncio.run(load_aws_details(config))
+    asyncio.run(generate_templates(config, repo_dir or str(pathlib.Path.cwd())))
 
 
 @cli.command()

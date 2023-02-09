@@ -174,13 +174,10 @@ async def create_templated_managed_policy(  # noqa: C901
     managed_policy_refs: list[dict],
     managed_policy_dir: str,
     existing_template_map: dict,
-    configs: list[Config],
+    config: Config,
 ):
-    min_accounts_required_for_wildcard_included_accounts = max(
-        [
-            config.aws.min_accounts_required_for_wildcard_included_accounts
-            for config in configs
-        ]
+    min_accounts_required_for_wildcard_included_accounts = (
+        config.aws.min_accounts_required_for_wildcard_included_accounts
     )
     account_id_to_mp_map = {}
     num_of_accounts = len(managed_policy_refs)
@@ -280,11 +277,11 @@ async def create_templated_managed_policy(  # noqa: C901
 
 
 async def generate_aws_managed_policy_templates(
-    configs: list[Config],
+    config: Config,
     base_output_dir: str,
     managed_policy_messages: list[ManagedPolicyMessageDetails] = None,
 ):
-    aws_account_map = await get_aws_account_map(configs)
+    aws_account_map = await get_aws_account_map(config)
     existing_template_map = await get_existing_template_map(
         base_output_dir, "NOQ::IAM::ManagedPolicy"
     )
@@ -434,7 +431,7 @@ async def generate_aws_managed_policy_templates(
             policy_refs,
             resource_dir,
             existing_template_map,
-            configs,
+            config,
         )
 
     log.info("Finished templated managed policy generation")

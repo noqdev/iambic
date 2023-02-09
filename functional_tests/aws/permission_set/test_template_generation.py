@@ -54,7 +54,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
         )
 
         await generate_aws_permission_set_templates(
-            [IAMBIC_TEST_DETAILS.config],
+            IAMBIC_TEST_DETAILS.config,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 PermissionSetMessageDetails(
@@ -83,7 +83,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
         )[0]
 
         await generate_aws_permission_set_templates(
-            [IAMBIC_TEST_DETAILS.config],
+            IAMBIC_TEST_DETAILS.config,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 PermissionSetMessageDetails(
