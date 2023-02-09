@@ -218,7 +218,6 @@ async def _account_id_to_role_map(role_refs):
 
 
 async def create_templated_role(  # noqa: C901
-    global_config: Config,
     aws_account_map: dict[str, AWSAccount],
     role_name: str,
     role_refs: list[dict],

@@ -203,4 +203,17 @@ async def aws_account_update_and_discovery(config: Config, repo_dir: str):
         log.warning(
             "Running import to regenerate AWS templates.",
         )
-        await generate_templates([config], repo_dir, GenerateTemplateScope.AWS)
+        await generate_templates(config, repo_dir, GenerateTemplateScope.AWS)
+
+
+async def load_aws_details(config: Config) -> Config:
+    await config.setup_aws_accounts()
+
+    identity_center_detail_set_tasks = []
+    if config.aws and config.aws.accounts:
+        identity_center_detail_set_tasks.extend(
+            [account.set_identity_center_details() for account in config.aws.accounts]
+        )
+    await asyncio.gather(*identity_center_detail_set_tasks)
+
+    return config
