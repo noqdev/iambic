@@ -45,14 +45,6 @@ python-versions = ">=3.7"
 tests = ["mypy (>=0.800)", "pytest", "pytest-asyncio"]
 
 [[package]]
-name = "async-lru"
-version = "1.0.3"
-description = "Simple lru_cache for asyncio"
-category = "main"
-optional = false
-python-versions = ">=3.6"
-
-[[package]]
 name = "async-timeout"
 version = "3.0.1"
 description = "Timeout context manager for asyncio programs"
@@ -1305,7 +1297,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "e60aa034aabb3e5e34e2f8f76a1e2bf0a96f84f08d44490378d4b469f6eac6c7"
+content-hash = "d9919b529118693da1b7ab3d8bc5be8eb83e0bd740f0edae704ddd11bd676b34"
 
 [metadata.files]
 aenum = [
@@ -1359,10 +1351,6 @@ aiohttp = [
 asgiref = [
     {file = "asgiref-3.6.0-py3-none-any.whl", hash = "sha256:71e68008da809b957b7ee4b43dbccff33d1b23519fb8344e33f049897077afac"},
     {file = "asgiref-3.6.0.tar.gz", hash = "sha256:9567dfe7bd8d3c8c892227827c41cce860b368104c3431da67a0c5a65a949506"},
-]
-async-lru = [
-    {file = "async-lru-1.0.3.tar.gz", hash = "sha256:c2cb9b2915eb14e6cf3e717154b40f715bf90e596d73623677affd0d1fbcd32a"},
-    {file = "async_lru-1.0.3-py3-none-any.whl", hash = "sha256:ea692c303feb6211ff260d230dae1583636f13e05c9ae616eada77855b7f415c"},
 ]
 async-timeout = [
     {file = "async-timeout-3.0.1.tar.gz", hash = "sha256:0c3c816a028d47f659d6ff5c745cb2acf1f966da1fe5c19c77a70282b25f4c5f"},

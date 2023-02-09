@@ -19,6 +19,7 @@ from iambic.core.models import (
     ProposedChangeType,
     TemplateChangeDetails,
 )
+from iambic.core.utils import NoqSemaphore
 from iambic.okta.models import User, UserStatus
 from iambic.okta.user.utils import (
     create_user,
@@ -29,6 +30,7 @@ from iambic.okta.user.utils import (
 )
 
 OKTA_USER_TEMPLATE_TYPE = "NOQ::Okta::User"
+OKTA_GET_USER_SEMAPHORE = NoqSemaphore(get_user, 3)
 
 
 class Assignment(BaseModel):
@@ -154,9 +156,16 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
             organization=str(self.properties.idp_name),
         )
 
-        current_user: Optional[User] = await get_user(
-            self.properties.username, self.properties.user_id, okta_organization
+        current_user_task = await OKTA_GET_USER_SEMAPHORE.process(
+            [
+                {
+                    "username": self.properties.username,
+                    "user_id": self.properties.user_id,
+                    "okta_organization": okta_organization,
+                }
+            ]
         )
+        current_user: Optional[User] = current_user_task[0]
         if current_user:
             change_details.current_value = current_user
 
