@@ -4,7 +4,7 @@ title: Google
 <!-- #TODO not sure where this goes. It's useful metainformation, but not really part of the flow of the tutorial. -->
 Noq's SaaS Platform provides enterprise Self-Service features that make Google Group requests easier for end-users. Reach out to us at [hello@noq.dev](mailto:hello@noq.dev) or visit [https://www.noq.dev](https://www.noq.dev) for more information.
 
-In this tutorial, you will configure IAMbic to manage Google Groups, and then practice using IAMbic to to create, manipulate, and expire a test group. These are the steps you will complete. 
+In this tutorial, you will configure IAMbic to manage Google Groups, and then practice using IAMbic to to create, manipulate, and expire a test group. These are the steps you will complete.
 
 
 #### Setup
@@ -255,8 +255,8 @@ Run the `apply` command to have IAMbic update the group:
 iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
 ```
 
-<!-- #TODO Is there a way we can test/verify that this worked and the user is in the GG now? 
-Oh, like the confirm below. Same here? 
+<!-- #TODO Is there a way we can test/verify that this worked and the user is in the GG now?
+Oh, like the confirm below. Same here?
 -->
 
 
@@ -309,7 +309,7 @@ iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
 
 ### 6. Expire the Google Group
 
-In this section, we will update the Google Group we created in the previous section so the group will expire in one minute. 
+In this section, we will update the Google Group we created in the previous section so the group will expire in one minute.
 Notice the extra line at the top-level of the YAML below, `expires_at: in one minute`.
 
 Run the following command to update the group template, and then apply and view the new template.
@@ -345,5 +345,5 @@ iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
 
 <!-- #TODO Do something here to confrim it's expired properly -->
 
-## Conclusion 
-That's it! You've now connected Google Groups to IAMbic, and are able to create and edit your groups, and expire users and groups. 
+## Conclusion
+That's it! You've now connected Google Groups to IAMbic, and are able to create and edit your groups, and expire users and groups.

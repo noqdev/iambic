@@ -34,7 +34,7 @@ def output_proposed_changes(
     if output_path is None:
         output_path = "proposed_changes.yaml"
     if template_changes:
-        log.info(f"A detailed summary of descriptions was saved to {output_path}")
+        log.info(f"A detailed summary of changes has been saved to {output_path}")
 
         with open(output_path, "w") as f:
             f.write(

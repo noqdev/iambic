@@ -290,6 +290,7 @@ async def create_templated_group(  # noqa: C901
         GroupTemplate,
         group_template_params,
         GroupProperties(**group_template_properties),
+        list(aws_account_map.values()),
     )
 
 

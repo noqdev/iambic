@@ -819,7 +819,10 @@ class ConfigurationWizard:
                     statement=[
                         PolicyStatement(
                             effect="Allow",
-                            action=["secretsmanager:GetSecretValue"],
+                            action=[
+                                "secretsmanager:GetSecretValue",
+                                "secretsmanager:PutSecretValue",
+                            ],
                             resource=[response["ARN"]],
                         )
                     ],

@@ -358,6 +358,7 @@ async def create_templated_permission_set(  # noqa: C901
         AWSIdentityCenterPermissionSetTemplate,
         template_params,
         AWSIdentityCenterPermissionSetProperties(**template_properties),
+        list(aws_account_map.values()),
     )
 
 
