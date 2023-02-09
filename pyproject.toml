@@ -49,7 +49,6 @@ asynctest = "^0.13.0"
 questionary = "^1.10.0"
 types-dateparser = "^1.1.4.5"
 tenacity = "^8.1.0"
-async-lru = "^1.0.3"
 
 [tool.poetry.scripts]
 iambic = "iambic.main:cli"

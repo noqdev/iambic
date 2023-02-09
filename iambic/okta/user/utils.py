@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 import okta.models as models
 import tenacity
-from async_lru import alru_cache
 
 from iambic.config.models import OktaOrganization
 from iambic.core.context import ExecutionContext
@@ -61,7 +60,6 @@ async def create_user(
     stop=tenacity.stop_after_attempt(25),
     retry=(tenacity.retry_if_exception_type(asyncio.exceptions.TimeoutError)),
 )
-@alru_cache()
 async def get_user(
     username: str,
     user_id: Optional[str],
@@ -85,7 +83,7 @@ async def get_user(
         user, _, err = await client.get_user(username)
     if err:
         if isinstance(err, asyncio.exceptions.TimeoutError):
-            raise
+            raise err
         if err.error_code == "E0000007":
             return None  # No user exists
         raise Exception(f"Error retrieving user: {err}")
