@@ -18,6 +18,7 @@ from iambic.core.models import (
     ExpiryModel,
     TemplateChangeDetails,
 )
+from iambic.core.utils import NoqSemaphore
 from iambic.okta.app.utils import (
     get_app,
     maybe_delete_app,
@@ -25,6 +26,8 @@ from iambic.okta.app.utils import (
     update_app_name,
 )
 from iambic.okta.models import App, Assignment, Status
+
+OKTA_GET_APP_SEMAPHORE = NoqSemaphore(get_app, 3)
 
 
 class OktaAppTemplateProperties(ExpiryModel, BaseModel):
@@ -147,10 +150,11 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
             organization=str(self.properties.idp_name),
         )
 
-        current_app: Optional[App] = await get_app(
-            okta_organization,
-            self.properties.id,
+        current_app_task = await OKTA_GET_APP_SEMAPHORE.process(
+            [{"okta_organization": okta_organization, "app_id": self.properties.id}]
         )
+
+        current_app: Optional[App] = current_app_task[0]
         if current_app:
             change_details.current_value = current_app
 
@@ -236,7 +240,7 @@ async def get_app_template(okta_app) -> OktaAppTemplate:
     """Get a template for an app"""
     file_name = f"{okta_app.name}.yaml"
     app = OktaAppTemplate(
-        file_path=f"resources/okta/apps/{okta_app.idp_name}/{file_name}",
+        file_path=f"resources/okta/{okta_app.idp_name}/apps/{file_name}",
         template_type="NOQ::Okta::App",
         properties=OktaAppTemplateProperties(
             name=okta_app.name,
