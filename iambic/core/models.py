@@ -28,11 +28,11 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, validate_model, validator
 from pydantic.fields import ModelField
 
-from iambic.aws.utils import apply_to_account
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.utils import (
+    apply_to_provider,
     create_commented_map,
     snake_to_camelcap,
     sort_dict,
@@ -143,7 +143,7 @@ class BaseModel(IambicPydanticBaseModel):
             return attr_val
 
         matching_definitions = [
-            val for val in attr_val if apply_to_account(val, aws_account, context)
+            val for val in attr_val if apply_to_provider(val, aws_account, context)
         ]
         if len(matching_definitions) == 0:
             # Fallback to the default definition
@@ -266,86 +266,6 @@ class BaseModel(IambicPydanticBaseModel):
         raise NotImplementedError
 
 
-def get_model_lookup_key(model: BaseModel) -> str:
-    from iambic.aws.models import AccessModel
-
-    resource_id = None
-    access_model_str = ""
-    try:
-        resource_id = model.resource_id
-    except NotImplementedError:
-        return None
-
-    if isinstance(model, AccessModel):
-        access_model_str = model.access_model_sort_weight()
-    map_key = f"{resource_id}!{access_model_str}"
-    return map_key
-
-
-def get_resource_id_to_model_map(models: list[BaseModel]) -> dict[str, BaseModel]:
-    resource_id_to_model_map = {}
-    for existing_model in models:
-        map_key = get_model_lookup_key(existing_model)
-        if map_key:
-            resource_id_to_model_map[map_key] = existing_model
-    return resource_id_to_model_map
-
-
-def merge_model_list(existing_list: list[BaseModel], new_list: list[BaseModel]) -> list:
-    existing_resource_id_to_model_map = get_resource_id_to_model_map(existing_list)
-    merged_list = []
-    for new_index, new_model in enumerate(new_list):
-        new_model_lookup_key = get_model_lookup_key(new_model)
-        if (
-            new_model_lookup_key
-            and new_model_lookup_key in existing_resource_id_to_model_map
-        ):
-            existing_model = existing_resource_id_to_model_map[new_model_lookup_key]
-            merged_list.append(merge_model(existing_model, new_model))
-        elif not new_model_lookup_key and new_index < len(existing_list):
-            # when we cannot use
-            existing_model = existing_list[new_index]
-            merged_list.append(merge_model(existing_model, new_model))
-        else:
-            merged_list.append(new_model.copy())
-    return merged_list
-
-
-def merge_model(existing_model: BaseModel, new_model: BaseModel) -> BaseModel:
-    if new_model is None:
-        # if new_model is None, and existing_model is not None, we will lose
-        # metadata. It can be argued what's the preferred behavior, just return
-        # none and keep teh old model and then mark it as deleted.
-        if existing_model:
-            log.warn(
-                "merge_model: the incoming value is None when existing value is not None"
-            )
-        return new_model
-
-    merged_model = existing_model.copy()
-    iambic_fields = existing_model.metadata_iambic_fields
-    field_names = new_model.__fields__.keys()
-    for key in field_names:
-        new_value = getattr(new_model, key)
-        existing_value = getattr(existing_model, key)
-        if isinstance(existing_value, list):
-            if len(existing_value) > 0:
-                inner_element = existing_value[0]
-                if isinstance(inner_element, BaseModel):
-                    setattr(
-                        merged_model, key, merge_model_list(existing_value, new_value)
-                    )
-                else:
-                    setattr(merged_model, key, new_value)
-            else:
-                setattr(merged_model, key, new_value)
-        elif isinstance(existing_value, BaseModel):
-            setattr(merged_model, key, merge_model(existing_value, new_value))
-        elif key not in iambic_fields:
-            setattr(merged_model, key, new_value)
-    return merged_model
-
-
 class ProposedChangeType(Enum):
     CREATE = "Create"
     UPDATE = "Update"
@@ -407,6 +327,74 @@ class TemplateChangeDetails(PydanticBaseModel):
             exclude_none=exclude_none,
         )
         return json.loads(response)
+
+
+class ProviderChild(PydanticBaseModel):
+    """
+    Inherited by the provider class to provide a consistent interface for AccessModelMixin
+
+    For AWS, this is the AWS account
+    For GCP, this is the GCP project
+    For Okta, this is the IDP domain
+    """
+
+    iambic_managed: Optional[IambicManaged] = Field(
+        IambicManaged.UNDEFINED,
+        description="Controls the directionality of iambic changes",
+    )
+
+    @property
+    def parent_id(self) -> Optional[str]:
+        """
+        For example, the parent_id of an AWS account is the AWS organization ID
+        """
+        raise NotImplementedError
+
+    @property
+    def preferred_identifier(self) -> str:
+        raise NotImplementedError
+
+    @property
+    def all_identifiers(self) -> set[str]:
+        raise NotImplementedError
+
+
+class AccessModelMixin:
+    @property
+    def included_children(self):
+        raise NotImplementedError
+
+    def set_included_children(self, value):
+        raise NotImplementedError
+
+    @property
+    def excluded_children(self):
+        raise NotImplementedError
+
+    def set_excluded_children(self, value):
+        raise NotImplementedError
+
+    @property
+    def included_parents(self):
+        raise NotImplementedError
+
+    def set_included_parents(self, value):
+        raise NotImplementedError
+
+    @property
+    def excluded_parents(self):
+        raise NotImplementedError
+
+    def set_excluded_parents(self, value):
+        raise NotImplementedError
+
+    def access_model_sort_weight(self):
+        return (
+            str(self.included_children)
+            + str(self.excluded_children)
+            + str(self.included_parents)
+            + str(self.excluded_parents)
+        )
 
 
 class BaseTemplate(
@@ -501,7 +489,7 @@ class BaseTemplate(
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
-        return set(["iambic_managed", "file_path"])
+        return {"iambic_managed", "file_path"}
 
 
 class Variable(PydanticBaseModel):
@@ -546,4 +534,4 @@ class ExpiryModel(IambicPydanticBaseModel):
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
-        return set(["expires_at", "deleted"])
+        return {"expires_at", "deleted"}

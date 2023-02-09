@@ -15,8 +15,6 @@ from iambic.aws.utils import (
     RegionName,
     boto_crud_call,
     create_assume_role_session,
-    evaluate_on_account,
-    get_account_value,
     get_current_role_arn,
     legacy_paginated_search,
     set_org_account_variables,
@@ -25,14 +23,21 @@ from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
+    AccessModelMixin,
     AccountChangeDetails,
     BaseModel,
     BaseTemplate,
     ExpiryModel,
+    ProviderChild,
     TemplateChangeDetails,
     Variable,
 )
-from iambic.core.utils import NoqSemaphore, sort_dict
+from iambic.core.utils import (
+    NoqSemaphore,
+    evaluate_on_provider,
+    get_provider_value,
+    sort_dict,
+)
 
 yaml = YAML()
 
@@ -68,7 +73,7 @@ class Partition(Enum):
         return cls(node.value)
 
 
-class AccessModel(BaseModel):
+class AccessModel(AccessModelMixin, BaseModel):
     included_accounts: list[str] = Field(
         ["*"],
         description=(
@@ -98,13 +103,33 @@ class AccessModel(BaseModel):
         ),
     )
 
-    def access_model_sort_weight(self):
-        return (
-            str(self.included_accounts)
-            + str(self.excluded_accounts)
-            + str(self.included_orgs)
-            + str(self.excluded_orgs)
-        )
+    @property
+    def included_children(self):
+        return self.included_accounts
+
+    def set_included_children(self, value):
+        self.included_accounts = value
+
+    @property
+    def excluded_children(self):
+        return self.excluded_accounts
+
+    def set_excluded_children(self, value):
+        self.excluded_accounts = value
+
+    @property
+    def included_parents(self):
+        return self.included_orgs
+
+    def set_included_parents(self, value):
+        self.included_orgs = value
+
+    @property
+    def excluded_parents(self):
+        return self.excluded_orgs
+
+    def set_excluded_parents(self, value):
+        self.excluded_orgs = value
 
 
 class Tag(ExpiryModel, AccessModel):
@@ -231,7 +256,7 @@ class IdentityCenterDetails(PydanticBaseModel):
         return resource_map.get(resource_id)[name_map[resource_type]]
 
 
-class AWSAccount(BaseAWSAccountAndOrgModel):
+class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
     account_id: constr(min_length=12, max_length=12) = Field(
         None, description="The AWS Account ID"
     )
@@ -239,14 +264,10 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
         None,
         description="A unique identifier designating the identity of the organization",
     )
-    account_name: Optional[str] = None
+    account_name: str
     partition: Optional[Partition] = Field(
         Partition.AWS,
         description="The AWS partition the account is in. Options are aws, aws-us-gov, and aws-cn",
-    )
-    iambic_managed: Optional[IambicManaged] = Field(
-        IambicManaged.UNDEFINED,
-        description="Controls the directionality of iambic changes",
     )
     variables: Optional[List[Variable]] = Field(
         [],
@@ -435,6 +456,21 @@ class AWSAccount(BaseAWSAccountAndOrgModel):
             ],
         )
 
+    @property
+    def parent_id(self) -> Optional[str]:
+        return self.org_id
+
+    @property
+    def preferred_identifier(self) -> str:
+        return self.account_name
+
+    @property
+    def all_identifiers(self) -> set[str]:
+        if self.account_name:
+            return {self.account_id, self.account_name.lower()}
+        else:
+            return set(self.account_id)
+
     def __str__(self):
         return f"{self.account_name} - ({self.account_id})"
 
@@ -450,7 +486,7 @@ class BaseAWSOrgRule(BaseModel):
     )
 
 
-class AWSOrgAccountRule(BaseAWSOrgRule):
+class AWSOrgAccountRule(AccessModelMixin, BaseAWSOrgRule):
     included_accounts: list[str] = Field(
         ["*"],
         description=(
@@ -465,6 +501,22 @@ class AWSOrgAccountRule(BaseAWSOrgRule):
             "Account ids/names can be represented as a regex and string"
         ),
     )
+
+    @property
+    def included_children(self):
+        return self.included_accounts
+
+    @property
+    def excluded_children(self):
+        return self.excluded_accounts
+
+    @property
+    def included_parents(self):
+        return []
+
+    @property
+    def excluded_parents(self):
+        return []
 
 
 class AWSIdentityCenterAccount(PydanticBaseModel):
@@ -514,7 +566,9 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         account_rule = self.default_rule
 
         if self.account_rules and (
-            new_rule := get_account_value(self.account_rules, account_id, account_name)
+            new_rule := get_provider_value(
+                self.account_rules, {account_id, account_name}
+            )
         ):
             account_rule = new_rule
 
@@ -645,7 +699,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
             resource_type=self.resource_type, resource_id=self.resource_id
         )
         for account in config.aws.accounts:
-            if evaluate_on_account(self, account, context):
+            if evaluate_on_provider(self, account, context):
                 if context.execute:
                     log_str = "Applying changes to resource."
                 else:
