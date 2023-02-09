@@ -118,8 +118,8 @@ def filesystem():
 
     try:
         config: Config = Config.load(temp_config_filename)
-        config.combine_extended_configs()
         asyncio.run(config.setup_aws_accounts())
+        asyncio.run(config.combine_extended_configs())
         yield (temp_config_filename, temp_templates_directory, config)
     finally:
         try:

@@ -10,126 +10,11 @@
             "request": "launch",
             "module": "iambic.main",
             "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
             "args": [
                 "plan",
-                "--repo-dir",
-                "../noq-templates/",
-                "--config",
-                "demo/config.yaml"
             ],
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole"
-            },
             "justMyCode": false
-        },
-        {
-            "name": "Iambic Apply AWS Template",
-            "type": "python",
-            "request": "launch",
-            "module": "iambic.main",
-            "console": "integratedTerminal",
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole"
-            },
-            "args": [
-                "apply",
-                "--template",
-                "../noq-templates/resources/aws/roles/application/noqmeter_null_test_role.yaml",
-                "--config",
-                "demo/config.yaml"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "Iambic Force Apply AWS Template",
-            "type": "python",
-            "request": "launch",
-            "module": "iambic.main",
-            "console": "integratedTerminal",
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole"
-            },
-            "args": [
-                "apply",
-                "-f",
-                "--template",
-                "../noq-templates/resources/aws/roles/multi_account/noqmeter_null_test_role.yaml",
-                "--config",
-                "demo/config.yaml"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "Iambic Apply Google Template",
-            "type": "python",
-            "request": "launch",
-            "module": "iambic.main",
-            "console": "integratedTerminal",
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole"
-            },
-            "args": [
-                "apply",
-                "--template",
-                "../noq-templates/google/groups/noq.dev/iambic_test_group.yaml",
-                "--config",
-                "demo/config.yaml"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "Iambic Apply Okta Group Template",
-            "type": "python",
-            "request": "launch",
-            "module": "iambic.main",
-            "console": "integratedTerminal",
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole"
-            },
-            "args": [
-                "apply",
-                "--template",
-                "../noq-templates/okta/groups/development/networking2.yaml",
-                "--config",
-                "demo/config.yaml"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "Iambic Apply Okta User Template",
-            "type": "python",
-            "request": "launch",
-            "module": "iambic.main",
-            "console": "integratedTerminal",
-            "env": {
-                "AWS_PROFILE": "staging/staging_admin"
-            },
-            "args": [
-                "apply",
-                "--template",
-                "../noq-templates/resources/okta/development/users/curtis@noq_dev.yaml",
-                "--repo-dir",
-                "../noq-templates/",
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "Iambic Apply Okta App Template",
-            "type": "python",
-            "request": "launch",
-            "module": "iambic.main",
-            "console": "integratedTerminal",
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole"
-            },
-            "args": [
-                "apply",
-                "--template",
-                "../noq-templates/okta/apps/development/frontegg-test.yaml",
-                "--config",
-                "demo/config.yaml"
-            ],
-            "justMyCode": true
         },
         {
             "name": "Iambic Apply All Templates",
@@ -137,31 +22,36 @@
             "request": "launch",
             "module": "iambic.main",
             "console": "integratedTerminal",
-            "env": {
-                "AWS_PROFILE": "staging/staging_admin"
-            },
+            "envFile": "${workspaceFolder}/.env",
             "args": [
                 "apply",
-                "-d",
-                "../noq-templates/",
             ],
             "justMyCode": true
         },
         {
-            "name": "Iambic Git-Apply",
+            "name": "Iambic - Apply Specific Template",
             "type": "python",
             "request": "launch",
             "module": "iambic.main",
             "console": "integratedTerminal",
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole"
-            },
+            "args": [
+                "apply",
+
+                "--template",
+                "${env:IAMBIC_TEMPLATE_PATH}"
+            ],
+            "envFile": "${workspaceFolder}/.env",
+            "justMyCode": true
+        },
+        {
+            "name": "Iambic - Git-Apply",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
             "args": [
                 "git-apply",
-                "--repo-dir",
-                "../noq-templates/",
-                "--config",
-                "demo/config.yaml"
             ],
             "justMyCode": true
         },
@@ -171,19 +61,14 @@
             "request": "launch",
             "module": "iambic.main",
             "console": "integratedTerminal",
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole"
-            },
+            "envFile": "${workspaceFolder}/.env",
             "args": [
                 "git-apply",
-                "--repo-dir",
-                "../noq-templates/",
-                "--config",
-                "demo/config.yaml",
+
                 "--from-sha",
-                "1267dca837c0b3fa50d9d2aa926b386b1344501c",
+                "${env:IAMBIC_FROM_SHA}",
                 "--to-sha",
-                "aa38e4dac35e4bf9eae22fe47d638fc134fd1f00",
+                "${env:IAMBIC_TO_SHA}",
             ],
             "justMyCode": true
         },
@@ -195,14 +80,8 @@
             "console": "integratedTerminal",
             "args": [
                 "git-plan",
-                "--repo-dir",
-                "../noq-templates/",
-                "--config",
-                "demo/config.yaml"
             ],
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole"
-            },
+            "envFile": "${workspaceFolder}/.env",
             "justMyCode": true
         },
         {
@@ -211,13 +90,9 @@
             "request": "launch",
             "module": "iambic.main",
             "console": "integratedTerminal",
-            "env": {
-                "AWS_PROFILE": "staging/staging_admin"
-            },
+            "envFile": "${workspaceFolder}/.env",
             "args": [
                 "import",
-                "--repo-dir",
-                "../noq-templates"
             ],
             "justMyCode": true
         },
@@ -227,13 +102,9 @@
             "request": "launch",
             "module": "iambic.main",
             "console": "integratedTerminal",
-            "env": {
-                "AWS_PROFILE": "staging/staging_admin"
-            },
+            "envFile": "${workspaceFolder}/.env",
             "args": [
                 "config-discovery",
-                "--repo-dir",
-                "../noq-templates"
             ],
             "justMyCode": true
         },
@@ -243,13 +114,9 @@
             "request": "launch",
             "module": "iambic.main",
             "console": "integratedTerminal",
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole"
-            },
+            "envFile": "${workspaceFolder}/.env",
             "args": [
                 "detect",
-                "--config",
-                "demo/config.yaml",
             ],
             "justMyCode": true
         },
@@ -263,11 +130,7 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole",
-                "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
-                "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
-            },
+            "envFile": "${workspaceFolder}/.env",
         },
         {
             "name": "Iambic: Lambda App Plan",
@@ -279,11 +142,7 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole",
-                "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
-                "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
-            },
+            "envFile": "${workspaceFolder}/.env",
         },
         {
             "name": "Iambic: Lambda App Apply",
@@ -295,11 +154,7 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole",
-                "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
-                "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
-            },
+            "envFile": "${workspaceFolder}/.env",
         },
         {
             "name": "Iambic: Lambda App detect",
@@ -311,11 +166,7 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole",
-                "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
-                "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
-            },
+            "envFile": "${workspaceFolder}/.env",
         },
         {
             "name": "Iambic: Lambda App git-apply",
@@ -327,11 +178,7 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole",
-                "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
-                "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
-            },
+            "envFile": "${workspaceFolder}/.env",
         },
         {
             "name": "Iambic: Lambda App git-plan",
@@ -343,12 +190,7 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole",
-                "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
-                "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full",
-                "PLAN_OUTPUT_PATH": "../proposed_changes.yaml",
-            },
+            "envFile": "${workspaceFolder}/.env",
         },
         {
             "name": "Iambic: Lambda App clone repos",
@@ -360,11 +202,7 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole",
-                "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
-                "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
-            },
+            "envFile": "${workspaceFolder}/.env",
         },
         {
             "name": "Iambic: Lambda App schedule",
@@ -376,11 +214,7 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
-            "env": {
-                "AWS_PROFILE": "staging/IambicHubRole",
-                "IAMBIC_CONFIG_ASSUME_ROLE": "arn:aws:iam::759357822767:role/IambicSpokeRole",
-                "IAMBIC_CONFIG": "arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full"
-            },
+            "envFile": "${workspaceFolder}/.env",
         },
         {
             "name": "Iambic Docs: Generate Schema",

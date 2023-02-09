@@ -56,29 +56,26 @@ async def test_create_template_role(test_role, mock_account_id_to_role_map, mock
     test_role_ref["account_id"] = "123456789012"
     test_role_refs = [test_role_ref]
     test_existing_template_map = {}
-    test_configs = [
-        Config(version=CURRENT_IAMBIC_VERSION, file_path="cool_file_man.yaml")
-    ]
+    test_config = Config(version=CURRENT_IAMBIC_VERSION, file_path="cool_file_man.yaml")
+
     output_role = await create_templated_role(
-        test_config,
         test_aws_account_map,
         test_role_name,
         test_role_refs,
         test_role_dir,
         test_existing_template_map,
-        test_configs,
+        test_config,
     )
     assert output_role.iambic_managed is IambicManaged.UNDEFINED
 
     test_role.iambic_managed = IambicManaged.READ_AND_WRITE
     test_existing_template_map = {test_role_name: test_role}
     output_role = await create_templated_role(
-        test_config,
         test_aws_account_map,
         test_role_name,
         test_role_refs,
         test_role_dir,
         test_existing_template_map,
-        test_configs,
+        test_config,
     )
     assert output_role.iambic_managed is IambicManaged.READ_AND_WRITE
