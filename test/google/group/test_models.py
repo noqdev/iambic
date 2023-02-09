@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from iambic.core.models import merge_model
+from iambic.core.template_generation import merge_model
 from iambic.google.group.models import GroupTemplateProperties, get_group_template
 
 VALUE_UNDER_TEST = {
@@ -83,7 +83,7 @@ def test_merge_list_group_members_expires_at():
         members=new_members,
     )
     merged_document: GroupTemplateProperties = merge_model(
-        existing_document, new_document
+        new_document, existing_document, []
     )
     assert existing_members != new_members
     assert merged_document.members[0].email == "user@example.com"

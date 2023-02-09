@@ -1,22 +1,22 @@
 from __future__ import annotations
 
 from iambic.aws.iam.user.models import Group, UserProperties
-from iambic.core.models import merge_model
+from iambic.core.template_generation import merge_model
 
 
-def test_merge_group():
+def test_merge_group(aws_accounts):
 
     existing_group = Group(
         group_name="foo",
         expires_at="tomorrow",
     )
     new_group = Group(group_name="foo")
-    merged_group: Group = merge_model(existing_group, new_group)
+    merged_group: Group = merge_model(new_group, existing_group, aws_accounts)
     assert existing_group.expires_at != new_group.expires_at
     assert merged_group.expires_at == existing_group.expires_at
 
 
-def test_merge_user_properties():
+def test_merge_user_properties(aws_accounts):
 
     existing_groups = [
         {
@@ -40,7 +40,9 @@ def test_merge_user_properties():
         user_name="foo",
         groups=new_groups,
     )
-    merged_properties: UserProperties = merge_model(existing_properties, new_properties)
+    merged_properties: UserProperties = merge_model(
+        new_properties, existing_properties, aws_accounts
+    )
     assert merged_properties.groups[0].group_name == "bar"
     assert (
         merged_properties.groups[0].expires_at
