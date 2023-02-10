@@ -185,21 +185,21 @@ async def detect_changes(  # noqa: C901
 
     tasks = []
     if role_messages:
-        tasks.append(generate_aws_role_templates([config], repo_dir, role_messages))
+        tasks.append(generate_aws_role_templates(config, repo_dir, role_messages))
     if user_messages:
-        tasks.append(generate_aws_user_templates([config], repo_dir, user_messages))
+        tasks.append(generate_aws_user_templates(config, repo_dir, user_messages))
     if group_messages:
-        tasks.append(generate_aws_group_templates([config], repo_dir, group_messages))
+        tasks.append(generate_aws_group_templates(config, repo_dir, group_messages))
     if managed_policy_messages:
         tasks.append(
             generate_aws_managed_policy_templates(
-                [config], repo_dir, managed_policy_messages
+                config, repo_dir, managed_policy_messages
             )
         )
     if permission_set_messages:
         tasks.append(
             generate_aws_permission_set_templates(
-                [config], repo_dir, permission_set_messages
+                config, repo_dir, permission_set_messages
             )
         )
 

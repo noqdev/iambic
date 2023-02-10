@@ -103,8 +103,8 @@ def generate_templates_fixture(request):
 
     if not FUNCTIONAL_TEST_TEMPLATE_DIR:
         run_import(
-            [IAMBIC_TEST_DETAILS.config_path],
             IAMBIC_TEST_DETAILS.template_dir_path,
+            IAMBIC_TEST_DETAILS.config_path,
         )
         log.info("Finished generating templates for testing")
 
