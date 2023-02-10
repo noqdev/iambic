@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from iambic.aws.models import AWSTemplate
+from iambic.aws.models import AccessModel, AWSTemplate
 from iambic.core.template_generation import merge_model
 
 
@@ -17,3 +17,29 @@ def test_aws_template_merge(aws_accounts):
     assert merged_template.file_path == existing_template.file_path
     assert merged_template.identifier == new_template.identifier
     assert merged_template.expires_at == existing_template_expires_at
+
+
+def test_access_model_sorting():
+
+    included_accounts_1 = ["development", "ses"]
+    included_accounts_2 = list(reversed(included_accounts_1))
+    access_model_1 = AccessModel(included_accounts=included_accounts_1)
+    access_model_2 = AccessModel(included_accounts=included_accounts_2)
+    assert included_accounts_1 != included_accounts_2
+    assert access_model_1.included_accounts == access_model_2.included_accounts
+
+
+# Make sure even if includedd children is modified after model
+# creation the sort weight is still stable
+def test_access_model_sorting_weight():
+
+    included_accounts_1 = ["development", "ses"]
+    access_model_1 = AccessModel()
+    access_model_2 = AccessModel()
+    access_model_1.included_accounts.extend(included_accounts_1)
+    access_model_2.included_accounts.extend(reversed(included_accounts_1))
+    assert access_model_1.included_accounts != access_model_2.included_accounts
+    assert (
+        access_model_1.access_model_sort_weight()
+        == access_model_2.access_model_sort_weight()
+    )
