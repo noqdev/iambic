@@ -11,7 +11,7 @@ import boto3
 import googleapiclient.discovery
 from google.oauth2 import service_account
 from okta.client import Client as OktaClient
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from slack_bolt import App as SlackBoltApp
 
 from iambic.aws.models import AWSAccount, AWSOrganization
@@ -163,6 +163,12 @@ class AWSConfig(BaseModel):
             "Iambic will set included_accounts=* on imported resources that exist on all accounts if the minimum number of accounts is met."
         ),
     )
+
+    @validator("organizations")
+    def validate_organizations(cls, organizations):
+        if len(organizations) > 1:
+            raise ValueError("Only one AWS Organization is supported at this time.")
+        return organizations
 
     @property
     def hub_role_arn(self):
