@@ -363,26 +363,25 @@ async def create_templated_permission_set(  # noqa: C901
 
 
 async def generate_aws_permission_set_templates(
-    configs: list[Config],
+    config: Config,
     base_output_dir: str,
     permission_set_messages: list[PermissionSetMessageDetails] = None,
 ):
-    aws_account_map = await get_aws_account_map(configs)
+    aws_account_map = await get_aws_account_map(config)
     existing_template_map = await get_existing_template_map(
         base_output_dir, AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
     )
     resource_dir = get_permission_set_dir(base_output_dir)
 
     identity_center_accounts = []
-    for config in configs:
-        if config.aws and config.aws.accounts:
-            identity_center_accounts.extend(
-                [
-                    account
-                    for account in config.aws.accounts
-                    if account.identity_center_details
-                ]
-            )
+    if config.aws and config.aws.accounts:
+        identity_center_accounts.extend(
+            [
+                account
+                for account in config.aws.accounts
+                if account.identity_center_details
+            ]
+        )
 
     if not identity_center_accounts:
         return

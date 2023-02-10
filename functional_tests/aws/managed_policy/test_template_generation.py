@@ -47,7 +47,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
         self.assertEqual(file_sys_template.properties.description, initial_description)
 
         await generate_aws_managed_policy_templates(
-            [IAMBIC_TEST_DETAILS.config],
+            IAMBIC_TEST_DETAILS.config,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 ManagedPolicyMessageDetails(
@@ -71,7 +71,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
         self.assertTrue(os.path.exists(self.template.file_path))
 
         await generate_aws_managed_policy_templates(
-            [IAMBIC_TEST_DETAILS.config],
+            IAMBIC_TEST_DETAILS.config,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 ManagedPolicyMessageDetails(
@@ -108,7 +108,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
 
         # Refresh the template
         await generate_aws_managed_policy_templates(
-            [IAMBIC_TEST_DETAILS.config],
+            IAMBIC_TEST_DETAILS.config,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 ManagedPolicyMessageDetails(

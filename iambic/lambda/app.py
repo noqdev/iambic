@@ -57,7 +57,7 @@ def run_handler(event=None, context=None):
 
     match lambda_context.command:
         case LambdaCommand.run_import.value:
-            return run_import([config_path], REPO_BASE_PATH)
+            return run_import(REPO_BASE_PATH, config_path)
         case LambdaCommand.run_plan.value:
             return run_plan([], REPO_BASE_PATH)
         case LambdaCommand.run_apply.value:

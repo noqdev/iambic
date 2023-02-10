@@ -524,7 +524,7 @@ class ConfigurationWizard:
                     asyncio.run(account.set_identity_center_details())
             asyncio.run(
                 generate_aws_role_templates(
-                    [self.config],
+                    self.config,
                     self.repo_dir,
                 )
             )
@@ -741,7 +741,7 @@ class ConfigurationWizard:
             # Examples would be granting access to the change detection queue or decoding the secret
             asyncio.run(
                 generate_aws_role_templates(
-                    [self.config],
+                    self.config,
                     self.repo_dir,
                 )
             )

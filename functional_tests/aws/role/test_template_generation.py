@@ -44,7 +44,7 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
         await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
 
         await generate_aws_role_templates(
-            [IAMBIC_TEST_DETAILS.config],
+            IAMBIC_TEST_DETAILS.config,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 RoleMessageDetails(
@@ -67,7 +67,7 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
         self.assertTrue(os.path.exists(self.template.file_path))
 
         await generate_aws_role_templates(
-            [IAMBIC_TEST_DETAILS.config],
+            IAMBIC_TEST_DETAILS.config,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 RoleMessageDetails(
@@ -98,7 +98,7 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
 
         # Refresh the template
         await generate_aws_role_templates(
-            [IAMBIC_TEST_DETAILS.config],
+            IAMBIC_TEST_DETAILS.config,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 RoleMessageDetails(
