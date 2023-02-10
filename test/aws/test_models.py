@@ -27,3 +27,19 @@ def test_access_model_sorting():
     access_model_2 = AccessModel(included_accounts=included_accounts_2)
     assert included_accounts_1 != included_accounts_2
     assert access_model_1.included_accounts == access_model_2.included_accounts
+
+
+# Make sure even if includedd children is modified after model
+# creation the sort weight is still stable
+def test_access_model_sorting_weight():
+
+    included_accounts_1 = ["development", "ses"]
+    access_model_1 = AccessModel()
+    access_model_2 = AccessModel()
+    access_model_1.included_accounts.extend(included_accounts_1)
+    access_model_2.included_accounts.extend(reversed(included_accounts_1))
+    assert access_model_1.included_accounts != access_model_2.included_accounts
+    assert (
+        access_model_1.access_model_sort_weight()
+        == access_model_2.access_model_sort_weight()
+    )
