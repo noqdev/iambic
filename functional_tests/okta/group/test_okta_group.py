@@ -19,9 +19,9 @@ properties:
   idp_name: development
   description: This is a test group created by the Iambic functional test suite.
   members:
-    - username: curtis@noq.dev
-    - username: steven@noq.dev
-    - username: will@noq.dev
+    - username: user1@example.com
+    - username: user2@example.com
+    - username: user3@example.com
 """
     test_group_fp = os.path.join(
         temp_templates_directory,
@@ -41,13 +41,13 @@ properties:
 
     # Test Reading Template
     group_template = load_templates([test_group_fp])[0]
-    assert group_template.properties.members[2].username == "will@noq.dev"
+    assert group_template.properties.members[2].username == "user3@example.com"
 
-    # Expire `fakeuser@example.com`
+    # Expire `user3@example.com`
     group_template.properties.members[2].expires_at = datetime.datetime.now(
         datetime.timezone.utc
     ) - datetime.timedelta(days=1)
-    # Set `steven@noq.dev` to expire tomorrow
+    # Set `user2@example.com` to expire tomorrow
     group_template.properties.members[1].expires_at = datetime.datetime.now(
         datetime.timezone.utc
     ) + datetime.timedelta(days=1)

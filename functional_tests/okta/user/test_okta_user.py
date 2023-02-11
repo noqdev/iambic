@@ -21,8 +21,8 @@ properties:
   profile:
     firstName: iambic
     lastName: functional_test_user
-    email: iambic_functional_test_user@noq.dev
-    login: iambic_functional_test_user@noq.dev
+    email: iambic_functional_test_user@example.com
+    login: iambic_functional_test_user@example.com
   status: active
 """
     test_user_fp = os.path.join(
