@@ -45,6 +45,7 @@ class OktaOrganization(BaseModel):
                     "orgUrl": self.org_url,
                     "token": self.api_token,
                     "requestTimeout": self.request_timeout,
+                    "rateLimit": {"maxRetries": 0},
                 }
             )
         return self.client

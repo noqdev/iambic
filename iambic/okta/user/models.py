@@ -30,7 +30,7 @@ from iambic.okta.user.utils import (
 )
 
 OKTA_USER_TEMPLATE_TYPE = "NOQ::Okta::User"
-OKTA_GET_USER_SEMAPHORE = NoqSemaphore(get_user, 3)
+OKTA_GET_USER_SEMAPHORE = NoqSemaphore(get_user, 10)
 
 
 class Assignment(BaseModel):

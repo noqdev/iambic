@@ -3,9 +3,8 @@ from __future__ import annotations
 import os
 import pathlib
 from tempfile import TemporaryDirectory
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
-import asynctest
 import pytest
 
 from iambic.aws.models import (
@@ -84,12 +83,10 @@ def config(repo_path):
 
 
 @pytest.mark.asyncio
-@asynctest.patch(
-    "iambic.config.utils.clone_git_repos", return_value={"test_repo": MagicMock()}
-)
-@asynctest.patch("iambic.config.utils.get_origin_head", return_value="main")
-@asynctest.patch("iambic.config.utils.Repo", return_value=MagicMock())
-# Notice: the order of fixtures is important; asynctest patches always come first in reverse order
+@patch("iambic.config.utils.clone_git_repos", return_value={"test_repo": MagicMock()})
+@patch("iambic.config.utils.get_origin_head", return_value="main")
+@patch("iambic.config.utils.Repo", return_value=MagicMock())
+# Notice: the order of fixtures is important; mock patches always come first in reverse order
 # And then the pytest fixtures
 async def test_load_store_templated_config(
     repo, origin_head, test_repo, mocker, config, repo_path
