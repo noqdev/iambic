@@ -6,9 +6,10 @@ import glob
 import os
 import pathlib
 import re
+import typing
 from datetime import datetime
 from io import StringIO
-from typing import Any, Union
+from typing import Any, Optional, Union
 from urllib.parse import unquote_plus
 
 import aiofiles
@@ -17,9 +18,12 @@ from ruamel.yaml import YAML
 
 from iambic.core import noq_json as json
 from iambic.core.context import ExecutionContext
+from iambic.core.exceptions import RateLimitException
 from iambic.core.iambic_enum import IambicManaged
+from iambic.core.logger import log
 
 NOQ_TEMPLATE_REGEX = r".*template_type:\n?.*NOQ::"
+RATE_LIMIT_STORAGE: dict[str, int] = {}
 
 
 def camel_to_snake(str_obj: str) -> str:
@@ -398,3 +402,80 @@ def get_provider_value(matching_values: list, identifiers: set[str]):
                     return cur_val
                 else:
                     break
+
+
+class GlobalRetryController:
+    """
+    A context manager class that automatically retries a function in case of rate limit exceptions.
+
+    This class provides a convenient way to wrap a function execution with rate limit handling. It retries the function
+    in case of rate limit exceptions and stores the state of the rate limit in a global storage to ensure that all
+    similarly executed functions are paused when a rate limit exception is encountered.
+
+    Attributes:
+        wait_time (int): The time to wait before retrying the function in case of rate limit exceptions (default is 60
+                        seconds).
+        rate_limit_exceptions (list): A list of exceptions that will trigger a retry (default is
+                                      [TimeoutError, asyncio.exceptions.TimeoutError, RateLimitException]).
+        fn_identifier (str): An identifier for the function that is being executed, used to store the state of the rate
+                             limit in the global storage (default is None, in which case the function name is used).
+        max_retries (int): The maximum number of times to retry the function in case of rate limit exceptions
+                           (default is 10).
+    """
+
+    def __init__(
+        self,
+        wait_time: int = 60,
+        rate_limit_exceptions: Optional[list[Any]] = None,
+        fn_identifier: Optional[str] = None,
+        max_retries: int = 10,
+    ):
+        if rate_limit_exceptions is None:
+            rate_limit_exceptions = [
+                TimeoutError,
+                asyncio.exceptions.TimeoutError,
+                RateLimitException,
+            ]
+        self.wait_time = wait_time
+        self.rate_limit_exceptions = rate_limit_exceptions
+        self.fn_identifier = fn_identifier
+        self.max_retries = max_retries
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    async def __call__(self, func: typing.Callable, *args, **kwargs):
+        if self.fn_identifier is not None:
+            endpoint = self.fn_identifier
+        else:
+            endpoint = func.__name__
+        retries = 0
+        while retries < self.max_retries:
+            try:
+                res = await func(*args, **kwargs)
+                if retries > 0:
+                    log.info(f"Retry successful for {endpoint}.")
+                return res
+            except Exception as e:
+                if type(e) not in self.rate_limit_exceptions:
+                    raise e
+                if self.max_retries == retries + 1:
+                    raise e
+                if endpoint in RATE_LIMIT_STORAGE:
+                    wait_time = (
+                        RATE_LIMIT_STORAGE[endpoint] - asyncio.get_running_loop().time()
+                    )
+                    if wait_time > 0:
+                        await asyncio.sleep(wait_time)
+                    else:
+                        del RATE_LIMIT_STORAGE[endpoint]
+                RATE_LIMIT_STORAGE[endpoint] = (
+                    asyncio.get_running_loop().time() + self.wait_time
+                )
+                retries += 1
+                log.warning(
+                    f"Rate limit hit for {endpoint}. Retrying in {self.wait_time} seconds."
+                )
