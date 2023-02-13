@@ -13,17 +13,17 @@ def test_google():
 properties:
   name: iambic_functional_test_temp_group
   description: 'This is a temporary group created by the iambic functional test suite.'
-  domain: noq.dev
-  email: iambic_test_group@noq.dev
+  domain: iambic.org
+  email: iambic_test_group@iambic.org
   members:
-    - email: curtis@noq.dev
+    - email: curtis@iambic.org
       role: OWNER
-    - email: steven@noq.dev
-    - email: fakeuser@example.com
+    - email: iambic_test_user_1@iambic.org
+    - email: iambic_test_user_2@iambic.org
 """
     test_group_fp = os.path.join(
         IAMBIC_TEST_DETAILS.template_dir_path,
-        "resources/google/noq.dev/groups/iambic_functional_test_group.yaml",
+        "resources/google/iambic.org/groups/iambic_test_group.yaml",
     )
 
     with open(test_group_fp, "w") as temp_file:
@@ -39,13 +39,13 @@ properties:
 
     # Test Reading Template
     group_template = load_templates([test_group_fp])[0]
-    assert group_template.properties.members[2].email == "fakeuser@example.com"
+    assert group_template.properties.members[2].email == "iambic_test_user_2@iambic.org"
 
     # Expire `fakeuser@example.com`
     group_template.properties.members[2].expires_at = datetime.datetime.now(
         datetime.timezone.utc
     ) - datetime.timedelta(days=1)
-    # Set `steven@noq.dev` to expire tomorrow
+    # Set `iambic_test_user_1@iambic.org` to expire tomorrow
     group_template.properties.members[1].expires_at = datetime.datetime.now(
         datetime.timezone.utc
     ) + datetime.timedelta(days=1)

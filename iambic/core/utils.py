@@ -415,7 +415,7 @@ class GlobalRetryController:
     Attributes:
         wait_time (int): The time to wait before retrying the function in case of rate limit exceptions (default is 60
                         seconds).
-        rate_limit_exceptions (list): A list of exceptions that will trigger a retry (default is
+        retry_exceptions (list): A list of exceptions that will trigger a retry (default is
                                       [TimeoutError, asyncio.exceptions.TimeoutError, RateLimitException]).
         fn_identifier (str): An identifier for the function that is being executed, used to store the state of the rate
                              limit in the global storage (default is None, in which case the function name is used).
@@ -426,18 +426,18 @@ class GlobalRetryController:
     def __init__(
         self,
         wait_time: int = 60,
-        rate_limit_exceptions: Optional[list[Any]] = None,
+        retry_exceptions: Optional[list[Any]] = None,
         fn_identifier: Optional[str] = None,
         max_retries: int = 10,
     ):
-        if rate_limit_exceptions is None:
-            rate_limit_exceptions = [
+        if retry_exceptions is None:
+            retry_exceptions = [
                 TimeoutError,
                 asyncio.exceptions.TimeoutError,
                 RateLimitException,
             ]
         self.wait_time = wait_time
-        self.rate_limit_exceptions = rate_limit_exceptions
+        self.retry_exceptions = retry_exceptions
         self.fn_identifier = fn_identifier
         self.max_retries = max_retries
 
@@ -460,7 +460,7 @@ class GlobalRetryController:
                     log.info(f"Retry successful for {endpoint}.")
                 return res
             except Exception as e:
-                if type(e) not in self.rate_limit_exceptions:
+                if type(e) not in self.retry_exceptions:
                     raise e
                 if self.max_retries == retries + 1:
                     raise e
