@@ -27,7 +27,7 @@ from iambic.okta.app.utils import (
 )
 from iambic.okta.models import App, Assignment, Status
 
-OKTA_GET_APP_SEMAPHORE = NoqSemaphore(get_app, 3)
+OKTA_GET_APP_SEMAPHORE = NoqSemaphore(get_app, 10)
 
 
 class OktaAppTemplateProperties(ExpiryModel, BaseModel):
