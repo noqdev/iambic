@@ -499,7 +499,7 @@ class BaseTemplate(
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
-        return {"iambic_managed", "file_path"}
+        return {"iambic_managed", "file_path", "owner"}
 
 
 class Variable(PydanticBaseModel):
