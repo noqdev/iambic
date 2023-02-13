@@ -106,8 +106,8 @@ Never commit secrets Git. Ensure that you have a  `.gitignore` file in the root 
 secrets:
   google:
     - subjects:
-      - domain: "iambic.org"
-        service_account: "iambic-...@iambic-....iam.gserviceaccount.com"
+        - domain: "iambic.org"
+          service_account: "iambic-...@iambic-....iam.gserviceaccount.com"
       type: "service_account"
       project_id: "iambic-..."
       private_key_id: "bfa86..."
@@ -115,7 +115,7 @@ secrets:
       client_email: "iambic-...@iambic-....iam.gserviceaccount.com"
       client_id: "1165324...."
       auth_uri: "https://accounts.google.com/o/oauth2/auth"
-      token_uri": "https://oauth2.googleapis.com/token"
+      token_uri: "https://oauth2.googleapis.com/token"
       auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs"
       client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/iambic..."
 ```

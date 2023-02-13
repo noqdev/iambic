@@ -7,6 +7,7 @@ import okta.models as models
 from okta.errors.okta_api_error import OktaAPIError
 
 from iambic.core.exceptions import RateLimitException
+from iambic.okta.exceptions import UserProfileNotUpdatableYet
 
 
 async def generate_user_profile(user: models.User):
@@ -31,7 +32,12 @@ async def handle_okta_fn(fn, *args, **kwargs):
         if isinstance(err, OktaAPIError):
             if err.error_code == "E0000047":
                 raise RateLimitException(err.error_summary)
+            if err.error_code == "E0000112":
+                raise UserProfileNotUpdatableYet(
+                    "Unable to update profile, user is not fully provisioned"
+                )
             return res
+
         # Handle the case where Okta SDK returns JSON
         try:
             err_j = json.loads(err)
@@ -39,5 +45,4 @@ async def handle_okta_fn(fn, *args, **kwargs):
                 raise RateLimitException(err)
         except TypeError:
             pass
-        print("here")
     return res

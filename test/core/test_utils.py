@@ -83,12 +83,12 @@ def test_commmented_yaml():
 class TestGlobalRetryController(unittest.TestCase):
     def setUp(self):
         self.wait_time = 1
-        self.rate_limit_exceptions = [TimeoutError, asyncio.exceptions.TimeoutError]
+        self.retry_exceptions = [TimeoutError, asyncio.exceptions.TimeoutError]
         self.fn_identifier = None
         self.max_retries = 10
         self.retry_controller = GlobalRetryController(
             wait_time=self.wait_time,
-            rate_limit_exceptions=self.rate_limit_exceptions,
+            retry_exceptions=self.retry_exceptions,
             fn_identifier=self.fn_identifier,
             max_retries=self.max_retries,
         )
@@ -154,7 +154,7 @@ class TestGlobalRetryController(unittest.TestCase):
         self.fn_identifier = "custom_endpoint"
         self.retry_controller = GlobalRetryController(
             wait_time=self.wait_time,
-            rate_limit_exceptions=self.rate_limit_exceptions,
+            retry_exceptions=self.retry_exceptions,
             fn_identifier=self.fn_identifier,
             max_retries=self.max_retries,
         )

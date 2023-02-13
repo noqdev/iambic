@@ -8,6 +8,7 @@ import okta.models as models
 
 from iambic.config.models import OktaOrganization
 from iambic.core.context import ExecutionContext
+from iambic.core.exceptions import RateLimitException
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import GlobalRetryController
@@ -196,7 +197,13 @@ async def update_user_profile(
         client = await okta_organization.get_okta_client()
         updated_user_obj = models.User({"profile": new_profile})
         async with GlobalRetryController(
-            fn_identifier="okta.update_user"
+            fn_identifier="okta.update_user",
+            retry_exceptions=[
+                UserProfileNotUpdatableYet,
+                TimeoutError,
+                asyncio.exceptions.TimeoutError,
+                RateLimitException,
+            ],
         ) as retry_controller:
             fn = functools.partial(client.update_user, user.user_id, updated_user_obj)
             _, _, err = await retry_controller(handle_okta_fn, fn)

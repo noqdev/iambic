@@ -60,7 +60,7 @@ It may seem as though the 2 terms are used interchangeably but they're really 2 
 They are both a way to associate a user or group with a permission set on an account in AWS.
 
 An account assignment is an AWS Identity Center concept where each assignment represents a single combination.
-For example, the group engineering@noq.dev being assigned access to the engineering permission set on the noq-dev account.
+For example, the group engineering@iambic.org being assigned access to the engineering permission set on the iambic-org account.
 
 On the other hand, an access rule is a concept used by IAMbic.
 Access rules are more expressive as you can assign multiple users or groups to a permission set on multiple accounts via a list regexes.
