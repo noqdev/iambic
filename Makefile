@@ -38,7 +38,7 @@ push_manifest:
 
 .PHONY: test
 test:
-	python3.10 -m pytest test
+	python3.10 -m pytest test --cov-report html --cov iambic -s
 
 .PHONY: functional_test
 functional_test:

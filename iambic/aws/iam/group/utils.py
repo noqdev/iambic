@@ -4,6 +4,7 @@ import asyncio
 import json
 from typing import Union
 
+from aws_error_utils import errors
 from deepdiff import DeepDiff
 
 from iambic.aws.models import AWSAccount
@@ -85,7 +86,7 @@ async def get_group(group_name: str, iam_client, include_policies: bool = True) 
             current_group["InlinePolicies"] = await get_group_inline_policies(
                 group_name, iam_client, as_dict=False
             )
-    except iam_client.exceptions.NoSuchEntityException:
+    except errors.NoSuchEntityException:
         current_group = {}
 
     return current_group

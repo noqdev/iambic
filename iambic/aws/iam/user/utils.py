@@ -4,6 +4,7 @@ import asyncio
 import json
 from typing import Union
 
+from aws_error_utils import errors
 from deepdiff import DeepDiff
 
 from iambic.aws.models import AWSAccount
@@ -99,7 +100,7 @@ async def get_user(user_name: str, iam_client, include_policies: bool = True) ->
             current_user["Groups"] = await get_user_groups(
                 user_name, iam_client, as_dict=False
             )
-    except iam_client.exceptions.NoSuchEntityException:
+    except errors.NoSuchEntityException:
         current_user = {}
 
     return current_user
