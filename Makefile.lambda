@@ -1,0 +1,28 @@
+# public.ecr.aws/l1s5s8m2 is the public ecr repository for integration testing
+LAMBDA_ECR_REPO := "759357822767.dkr.ecr.us-west-2.amazonaws.com"
+LAMBDA_CONTAINER_REPO_NAME := "test-lambda-container"
+LAMBDA_IMAGE_LABEL := "latest"
+
+# skipping linux/arm64 to speed up functional_tests
+# our self-hosted runner is linux/amd64, cross-platform
+# building was really slow
+docker_buildx_lambda := docker buildx build \
+	--platform=linux/amd64 \
+	-t "${LAMBDA_ECR_REPO}/${LAMBDA_CONTAINER_REPO_NAME}:${LAMBDA_IMAGE_LABEL}"
+
+.PHONY: auth_to_ecr
+auth_to_ecr:
+	# Only run this target if you need to build your own IMAGE and push to your own ECR
+	# If you are, (most won't), you need to change the AWS_PROFILE to the one that has
+	# access to push to the desired registry.
+	aws --profile development/development_admin ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 759357822767.dkr.ecr.us-west-2.amazonaws.com
+
+.PHONY: build_docker_lambda
+build_docker_lambda:
+	@echo "--> Creating Iambic Docker image"
+	$(docker_buildx_lambda) .
+
+.PHONY: upload_docker_lambda
+upload_docker_lambda:
+	@echo "--> Uploading Iambic Docker image"
+	$(docker_buildx_lambda) --push .
