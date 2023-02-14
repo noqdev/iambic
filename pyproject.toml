@@ -47,6 +47,7 @@ dateparser = "^1.1.4"
 pytest-mock = "^3.10.0"
 questionary = "^1.10.0"
 types-dateparser = "^1.1.4.5"
+cryptography = "^39.0.1"
 
 [tool.poetry.scripts]
 iambic = "iambic.main:cli"
