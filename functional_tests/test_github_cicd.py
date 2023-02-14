@@ -16,6 +16,7 @@ from functional_tests.conftest import all_config
 from iambic.aws.iam.role.models import RoleTemplate
 from iambic.config.models import Config, ExtendsConfig
 from iambic.core.git import clone_git_repo
+from iambic.core.logger import log
 
 os.environ["TESTING"] = "true"
 
@@ -123,7 +124,6 @@ def filesystem():
         yield (temp_config_filename, temp_templates_directory, config)
     finally:
         try:
-            os.close(fd)
             os.unlink(temp_config_filename)
             shutil.rmtree(temp_templates_directory)
         except Exception as e:
@@ -216,17 +216,23 @@ def test_github_cicd(filesystem, generate_templates_fixture, build_push_containe
     github_client = Github(github_token)
     github_repo = github_client.get_repo(TEMPLATE_REPO_NAME)
     pull_request_body = "itest"
+    utc_since_pull_request = datetime.datetime.utcnow()
     pr = github_repo.create_pull(
         title="itest", body=pull_request_body, head=new_branch, base="main"
     )
     pr_number = pr.number
 
     # test react to pull_request
+    workflow = github_repo.get_workflow("pull-request.yml")
     is_workflow_run_successful = False
     datetime_since_comment_issued = datetime.datetime.utcnow()
     while (datetime.datetime.utcnow() - datetime_since_comment_issued).seconds < 120:
-        runs = github_repo.get_workflow_runs(event="pull_request", branch=new_branch)
-        runs = [run for run in runs if run.created_at >= utc_obj]
+        runs = workflow.get_runs(
+            event="pull_request", branch=new_branch
+        )  # network call
+        runs = [run for run in runs if run.created_at >= utc_since_pull_request]
+        log_params = {"network_response_call": len(runs)}
+        log.debug("waiting for pull_request_verification", log_params)
         runs = [run for run in runs if run.conclusion == "success"]
         if len(runs) != 1:
             time.sleep(10)
@@ -239,11 +245,14 @@ def test_github_cicd(filesystem, generate_templates_fixture, build_push_containe
     assert is_workflow_run_successful
 
     # test git-plan
+    workflow = github_repo.get_workflow("issue-comment.yml")
     is_workflow_run_successful = False
     datetime_since_comment_issued = datetime.datetime.utcnow()
     while (datetime.datetime.utcnow() - datetime_since_comment_issued).seconds < 120:
-        runs = github_repo.get_workflow_runs(event="issue_comment", branch="main")
-        runs = [run for run in runs if run.created_at >= utc_obj]
+        runs = workflow.get_runs(event="issue_comment", branch="main")  # network call
+        runs = [run for run in runs if run.created_at >= utc_since_pull_request]
+        log_params = {"network_response_call": len(runs)}
+        log.debug("waiting for git_plan_verification", log_params)
         runs = [run for run in runs if run.conclusion == "success"]
         if len(runs) != 1:
             time.sleep(10)
@@ -256,6 +265,7 @@ def test_github_cicd(filesystem, generate_templates_fixture, build_push_containe
     assert is_workflow_run_successful
 
     # let github action to handle the approval flow
+    workflow = github_repo.get_workflow("issue-comment.yml")
     pr.create_issue_comment("approve")
     is_workflow_run_successful = False
     datetime_since_comment_issued = datetime.datetime.utcnow()
@@ -273,15 +283,19 @@ def test_github_cicd(filesystem, generate_templates_fixture, build_push_containe
             break
 
     # test iambic git-apply
+    workflow = github_repo.get_workflow("issue-comment.yml")
+    utc_since_git_apply = datetime.datetime.utcnow()
     pr.create_issue_comment("iambic git-apply")
     is_workflow_run_successful = False
     datetime_since_comment_issued = datetime.datetime.utcnow()
     while (datetime.datetime.utcnow() - datetime_since_comment_issued).seconds < 120:
-        runs = github_repo.get_workflow_runs(event="issue_comment", branch="main")
-        runs = [run for run in runs if run.created_at >= utc_obj]
+        runs = workflow.get_runs(event="issue_comment", branch="main")  # network
+        runs = [run for run in runs if run.created_at >= utc_since_git_apply]
+        log_params = {"network_response_call": len(runs)}
+        log.debug("waiting for git_apply_verification", log_params)
         runs = [run for run in runs if run.head_sha == head_sha]
         runs = [run for run in runs if run.conclusion == "success"]
-        if len(runs) != 2:
+        if len(runs) != 1:
             time.sleep(10)
             print("sleeping")
             continue
