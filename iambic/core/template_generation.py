@@ -16,7 +16,7 @@ from iambic.core.utils import (
     get_provider_value,
     is_regex_match,
 )
-from iambic.plugins.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
 
 async def get_existing_template_map(repo_dir: str, template_type: str) -> dict:

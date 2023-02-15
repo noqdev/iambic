@@ -16,7 +16,7 @@ from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, TemplateChangeDetails
 from iambic.core.utils import sort_dict, yaml
-from iambic.plugins import aws
+from iambic.plugins.v0_1_0 import aws
 
 
 def load_plugins(paths: list[str]) -> List[tuple[ProviderPlugin, BaseModel]]:
@@ -338,3 +338,6 @@ async def load_config(config_path: str) -> Config:
         )
     )
     return config
+
+
+CURRENT_IAMBIC_VERSION = "1"

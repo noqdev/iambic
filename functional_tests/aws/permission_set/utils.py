@@ -4,15 +4,15 @@ import random
 
 from iambic.core.logger import log
 from iambic.core.utils import gather_templates
-from iambic.plugins.aws.identity_center.permission_set.models import (
+from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
     AWSIdentityCenterPermissionSetTemplate,
     PermissionSetAccess,
 )
-from iambic.plugins.aws.identity_center.permission_set.template_generation import (
+from iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation import (
     get_permission_set_dir,
 )
-from iambic.plugins.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
 
 def attach_access_rule(

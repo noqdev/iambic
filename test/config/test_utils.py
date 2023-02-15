@@ -9,7 +9,7 @@ import pytest
 from iambic.config.dynamic_config import Config
 from iambic.config.models import AWSConfig, AWSOrganization
 from iambic.core.iambic_enum import IambicManaged
-from iambic.plugins.aws.models import (
+from iambic.plugins.v0_1_0.aws.models import (
     AWSAccount,
     BaseAWSOrgRule,
     get_hub_role_arn,

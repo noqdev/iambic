@@ -5,8 +5,8 @@ import yaml
 
 from iambic.core.context import ExecutionContext
 from iambic.core.utils import evaluate_on_provider
-from iambic.plugins.aws.iam.role.models import RoleTemplate
-from iambic.plugins.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.iam.role.models import RoleTemplate
+from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
 TEMPLATE_UNDER_TEST = """
 template_type: NOQ::AWS::IAM::Role

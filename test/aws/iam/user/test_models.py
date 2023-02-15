@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from iambic.core.template_generation import merge_model
-from iambic.plugins.aws.iam.user.models import Group, UserProperties
+from iambic.plugins.v0_1_0.aws.iam.user.models import Group, UserProperties
 
 
 def test_merge_group(aws_accounts):

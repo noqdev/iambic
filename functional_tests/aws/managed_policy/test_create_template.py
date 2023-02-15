@@ -9,7 +9,7 @@ from functional_tests.aws.role.utils import get_modifiable_role
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
 from iambic.core.utils import aio_wrapper
-from iambic.plugins.aws.iam.policy.utils import (
+from iambic.plugins.v0_1_0.aws.iam.policy.utils import (
     get_managed_policy_across_accounts,
     get_managed_policy_attachments,
 )

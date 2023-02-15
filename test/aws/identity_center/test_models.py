@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from iambic.core.template_generation import merge_model
-from iambic.plugins.aws.identity_center.permission_set.models import (
+from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetTemplate,
 )
 

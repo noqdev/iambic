@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import random
 
-from iambic.plugins.aws.iam.user.models import UserTemplate
-from iambic.plugins.aws.iam.user.template_generation import get_user_dir
-from iambic.plugins.aws.iam.user.utils import list_users
+from iambic.plugins.v0_1_0.aws.iam.user.models import UserTemplate
+from iambic.plugins.v0_1_0.aws.iam.user.template_generation import get_user_dir
+from iambic.plugins.v0_1_0.aws.iam.user.utils import list_users
 
 
 async def generate_user_template_from_base(

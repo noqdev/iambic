@@ -8,8 +8,8 @@ import dateparser
 from functional_tests.aws.user.utils import generate_user_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
-from iambic.plugins.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
-from iambic.plugins.aws.iam.user.utils import get_user_across_accounts
+from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
+from iambic.plugins.v0_1_0.aws.iam.user.utils import get_user_across_accounts
 
 
 class UpdateUserTestCase(IsolatedAsyncioTestCase):

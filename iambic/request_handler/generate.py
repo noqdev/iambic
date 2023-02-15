@@ -11,15 +11,19 @@ from iambic.okta.group.template_generation import (
     generate_group_templates as generate_okta_group_templates,
 )
 from iambic.okta.user.template_generation import generate_user_templates
-from iambic.plugins.aws.iam.group.template_generation import (
+from iambic.plugins.v0_1_0.aws.iam.group.template_generation import (
     generate_aws_group_templates,
 )
-from iambic.plugins.aws.iam.policy.template_generation import (
+from iambic.plugins.v0_1_0.aws.iam.policy.template_generation import (
     generate_aws_managed_policy_templates,
 )
-from iambic.plugins.aws.iam.role.template_generation import generate_aws_role_templates
-from iambic.plugins.aws.iam.user.template_generation import generate_aws_user_templates
-from iambic.plugins.aws.identity_center.permission_set.template_generation import (
+from iambic.plugins.v0_1_0.aws.iam.role.template_generation import (
+    generate_aws_role_templates,
+)
+from iambic.plugins.v0_1_0.aws.iam.user.template_generation import (
+    generate_aws_user_templates,
+)
+from iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation import (
     generate_aws_permission_set_templates,
 )
 

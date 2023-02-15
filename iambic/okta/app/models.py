@@ -26,7 +26,7 @@ from iambic.okta.app.utils import (
     update_app_name,
 )
 from iambic.okta.models import App, Assignment, Status
-from iambic.plugins.aws.utils import remove_expired_resources
+from iambic.plugins.v0_1_0.aws.utils import remove_expired_resources
 
 OKTA_GET_APP_SEMAPHORE = NoqSemaphore(get_app, 3)
 
