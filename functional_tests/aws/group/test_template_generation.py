@@ -6,9 +6,9 @@ from unittest import IsolatedAsyncioTestCase
 from functional_tests.aws.group.utils import generate_group_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
-from iambic.plugins.aws.event_bridge.models import GroupMessageDetails
-from iambic.plugins.aws.iam.group.models import GroupTemplate
-from iambic.plugins.aws.iam.group.template_generation import (
+from iambic.plugins.v0_1_0.aws.event_bridge.models import GroupMessageDetails
+from iambic.plugins.v0_1_0.aws.iam.group.models import GroupTemplate
+from iambic.plugins.v0_1_0.aws.iam.group.template_generation import (
     generate_aws_group_templates,
 )
 

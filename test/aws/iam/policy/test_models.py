@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from iambic.core.template_generation import merge_model
-from iambic.plugins.aws.iam.policy.models import PolicyDocument
+from iambic.plugins.v0_1_0.aws.iam.policy.models import PolicyDocument
 
 
 def test_merge_policy_document_with_sid(aws_accounts):

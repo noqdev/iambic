@@ -9,11 +9,11 @@ from functional_tests.aws.permission_set.utils import (
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
-from iambic.plugins.aws.event_bridge.models import PermissionSetMessageDetails
-from iambic.plugins.aws.identity_center.permission_set.models import (
+from iambic.plugins.v0_1_0.aws.event_bridge.models import PermissionSetMessageDetails
+from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetTemplate,
 )
-from iambic.plugins.aws.identity_center.permission_set.template_generation import (
+from iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation import (
     generate_aws_permission_set_templates,
 )
 

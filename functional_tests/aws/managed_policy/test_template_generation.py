@@ -8,9 +8,9 @@ from functional_tests.aws.managed_policy.utils import (
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
-from iambic.plugins.aws.event_bridge.models import ManagedPolicyMessageDetails
-from iambic.plugins.aws.iam.policy.models import ManagedPolicyTemplate
-from iambic.plugins.aws.iam.policy.template_generation import (
+from iambic.plugins.v0_1_0.aws.event_bridge.models import ManagedPolicyMessageDetails
+from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyTemplate
+from iambic.plugins.v0_1_0.aws.iam.policy.template_generation import (
     generate_aws_managed_policy_templates,
 )
 

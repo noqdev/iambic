@@ -11,7 +11,7 @@ from iambic.config.dynamic_config import Config, load_config
 from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.main import run_import
-from iambic.plugins.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
 if not os.environ.get("GITHUB_ACTIONS", None):
     # We will select a particular AWS_PROFILE to run on developer local machine

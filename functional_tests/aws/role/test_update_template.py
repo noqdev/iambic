@@ -8,8 +8,8 @@ import dateparser
 from functional_tests.aws.role.utils import generate_role_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
-from iambic.plugins.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
-from iambic.plugins.aws.iam.role.utils import get_role_across_accounts
+from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
+from iambic.plugins.v0_1_0.aws.iam.role.utils import get_role_across_accounts
 
 
 class UpdateRoleTestCase(IsolatedAsyncioTestCase):

@@ -4,8 +4,8 @@ import pytest
 from pydantic import ValidationError
 
 from iambic.config.dynamic_config import Config
-from iambic.config.models import AWSConfig
-from iambic.plugins.aws.models import (
+from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+from iambic.plugins.v0_1_0.aws.models import (
     AWSIdentityCenterAccount,
     AWSOrgAccountRule,
     AWSOrganization,

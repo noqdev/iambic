@@ -7,10 +7,10 @@ from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import TemplateChangeDetails
 from iambic.core.parser import load_templates
-from iambic.plugins.aws.identity_center.permission_set.utils import (
+from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
     generate_permission_set_map,
 )
-from iambic.plugins.aws.utils import remove_expired_resources
+from iambic.plugins.v0_1_0.aws.utils import remove_expired_resources
 
 
 async def apply_changes(

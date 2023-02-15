@@ -12,13 +12,11 @@ import botocore
 import questionary
 from botocore.exceptions import ClientError
 
-from iambic.config.models import (
+from iambic.config.dynamic_config import (
     CURRENT_IAMBIC_VERSION,
     Config,
     ExtendsConfig,
     ExtendsConfigKey,
-    GoogleProject,
-    OktaOrganization,
 )
 from iambic.config.utils import resolve_config_template_path
 from iambic.core.context import ctx
@@ -27,15 +25,22 @@ from iambic.core.logger import log
 from iambic.core.template_generation import get_existing_template_map
 from iambic.core.utils import yaml
 from iambic.github.utils import create_workflow_files
-from iambic.plugins.aws.cloud_formation.utils import (
+from iambic.google.iambic_plugin import GoogleProject
+from iambic.okta.iambic_plugin import OktaOrganization
+from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
     create_iambic_eventbridge_stacks,
     create_iambic_role_stacks,
     create_spoke_role_stack,
 )
-from iambic.plugins.aws.iam.policy.models import PolicyDocument, PolicyStatement
-from iambic.plugins.aws.iam.role.models import AWS_IAM_ROLE_TEMPLATE_TYPE, RoleTemplate
-from iambic.plugins.aws.iam.role.template_generation import generate_aws_role_templates
-from iambic.plugins.aws.models import (
+from iambic.plugins.v0_1_0.aws.iam.policy.models import PolicyDocument, PolicyStatement
+from iambic.plugins.v0_1_0.aws.iam.role.models import (
+    AWS_IAM_ROLE_TEMPLATE_TYPE,
+    RoleTemplate,
+)
+from iambic.plugins.v0_1_0.aws.iam.role.template_generation import (
+    generate_aws_role_templates,
+)
+from iambic.plugins.v0_1_0.aws.models import (
     ARN_RE,
     IAMBIC_SPOKE_ROLE_NAME,
     AWSAccount,
@@ -46,7 +51,11 @@ from iambic.plugins.aws.models import (
     get_hub_role_arn,
     get_spoke_role_arn,
 )
-from iambic.plugins.aws.utils import RegionName, get_identity_arn, is_valid_account_id
+from iambic.plugins.v0_1_0.aws.utils import (
+    RegionName,
+    get_identity_arn,
+    is_valid_account_id,
+)
 
 CUSTOM_AUTO_COMPLETE_STYLE = questionary.Style(
     [

@@ -6,9 +6,11 @@ from unittest import IsolatedAsyncioTestCase
 from functional_tests.aws.user.utils import generate_user_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
-from iambic.plugins.aws.event_bridge.models import UserMessageDetails
-from iambic.plugins.aws.iam.user.models import UserTemplate
-from iambic.plugins.aws.iam.user.template_generation import generate_aws_user_templates
+from iambic.plugins.v0_1_0.aws.event_bridge.models import UserMessageDetails
+from iambic.plugins.v0_1_0.aws.iam.user.models import UserTemplate
+from iambic.plugins.v0_1_0.aws.iam.user.template_generation import (
+    generate_aws_user_templates,
+)
 
 
 class PartialImportUserTestCase(IsolatedAsyncioTestCase):
