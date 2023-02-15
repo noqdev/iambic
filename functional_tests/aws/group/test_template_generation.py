@@ -5,10 +5,12 @@ from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.aws.group.utils import generate_group_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.aws.event_bridge.models import GroupMessageDetails
-from iambic.aws.iam.group.models import GroupTemplate
-from iambic.aws.iam.group.template_generation import generate_aws_group_templates
 from iambic.core.context import ctx
+from iambic.plugins.aws.event_bridge.models import GroupMessageDetails
+from iambic.plugins.aws.iam.group.models import GroupTemplate
+from iambic.plugins.aws.iam.group.template_generation import (
+    generate_aws_group_templates,
+)
 
 
 class PartialImportGroupTestCase(IsolatedAsyncioTestCase):

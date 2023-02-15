@@ -13,10 +13,10 @@ import pytest
 from github import Github
 
 from functional_tests.conftest import all_config
-from iambic.aws.iam.role.models import RoleTemplate
 from iambic.config.dynamic_config import Config, load_config
 from iambic.config.models import ExtendsConfig
 from iambic.core.git import clone_git_repo
+from iambic.plugins.aws.iam.role.models import RoleTemplate
 
 os.environ["TESTING"] = "true"
 

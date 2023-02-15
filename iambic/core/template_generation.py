@@ -5,7 +5,6 @@ from typing import Union
 
 import xxhash
 
-from iambic.aws.models import AWSAccount
 from iambic.core import noq_json as json
 from iambic.core.context import ctx
 from iambic.core.logger import log
@@ -17,6 +16,7 @@ from iambic.core.utils import (
     get_provider_value,
     is_regex_match,
 )
+from iambic.plugins.aws.models import AWSAccount
 
 
 async def get_existing_template_map(repo_dir: str, template_type: str) -> dict:

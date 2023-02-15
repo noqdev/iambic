@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from iambic.aws.models import AccessModel
+from iambic.plugins.aws.models import AccessModel
 
 
 class Path(AccessModel):

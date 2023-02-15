@@ -1,36 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from itertools import chain
 from typing import Callable, Optional, Union
 
 import botocore
 from pydantic import Field, constr, validator
 
-from iambic.aws.iam.models import MaxSessionDuration, Path
-from iambic.aws.iam.policy.models import (
-    AssumeRolePolicyDocument,
-    ManagedPolicyRef,
-    PolicyDocument,
-)
-from iambic.aws.iam.role.utils import (
-    apply_role_inline_policies,
-    apply_role_managed_policies,
-    apply_role_tags,
-    delete_iam_role,
-    get_role,
-    update_assume_role_policy,
-)
-from iambic.aws.models import (
-    ARN_RE,
-    AccessModel,
-    AWSAccount,
-    AWSTemplate,
-    Description,
-    Tag,
-)
-from iambic.aws.utils import boto_crud_call, remove_expired_resources
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -41,27 +17,27 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
+from iambic.plugins.aws.iam.models import Path
+from iambic.plugins.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
+from iambic.plugins.aws.iam.user.utils import (
+    apply_user_groups,
+    apply_user_inline_policies,
+    apply_user_managed_policies,
+    apply_user_tags,
+    delete_iam_user,
+    get_user,
+)
+from iambic.plugins.aws.models import (
+    ARN_RE,
+    AccessModel,
+    AWSAccount,
+    AWSTemplate,
+    Description,
+    Tag,
+)
+from iambic.plugins.aws.utils import boto_crud_call, remove_expired_resources
 
-AWS_IAM_ROLE_TEMPLATE_TYPE = "NOQ::AWS::IAM::Role"
-
-
-class RoleAccess(ExpiryModel, AccessModel):
-    users: list[str] = Field(
-        [],
-        description="List of users who can assume into the role",
-    )
-    groups: list[str] = Field(
-        [],
-        description="List of groups. Users in one or more of the groups can assume into the role",
-    )
-
-    @property
-    def resource_type(self):
-        return "aws:iam:role:access_rule"
-
-    @property
-    def resource_id(self):
-        return
+AWS_IAM_USER_TEMPLATE_TYPE = "NOQ::AWS::IAM::User"
 
 
 class PermissionBoundary(ExpiryModel, AccessModel):
@@ -76,46 +52,55 @@ class PermissionBoundary(ExpiryModel, AccessModel):
         return self.policy_arn
 
 
-class RoleProperties(BaseModel):
-    role_name: str = Field(
-        description="Name of the role",
+class Group(ExpiryModel, AccessModel):
+    group_name: str
+
+    @property
+    def resource_type(self):
+        return "aws:iam:group"
+
+    @property
+    def resource_id(self):
+        return self.group_name
+
+
+class UserProperties(BaseModel):
+    user_name: str = Field(
+        description="Name of the user",
     )
     description: Optional[Union[str, list[Description]]] = Field(
         "",
-        description="Description of the role",
+        description="Description of the user",
     )
     owner: Optional[str] = None
-    max_session_duration: Optional[Union[int, list[MaxSessionDuration]]] = 3600
     path: Optional[Union[str, list[Path]]] = "/"
     permissions_boundary: Optional[
         Union[None, PermissionBoundary, list[PermissionBoundary]]
     ] = None
-    assume_role_policy_document: Optional[
-        Union[None, list[AssumeRolePolicyDocument], AssumeRolePolicyDocument]
-    ] = Field(
-        [],
-        description="Who can assume the Role",
-    )
     tags: Optional[list[Tag]] = Field(
         [],
-        description="List of tags attached to the role",
+        description="List of tags attached to the user",
+    )
+    groups: Optional[list[Group]] = Field(
+        [],
+        description="List of groups the user is a member of",
     )
     managed_policies: Optional[list[ManagedPolicyRef]] = Field(
         [],
-        description="Managed policy arns attached to the role",
+        description="Managed policy arns attached to the user",
     )
     inline_policies: Optional[list[PolicyDocument]] = Field(
         [],
-        description="List of the role's inline policies",
+        description="List of the user's inline policies",
     )
 
     @property
     def resource_type(self):
-        return "aws:iam:role"
+        return "aws:iam:user"
 
     @property
     def resource_id(self):
-        return self.role_name
+        return self.user_name
 
     @classmethod
     def sort_func(cls, attribute_name: str) -> Callable:
@@ -123,6 +108,16 @@ class RoleProperties(BaseModel):
             return f"{getattr(obj, attribute_name)}!{obj.access_model_sort_weight()}"
 
         return _sort_func
+
+    @validator("tags")
+    def sort_tags(cls, v: list[Tag]):
+        sorted_v = sorted(v, key=cls.sort_func("key"))
+        return sorted_v
+
+    @validator("groups")
+    def sort_groups(cls, v: list[Group]):
+        sorted_v = sorted(v, key=cls.sort_func("group_name"))
+        return sorted_v
 
     @validator("managed_policies")
     def sort_managed_policy_refs(cls, v: list[ManagedPolicyRef]):
@@ -134,43 +129,19 @@ class RoleProperties(BaseModel):
         sorted_v = sorted(v, key=cls.sort_func("policy_name"))
         return sorted_v
 
-    @validator("tags")
-    def sort_tags(cls, v: list[Tag]):
-        sorted_v = sorted(v, key=cls.sort_func("key"))
-        return sorted_v
 
-    @validator("assume_role_policy_document")
-    def sort_assume_role_policy_documents(cls, v: list[AssumeRolePolicyDocument]):
-        if not isinstance(v, list):
-            return v
-        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
-        return sorted_v
-
-
-class RoleTemplate(AWSTemplate, AccessModel):
-    template_type = AWS_IAM_ROLE_TEMPLATE_TYPE
-    properties: RoleProperties = Field(
-        description="Properties of the role",
-    )
-    access_rules: Optional[list[RoleAccess]] = Field(
-        [],
-        description="Used to define users and groups who can access the role via Noq credential brokering",
+class UserTemplate(AWSTemplate, AccessModel):
+    template_type = AWS_IAM_USER_TEMPLATE_TYPE
+    properties: UserProperties = Field(
+        description="Properties of the user",
     )
 
     def _apply_resource_dict(
         self, aws_account: AWSAccount = None, context: ExecutionContext = None
     ) -> dict:
-        response = super(RoleTemplate, self)._apply_resource_dict(aws_account, context)
-        response.pop("RoleAccess", None)
+        response = super(UserTemplate, self)._apply_resource_dict(aws_account, context)
         if "Tags" not in response:
             response["Tags"] = []
-
-        # Ensure only 1 of the following objects
-        # TODO: Have this handled in a cleaner way. Maybe via an attribute on a pydantic field
-        if assume_role_policy := response.pop("AssumeRolePolicyDocument", []):
-            if isinstance(assume_role_policy, list):
-                assume_role_policy = assume_role_policy[0]
-            response["AssumeRolePolicyDocument"] = assume_role_policy
 
         if permissions_boundary := response.pop("PermissionsBoundary", []):
             if isinstance(permissions_boundary, list):
@@ -180,17 +151,11 @@ class RoleTemplate(AWSTemplate, AccessModel):
         if isinstance(response.get("Description"), list):
             response["Description"] = response["Description"][0]["Description"]
 
-        if isinstance(response.get("MaxSessionDuration"), list):
-            response["MaxSessionDuration"] = response["MaxSessionDuration"][0][
-                "MaxSessionDuration"
-            ]
-
         return response
 
     def _is_iambic_import_only(self, aws_account: AWSAccount):
         return (
-            "aws-service-role" in self.properties.path
-            or aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
+            aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
             or self.iambic_managed == IambicManaged.IMPORT_ONLY
         )
 
@@ -204,40 +169,36 @@ class RoleTemplate(AWSTemplate, AccessModel):
         self = await remove_expired_resources(
             self, self.resource_type, self.resource_id
         )
-        account_role = self.apply_resource_dict(aws_account, context)
+        account_user = self.apply_resource_dict(aws_account, context)
 
-        self = await remove_expired_resources(
-            self, self.resource_type, self.resource_id
-        )
-        role_name = account_role["RoleName"]
+        user_name = account_user["UserName"]
         account_change_details = AccountChangeDetails(
             account=str(aws_account),
-            resource_id=role_name,
-            new_value=dict(**account_role),
+            resource_id=user_name,
+            new_value=dict(**account_user),
             proposed_changes=[],
         )
         log_params = dict(
             resource_type=self.resource_type,
-            resource_id=role_name,
+            resource_id=user_name,
             account=str(aws_account),
         )
         iambic_import_only = self._is_iambic_import_only(aws_account)
-
-        current_role = await get_role(role_name, client)
-        if current_role:
-            account_change_details.current_value = {**current_role}  # Create a new dict
+        current_user = await get_user(user_name, client)
+        if current_user:
+            account_change_details.current_value = {**current_user}  # Create a new dict
 
         deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
         if isinstance(deleted, list):
             deleted = deleted[0].deleted
 
         if deleted:
-            if current_role:
+            if current_user:
                 account_change_details.new_value = None
                 account_change_details.proposed_changes.append(
                     ProposedChange(
                         change_type=ProposedChangeType.DELETE,
-                        resource_id=role_name,
+                        resource_id=user_name,
                         resource_type=self.resource_type,
                     )
                 )
@@ -247,33 +208,27 @@ class RoleTemplate(AWSTemplate, AccessModel):
                 log.info(log_str, **log_params)
 
                 if context.execute:
-                    await delete_iam_role(role_name, client, log_params)
+                    await delete_iam_user(user_name, client, log_params)
 
             return account_change_details
 
-        role_exists = bool(current_role)
-        inline_policies = account_role.pop("InlinePolicies", [])
-        managed_policies = account_role.pop("ManagedPolicies", [])
-        existing_inline_policies = current_role.pop("InlinePolicies", [])
-        existing_managed_policies = current_role.pop("ManagedPolicies", [])
+        user_exists = bool(current_user)
+        inline_policies = account_user.pop("InlinePolicies", [])
+        managed_policies = account_user.pop("ManagedPolicies", [])
+        groups = account_user.pop("Groups", [])
+        existing_inline_policies = current_user.pop("InlinePolicies", [])
+        existing_managed_policies = current_user.pop("ManagedPolicies", [])
+        existing_groups = current_user.pop("Groups", [])
         tasks = []
         try:
-            if role_exists:
+            if user_exists:
                 tasks.extend(
                     [
-                        apply_role_tags(
-                            role_name,
+                        apply_user_tags(
+                            user_name,
                             client,
-                            account_role["Tags"],
-                            current_role.get("Tags", []),
-                            log_params,
-                            context,
-                        ),
-                        update_assume_role_policy(
-                            role_name,
-                            client,
-                            account_role.pop("AssumeRolePolicyDocument", {}),
-                            current_role["AssumeRolePolicyDocument"],
+                            account_user["Tags"],
+                            current_user.get("Tags", []),
                             log_params,
                             context,
                         ),
@@ -282,17 +237,17 @@ class RoleTemplate(AWSTemplate, AccessModel):
 
                 supported_update_keys = ["Description", "MaxSessionDuration"]
                 update_resource_log_params = {**log_params}
-                update_role_params = {}
+                update_user_params = {}
                 for k in supported_update_keys:
-                    if account_role.get(k) is not None and account_role.get(
+                    if account_user.get(k) is not None and account_user.get(
                         k
-                    ) != current_role.get(k):
+                    ) != current_user.get(k):
                         update_resource_log_params[k] = dict(
-                            old_value=current_role.get(k), new_value=account_role.get(k)
+                            old_value=current_user.get(k), new_value=account_user.get(k)
                         )
-                        update_role_params[k] = current_role.get(k)
+                        update_user_params[k] = current_user.get(k)
 
-                if update_role_params:
+                if update_user_params:
                     log_str = "Out of date resource found."
                     if context.execute:
                         log.info(
@@ -301,10 +256,10 @@ class RoleTemplate(AWSTemplate, AccessModel):
                         )
                         tasks.append(
                             boto_crud_call(
-                                client.update_role,
-                                RoleName=role_name,
+                                client.update_user,
+                                UserName=user_name,
                                 **{
-                                    k: account_role.get(k)
+                                    k: account_user.get(k)
                                     for k in supported_update_keys
                                 },
                             )
@@ -314,7 +269,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                         account_change_details.proposed_changes.append(
                             ProposedChange(
                                 change_type=ProposedChangeType.UPDATE,
-                                resource_id=role_name,
+                                resource_id=user_name,
                                 resource_type=self.resource_type,
                             )
                         )
@@ -322,7 +277,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                 account_change_details.proposed_changes.append(
                     ProposedChange(
                         change_type=ProposedChangeType.CREATE,
-                        resource_id=role_name,
+                        resource_id=user_name,
                         resource_type=self.resource_type,
                     )
                 )
@@ -334,34 +289,39 @@ class RoleTemplate(AWSTemplate, AccessModel):
 
                 log_str = f"{log_str} Creating resource..."
                 log.info(log_str, **log_params)
-                account_role["AssumeRolePolicyDocument"] = json.dumps(
-                    account_role["AssumeRolePolicyDocument"]
-                )
-                if account_role.get("PermissionsBoundary"):
-                    account_role["PermissionsBoundary"] = account_role[
+                if account_user.get("PermissionsBoundary"):
+                    account_user["PermissionsBoundary"] = account_user[
                         "PermissionsBoundary"
                     ]["PolicyArn"]
 
-                await boto_crud_call(client.create_role, **account_role)
+                await boto_crud_call(client.create_user, **account_user)
         except Exception as e:
             log.error("Unable to generate tasks for resource", error=e, **log_params)
             return account_change_details
 
         tasks.extend(
             [
-                apply_role_managed_policies(
-                    role_name,
+                apply_user_managed_policies(
+                    user_name,
                     client,
                     managed_policies,
                     existing_managed_policies,
                     log_params,
                     context,
                 ),
-                apply_role_inline_policies(
-                    role_name,
+                apply_user_inline_policies(
+                    user_name,
                     client,
                     inline_policies,
                     existing_inline_policies,
+                    log_params,
+                    context,
+                ),
+                apply_user_groups(
+                    user_name,
+                    client,
+                    groups,
+                    existing_groups,
                     log_params,
                     context,
                 ),
@@ -397,8 +357,4 @@ class RoleTemplate(AWSTemplate, AccessModel):
 
     @property
     def resource_id(self):
-        return self.properties.role_name
-
-    @classmethod
-    def iambic_specific_knowledge(cls) -> set[str]:
-        return {"access_rules", "file_path", "iambic_managed"}
+        return self.properties.user_name

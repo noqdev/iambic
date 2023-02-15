@@ -7,27 +7,6 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 from pydantic import Field, validator
 
-from iambic.aws.iam.policy.models import PolicyStatement
-from iambic.aws.identity_center.permission_set.utils import (
-    apply_account_assignments,
-    apply_permission_set_aws_managed_policies,
-    apply_permission_set_customer_managed_policies,
-    apply_permission_set_inline_policy,
-    apply_permission_set_permission_boundary,
-    apply_permission_set_tags,
-    delete_permission_set,
-    enrich_permission_set_details,
-    get_permission_set_users_and_groups_as_access_rules,
-)
-from iambic.aws.models import (
-    AccessModel,
-    AWSAccount,
-    AWSTemplate,
-    Description,
-    ExpiryModel,
-    Tag,
-)
-from iambic.aws.utils import boto_crud_call, remove_expired_resources
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -40,9 +19,30 @@ from iambic.core.models import (
     TemplateChangeDetails,
 )
 from iambic.core.utils import aio_wrapper, evaluate_on_provider
+from iambic.plugins.aws.iam.policy.models import PolicyStatement
+from iambic.plugins.aws.identity_center.permission_set.utils import (
+    apply_account_assignments,
+    apply_permission_set_aws_managed_policies,
+    apply_permission_set_customer_managed_policies,
+    apply_permission_set_inline_policy,
+    apply_permission_set_permission_boundary,
+    apply_permission_set_tags,
+    delete_permission_set,
+    enrich_permission_set_details,
+    get_permission_set_users_and_groups_as_access_rules,
+)
+from iambic.plugins.aws.models import (
+    AccessModel,
+    AWSAccount,
+    AWSTemplate,
+    Description,
+    ExpiryModel,
+    Tag,
+)
+from iambic.plugins.aws.utils import boto_crud_call, remove_expired_resources
 
 if TYPE_CHECKING:
-    from iambic.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.aws.iambic_plugin import AWSConfig
 
 AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE = (
     "NOQ::AWS::IdentityCenter::PermissionSet"

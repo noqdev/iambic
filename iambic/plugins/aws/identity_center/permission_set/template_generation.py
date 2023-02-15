@@ -9,19 +9,6 @@ from typing import TYPE_CHECKING, Union
 
 import aiofiles
 
-from iambic.aws.event_bridge.models import PermissionSetMessageDetails
-from iambic.aws.identity_center.permission_set.models import (
-    AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
-    AWSIdentityCenterPermissionSetProperties,
-    AWSIdentityCenterPermissionSetTemplate,
-)
-from iambic.aws.identity_center.permission_set.utils import (
-    enrich_permission_set_details,
-    get_permission_set_details,
-    get_permission_set_users_and_groups,
-)
-from iambic.aws.models import AWSAccount
-from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
@@ -32,9 +19,22 @@ from iambic.core.template_generation import (
     group_int_or_str_attribute,
 )
 from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.plugins.aws.event_bridge.models import PermissionSetMessageDetails
+from iambic.plugins.aws.identity_center.permission_set.models import (
+    AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
+    AWSIdentityCenterPermissionSetProperties,
+    AWSIdentityCenterPermissionSetTemplate,
+)
+from iambic.plugins.aws.identity_center.permission_set.utils import (
+    enrich_permission_set_details,
+    get_permission_set_details,
+    get_permission_set_users_and_groups,
+)
+from iambic.plugins.aws.models import AWSAccount
+from iambic.plugins.aws.utils import get_aws_account_map, normalize_boto3_resp
 
 if TYPE_CHECKING:
-    from iambic.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.aws.iambic_plugin import AWSConfig
 
 # The dir to write the boto response to a file to prevent keeping too much in memory
 IDENTITY_CENTER_PERMISSION_SET_RESPONSE_DIR = pathlib.Path.home().joinpath(

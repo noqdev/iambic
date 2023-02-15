@@ -7,27 +7,6 @@ from typing import TYPE_CHECKING, Union
 
 import boto3
 
-from iambic.aws.event_bridge.models import (
-    GroupMessageDetails,
-    ManagedPolicyMessageDetails,
-    PermissionSetMessageDetails,
-    RoleMessageDetails,
-    UserMessageDetails,
-)
-from iambic.aws.iam.group.template_generation import generate_aws_group_templates
-from iambic.aws.iam.policy.template_generation import (
-    generate_aws_managed_policy_templates,
-)
-from iambic.aws.iam.role.template_generation import generate_aws_role_templates
-from iambic.aws.iam.user.template_generation import generate_aws_user_templates
-from iambic.aws.identity_center.permission_set.models import (
-    AWSIdentityCenterPermissionSetTemplate,
-)
-from iambic.aws.identity_center.permission_set.template_generation import (
-    generate_aws_permission_set_templates,
-)
-from iambic.aws.identity_center.permission_set.utils import generate_permission_set_map
-from iambic.aws.models import AWSAccount
 from iambic.config.models import ExtendsConfig, ExtendsConfigKey
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import IambicManaged
@@ -35,9 +14,34 @@ from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, TemplateChangeDetails
 from iambic.core.parser import load_templates
 from iambic.core.utils import gather_templates, yaml
+from iambic.plugins.aws.event_bridge.models import (
+    GroupMessageDetails,
+    ManagedPolicyMessageDetails,
+    PermissionSetMessageDetails,
+    RoleMessageDetails,
+    UserMessageDetails,
+)
+from iambic.plugins.aws.iam.group.template_generation import (
+    generate_aws_group_templates,
+)
+from iambic.plugins.aws.iam.policy.template_generation import (
+    generate_aws_managed_policy_templates,
+)
+from iambic.plugins.aws.iam.role.template_generation import generate_aws_role_templates
+from iambic.plugins.aws.iam.user.template_generation import generate_aws_user_templates
+from iambic.plugins.aws.identity_center.permission_set.models import (
+    AWSIdentityCenterPermissionSetTemplate,
+)
+from iambic.plugins.aws.identity_center.permission_set.template_generation import (
+    generate_aws_permission_set_templates,
+)
+from iambic.plugins.aws.identity_center.permission_set.utils import (
+    generate_permission_set_map,
+)
+from iambic.plugins.aws.models import AWSAccount
 
 if TYPE_CHECKING:
-    from iambic.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.aws.iambic_plugin import AWSConfig
 
 
 async def load(config: AWSConfig) -> AWSConfig:

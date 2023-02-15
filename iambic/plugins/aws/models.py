@@ -11,14 +11,6 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, constr
 from ruamel.yaml import YAML, yaml_object
 
-from iambic.aws.utils import (
-    RegionName,
-    boto_crud_call,
-    create_assume_role_session,
-    get_current_role_arn,
-    legacy_paginated_search,
-    set_org_account_variables,
-)
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -38,11 +30,19 @@ from iambic.core.utils import (
     get_provider_value,
     sort_dict,
 )
+from iambic.plugins.aws.utils import (
+    RegionName,
+    boto_crud_call,
+    create_assume_role_session,
+    get_current_role_arn,
+    legacy_paginated_search,
+    set_org_account_variables,
+)
 
 yaml = YAML()
 
 if TYPE_CHECKING:
-    from iambic.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.aws.iambic_plugin import AWSConfig
 
 ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\*$"
 

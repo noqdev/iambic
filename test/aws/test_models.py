@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from iambic.aws.models import AWSTemplate
 from iambic.core.template_generation import merge_model
+from iambic.plugins.aws.models import AWSTemplate
 
 
 def test_aws_template_merge(aws_accounts):

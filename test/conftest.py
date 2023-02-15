@@ -4,12 +4,12 @@ import itertools
 
 import pytest
 
-from iambic.aws.iambic_plugin import AWSConfig
-from iambic.aws.models import AWSAccount
 from iambic.config.dynamic_config import Config, create_pydantic_model, load_plugins
 from iambic.config.models import CURRENT_IAMBIC_VERSION
 from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
+from iambic.plugins.aws.iambic_plugin import AWSConfig
+from iambic.plugins.aws.models import AWSAccount
 
 
 @pytest.fixture

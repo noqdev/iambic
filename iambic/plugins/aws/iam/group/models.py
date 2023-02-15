@@ -7,16 +7,6 @@ from typing import Callable, Optional, Union
 import botocore
 from pydantic import Field, constr, validator
 
-from iambic.aws.iam.group.utils import (
-    apply_group_inline_policies,
-    apply_group_managed_policies,
-    delete_iam_group,
-    get_group,
-)
-from iambic.aws.iam.models import Path
-from iambic.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
-from iambic.aws.models import ARN_RE, AccessModel, AWSAccount, AWSTemplate
-from iambic.aws.utils import boto_crud_call, remove_expired_resources
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -27,6 +17,16 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
+from iambic.plugins.aws.iam.group.utils import (
+    apply_group_inline_policies,
+    apply_group_managed_policies,
+    delete_iam_group,
+    get_group,
+)
+from iambic.plugins.aws.iam.models import Path
+from iambic.plugins.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
+from iambic.plugins.aws.models import ARN_RE, AccessModel, AWSAccount, AWSTemplate
+from iambic.plugins.aws.utils import boto_crud_call, remove_expired_resources
 
 AWS_IAM_GROUP_TEMPLATE_TYPE = "NOQ::AWS::IAM::Group"
 

@@ -4,10 +4,10 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from iambic.aws.iam.role.models import RoleTemplate
-from iambic.aws.iam.role.template_generation import create_templated_role
-from iambic.aws.models import AWSAccount
 from iambic.core.iambic_enum import IambicManaged
+from iambic.plugins.aws.iam.role.models import RoleTemplate
+from iambic.plugins.aws.iam.role.template_generation import create_templated_role
+from iambic.plugins.aws.models import AWSAccount
 
 
 @pytest.fixture
@@ -25,7 +25,7 @@ def test_role():
 @pytest.fixture
 def mock_account_id_to_role_map(test_role):
     with patch(
-        "iambic.aws.iam.role.template_generation._account_id_to_role_map"
+        "iambic.plugins.aws.iam.role.template_generation._account_id_to_role_map"
     ) as _mock_account_id_to_role_map:
         async_mock = AsyncMock(return_value={"dev": test_role.properties.dict()})
         _mock_account_id_to_role_map.side_effect = async_mock

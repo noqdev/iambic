@@ -7,12 +7,12 @@ from functional_tests.aws.managed_policy.utils import (
     generate_managed_policy_template_from_base,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.aws.event_bridge.models import ManagedPolicyMessageDetails
-from iambic.aws.iam.policy.models import ManagedPolicyTemplate
-from iambic.aws.iam.policy.template_generation import (
+from iambic.core.context import ctx
+from iambic.plugins.aws.event_bridge.models import ManagedPolicyMessageDetails
+from iambic.plugins.aws.iam.policy.models import ManagedPolicyTemplate
+from iambic.plugins.aws.iam.policy.template_generation import (
     generate_aws_managed_policy_templates,
 )
-from iambic.core.context import ctx
 
 
 class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):

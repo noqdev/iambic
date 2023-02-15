@@ -3,14 +3,14 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from iambic.aws.models import (
+from iambic.config.dynamic_config import Config
+from iambic.config.models import AWSConfig
+from iambic.plugins.aws.models import (
     AWSIdentityCenterAccount,
     AWSOrgAccountRule,
     AWSOrganization,
     BaseAWSOrgRule,
 )
-from iambic.config.dynamic_config import Config
-from iambic.config.models import AWSConfig
 
 
 @pytest.fixture

@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import asyncio
 
-from iambic.aws.identity_center.permission_set.utils import generate_permission_set_map
-from iambic.aws.utils import remove_expired_resources
 from iambic.config.dynamic_config import Config
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import TemplateChangeDetails
 from iambic.core.parser import load_templates
+from iambic.plugins.aws.identity_center.permission_set.utils import (
+    generate_permission_set_map,
+)
+from iambic.plugins.aws.utils import remove_expired_resources
 
 
 async def apply_changes(

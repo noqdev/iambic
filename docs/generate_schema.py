@@ -4,18 +4,18 @@ import os
 
 import jsonschema2md2
 
-from iambic.aws.iam.group.models import GroupTemplate as AWSGroupTemplate
-from iambic.aws.iam.policy.models import ManagedPolicyTemplate
-from iambic.aws.iam.role.models import RoleTemplate
-from iambic.aws.identity_center.permission_set.models import (
-    AWSIdentityCenterPermissionSetTemplate,
-)
-from iambic.aws.models import AWSAccount, AWSOrganization
 from iambic.config.models import Config, ExtendsConfig
 from iambic.core.models import Variable
 from iambic.core.utils import camel_to_snake
 from iambic.google.group.models import GroupTemplate
 from iambic.okta.group.models import OktaGroupTemplate
+from iambic.plugins.aws.iam.group import GroupTemplate as AWSGroupTemplate
+from iambic.plugins.aws.iam.policy.models import ManagedPolicyTemplate
+from iambic.plugins.aws.iam.role.models import RoleTemplate
+from iambic.plugins.aws.identity_center.permission_set.models import (
+    AWSIdentityCenterPermissionSetTemplate,
+)
+from iambic.plugins.aws.models import AWSAccount, AWSOrganization
 
 
 def create_model_schemas(

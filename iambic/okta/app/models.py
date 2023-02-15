@@ -6,7 +6,6 @@ from typing import Any, List, Optional
 
 from pydantic import Field
 
-from iambic.aws.utils import remove_expired_resources
 from iambic.config.dynamic_config import Config
 from iambic.config.models import OktaOrganization
 from iambic.core.context import ExecutionContext
@@ -27,6 +26,7 @@ from iambic.okta.app.utils import (
     update_app_name,
 )
 from iambic.okta.models import App, Assignment, Status
+from iambic.plugins.aws.utils import remove_expired_resources
 
 OKTA_GET_APP_SEMAPHORE = NoqSemaphore(get_app, 3)
 

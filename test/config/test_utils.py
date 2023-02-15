@@ -6,15 +6,15 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from iambic.aws.models import (
+from iambic.config.dynamic_config import Config
+from iambic.config.models import AWSConfig, AWSOrganization
+from iambic.core.iambic_enum import IambicManaged
+from iambic.plugins.aws.models import (
     AWSAccount,
     BaseAWSOrgRule,
     get_hub_role_arn,
     get_spoke_role_arn,
 )
-from iambic.config.dynamic_config import Config
-from iambic.config.models import AWSConfig, AWSOrganization
-from iambic.core.iambic_enum import IambicManaged
 
 
 @pytest.fixture

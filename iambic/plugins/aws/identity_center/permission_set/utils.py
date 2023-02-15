@@ -5,13 +5,13 @@ import asyncio
 from botocore.exceptions import ClientError
 from deepdiff import DeepDiff
 
-from iambic.aws.models import AWSAccount
-from iambic.aws.utils import boto_crud_call, legacy_paginated_search
 from iambic.core import noq_json as json
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper, async_batch_processor
+from iambic.plugins.aws.models import AWSAccount
+from iambic.plugins.aws.utils import boto_crud_call, legacy_paginated_search
 
 
 async def get_permission_set_details(
@@ -38,7 +38,7 @@ async def generate_permission_set_map(aws_accounts: list[AWSAccount], templates:
     :param templates:
     :return:
     """
-    from iambic.aws.identity_center.permission_set.models import (
+    from iambic.plugins.aws.identity_center.permission_set.models import (
         AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
     )
 

@@ -8,14 +8,14 @@ from functional_tests.aws.permission_set.utils import (
     generate_permission_set_template_from_base,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.aws.event_bridge.models import PermissionSetMessageDetails
-from iambic.aws.identity_center.permission_set.models import (
+from iambic.core.context import ctx
+from iambic.plugins.aws.event_bridge.models import PermissionSetMessageDetails
+from iambic.plugins.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetTemplate,
 )
-from iambic.aws.identity_center.permission_set.template_generation import (
+from iambic.plugins.aws.identity_center.permission_set.template_generation import (
     generate_aws_permission_set_templates,
 )
-from iambic.core.context import ctx
 
 
 class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):

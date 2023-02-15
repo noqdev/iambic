@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import random
 
-from iambic.aws.iam.role.models import RoleAccess, RoleTemplate
-from iambic.aws.iam.role.template_generation import get_role_dir
-from iambic.aws.iam.role.utils import list_roles
-from iambic.aws.models import AWSAccount
+from iambic.plugins.aws.iam.role.models import RoleAccess, RoleTemplate
+from iambic.plugins.aws.iam.role.template_generation import get_role_dir
+from iambic.plugins.aws.iam.role.utils import list_roles
+from iambic.plugins.aws.models import AWSAccount
 
 
 def attach_access_rule(

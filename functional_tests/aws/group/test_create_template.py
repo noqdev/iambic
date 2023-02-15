@@ -5,10 +5,10 @@ from unittest import IsolatedAsyncioTestCase
 from functional_tests.aws.group.utils import generate_group_template_from_base
 from functional_tests.aws.user.utils import get_modifiable_user
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.aws.iam.group.utils import get_group_across_accounts
-from iambic.aws.iam.user.utils import get_user_groups
-from iambic.aws.utils import boto_crud_call
 from iambic.core.context import ctx
+from iambic.plugins.aws.iam.group.utils import get_group_across_accounts
+from iambic.plugins.aws.iam.user.utils import get_user_groups
+from iambic.plugins.aws.utils import boto_crud_call
 
 
 class CreateGroupTestCase(IsolatedAsyncioTestCase):

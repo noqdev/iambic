@@ -14,7 +14,7 @@ from iambic.core.logger import log
 from iambic.core.utils import aio_wrapper, camel_to_snake
 
 if TYPE_CHECKING:
-    from iambic.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.aws.iambic_plugin import AWSConfig
 
 
 async def boto_crud_call(boto_fnc, **kwargs) -> Union[list, dict]:

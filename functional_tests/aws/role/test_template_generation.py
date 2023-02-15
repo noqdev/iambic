@@ -5,10 +5,10 @@ from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.aws.role.utils import generate_role_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.aws.event_bridge.models import RoleMessageDetails
-from iambic.aws.iam.role.models import RoleTemplate
-from iambic.aws.iam.role.template_generation import generate_aws_role_templates
 from iambic.core.context import ctx
+from iambic.plugins.aws.event_bridge.models import RoleMessageDetails
+from iambic.plugins.aws.iam.role.models import RoleTemplate
+from iambic.plugins.aws.iam.role.template_generation import generate_aws_role_templates
 
 
 class PartialImportRoleTestCase(IsolatedAsyncioTestCase):

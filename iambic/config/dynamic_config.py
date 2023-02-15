@@ -11,12 +11,12 @@ from typing import List, Optional, Union
 from pydantic import BaseModel, Field
 from pydantic import create_model as create_pydantic_model
 
-from iambic import aws
 from iambic.core.context import ctx
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, TemplateChangeDetails
 from iambic.core.utils import sort_dict, yaml
+from iambic.plugins import aws
 
 
 def load_plugins(paths: list[str]) -> List[tuple[ProviderPlugin, BaseModel]]:
