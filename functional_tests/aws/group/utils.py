@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import random
 
-from iambic.aws.iam.group.models import GroupTemplate
-from iambic.aws.iam.group.template_generation import get_group_dir
-from iambic.aws.iam.group.utils import list_groups
+from iambic.plugins.aws.iam.group.models import GroupTemplate
+from iambic.plugins.aws.iam.group.template_generation import get_group_dir
+from iambic.plugins.aws.iam.group.utils import list_groups
 
 
 async def generate_group_template_from_base(

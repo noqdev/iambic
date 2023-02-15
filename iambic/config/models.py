@@ -14,11 +14,11 @@ from okta.client import Client as OktaClient
 from pydantic import BaseModel, Field, validator
 from slack_bolt import App as SlackBoltApp
 
-from iambic.aws.models import AWSAccount, AWSOrganization
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, Variable
 from iambic.core.utils import aio_wrapper, sort_dict, yaml
+from iambic.plugins.aws.models import AWSAccount, AWSOrganization
 
 CURRENT_IAMBIC_VERSION = "1"
 

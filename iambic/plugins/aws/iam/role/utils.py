@@ -6,12 +6,12 @@ from typing import Union
 
 from deepdiff import DeepDiff
 
-from iambic.aws.models import AWSAccount
-from iambic.aws.utils import boto_crud_call, paginated_search
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper
+from iambic.plugins.aws.models import AWSAccount
+from iambic.plugins.aws.utils import boto_crud_call, paginated_search
 
 
 async def get_role_inline_policy_names(role_name: str, iam_client):

@@ -5,13 +5,13 @@ import asyncio
 from botocore.exceptions import ClientError
 from deepdiff import DeepDiff
 
-from iambic.aws.models import AWSAccount
-from iambic.aws.utils import boto_crud_call, paginated_search
 from iambic.core import noq_json as json
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import NoqSemaphore, aio_wrapper
+from iambic.plugins.aws.models import AWSAccount
+from iambic.plugins.aws.utils import boto_crud_call, paginated_search
 
 
 async def list_managed_policy_versions(iam_client, policy_arn: str) -> list[dict]:

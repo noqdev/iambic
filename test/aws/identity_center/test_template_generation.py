@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from iambic.aws.identity_center.permission_set.template_generation import (
+from iambic.plugins.aws.identity_center.permission_set.template_generation import (
     _sorted_and_clean_access_rules,
 )
 

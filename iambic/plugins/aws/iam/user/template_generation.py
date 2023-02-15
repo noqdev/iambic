@@ -8,22 +8,6 @@ from typing import TYPE_CHECKING
 
 import aiofiles
 
-from iambic.aws.event_bridge.models import UserMessageDetails
-from iambic.aws.iam.user.models import (
-    AWS_IAM_USER_TEMPLATE_TYPE,
-    UserProperties,
-    UserTemplate,
-)
-from iambic.aws.iam.user.utils import (
-    get_user_across_accounts,
-    get_user_groups,
-    get_user_inline_policies,
-    get_user_managed_policies,
-    list_user_tags,
-    list_users,
-)
-from iambic.aws.models import AWSAccount
-from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
@@ -34,9 +18,25 @@ from iambic.core.template_generation import (
     group_int_or_str_attribute,
 )
 from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.plugins.aws.event_bridge.models import UserMessageDetails
+from iambic.plugins.aws.iam.user.models import (
+    AWS_IAM_USER_TEMPLATE_TYPE,
+    UserProperties,
+    UserTemplate,
+)
+from iambic.plugins.aws.iam.user.utils import (
+    get_user_across_accounts,
+    get_user_groups,
+    get_user_inline_policies,
+    get_user_managed_policies,
+    list_user_tags,
+    list_users,
+)
+from iambic.plugins.aws.models import AWSAccount
+from iambic.plugins.aws.utils import get_aws_account_map, normalize_boto3_resp
 
 if TYPE_CHECKING:
-    from iambic.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.aws.iambic_plugin import AWSConfig
 
 USER_RESPONSE_DIR = pathlib.Path.home().joinpath(".iambic", "resources", "aws", "users")
 

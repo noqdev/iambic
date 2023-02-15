@@ -8,14 +8,6 @@ from typing import TYPE_CHECKING
 
 import aiofiles
 
-from iambic.aws.event_bridge.models import ManagedPolicyMessageDetails
-from iambic.aws.iam.policy.models import ManagedPolicyProperties, ManagedPolicyTemplate
-from iambic.aws.iam.policy.utils import (
-    get_managed_policy_across_accounts,
-    list_managed_policies,
-)
-from iambic.aws.models import AWSAccount
-from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
@@ -26,9 +18,20 @@ from iambic.core.template_generation import (
     group_int_or_str_attribute,
 )
 from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.plugins.aws.event_bridge.models import ManagedPolicyMessageDetails
+from iambic.plugins.aws.iam.policy.models import (
+    ManagedPolicyProperties,
+    ManagedPolicyTemplate,
+)
+from iambic.plugins.aws.iam.policy.utils import (
+    get_managed_policy_across_accounts,
+    list_managed_policies,
+)
+from iambic.plugins.aws.models import AWSAccount
+from iambic.plugins.aws.utils import get_aws_account_map, normalize_boto3_resp
 
 if TYPE_CHECKING:
-    from iambic.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.aws.iambic_plugin import AWSConfig
 
 MANAGED_POLICY_RESPONSE_DIR = pathlib.Path.home().joinpath(
     ".iambic", "resources", "aws", "managed_policies"

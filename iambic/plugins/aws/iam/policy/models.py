@@ -9,22 +9,6 @@ import botocore
 from jinja2 import BaseLoader, Environment
 from pydantic import Field, constr, validator
 
-from iambic.aws.iam.models import Path
-from iambic.aws.iam.policy.utils import (
-    apply_managed_policy_tags,
-    delete_managed_policy,
-    get_managed_policy,
-    update_managed_policy,
-)
-from iambic.aws.models import (
-    ARN_RE,
-    AccessModel,
-    AWSAccount,
-    AWSTemplate,
-    Description,
-    Tag,
-)
-from iambic.aws.utils import boto_crud_call
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -35,6 +19,22 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
+from iambic.plugins.aws.iam.models import Path
+from iambic.plugins.aws.iam.policy.utils import (
+    apply_managed_policy_tags,
+    delete_managed_policy,
+    get_managed_policy,
+    update_managed_policy,
+)
+from iambic.plugins.aws.models import (
+    ARN_RE,
+    AccessModel,
+    AWSAccount,
+    AWSTemplate,
+    Description,
+    Tag,
+)
+from iambic.plugins.aws.utils import boto_crud_call
 
 AWS_MANAGED_POLICY_TEMPLATE_TYPE = "NOQ::IAM::ManagedPolicy"
 

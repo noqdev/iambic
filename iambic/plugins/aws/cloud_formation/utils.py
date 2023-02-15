@@ -4,13 +4,13 @@ import asyncio
 import os
 from datetime import datetime, timedelta
 
-from iambic.aws.models import (
+from iambic.core.logger import log
+from iambic.plugins.aws.models import (
     IAMBIC_HUB_ROLE_NAME,
     IAMBIC_SPOKE_ROLE_NAME,
     get_hub_role_arn,
 )
-from iambic.aws.utils import boto_crud_call, legacy_paginated_search
-from iambic.core.logger import log
+from iambic.plugins.aws.utils import boto_crud_call, legacy_paginated_search
 
 TEMPLATE_DIR = f"{str(os.path.dirname(__file__))}/templates"
 

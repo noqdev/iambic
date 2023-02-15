@@ -8,20 +8,6 @@ from typing import TYPE_CHECKING
 
 import aiofiles
 
-from iambic.aws.event_bridge.models import GroupMessageDetails
-from iambic.aws.iam.group.models import (
-    AWS_IAM_GROUP_TEMPLATE_TYPE,
-    GroupProperties,
-    GroupTemplate,
-)
-from iambic.aws.iam.group.utils import (
-    get_group_across_accounts,
-    get_group_inline_policies,
-    get_group_managed_policies,
-    list_groups,
-)
-from iambic.aws.models import AWSAccount
-from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
@@ -32,9 +18,23 @@ from iambic.core.template_generation import (
     group_int_or_str_attribute,
 )
 from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.plugins.aws.event_bridge.models import GroupMessageDetails
+from iambic.plugins.aws.iam.group.models import (
+    AWS_IAM_GROUP_TEMPLATE_TYPE,
+    GroupProperties,
+    GroupTemplate,
+)
+from iambic.plugins.aws.iam.group.utils import (
+    get_group_across_accounts,
+    get_group_inline_policies,
+    get_group_managed_policies,
+    list_groups,
+)
+from iambic.plugins.aws.models import AWSAccount
+from iambic.plugins.aws.utils import get_aws_account_map, normalize_boto3_resp
 
 if TYPE_CHECKING:
-    from iambic.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.aws.iambic_plugin import AWSConfig
 
 GROUP_RESPONSE_DIR = pathlib.Path.home().joinpath(
     ".iambic", "resources", "aws", "groups"

@@ -5,7 +5,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, validator
 
-from iambic.aws.handlers import (
+from iambic.core.iambic_plugin import ProviderPlugin
+from iambic.plugins.aws.handlers import (
     apply,
     aws_account_update_and_discovery,
     decode_aws_secret,
@@ -13,15 +14,14 @@ from iambic.aws.handlers import (
     import_aws_resources,
     load,
 )
-from iambic.aws.iam.group.models import GroupTemplate
-from iambic.aws.iam.policy.models import ManagedPolicyTemplate
-from iambic.aws.iam.role.models import RoleTemplate
-from iambic.aws.iam.user.models import UserTemplate
-from iambic.aws.identity_center.permission_set.models import (
+from iambic.plugins.aws.iam.group.models import GroupTemplate
+from iambic.plugins.aws.iam.policy.models import ManagedPolicyTemplate
+from iambic.plugins.aws.iam.role.models import RoleTemplate
+from iambic.plugins.aws.iam.user.models import UserTemplate
+from iambic.plugins.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetTemplate,
 )
-from iambic.aws.models import AWSAccount, AWSOrganization
-from iambic.core.iambic_plugin import ProviderPlugin
+from iambic.plugins.aws.models import AWSAccount, AWSOrganization
 
 
 class AWSConfig(BaseModel):

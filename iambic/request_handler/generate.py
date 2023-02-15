@@ -4,16 +4,6 @@ import asyncio
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from iambic.aws.iam.group.template_generation import generate_aws_group_templates
-from iambic.aws.iam.policy.template_generation import (
-    generate_aws_managed_policy_templates,
-)
-from iambic.aws.iam.role.template_generation import generate_aws_role_templates
-from iambic.aws.iam.user.template_generation import generate_aws_user_templates
-from iambic.aws.identity_center.permission_set.template_generation import (
-    generate_aws_permission_set_templates,
-)
-
 # TODO: This is a plugin anti-pattern. We need to make a real plugin architecture.
 from iambic.google.group.template_generation import generate_group_templates
 from iambic.okta.app.template_generation import generate_app_templates
@@ -21,6 +11,17 @@ from iambic.okta.group.template_generation import (
     generate_group_templates as generate_okta_group_templates,
 )
 from iambic.okta.user.template_generation import generate_user_templates
+from iambic.plugins.aws.iam.group.template_generation import (
+    generate_aws_group_templates,
+)
+from iambic.plugins.aws.iam.policy.template_generation import (
+    generate_aws_managed_policy_templates,
+)
+from iambic.plugins.aws.iam.role.template_generation import generate_aws_role_templates
+from iambic.plugins.aws.iam.user.template_generation import generate_aws_user_templates
+from iambic.plugins.aws.identity_center.permission_set.template_generation import (
+    generate_aws_permission_set_templates,
+)
 
 if TYPE_CHECKING:
     from iambic.config.dynamic_config import Config

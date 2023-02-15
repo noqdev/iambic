@@ -41,8 +41,8 @@ from iambic.core.utils import (
 )
 
 if TYPE_CHECKING:
-    from iambic.aws.models import AWSAccount
     from iambic.config.dynamic_config import Config
+    from iambic.plugins.aws.models import AWSAccount
 
     MappingIntStrAny = typing.Mapping[int | str, Any]
     AbstractSetIntStr = typing.AbstractSet[int | str]

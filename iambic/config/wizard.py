@@ -12,26 +12,6 @@ import botocore
 import questionary
 from botocore.exceptions import ClientError
 
-from iambic.aws.cloud_formation.utils import (
-    create_iambic_eventbridge_stacks,
-    create_iambic_role_stacks,
-    create_spoke_role_stack,
-)
-from iambic.aws.iam.policy.models import PolicyDocument, PolicyStatement
-from iambic.aws.iam.role.models import AWS_IAM_ROLE_TEMPLATE_TYPE, RoleTemplate
-from iambic.aws.iam.role.template_generation import generate_aws_role_templates
-from iambic.aws.models import (
-    ARN_RE,
-    IAMBIC_SPOKE_ROLE_NAME,
-    AWSAccount,
-    AWSIdentityCenterAccount,
-    AWSOrganization,
-    BaseAWSOrgRule,
-    Partition,
-    get_hub_role_arn,
-    get_spoke_role_arn,
-)
-from iambic.aws.utils import RegionName, get_identity_arn, is_valid_account_id
 from iambic.config.models import (
     CURRENT_IAMBIC_VERSION,
     Config,
@@ -47,6 +27,26 @@ from iambic.core.logger import log
 from iambic.core.template_generation import get_existing_template_map
 from iambic.core.utils import yaml
 from iambic.github.utils import create_workflow_files
+from iambic.plugins.aws.cloud_formation.utils import (
+    create_iambic_eventbridge_stacks,
+    create_iambic_role_stacks,
+    create_spoke_role_stack,
+)
+from iambic.plugins.aws.iam.policy.models import PolicyDocument, PolicyStatement
+from iambic.plugins.aws.iam.role.models import AWS_IAM_ROLE_TEMPLATE_TYPE, RoleTemplate
+from iambic.plugins.aws.iam.role.template_generation import generate_aws_role_templates
+from iambic.plugins.aws.models import (
+    ARN_RE,
+    IAMBIC_SPOKE_ROLE_NAME,
+    AWSAccount,
+    AWSIdentityCenterAccount,
+    AWSOrganization,
+    BaseAWSOrgRule,
+    Partition,
+    get_hub_role_arn,
+    get_spoke_role_arn,
+)
+from iambic.plugins.aws.utils import RegionName, get_identity_arn, is_valid_account_id
 
 CUSTOM_AUTO_COMPLETE_STYLE = questionary.Style(
     [
