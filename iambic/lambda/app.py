@@ -18,7 +18,13 @@ from iambic.main import (
     run_plan,
 )
 
-REPO_BASE_PATH = os.path.expanduser("~/.iambic/repos/")
+# Have to be careful when setting REPO_BASE_PATH because lambda execution
+# environment can be very straight on only /tmp is writable
+if os.environ.get("AWS_LAMBDA_FUNCTION_NAME", False):
+    REPO_BASE_PATH = "/tmp/.iambic/repos/"
+else:
+    REPO_BASE_PATH = os.path.expanduser("~/.iambic/repos/")
+
 os.makedirs(os.path.dirname(REPO_BASE_PATH), exist_ok=True)
 PLAN_OUTPUT_PATH = os.environ.get("PLAN_OUTPUT_PATH", None)
 FROM_SHA = os.environ.get("FROM_SHA", None)

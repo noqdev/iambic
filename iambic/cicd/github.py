@@ -25,7 +25,12 @@ MERGEABLE_STATE_CLEAN = "clean"
 MERGEABLE_STATE_BLOCKED = "blocked"
 
 
-SHARED_CONTAINER_GITHUB_DIRECTORY = "/root/data"
+# Have to be careful when setting REPO_BASE_PATH because lambda execution
+# environment can be very straight on only /tmp is writable
+if os.environ.get("AWS_LAMBDA_FUNCTION_NAME", False):
+    SHARED_CONTAINER_GITHUB_DIRECTORY = "/tmp/data/"
+else:
+    SHARED_CONTAINER_GITHUB_DIRECTORY = "/root/data"
 
 
 class HandleIssueCommentReturnCode(Enum):
@@ -155,22 +160,29 @@ def ensure_body_length_fits_github_spec(body: str) -> str:
 
 
 def post_result_as_pr_comment(
-    pull_request: PullRequest, context: dict[str, Any], iambic_op: str
+    pull_request: PullRequest,
+    context: dict[str, Any],
+    iambic_op: str,
+    proposed_changes_path: str,
 ) -> None:
-    run_url = (
-        context["server_url"]
-        + "/"
-        + context["repository"]
-        + "/actions/runs/"
-        + context["run_id"]
-        + "/attempts/"
-        + context["run_attempt"]
-    )
+    if context:
+        run_url = (
+            context["server_url"]
+            + "/"
+            + context["repository"]
+            + "/actions/runs/"
+            + context["run_id"]
+            + "/attempts/"
+            + context["run_attempt"]
+        )
+    else:
+        run_url = "lambda implementation not currently supported run_url"  # FIXME
     lines = []
-    cwd = os.getcwd()
-    filepath = f"{cwd}/proposed_changes.yaml"
-    if os.path.exists(filepath):
-        with open(filepath) as f:
+    if not proposed_changes_path:
+        cwd = os.getcwd()
+        proposed_changes_path = f"{cwd}/proposed_changes.yaml"
+    if os.path.exists(proposed_changes_path):
+        with open(proposed_changes_path) as f:
             lines = f.readlines()
     plan = "".join(lines) if lines else "no changes"
     body = GIT_APPLY_COMMENT_TEMPLATE.format(
@@ -275,7 +287,7 @@ def handle_iambic_git_apply(
     try:
         prepare_local_repo(repo_url, lambda_repo_path, pull_request_branch_name)
         lambda_run_handler(None, {"command": "git_apply"})
-        post_result_as_pr_comment(pull_request, context, "git-apply")
+        post_result_as_pr_comment(pull_request, context, "git-apply", None)
         copy_data_to_data_directory()
         pull_request.merge()
         return HandleIssueCommentReturnCode.MERGED
@@ -296,14 +308,26 @@ def handle_iambic_git_plan(
     pull_number: str,
     pull_request_branch_name: str,
     repo_url: str,
+    proposed_changes_path: str = None,
 ):
     session_name = get_session_name(repo_name, pull_number)
     os.environ["IAMBIC_SESSION_NAME"] = session_name
 
     try:
         prepare_local_repo(repo_url, lambda_repo_path, pull_request_branch_name)
+
+        if proposed_changes_path:
+            # code smell to have to change a module variable
+            # to control the destination of proposed_changes.yaml
+            # It's questionable if we still need to depend on the lambda interface
+            # because lambda interface was created to dynamic populate template config
+            # but templates config is now already stored in the templates repo itself.
+            getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH = proposed_changes_path
+
         lambda_run_handler(None, {"command": "git_plan"})
-        post_result_as_pr_comment(pull_request, context, "git-plan")
+        post_result_as_pr_comment(
+            pull_request, context, "git-plan", proposed_changes_path
+        )
         copy_data_to_data_directory()
         return HandleIssueCommentReturnCode.PLANNED
     except Exception as e:
