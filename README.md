@@ -45,6 +45,19 @@ Noq Enterprise offers many more enhancements on top of Iambic. Visit [https://ww
 
 `python -m iambic.main import -c demo/config.yaml`
 
+## Documentation
+
+Documentation is housed in docs/web and can be launched by following these steps:
+
+Note: you may have to first install yarn: https://classic.yarnpkg.com/lang/en/docs/install/#debian-stable and possibly nodejs/npm: https://docs.npmjs.com/downloading-and-installing-node-js-and-npm
+
+In `docs/web`:
+
+* `yarn`
+* `yarn start`
+
+This will launch your browser on http://localhost:3000 where you can view all IAMbic documentation.
+
 ## Additional Documentation
 
 * [Schemas](docs/SCHEMA.md)
