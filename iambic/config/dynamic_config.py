@@ -295,6 +295,26 @@ class Config(BaseTemplate):
 
 
 async def load_config(config_path: str) -> Config:
+    """
+    Load the configuration from the specified file path.
+
+    Only use this function to retrieve the configuration object.
+    Do not try to instantiate directly.
+    Should be called as soon as possible in the application.
+    This function is responsible for:
+    - Loading the configuration file
+    - Loading the plugins
+    - Creating the dynamic configuration object using the loaded plugins
+    - Setting runtime metadata for the plugins
+    - Retrieving secrets which are used to set certain plugins
+    - Setting list of templates on the TEMPLATE global variable
+
+    Parameters:
+    - config_path (str): The file path of the configuration file.
+
+    Returns:
+    - Config: The configuration object created from the specified file.
+    """
     from iambic.config.templates import TEMPLATES
 
     config_dict = yaml.load(open(config_path))
