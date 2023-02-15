@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 import pathlib
+import subprocess
 import warnings
 from typing import Optional
 
@@ -191,6 +192,11 @@ def run_clone_repos(repo_dir: str = str(pathlib.Path.cwd())):
 )
 def apply(force: bool, config_path: str, templates: list[str], repo_dir: str):
     run_apply(force, config_path, templates, repo_dir=repo_dir)
+
+
+@cli.command()
+def doc_serve():
+    subprocess.run(["yarn", "start"], shell=True, check=True)
 
 
 def run_apply(
