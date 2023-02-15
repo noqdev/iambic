@@ -23,13 +23,13 @@ class CreateGroupTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
     async def test_create_group_all_accounts(self):
         self.template.included_accounts = ["*"]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         account_group_mapping = await get_group_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.group_name, False
@@ -50,7 +50,7 @@ class CreateGroupTestCase(IsolatedAsyncioTestCase):
         self.template.included_accounts = [included_account]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         account_group_mapping = await get_group_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.group_name, False
@@ -76,7 +76,7 @@ class CreateGroupTestCase(IsolatedAsyncioTestCase):
 
         self.template.included_accounts = [included_account]
         self.template.excluded_accounts = []
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         user = await get_modifiable_user(iam_client)
         user_name = user["UserName"]

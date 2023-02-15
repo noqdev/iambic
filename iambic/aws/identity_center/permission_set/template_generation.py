@@ -5,7 +5,7 @@ import itertools
 import os
 import pathlib
 from collections import defaultdict
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import aiofiles
 
@@ -22,7 +22,6 @@ from iambic.aws.identity_center.permission_set.utils import (
 )
 from iambic.aws.models import AWSAccount
 from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
-from iambic.config.models import Config
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
@@ -33,6 +32,9 @@ from iambic.core.template_generation import (
     group_int_or_str_attribute,
 )
 from iambic.core.utils import NoqSemaphore, resource_file_upsert
+
+if TYPE_CHECKING:
+    from iambic.aws.iambic_plugin import AWSConfig
 
 # The dir to write the boto response to a file to prevent keeping too much in memory
 IDENTITY_CENTER_PERMISSION_SET_RESPONSE_DIR = pathlib.Path.home().joinpath(
@@ -363,7 +365,7 @@ async def create_templated_permission_set(  # noqa: C901
 
 
 async def generate_aws_permission_set_templates(
-    config: Config,
+    config: AWSConfig,
     base_output_dir: str,
     permission_set_messages: list[PermissionSetMessageDetails] = None,
 ):
@@ -374,13 +376,9 @@ async def generate_aws_permission_set_templates(
     resource_dir = get_permission_set_dir(base_output_dir)
 
     identity_center_accounts = []
-    if config.aws and config.aws.accounts:
+    if config.accounts:
         identity_center_accounts.extend(
-            [
-                account
-                for account in config.aws.accounts
-                if account.identity_center_details
-            ]
+            [account for account in config.accounts if account.identity_center_details]
         )
 
     if not identity_center_accounts:

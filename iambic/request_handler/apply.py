@@ -4,7 +4,7 @@ import asyncio
 
 from iambic.aws.identity_center.permission_set.utils import generate_permission_set_map
 from iambic.aws.utils import remove_expired_resources
-from iambic.config.models import Config
+from iambic.config.dynamic_config import Config
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import TemplateChangeDetails
@@ -39,6 +39,8 @@ async def apply_changes(
 
 
 async def flag_expired_resources(template_paths: list[str]):
+    # Warning: The dynamic config must be loaded before this is called.
+    #   This is done using iambic.config.dynamic_config.load_config(config_path)
     log.info("Scanning for expired resources")
     templates = await asyncio.gather(
         *[

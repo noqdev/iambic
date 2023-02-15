@@ -26,7 +26,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
     async def test_update_permission_set_attribute(self):
         initial_description = "This was created by a functional test."
@@ -42,7 +42,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
         )
         self.assertEqual(file_sys_template.properties.description, initial_description)
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
         await asyncio.sleep(5)
         await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
 
@@ -54,7 +54,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
         )
 
         await generate_aws_permission_set_templates(
-            IAMBIC_TEST_DETAILS.config,
+            IAMBIC_TEST_DETAILS.config.aws,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 PermissionSetMessageDetails(
@@ -83,7 +83,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
         )[0]
 
         await generate_aws_permission_set_templates(
-            IAMBIC_TEST_DETAILS.config,
+            IAMBIC_TEST_DETAILS.config.aws,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 PermissionSetMessageDetails(

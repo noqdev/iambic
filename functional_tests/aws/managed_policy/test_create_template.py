@@ -28,13 +28,13 @@ class CreateManagedPolicyTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
     async def test_create_managed_policy_all_accounts(self):
         self.template.included_accounts = ["*"]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         account_mp_mapping = await get_managed_policy_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.path, self.policy_name
@@ -55,7 +55,7 @@ class CreateManagedPolicyTestCase(IsolatedAsyncioTestCase):
         self.template.included_accounts = [included_account]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         account_mp_mapping = await get_managed_policy_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.path, self.policy_name
@@ -81,7 +81,7 @@ class CreateManagedPolicyTestCase(IsolatedAsyncioTestCase):
 
         self.template.included_accounts = [included_account]
         self.template.excluded_accounts = []
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         role = await get_modifiable_role(iam_client)
         role_name = role["RoleName"]

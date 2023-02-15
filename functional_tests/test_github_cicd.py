@@ -14,7 +14,8 @@ from github import Github
 
 from functional_tests.conftest import all_config
 from iambic.aws.iam.role.models import RoleTemplate
-from iambic.config.models import Config, ExtendsConfig
+from iambic.config.dynamic_config import Config, load_config
+from iambic.config.models import ExtendsConfig
 from iambic.core.git import clone_git_repo
 
 os.environ["TESTING"] = "true"
@@ -117,9 +118,7 @@ def filesystem():
         temp_file.write(all_config)
 
     try:
-        config: Config = Config.load(temp_config_filename)
-        asyncio.run(config.setup_aws_accounts())
-        asyncio.run(config.combine_extended_configs())
+        config = asyncio.run(load_config(temp_config_filename.config_path))
         yield (temp_config_filename, temp_templates_directory, config)
     finally:
         try:
@@ -152,13 +151,11 @@ def build_push_container():
 
 
 def get_github_token(config: Config) -> str:
-    github_secret = asyncio.run(config.get_aws_secret(github_config))
-    return github_secret["secrets"]["github-token-iambic-templates-itest"]
+    return config.secrets["github-token-iambic-templates-itest"]
 
 
 def get_aws_key_dict(config: Config) -> str:
-    github_secret = asyncio.run(config.get_aws_secret(github_config))
-    return github_secret["secrets"]["aws-iambic-github-cicid-itest"]
+    return config.secrets["aws-iambic-github-cicid-itest"]
 
 
 def prepare_template_repo(github_token: str, temp_templates_directory: str):

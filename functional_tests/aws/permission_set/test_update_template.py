@@ -19,7 +19,7 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
                 IAMBIC_TEST_DETAILS.template_dir_path
             )
         )
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
         sleep(5)
         asyncio.run(
             IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
@@ -32,11 +32,11 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
             IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
         )
         cls.template.deleted = True
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
 
     async def test_update_description(self):
         self.template.properties.description = "Updated description"
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
         await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
 
         self.assertEqual(

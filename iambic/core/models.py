@@ -36,13 +36,13 @@ from iambic.core.utils import (
     create_commented_map,
     snake_to_camelcap,
     sort_dict,
-    transform_commments,
+    transform_comments,
     yaml,
 )
 
 if TYPE_CHECKING:
     from iambic.aws.models import AWSAccount
-    from iambic.config.models import Config
+    from iambic.config.dynamic_config import Config
 
     MappingIntStrAny = typing.Mapping[int | str, Any]
     AbstractSetIntStr = typing.AbstractSet[int | str]
@@ -485,7 +485,7 @@ class BaseTemplate(
     @classmethod
     def load(cls, file_path: str):
         return cls(
-            file_path=file_path, **transform_commments(yaml.load(open(file_path)))
+            file_path=file_path, **transform_comments(yaml.load(open(file_path)))
         )
 
     @classmethod
@@ -515,7 +515,6 @@ class ExpiryModel(IambicPydanticBaseModel):
 
     @validator("expires_at", pre=True)
     def parse_expires_at(cls, value):
-        dt = None
         if not value:
             return value
         if isinstance(value, datetime.date):

@@ -15,7 +15,7 @@ from iambic.core.logger import log
 from iambic.core.utils import NOQ_TEMPLATE_REGEX, file_regex_search, yaml
 
 if TYPE_CHECKING:
-    from iambic.config.models import Config
+    from iambic.config.dynamic_config import Config
 
 
 class GitDiff(PydanticBaseModel):

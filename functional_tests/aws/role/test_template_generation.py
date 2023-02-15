@@ -23,7 +23,7 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
     async def test_update_role_attribute(self):
         initial_description = "This was created by a functional test."
@@ -41,10 +41,10 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
         file_sys_template = RoleTemplate.load(self.template.file_path)
         self.assertEqual(file_sys_template.properties.description, initial_description)
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         await generate_aws_role_templates(
-            IAMBIC_TEST_DETAILS.config,
+            IAMBIC_TEST_DETAILS.config.aws,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 RoleMessageDetails(
@@ -67,7 +67,7 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
         self.assertTrue(os.path.exists(self.template.file_path))
 
         await generate_aws_role_templates(
-            IAMBIC_TEST_DETAILS.config,
+            IAMBIC_TEST_DETAILS.config.aws,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 RoleMessageDetails(
@@ -94,11 +94,11 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
         self.assertNotIn(deleted_account, file_sys_template.excluded_accounts)
 
         # Create the policy on all accounts except 1
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         # Refresh the template
         await generate_aws_role_templates(
-            IAMBIC_TEST_DETAILS.config,
+            IAMBIC_TEST_DETAILS.config.aws,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 RoleMessageDetails(
