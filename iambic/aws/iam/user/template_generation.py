@@ -4,6 +4,7 @@ import itertools
 import os
 import pathlib
 from collections import defaultdict
+from typing import TYPE_CHECKING
 
 import aiofiles
 
@@ -23,7 +24,6 @@ from iambic.aws.iam.user.utils import (
 )
 from iambic.aws.models import AWSAccount
 from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
-from iambic.config.models import Config
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
@@ -34,6 +34,9 @@ from iambic.core.template_generation import (
     group_int_or_str_attribute,
 )
 from iambic.core.utils import NoqSemaphore, resource_file_upsert
+
+if TYPE_CHECKING:
+    from iambic.aws.iambic_plugin import AWSConfig
 
 USER_RESPONSE_DIR = pathlib.Path.home().joinpath(".iambic", "resources", "aws", "users")
 
@@ -216,13 +219,13 @@ async def create_templated_user(  # noqa: C901
     user_refs: list[dict],
     user_dir: str,
     existing_template_map: dict,
-    config: Config,
+    config: AWSConfig,
 ) -> UserTemplate:
     account_id_to_user_map = await _account_id_to_user_map(user_refs)
     num_of_accounts = len(user_refs)
 
     min_accounts_required_for_wildcard_included_accounts = (
-        config.aws.min_accounts_required_for_wildcard_included_accounts
+        config.min_accounts_required_for_wildcard_included_accounts
     )
 
     # Generate the params used for attribute creation
@@ -362,7 +365,7 @@ async def create_templated_user(  # noqa: C901
 
 
 async def generate_aws_user_templates(
-    config: Config,
+    config: AWSConfig,
     base_output_dir: str,
     user_messages: list[UserMessageDetails] = None,
 ):

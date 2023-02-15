@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 from deepdiff import DeepDiff
 
-from iambic.aws.models import AWSAccount
 from iambic.aws.utils import boto_crud_call, paginated_search
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper
+
+if TYPE_CHECKING:
+    from iambic.aws.models import AWSAccount
 
 
 async def get_group_inline_policy_names(group_name: str, iam_client):

@@ -9,7 +9,8 @@ from iambic.aws.models import (
     AWSOrganization,
     BaseAWSOrgRule,
 )
-from iambic.config.models import AWSConfig, Config
+from iambic.config.dynamic_config import Config
+from iambic.config.models import AWSConfig
 
 
 @pytest.fixture

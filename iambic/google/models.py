@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 from enum import Enum
 
-from iambic.config.models import Config, GoogleProject
+from iambic.config.dynamic_config import Config
+from iambic.config.models import GoogleProject
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import (

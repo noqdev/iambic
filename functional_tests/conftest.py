@@ -8,7 +8,7 @@ import tempfile
 import pytest
 
 from iambic.aws.models import AWSAccount
-from iambic.config.models import Config
+from iambic.config.dynamic_config import Config, load_config
 from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.main import run_import
@@ -109,8 +109,9 @@ def generate_templates_fixture(request):
         log.info("Finished generating templates for testing")
 
     log.info("Setting up config for testing")
-    IAMBIC_TEST_DETAILS.config = Config.load(IAMBIC_TEST_DETAILS.config_path)
-    asyncio.run(IAMBIC_TEST_DETAILS.config.setup_aws_accounts())
+    IAMBIC_TEST_DETAILS.config = asyncio.run(
+        load_config(IAMBIC_TEST_DETAILS.config_path)
+    )
 
     for aws_account in IAMBIC_TEST_DETAILS.config.aws.accounts:
         if aws_account.identity_center_details:

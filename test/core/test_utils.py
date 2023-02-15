@@ -5,7 +5,7 @@ from typing import List
 import pytest
 
 from iambic.core.models import BaseModel
-from iambic.core.utils import create_commented_map, sort_dict, transform_commments, yaml
+from iambic.core.utils import create_commented_map, sort_dict, transform_comments, yaml
 
 
 @pytest.mark.parametrize(
@@ -62,9 +62,9 @@ TEST_COMMENTED_YAML = """forrest:  # forrest-comment
 """
 
 
-def test_commmented_yaml():
+def test_commented_yaml():
     yaml_dict = yaml.load(TEST_COMMENTED_YAML)
-    yaml_dict = transform_commments(yaml_dict)
+    yaml_dict = transform_comments(yaml_dict)
     commented_model = ForrestModel(**yaml_dict)
     commented_map = create_commented_map(commented_model.dict())
     as_yaml = yaml.dump(commented_map)

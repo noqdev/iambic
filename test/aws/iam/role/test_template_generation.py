@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from iambic.aws.iam.role.models import RoleTemplate
 from iambic.aws.iam.role.template_generation import create_templated_role
 from iambic.aws.models import AWSAccount
-from iambic.config.models import CURRENT_IAMBIC_VERSION, Config
 from iambic.core.iambic_enum import IambicManaged
 
 
@@ -40,8 +39,9 @@ def mock_write():
 
 
 @pytest.mark.asyncio
-async def test_create_template_role(test_role, mock_account_id_to_role_map, mock_write):
-    test_config = MagicMock()
+async def test_create_template_role(
+    test_config, test_role, mock_account_id_to_role_map, mock_write
+):
     test_account_id = "123456789012"
     test_account = AWSAccount(
         account_id=test_account_id, account_name="dev", assume_role_arn=""
@@ -56,7 +56,6 @@ async def test_create_template_role(test_role, mock_account_id_to_role_map, mock
     test_role_ref["account_id"] = "123456789012"
     test_role_refs = [test_role_ref]
     test_existing_template_map = {}
-    test_config = Config(version=CURRENT_IAMBIC_VERSION, file_path="cool_file_man.yaml")
 
     output_role = await create_templated_role(
         test_aws_account_map,
@@ -64,7 +63,7 @@ async def test_create_template_role(test_role, mock_account_id_to_role_map, mock
         test_role_refs,
         test_role_dir,
         test_existing_template_map,
-        test_config,
+        test_config.aws,
     )
     assert output_role.iambic_managed is IambicManaged.UNDEFINED
 
@@ -76,6 +75,6 @@ async def test_create_template_role(test_role, mock_account_id_to_role_map, mock
         test_role_refs,
         test_role_dir,
         test_existing_template_map,
-        test_config,
+        test_config.aws,
     )
     assert output_role.iambic_managed is IambicManaged.READ_AND_WRITE

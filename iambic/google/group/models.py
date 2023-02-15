@@ -43,10 +43,6 @@ from iambic.google.models import (
 
 GOOGLE_GROUP_TEMPLATE_TYPE = "NOQ::Google::Group"
 
-# TODO: Okta Applications and User/Group -> Application assignments
-
-GOOGLE_GROUP_TEMPLATE_TYPE = "NOQ::Google::Group"
-
 
 class GroupMember(BaseModel, ExpiryModel):
     email: str

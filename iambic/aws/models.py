@@ -42,7 +42,7 @@ from iambic.core.utils import (
 yaml = YAML()
 
 if TYPE_CHECKING:
-    from iambic.config.models import Config
+    from iambic.aws.iambic_plugin import AWSConfig
 
 ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\*$"
 
@@ -687,7 +687,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
         raise NotImplementedError
 
     async def apply(
-        self, config: Config, context: ExecutionContext
+        self, config: AWSConfig, context: ExecutionContext
     ) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
@@ -698,7 +698,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
         log_params = dict(
             resource_type=self.resource_type, resource_id=self.resource_id
         )
-        for account in config.aws.accounts:
+        for account in config.accounts:
             if evaluate_on_provider(self, account, context):
                 if context.execute:
                     log_str = "Applying changes to resource."

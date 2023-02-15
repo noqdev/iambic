@@ -4,6 +4,7 @@ import itertools
 import os
 import pathlib
 from collections import defaultdict
+from typing import TYPE_CHECKING
 
 import aiofiles
 
@@ -23,7 +24,6 @@ from iambic.aws.iam.role.utils import (
 )
 from iambic.aws.models import AWSAccount
 from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
-from iambic.config.models import Config
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
@@ -34,6 +34,9 @@ from iambic.core.template_generation import (
     group_int_or_str_attribute,
 )
 from iambic.core.utils import NoqSemaphore, resource_file_upsert
+
+if TYPE_CHECKING:
+    from iambic.aws.iambic_plugin import AWSConfig
 
 ROLE_RESPONSE_DIR = pathlib.Path.home().joinpath(".iambic", "resources", "aws", "roles")
 
@@ -223,13 +226,13 @@ async def create_templated_role(  # noqa: C901
     role_refs: list[dict],
     role_dir: str,
     existing_template_map: dict,
-    config: Config,
+    config: AWSConfig,
 ) -> RoleTemplate:
     account_id_to_role_map = await _account_id_to_role_map(role_refs)
     num_of_accounts = len(role_refs)
 
     min_accounts_required_for_wildcard_included_accounts = (
-        config.aws.min_accounts_required_for_wildcard_included_accounts
+        config.min_accounts_required_for_wildcard_included_accounts
     )
 
     # Generate the params used for attribute creation
@@ -383,7 +386,7 @@ async def create_templated_role(  # noqa: C901
 
 
 async def generate_aws_role_templates(
-    config: Config,
+    config: AWSConfig,
     base_output_dir: str,
     role_messages: list[RoleMessageDetails] = None,
 ):

@@ -27,16 +27,16 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
         cls.template.included_accounts = cls.all_account_ids[
             : len(cls.all_account_ids) // 2
         ]
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
 
     @classmethod
     def tearDownClass(cls):
         cls.template.deleted = True
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
 
     async def test_update_description(self):
         self.template.properties.description = "Updated description"
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         account_role_mapping = await get_role_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.role_name, False
@@ -54,7 +54,7 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
     async def test_update_managed_policies(self):
         if self.template.properties.managed_policies:
             self.template.properties.managed_policies = []
-            await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+            await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
             account_role_mapping = await get_role_across_accounts(
                 IAMBIC_TEST_DETAILS.config.aws.accounts,
@@ -73,7 +73,7 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
         self.template.properties.managed_policies = [
             ManagedPolicyRef(policy_arn=policy_arn)
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         account_role_mapping = await get_role_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts,
@@ -89,7 +89,7 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
                 )
 
         self.template.properties.managed_policies = []
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         account_role_mapping = await get_role_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts,
@@ -108,7 +108,7 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
         self.template.included_accounts = ["*"]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         account_role_mapping = await get_role_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.role_name, False
@@ -146,7 +146,7 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
                 ],
             )
         )
-        r = await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
         self.assertEqual(len(r.proposed_changes), 2)
 
         # Set expiration
@@ -155,5 +155,5 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
         ].expires_at = dateparser.parse(
             "yesterday", settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True}
         )
-        r = await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
         self.assertEqual(len(r.proposed_changes), 1)

@@ -14,7 +14,7 @@ from iambic.core.logger import log
 from iambic.core.utils import aio_wrapper, camel_to_snake
 
 if TYPE_CHECKING:
-    from iambic.config.models import Config
+    from iambic.aws.iambic_plugin import AWSConfig
 
 
 async def boto_crud_call(boto_fnc, **kwargs) -> Union[list, dict]:
@@ -236,14 +236,14 @@ async def set_org_account_variables(client, account: dict) -> dict:
     return account
 
 
-async def get_aws_account_map(config: Config) -> dict:
+async def get_aws_account_map(config: AWSConfig) -> dict:
     """Returns a map containing all enabled account configs across all provided config instances
 
     :param config:
     :return: dict(account_id:str = AWSAccount)
     """
     aws_account_map = dict()
-    for aws_account in config.aws.accounts:
+    for aws_account in config.accounts:
         if aws_account_map.get(aws_account.account_id):
             log.critical(
                 "Account definition found in multiple configs",

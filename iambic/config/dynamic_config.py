@@ -1,45 +1,33 @@
 from __future__ import annotations
 
+import asyncio
 import importlib
+import itertools
 import os
-from typing import Any, List, Optional
+from collections import defaultdict
+from enum import Enum
+from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field
 from pydantic import create_model as create_pydantic_model
 
 from iambic import aws
+from iambic.core.context import ctx
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
-from iambic.core.utils import yaml
-
-
-def generate_plugin_config_model(
-    plugin: ProviderPlugin,
-) -> tuple[ProviderPlugin, BaseModel]:
-    config_attrs = {}
-    for provider_def in [plugin.child_definition, plugin.parent_definition]:
-        if provider_def:
-            if provider_def.supports_multiple:
-                field_def = (
-                    list[provider_def.provider_class],
-                    ... if provider_def.required else None,
-                )
-            else:
-                field_def = (
-                    provider_def.provider_class,
-                    ... if provider_def.required else None,
-                )
-            config_attrs[provider_def.config_name] = field_def
-
-    plugin_config_model = create_pydantic_model(
-        f"Dynamic{plugin.config_name.upper()}Config",
-        __base__=plugin.provider_config,
-        **config_attrs,
-    )
-    return plugin, plugin_config_model
+from iambic.core.models import BaseTemplate, TemplateChangeDetails
+from iambic.core.utils import sort_dict, yaml
 
 
 def load_plugins(paths: list[str]) -> List[tuple[ProviderPlugin, BaseModel]]:
+    """
+    Load all plugins from the given paths.
+    This will search recursively for all files ending in iambic_plugin.py
+    It will retrieve the variable IAMBIC_PLUGIN set in the iambic_plugin module.
+
+    :param paths: A list of paths to search for plugins.
+    :return: A list of tuples containing the plugin and the plugin config model.
+    """
     plugins = []
     for path in paths:
         for root, dirs, files in os.walk(path):
@@ -58,74 +46,275 @@ def load_plugins(paths: list[str]) -> List[tuple[ProviderPlugin, BaseModel]]:
                             plugin_file_path=file,
                         )
 
-    return [generate_plugin_config_model(plugin) for plugin in plugins]
+    log.debug("Loading discovered plugins", discovered_plugin_count=len(plugins))
+    return plugins
 
 
-class Config(BaseModel):
+class ExtendsConfigKey(Enum):
+    AWS_SECRETS_MANAGER = "AWS_SECRETS_MANAGER"
+    LOCAL_FILE = "LOCAL_FILE"
+
+
+class ExtendsConfig(BaseModel):
+    key: ExtendsConfigKey
+    value: str
+    assume_role_arn: Optional[str]
+    external_id: Optional[str]
+
+
+class Config(BaseTemplate):
+    template_type: str = "NOQ::Core::Config"
+    version: str = Field(
+        description="Do not change! The version of iambic this repo is compatible with.",
+    )
     plugin_paths: Optional[list[str]] = Field(
         default=[
             aws.__path__[0],
         ],
         description="The paths to the plugins that should be loaded.",
     )
-    plugin_load_callables: Optional[list[Any]] = Field(
-        description="Used by the dynamic config loader."
+    extends: List[ExtendsConfig] = []
+    secrets: Optional[dict] = Field(
+        description="Secrets should only be used in memory and never serialized out",
+        exclude=True,
+        default={},
     )
-    plugin_import_callables: Optional[list[Any]] = Field(
-        description="Used by the dynamic config loader."
+    plugins: Optional[list[ProviderPlugin]] = Field(
+        description="A list of the plugin instances parsed as part of the plugin paths.",
+        exclude=True,
     )
-    plugin_templates: Optional[list[str]] = Field(
-        description="Used by the dynamic config loader."
-    )
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    def get_config_plugin(self, plugin: ProviderPlugin):
+        return getattr(self, plugin.config_name)
+
+    def set_config_plugin(self, plugin: ProviderPlugin, config: BaseModel):
+        setattr(self, plugin.config_name, config)
+
+    async def set_config_secrets(self):
+        if self.extends:
+            for extend in self.extends:
+                if extend.key == ExtendsConfigKey.LOCAL_FILE:
+                    dir_path = os.path.dirname(self.file_path)
+                    extend_path = os.path.join(dir_path, extend.value)
+                    with open(extend_path, "r") as ymlfile:
+                        extend_config = yaml.load(ymlfile)
+                    for k, v in extend_config.items():
+                        if not getattr(self, k, None):
+                            setattr(self, k, v)
+                else:
+                    decoded_secret_responses: list[dict] = await asyncio.gather(
+                        *[
+                            plugin.async_decode_secret_callable(
+                                self.get_config_plugin(plugin), extend
+                            )
+                            for plugin in self.plugins
+                            if plugin.async_decode_secret_callable
+                        ]
+                    )
+                    for decoded_secret in decoded_secret_responses:
+                        if decoded_secret:
+                            for k, v in decoded_secret.items():
+                                if not getattr(self, k, None):
+                                    setattr(self, k, v)
+                            break
 
     async def run_import(self, output_dir: str, messages: list = None):
         # It's the responsibility of the provider to handle throttling.
         await asyncio.gather(
             *[
-                _import(self, output_dir, messages)
-                for _import in self.plugin_import_callables
+                plugin.async_import_callable(
+                    self.get_config_plugin(plugin), output_dir, messages
+                )
+                for plugin in self.plugins
             ]
         )
 
-    async def run_load(self):
+    async def run_apply(
+        self, templates: list[BaseTemplate]
+    ) -> list[TemplateChangeDetails]:
+        # It's the responsibility of the provider to handle throttling.
+        # Build a map of a plugin's template types to the plugin
+        template_provider_map = {}
+        for plugin in self.plugins:
+            for template in plugin.templates:
+                template_provider_map[
+                    template.__fields__["template_type"].default
+                ] = plugin.config_name
+
+        # Create a map of the templates to apply to the template's plugin
+        plugin_templates = defaultdict(list)
+        for template in templates:
+            provider = template_provider_map[template.template_type]
+            plugin_templates[provider].append(template)
+
+        tasks = []
+        for plugin in self.plugins:
+            if templates := plugin_templates.get(plugin.config_name):
+                tasks.append(
+                    plugin.async_apply_callable(
+                        self.get_config_plugin(plugin), templates
+                    )
+                )
+
+        # Retrieve template changes across plugins and flatten responses
+        template_changes = await asyncio.gather(*tasks)
+        template_changes = list(itertools.chain.from_iterable(template_changes))
+
+        if ctx.execute and template_changes:
+            log.info("Finished applying changes.")
+        elif not ctx.execute:
+            log.info("Finished scanning for changes.")
+        else:
+            log.info("No changes found.")
+
+        return template_changes
+
+    async def run_detect_changes(
+        self, repo_dir: str, run_import_as_fallback: bool = False
+    ) -> Union[str, None]:
+        change_str_list = await asyncio.gather(
+            *[
+                plugin.async_detect_changes_callable(
+                    self.get_config_plugin(plugin), repo_dir
+                )
+                for plugin in self.plugins
+                if plugin.async_detect_changes_callable
+            ]
+        )
+        if run_import_as_fallback:
+            await asyncio.gather(
+                *[
+                    plugin.async_import_callable(
+                        self.get_config_plugin(plugin), repo_dir
+                    )
+                    for plugin in self.plugins
+                    if not plugin.async_detect_changes_callable
+                ]
+            )
+
+        if change_str_list := [
+            change_str for change_str in change_str_list if change_str
+        ]:
+            return "\n".join(change_str_list)
+
+    async def run_discover_upstream_config_changes(self, repo_dir: str):
+        await asyncio.gather(
+            *[
+                plugin.async_discover_upstream_config_changes_callable(
+                    self.get_config_plugin(plugin), repo_dir
+                )
+                for plugin in self.plugins
+                if plugin.async_discover_upstream_config_changes_callable
+            ]
+        )
+        self.write()
+
+    async def configure_plugins(self):
+        """
+        Called to set plugin metadata that is generated at run-time.
+        """
+
         # Sync to prevent issues updating the config
-        for _load in self.plugin_load_callables:
-            await _load(self)
+        for plugin in self.plugins:
+            if not plugin.requires_secret:
+                await plugin.async_load_callable(self.get_config_plugin(plugin))
+
+        await self.set_config_secrets()
+
+        for plugin in self.plugins:
+            if plugin.requires_secret:
+                if provider_config_dict := self.secrets.get(plugin.config_name):
+                    setattr(
+                        self,
+                        plugin.config_name,
+                        plugin.provider_config(**provider_config_dict),
+                    )
+                    await plugin.async_load_callable(self.get_config_plugin(plugin))
+
+    def dict(
+        self,
+        *,
+        include: Optional[
+            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
+        ] = None,
+        exclude: Optional[
+            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
+        ] = None,
+        by_alias: bool = False,
+        skip_defaults: Optional[bool] = None,
+        exclude_unset: bool = True,
+        exclude_defaults: bool = False,
+        exclude_none: bool = True,
+    ) -> "DictStrAny":  # noqa
+        required_exclude = {
+            "secrets",
+            "file_path",
+        }
+        for plugin in self.plugins:
+            if plugin.requires_secret:
+                required_exclude.add(plugin.config_name)
+
+        if exclude:
+            exclude.update(required_exclude)
+        else:
+            exclude = required_exclude
+
+        return super().dict(
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            skip_defaults=skip_defaults,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+        )
+
+    def write(self, exclude_none=True, exclude_unset=False, exclude_defaults=True):
+        input_dict = self.dict(
+            exclude_none=exclude_none,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+        )
+        sorted_input_dict = sort_dict(
+            input_dict,
+            [
+                "template_type",
+                "version",
+            ],
+        )
+
+        file_path = os.path.expanduser(self.file_path)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, "w") as f:
+            f.write(yaml.dump(sorted_input_dict))
+
+        log.info("Config successfully written", config_location=file_path)
 
 
-async def load_config(config_path: str):
-    base_config = Config()
+async def load_config(config_path: str) -> Config:
+    from iambic.config.templates import TEMPLATES
+
+    config_dict = yaml.load(open(config_path))
+    base_config = Config(file_path=config_path, **config_dict)
     all_plugins = load_plugins(base_config.plugin_paths)
-    config_fields = dict(
-        plugin_load_callables=(list, ...),
-        plugin_import_callables=(list, ...),
-        plugin_templates=(list, ...),
-    )
-    plugin_templates = []
-    plugin_load_callables = []
-    plugin_import_callables = []
-    for plugin, plugin_config_model in all_plugins:
-        config_fields[plugin.config_name] = (plugin_config_model, None)
-        plugin_templates.extend(plugin.templates)
-        plugin_load_callables.append(plugin.async_load_callable)
-        plugin_import_callables.append(plugin.async_import_callable)
+    config_fields = {}
+    for plugin in all_plugins:
+        config_fields[plugin.config_name] = (plugin.provider_config, None)
 
     dynamic_config = create_pydantic_model(
         "DynamicConfig", __base__=Config, **config_fields
     )
-    config = dynamic_config(
-        plugin_import_callables=plugin_import_callables,
-        plugin_load_callables=plugin_load_callables,
-        plugin_templates=plugin_templates,
-        **yaml.load(open(config_path)),
+    config = dynamic_config(plugins=all_plugins, file_path=config_path, **config_dict)
+    await config.configure_plugins()
+
+    TEMPLATES.set_templates(
+        list(
+            itertools.chain.from_iterable(
+                [plugin.templates for plugin in config.plugins]
+            )
+        )
     )
-    await config.run_load()
     return config
-
-
-if __name__ == "__main__":
-    import asyncio
-
-    os.environ["AWS_PROFILE"] = "iambic_test_org_account/IambicHubRole"
-    local_config = asyncio.run(load_config("__local_config.yaml"))
-    print(local_config)

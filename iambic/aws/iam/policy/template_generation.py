@@ -4,6 +4,7 @@ import itertools
 import os
 import pathlib
 from collections import defaultdict
+from typing import TYPE_CHECKING
 
 import aiofiles
 
@@ -15,7 +16,6 @@ from iambic.aws.iam.policy.utils import (
 )
 from iambic.aws.models import AWSAccount
 from iambic.aws.utils import get_aws_account_map, normalize_boto3_resp
-from iambic.config.models import Config
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
@@ -26,6 +26,9 @@ from iambic.core.template_generation import (
     group_int_or_str_attribute,
 )
 from iambic.core.utils import NoqSemaphore, resource_file_upsert
+
+if TYPE_CHECKING:
+    from iambic.aws.iambic_plugin import AWSConfig
 
 MANAGED_POLICY_RESPONSE_DIR = pathlib.Path.home().joinpath(
     ".iambic", "resources", "aws", "managed_policies"
@@ -174,10 +177,10 @@ async def create_templated_managed_policy(  # noqa: C901
     managed_policy_refs: list[dict],
     managed_policy_dir: str,
     existing_template_map: dict,
-    config: Config,
+    config: AWSConfig,
 ):
     min_accounts_required_for_wildcard_included_accounts = (
-        config.aws.min_accounts_required_for_wildcard_included_accounts
+        config.min_accounts_required_for_wildcard_included_accounts
     )
     account_id_to_mp_map = {}
     num_of_accounts = len(managed_policy_refs)
@@ -277,7 +280,7 @@ async def create_templated_managed_policy(  # noqa: C901
 
 
 async def generate_aws_managed_policy_templates(
-    config: Config,
+    config: AWSConfig,
     base_output_dir: str,
     managed_policy_messages: list[ManagedPolicyMessageDetails] = None,
 ):

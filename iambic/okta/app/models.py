@@ -7,7 +7,8 @@ from typing import Any, List, Optional
 from pydantic import Field
 
 from iambic.aws.utils import remove_expired_resources
-from iambic.config.models import Config, OktaOrganization
+from iambic.config.dynamic_config import Config
+from iambic.config.models import OktaOrganization
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log

@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import re
 from itertools import chain
-from typing import Callable, List, Optional, Union
+from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 from pydantic import Field, validator
 
@@ -28,7 +28,6 @@ from iambic.aws.models import (
     Tag,
 )
 from iambic.aws.utils import boto_crud_call, remove_expired_resources
-from iambic.config.models import Config
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -41,6 +40,9 @@ from iambic.core.models import (
     TemplateChangeDetails,
 )
 from iambic.core.utils import aio_wrapper, evaluate_on_provider
+
+if TYPE_CHECKING:
+    from iambic.aws.iambic_plugin import AWSConfig
 
 AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE = (
     "NOQ::AWS::IdentityCenter::PermissionSet"
@@ -694,7 +696,7 @@ class AWSIdentityCenterPermissionSetTemplate(
         return account_change_details
 
     async def apply(
-        self, config: Config, context: ExecutionContext
+        self, config: AWSConfig, context: ExecutionContext
     ) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
@@ -706,10 +708,7 @@ class AWSIdentityCenterPermissionSetTemplate(
             resource_type=self.resource_type, resource_id=self.resource_id
         )
 
-        if not config.aws or not config.aws.accounts:
-            return
-
-        for account in config.aws.accounts:
+        for account in config.accounts:
             if not account.identity_center_details:
                 continue
 
