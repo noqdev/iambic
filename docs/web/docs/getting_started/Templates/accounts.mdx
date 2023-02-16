@@ -1,0 +1,31 @@
+---
+title: AWS Account Template Examples
+---
+
+An example AWS account specification that 
+```yaml
+  - default_region: us-east-1
+    spoke_role_arn: arn:aws:iam::123456789012:role/IambicSpokeRole
+    account_id: '123456789012'
+    org_id: o-ybe1r90sq
+    account_name: development
+    role_access_tag: noq-authorized
+```
+
+```yaml
+  - default_region: us-east-1
+    spoke_role_arn: arn:aws:iam::456789012345:role/IambicSpokeRole
+    account_id: '456789012345'
+    org_id: o-ybe1r90sq
+    account_name: staging
+    role_access_tag: noq-authorized
+```
+
+```yaml
+  - default_region: us-east-1
+    spoke_role_arn: arn:aws:iam::9012345678901:role/IambicSpokeRole
+    account_id: '9012345678901'
+    org_id: o-ybe1r90sq
+    account_name: production
+    role_access_tag: noq-authorized
+```

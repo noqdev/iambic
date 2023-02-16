@@ -1,0 +1,20 @@
+---
+title: Configuration
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+# Wizard
+
+# Configuration File Reference
+
+The configuration file is written in YAML and needs to be created before IAMbic can be used the first time. It stores all the information about your environment and provides credentials to cloud services and Github. You can use the Wizard for a quick start.
+
+Each configuration file starts with an IAMbic template type and has several top level keys
+
+- template_type: `NOQ::Core::Config`
+- extends: describes the ...
+- version: `1`
+- aws: specifies AWS accounts and organizations that IAMbic has access to, via `hub and spoke roles`; read more about (hub and spoke roles)[../core_concepts/hub_and_spoke_roles.mdx].
+    - organizations: a nested list that is used to specify one or more organization entities within AWS. IAMbic can source organization entities to parse all attached accounts.
+    - accounts: a nested list that is used to specify one or more AWS accounts that IAMbic should synchronize.
