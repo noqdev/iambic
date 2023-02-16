@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Union
 
 import boto3
 
-from iambic.config.models import ExtendsConfig, ExtendsConfigKey
+from iambic.config.dynamic_config import ExtendsConfig, ExtendsConfigKey
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log

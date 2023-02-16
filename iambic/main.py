@@ -17,7 +17,7 @@ from iambic.core.logger import log
 from iambic.core.models import TemplateChangeDetails
 from iambic.core.parser import load_templates
 from iambic.core.utils import gather_templates, yaml
-from iambic.request_handler.apply import flag_expired_resources
+from iambic.request_handler.expire_resources import flag_expired_resources
 from iambic.request_handler.git_apply import apply_git_changes
 from iambic.request_handler.git_plan import plan_git_changes
 

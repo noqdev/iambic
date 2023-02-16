@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import asyncio
 from itertools import chain
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from pydantic import Field
 
-from iambic.config.dynamic_config import Config
-from iambic.config.models import OktaOrganization
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -19,14 +17,17 @@ from iambic.core.models import (
     TemplateChangeDetails,
 )
 from iambic.core.utils import NoqSemaphore
-from iambic.okta.app.utils import (
+from iambic.plugins.v0_1_0.aws.utils import remove_expired_resources
+from iambic.plugins.v0_1_0.okta.app.utils import (
     get_app,
     maybe_delete_app,
     update_app_assignments,
     update_app_name,
 )
-from iambic.okta.models import App, Assignment, Status
-from iambic.plugins.v0_1_0.aws.utils import remove_expired_resources
+from iambic.plugins.v0_1_0.okta.models import App, Assignment, Status
+
+if TYPE_CHECKING:
+    from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
 
 OKTA_GET_APP_SEMAPHORE = NoqSemaphore(get_app, 3)
 
@@ -63,7 +64,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
     )
 
     async def apply(
-        self, config: Config, context: ExecutionContext
+        self, config: OktaConfig, context: ExecutionContext
     ) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
@@ -82,8 +83,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
             template_changes.proposed_changes = []
             return template_changes
 
-        for okta_organization in config.okta_organizations:
-            # if evaluate_on_google_account(self, account):
+        for okta_organization in config.organizations:
             if context.execute:
                 log_str = "Applying changes to resource."
             else:

@@ -16,7 +16,9 @@ from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, TemplateChangeDetails
 from iambic.core.utils import sort_dict, yaml
-from iambic.plugins.v0_1_0 import aws
+from iambic.plugins import v0_1_0
+
+CURRENT_IAMBIC_VERSION = "1"
 
 
 def load_plugins(paths: list[str]) -> List[tuple[ProviderPlugin, BaseModel]]:
@@ -69,7 +71,7 @@ class Config(BaseTemplate):
     )
     plugin_paths: Optional[list[str]] = Field(
         default=[
-            aws.__path__[0],
+            v0_1_0.__path__[0],
         ],
         description="The paths to the plugins that should be loaded.",
     )
@@ -92,6 +94,10 @@ class Config(BaseTemplate):
 
     def set_config_plugin(self, plugin: ProviderPlugin, config: BaseModel):
         setattr(self, plugin.config_name, config)
+
+    @property
+    def configured_plugins(self):
+        return [plugin for plugin in self.plugins if self.get_config_plugin(plugin)]
 
     async def set_config_secrets(self):
         if self.extends:
@@ -116,9 +122,15 @@ class Config(BaseTemplate):
                     )
                     for decoded_secret in decoded_secret_responses:
                         if decoded_secret:
-                            for k, v in decoded_secret.items():
-                                if not getattr(self, k, None):
-                                    setattr(self, k, v)
+                            if "secrets" not in decoded_secret:
+                                decoded_secret = dict(secrets=decoded_secret)
+                            else:
+                                for k, v in decoded_secret.items():
+                                    if k != "secrets":
+                                        decoded_secret["secrets"][k] = v
+
+                            for k, v in decoded_secret.get("secrets", {}).items():
+                                self.secrets.setdefault(k, v)
                             break
 
     async def run_import(self, output_dir: str, messages: list = None):
@@ -128,7 +140,7 @@ class Config(BaseTemplate):
                 plugin.async_import_callable(
                     self.get_config_plugin(plugin), output_dir, messages
                 )
-                for plugin in self.plugins
+                for plugin in self.configured_plugins
             ]
         )
 
@@ -153,11 +165,13 @@ class Config(BaseTemplate):
         tasks = []
         for plugin in self.plugins:
             if templates := plugin_templates.get(plugin.config_name):
-                tasks.append(
-                    plugin.async_apply_callable(
-                        self.get_config_plugin(plugin), templates
+                if plugin_config := self.get_config_plugin(plugin):
+                    tasks.append(plugin.async_apply_callable(plugin_config, templates))
+                else:
+                    log.critical(
+                        "Templates discovered for a plugin not defined in the config file.",
+                        missing_config=plugin_config.config_name,
                     )
-                )
 
         # Retrieve template changes across plugins and flatten responses
         template_changes = await asyncio.gather(*tasks)
@@ -180,7 +194,7 @@ class Config(BaseTemplate):
                 plugin.async_detect_changes_callable(
                     self.get_config_plugin(plugin), repo_dir
                 )
-                for plugin in self.plugins
+                for plugin in self.configured_plugins
                 if plugin.async_detect_changes_callable
             ]
         )
@@ -190,7 +204,7 @@ class Config(BaseTemplate):
                     plugin.async_import_callable(
                         self.get_config_plugin(plugin), repo_dir
                     )
-                    for plugin in self.plugins
+                    for plugin in self.configured_plugins
                     if not plugin.async_detect_changes_callable
                 ]
             )
@@ -206,7 +220,7 @@ class Config(BaseTemplate):
                 plugin.async_discover_upstream_config_changes_callable(
                     self.get_config_plugin(plugin), repo_dir
                 )
-                for plugin in self.plugins
+                for plugin in self.configured_plugins
                 if plugin.async_discover_upstream_config_changes_callable
             ]
         )
@@ -218,7 +232,7 @@ class Config(BaseTemplate):
         """
 
         # Sync to prevent issues updating the config
-        for plugin in self.plugins:
+        for plugin in self.configured_plugins:
             if not plugin.requires_secret:
                 await plugin.async_load_callable(self.get_config_plugin(plugin))
 
@@ -338,6 +352,3 @@ async def load_config(config_path: str) -> Config:
         )
     )
     return config
-
-
-CURRENT_IAMBIC_VERSION = "1"

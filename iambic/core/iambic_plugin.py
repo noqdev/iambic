@@ -31,6 +31,7 @@ async def default_apply_callable(
 
 
 class ProviderPlugin(PydanticBaseModel):
+    version: str = Field(description="The version of the plugin.")
     config_name: str = Field(
         description="The name of the provider configuration in the iambic config file."
     )

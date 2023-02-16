@@ -1,19 +1,23 @@
 from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING
 
 from iambic.core.logger import log
 from iambic.core.template_generation import (
     create_or_update_template as common_create_or_update_template,
 )
 from iambic.core.template_generation import get_existing_template_map
-from iambic.okta.group.utils import list_all_users
-from iambic.okta.models import User
-from iambic.okta.user.models import (
+from iambic.plugins.v0_1_0.okta.group.utils import list_all_users
+from iambic.plugins.v0_1_0.okta.models import User
+from iambic.plugins.v0_1_0.okta.user.models import (
     OKTA_USER_TEMPLATE_TYPE,
     OktaUserTemplate,
     OktaUserTemplateProperties,
 )
+
+if TYPE_CHECKING:
+    from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
 
 
 def get_user_dir(base_dir: str, idp_name: str) -> str:
@@ -65,7 +69,9 @@ async def update_or_create_user_template(
     )
 
 
-async def generate_user_templates(config, output_dir, okta_organization):
+async def generate_user_templates(
+    config: OktaConfig, output_dir: str, okta_organization: OktaOrganization
+):
     users = await list_all_users(okta_organization)
     log.info(
         f"Found {len(users)} users in the `{okta_organization.idp_name}` Okta organization"

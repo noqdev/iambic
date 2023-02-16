@@ -25,8 +25,6 @@ from iambic.core.logger import log
 from iambic.core.template_generation import get_existing_template_map
 from iambic.core.utils import yaml
 from iambic.github.utils import create_workflow_files
-from iambic.google.iambic_plugin import GoogleProject
-from iambic.okta.iambic_plugin import OktaOrganization
 from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
     create_iambic_eventbridge_stacks,
     create_iambic_role_stacks,
@@ -56,6 +54,8 @@ from iambic.plugins.v0_1_0.aws.utils import (
     get_identity_arn,
     is_valid_account_id,
 )
+from iambic.plugins.v0_1_0.google.iambic_plugin import GoogleProject
+from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
 
 CUSTOM_AUTO_COMPLETE_STYLE = questionary.Style(
     [

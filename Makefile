@@ -42,13 +42,13 @@ test:
 
 .PHONY: functional_test
 functional_test:
-	pytest --cov-report html --cov iambic functional_tests/aws/user/test_template_generation.py -s
-# 	pytest --cov-report html --cov iambic functional_tests/aws/permission_set -s
+	pytest --cov-report html --cov iambic functional_tests -s
+# 	pytest --cov-report html --cov iambic functional_tests/aws/role/test_create_template.py -s
 # 	pytest --cov-report html --cov iambic functional_tests/aws/managed_policy/test_template_expiration.py -s
 
-.PHONY: functional_test
+.PHONY: functional_test_without_cicd
 functional_test_without_cicd:
-	pytest --cov-report html --cov iambic functional_tests --ignore functional_tests/test_github_cicd.py --ignore functional_tests/okta --ignore functional_tests/test_google.py -s
+	pytest --cov-report html --cov iambic functional_tests --ignore functional_tests/test_github_cicd.py -s
 
 docker_base_image_buildx := docker buildx build \
 	--platform=linux/amd64 \
