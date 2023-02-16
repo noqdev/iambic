@@ -10,12 +10,12 @@ from git import Repo
 from git.exc import GitCommandError
 from pydantic import BaseModel as PydanticBaseModel
 
-from iambic.config.templates import TEMPLATE_TYPE_MAP
+from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
 from iambic.core.utils import NOQ_TEMPLATE_REGEX, file_regex_search, yaml
 
 if TYPE_CHECKING:
-    from iambic.config.models import Config
+    from iambic.config.dynamic_config import Config
 
 
 class GitDiff(PydanticBaseModel):
@@ -148,7 +148,7 @@ async def retrieve_git_changes(
                     ):
                         continue  # Just renamed but no file changes
 
-                    template_cls = TEMPLATE_TYPE_MAP[
+                    template_cls = TEMPLATES.template_map[
                         main_template_dict["template_type"]
                     ]
                     main_template = template_cls(
@@ -178,7 +178,7 @@ def create_templates_for_deleted_files(deleted_files: list[GitDiff]) -> list:
     templates = []
     for git_diff in deleted_files:
         template_dict = yaml.load(StringIO(git_diff.content))
-        template_cls = TEMPLATE_TYPE_MAP[template_dict["template_type"]]
+        template_cls = TEMPLATES.template_map[template_dict["template_type"]]
         template = template_cls(file_path=git_diff.path, **template_dict)
         if template.deleted is True:
             continue
@@ -201,7 +201,7 @@ def create_templates_for_modified_files(
     templates = []
     for git_diff in modified_files:
         main_template_dict = yaml.load(StringIO(git_diff.content))
-        template_cls = TEMPLATE_TYPE_MAP[main_template_dict["template_type"]]
+        template_cls = TEMPLATES.template_map[main_template_dict["template_type"]]
 
         main_template = template_cls(file_path=git_diff.path, **main_template_dict)
 

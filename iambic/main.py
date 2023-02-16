@@ -8,21 +8,16 @@ from typing import Optional
 
 import click
 
-from iambic.config.models import Config
-from iambic.config.utils import (
-    aws_account_update_and_discovery,
-    load_aws_details,
-    resolve_config_template_path,
-)
+from iambic.config.dynamic_config import load_config
+from iambic.config.utils import resolve_config_template_path
 from iambic.config.wizard import ConfigurationWizard
 from iambic.core.context import ctx
 from iambic.core.git import clone_git_repos
 from iambic.core.logger import log
 from iambic.core.models import TemplateChangeDetails
+from iambic.core.parser import load_templates
 from iambic.core.utils import gather_templates, yaml
-from iambic.request_handler.apply import apply_changes, flag_expired_resources
-from iambic.request_handler.detect import detect_changes
-from iambic.request_handler.generate import generate_templates
+from iambic.request_handler.expire_resources import flag_expired_resources
 from iambic.request_handler.git_apply import apply_git_changes
 from iambic.request_handler.git_plan import plan_git_changes
 
@@ -77,12 +72,12 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
     if not templates:
         templates = asyncio.run(gather_templates(repo_dir))
 
-    asyncio.run(flag_expired_resources(templates))
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
-    config = Config.load(config_path)
-    asyncio.run(config.setup_aws_accounts())
+    config = asyncio.run(load_config(config_path))
+
+    asyncio.run(flag_expired_resources(templates))
     ctx.eval_only = True
-    output_proposed_changes(asyncio.run(apply_changes(config, templates, ctx)))
+    output_proposed_changes(asyncio.run(config.run_apply(templates)))
 
 
 @cli.command()
@@ -109,6 +104,10 @@ def expire(templates: list[str], repo_dir: str):
 
 
 def run_expire(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
+    config_path = asyncio.run(resolve_config_template_path(repo_dir))
+    # load_config is required to populate known templates
+    asyncio.run(load_config(config_path))
+
     if not templates:
         templates = asyncio.run(gather_templates(repo_dir))
 
@@ -130,9 +129,8 @@ def detect(repo_dir: str):
 
 def run_detect(repo_dir: str):
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
-    config = Config.load(config_path)
-    asyncio.run(config.setup_aws_accounts())
-    asyncio.run(detect_changes(config, repo_dir or str(pathlib.Path.cwd())))
+    config = asyncio.run(load_config(config_path))
+    asyncio.run(config.run_detect_changes(repo_dir or str(pathlib.Path.cwd())))
 
 
 @cli.command()
@@ -151,8 +149,7 @@ def clone_repos(repo_dir: str):
 
 def run_clone_repos(repo_dir: str = str(pathlib.Path.cwd())):
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
-    config = Config.load(config_path)
-    asyncio.run(config.setup_aws_accounts())
+    config = asyncio.run(load_config(config_path))
     asyncio.run(clone_git_repos(config, repo_dir))
 
 
@@ -203,17 +200,18 @@ def run_apply(
         templates = asyncio.run(gather_templates(repo_dir))
     if not config_path:
         config_path = asyncio.run(resolve_config_template_path(repo_dir))
-    config = Config.load(config_path)
-    asyncio.run(config.setup_aws_accounts())
+    config = asyncio.run(load_config(config_path))
     ctx.eval_only = not force
 
-    template_changes = asyncio.run(apply_changes(config, templates, ctx))
+    templates = load_templates(templates)
+    template_changes = asyncio.run(config.run_apply(templates))
     output_proposed_changes(template_changes)
 
     if ctx.eval_only and template_changes and click.confirm("Proceed?"):
         ctx.eval_only = False
-        asyncio.run(apply_changes(config, templates, ctx))
-    asyncio.run(detect_changes(config, repo_dir))
+        asyncio.run(config.run_apply(templates))
+    # This was here before, but I don't think it's needed. Leaving it here for now to see if anything breaks.
+    # asyncio.run(config.run_detect_changes(repo_dir))
 
 
 @cli.command(name="git-apply")
@@ -347,9 +345,8 @@ def run_git_plan(
 )
 def config_discovery(repo_dir: str):
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
-    config = Config.load(config_path)
-    asyncio.run(config.setup_aws_accounts())
-    asyncio.run(aws_account_update_and_discovery(config, repo_dir=repo_dir))
+    config = asyncio.run(load_config(config_path))
+    asyncio.run(config.run_discover_upstream_config_changes(repo_dir))
 
 
 @cli.command(name="import")
@@ -371,9 +368,8 @@ def run_import(
 ):
     if not config_path:
         config_path = asyncio.run(resolve_config_template_path(repo_dir))
-    config = Config.load(config_path)
-    asyncio.run(load_aws_details(config))
-    asyncio.run(generate_templates(config, repo_dir or str(pathlib.Path.cwd())))
+    config = asyncio.run(load_config(config_path))
+    asyncio.run(config.run_import(repo_dir or str(pathlib.Path.cwd())))
 
 
 @cli.command()

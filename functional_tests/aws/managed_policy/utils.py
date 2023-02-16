@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import random
 
-from iambic.aws.iam.policy.models import (
+from iambic.core.logger import log
+from iambic.core.utils import gather_templates
+from iambic.plugins.v0_1_0.aws.iam.policy.models import (
     AWS_MANAGED_POLICY_TEMPLATE_TYPE,
     ManagedPolicyDocument,
     ManagedPolicyTemplate,
 )
-from iambic.aws.iam.policy.template_generation import get_managed_policy_dir
-from iambic.core.logger import log
-from iambic.core.utils import gather_templates
+from iambic.plugins.v0_1_0.aws.iam.policy.template_generation import (
+    get_managed_policy_dir,
+)
 
 
 async def generate_managed_policy_template_from_base(

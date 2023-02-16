@@ -3,19 +3,19 @@ from __future__ import annotations
 import os
 import pathlib
 from tempfile import TemporaryDirectory
-from unittest.mock import MagicMock, patch
 
 import pytest
 
-from iambic.aws.models import (
+from iambic.config.dynamic_config import Config
+from iambic.core.iambic_enum import IambicManaged
+from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+from iambic.plugins.v0_1_0.aws.models import (
     AWSAccount,
+    AWSOrganization,
     BaseAWSOrgRule,
     get_hub_role_arn,
     get_spoke_role_arn,
 )
-from iambic.config.models import AWSConfig, AWSOrganization, Config
-from iambic.config.utils import load_template, store_template
-from iambic.core.iambic_enum import IambicManaged
 
 
 @pytest.fixture
@@ -80,18 +80,3 @@ def config(repo_path):
         file_path=f"{repo_path}/cool_location.yaml",
     )
     return test_config
-
-
-@pytest.mark.asyncio
-@patch("iambic.config.utils.clone_git_repos", return_value={"test_repo": MagicMock()})
-@patch("iambic.config.utils.get_origin_head", return_value="main")
-@patch("iambic.config.utils.Repo", return_value=MagicMock())
-# Notice: the order of fixtures is important; mock patches always come first in reverse order
-# And then the pytest fixtures
-async def test_load_store_templated_config(
-    repo, origin_head, test_repo, mocker, config, repo_path
-):
-    config.slack_app = "test_canary"
-    await store_template(config, repo_path, "test_repo")
-    test_config = await load_template(repo_path)
-    assert test_config.slack_app is None

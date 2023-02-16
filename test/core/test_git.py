@@ -32,9 +32,10 @@ class TestTemplate(BaseTemplate):
 
 @pytest.fixture
 def template_class():
-    the_git_module.TEMPLATE_TYPE_MAP[TEST_TEMPLATE_TYPE] = TestTemplate
-    yield the_git_module.TEMPLATE_TYPE_MAP
-    del the_git_module.TEMPLATE_TYPE_MAP[TEST_TEMPLATE_TYPE]
+    original_templates = the_git_module.TEMPLATES.templates
+    the_git_module.TEMPLATES.set_templates(original_templates + [TestTemplate])
+    yield the_git_module.TEMPLATES.template_map
+    the_git_module.TEMPLATES.set_templates(original_templates)
 
 
 @pytest.fixture
