@@ -1,7 +1,7 @@
 
 
 ## Overview
-IAMbic's Github integration is designed to facilitate team collaboration on IAMbic templates. This page will walk you thorugh the steps to configure IAMbic, Github, and AWS to work together. 
+IAMbic's Github integration is designed to facilitate team collaboration on IAMbic templates. This page will walk you thorugh the steps to configure IAMbic, Github, and AWS to work together.
 
 ### The typical workflow for using IAMbic with Github
 
@@ -11,7 +11,7 @@ IAMbic's Github integration is designed to facilitate team collaboration on IAMb
 4. Optional: Developer Alice updates the PR. The IAMbic Github action will run `iambic git-plan` again to calculate the new changes required.
 5. Reviewer Bob approves the PR.
 6. Developer Alice submits an `iambic git-apply` comment in the PR.
-7. The IAMbic Github action will apply the changes in the PR. 
+7. The IAMbic Github action will apply the changes in the PR.
 8. Once git-apply is successful, the Github action will close the pull request.
 
 ## Setting up Github and AWS to work with IAMbic
@@ -37,14 +37,14 @@ These steps will ensure Github is confgured properly to work with IAMbic.
 4. Set the branch name pattern to `main`.
 5. Configure the options
 	1. Enable "Require a pull request before merging".
-	1. Enable "Require Approvals". 
-	1. Leave the default value for "Required number of approvals". 
-	1. Enable "Require status checks to pass before merging". <!-- #TODO Is there a reason the prior 3 settings were on one line and this was on it's own line?  --> 
+	1. Enable "Require Approvals".
+	1. Leave the default value for "Required number of approvals".
+	1. Enable "Require status checks to pass before merging". <!-- #TODO Is there a reason the prior 3 settings were on one line and this was on it's own line?  -->
 
 #### Configure an Access Token for Github Actions to Update Repository Periodically
 
 1. Go to https://github.com/settings/apps.
-2. Click on "Personal access tokens". <!-- #TODO Can we link directly to personal or fine-grain tokens? --> 
+2. Click on "Personal access tokens". <!-- #TODO Can we link directly to personal or fine-grain tokens? -->
 3. Select "Fine-grain tokens".
 4. Generate a new token.
 5. For the token name, input `iambic-templates-import`.
@@ -60,7 +60,7 @@ These steps will ensure Github is confgured properly to work with IAMbic.
 9. Name the environment `production`.
 10. Click "Configure environment".
 11. Change Deployment branches to "Selected Branches".
-12. Add a Deployment Branch Rule and type in `main` for the Branch name pattern. 
+12. Add a Deployment Branch Rule and type in `main` for the Branch name pattern.
 13. Click "Add Rule".
 14. Click "Add Secret".
 15. Name the secret `AUTO_IMPORT_GH_TOKEN`.
@@ -86,7 +86,7 @@ These steps will ensure Github is confgured properly to work with IAMbic.
 10. For Secret, paste in the token generated in step 5.vi.
 
 #### To set up an access token for Github Action to automatically comment on new/edited pull requests for iambic planning and application
-<!-- #TODO This section looks a lot like the previous section. If this is a duplicate, delete this one and use the prior one. --> 
+<!-- #TODO This section looks a lot like the previous section. If this is a duplicate, delete this one and use the prior one. -->
 
 1. Go to https://github.com/settings/apps
 2. Click on "Personal access tokens".
@@ -100,7 +100,7 @@ These steps will ensure Github is confgured properly to work with IAMbic.
 	1. The previous action will also automatically give "Access: Read" for "Metadata".
 	1. Generate the token.
 6. Store the token in your organization's password vault, if available.
-7. Go to https://github.com/noqdev/iambic-templates-example/settings/secrets/actions 
+7. Go to https://github.com/noqdev/iambic-templates-example/settings/secrets/actions
 8. Add a new repository secret.
 9. Give the secret the name `AUTO_IMPORT_GH_TOKEN`.
 10. For Secret, paste in the token generated in step 5.vi.
@@ -157,7 +157,7 @@ Add the following statement into the Allow statement block
 ### Finish setting up your local repo
 #### Install the iambic github actions to iambic-templates repo
 
-1. Copy the following .github/workflows folder into your template directory. <!-- #TODO should this be a code block? --> 
+1. Copy the following .github/workflows folder into your template directory. <!-- #TODO should this be a code block? -->
 2. mkdir -p ~/github
 3. git clone https://github.com/noqdev/iambic-templates-example/ iambic-templates-example
 4. git clone <YOUR OWN IAMBIC repo> iambic-templates
@@ -183,15 +183,15 @@ Add the following statement into the Allow statement block
 ## FAQ
 
 1. The git-plan and git-apply process are performed via merge workflow. main branch is first checked out and then merge the changes requested in the PR. This is to ensure the plan is as up-to-date as possible. At any time if there is conflict, the requester should pull origin/main into the PR branch and allow iambic github action to replan the changes. <!-- #TODO Is this a question? -->
-	
+
 2. Do I need a dedicated Github account to run IAMbic?
-	
+
 	A: <!-- #TODO  -->
-	
-3. Can I use my existing Github repos to run IAMbic? 
-	
+
+3. Can I use my existing Github repos to run IAMbic?
+
 	A: <!-- #TODO  -->
-	
-4. Can I set IAMbic to run on just a small porton of my cloud? How do I do that? 
-	
+
+4. Can I set IAMbic to run on just a small porton of my cloud? How do I do that?
+
 	A: <!-- #TODO  -->

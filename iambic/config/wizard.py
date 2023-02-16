@@ -12,15 +12,33 @@ import botocore
 import questionary
 from botocore.exceptions import ClientError
 
-from iambic.aws.cloud_formation.utils import (
+from iambic.config.dynamic_config import (
+    CURRENT_IAMBIC_VERSION,
+    Config,
+    ExtendsConfig,
+    ExtendsConfigKey,
+)
+from iambic.config.utils import resolve_config_template_path
+from iambic.core.context import ctx
+from iambic.core.iambic_enum import IambicManaged
+from iambic.core.logger import log
+from iambic.core.template_generation import get_existing_template_map
+from iambic.core.utils import yaml
+from iambic.github.utils import create_workflow_files
+from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
     create_iambic_eventbridge_stacks,
     create_iambic_role_stacks,
     create_spoke_role_stack,
 )
-from iambic.aws.iam.policy.models import PolicyDocument, PolicyStatement
-from iambic.aws.iam.role.models import AWS_IAM_ROLE_TEMPLATE_TYPE, RoleTemplate
-from iambic.aws.iam.role.template_generation import generate_aws_role_templates
-from iambic.aws.models import (
+from iambic.plugins.v0_1_0.aws.iam.policy.models import PolicyDocument, PolicyStatement
+from iambic.plugins.v0_1_0.aws.iam.role.models import (
+    AWS_IAM_ROLE_TEMPLATE_TYPE,
+    RoleTemplate,
+)
+from iambic.plugins.v0_1_0.aws.iam.role.template_generation import (
+    generate_aws_role_templates,
+)
+from iambic.plugins.v0_1_0.aws.models import (
     ARN_RE,
     IAMBIC_SPOKE_ROLE_NAME,
     AWSAccount,
@@ -31,25 +49,13 @@ from iambic.aws.models import (
     get_hub_role_arn,
     get_spoke_role_arn,
 )
-from iambic.aws.utils import RegionName, get_identity_arn, is_valid_account_id
-from iambic.config.models import (
-    CURRENT_IAMBIC_VERSION,
-    Config,
-    ExtendsConfig,
-    ExtendsConfigKey,
-    GoogleProject,
-    OktaOrganization,
+from iambic.plugins.v0_1_0.aws.utils import (
+    RegionName,
+    get_identity_arn,
+    is_valid_account_id,
 )
-from iambic.config.utils import (
-    aws_account_update_and_discovery,
-    resolve_config_template_path,
-)
-from iambic.core.context import ctx
-from iambic.core.iambic_enum import IambicManaged
-from iambic.core.logger import log
-from iambic.core.template_generation import get_existing_template_map
-from iambic.core.utils import yaml
-from iambic.github.utils import create_workflow_files
+from iambic.plugins.v0_1_0.google.iambic_plugin import GoogleProject
+from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
 
 CUSTOM_AUTO_COMPLETE_STYLE = questionary.Style(
     [
@@ -735,7 +741,7 @@ class ConfigurationWizard:
         if questionary.confirm(
             "Would you like to update the config to include the Organization's accounts?"
         ).ask():
-            asyncio.run(aws_account_update_and_discovery(self.config, self.repo_dir))
+            asyncio.run(self.config.run_discover_upstream_config_changes(self.repo_dir))
         else:
             # We at least need to import the hub accounts roles to make any required changes to the spoke role
             # Examples would be granting access to the change detection queue or decoding the secret

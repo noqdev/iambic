@@ -5,7 +5,6 @@ from typing import Union
 
 import xxhash
 
-from iambic.aws.models import AWSAccount
 from iambic.core import noq_json as json
 from iambic.core.context import ctx
 from iambic.core.logger import log
@@ -17,6 +16,7 @@ from iambic.core.utils import (
     get_provider_value,
     is_regex_match,
 )
+from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
 
 async def get_existing_template_map(repo_dir: str, template_type: str) -> dict:
@@ -785,6 +785,24 @@ def merge_model(
     existing_model: BaseModel,
     all_provider_children: list[ProviderChild],
 ) -> Union[BaseModel, list[BaseModel], None]:
+    """
+    Update the metadata of the new IAMbic model using the existing model.
+    The merging process supports merging lists of objects that inherit from the AccessModelMixin, as well as
+    merging nested models that inherit from IAMbic's BaseModel.
+    This is to preserve metadata on import.
+
+    Args:
+    - new_model (BaseModel): The incoming IAMbic BaseModel to be merged with the existing model
+    - existing_model (BaseModel): The IAMbic BaseModel to be used to set the new_model's metadata
+    - all_provider_children (list[ProviderChild]): A list of provider children used to resolve conflicts when merging
+        lists of objects that inherit from the AccessModelMixin
+
+    Returns:
+    - Union[BaseModel, list[BaseModel], None]: The merged IAMbic model,
+        or a list of merged IAMbic models,
+        or None if the new model was set to None
+
+    """
     if new_model is None:
         # The attribute was set to None
         if existing_model:

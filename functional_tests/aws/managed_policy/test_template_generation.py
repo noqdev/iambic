@@ -7,12 +7,12 @@ from functional_tests.aws.managed_policy.utils import (
     generate_managed_policy_template_from_base,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.aws.event_bridge.models import ManagedPolicyMessageDetails
-from iambic.aws.iam.policy.models import ManagedPolicyTemplate
-from iambic.aws.iam.policy.template_generation import (
+from iambic.core.context import ctx
+from iambic.plugins.v0_1_0.aws.event_bridge.models import ManagedPolicyMessageDetails
+from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyTemplate
+from iambic.plugins.v0_1_0.aws.iam.policy.template_generation import (
     generate_aws_managed_policy_templates,
 )
-from iambic.core.context import ctx
 
 
 class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
@@ -28,7 +28,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
     async def test_update_managed_policy_attribute(self):
         initial_description = "This was created by a functional test."
@@ -41,13 +41,13 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
         self.template.write()
 
         self.template.properties.description = updated_description
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         file_sys_template = ManagedPolicyTemplate.load(self.template.file_path)
         self.assertEqual(file_sys_template.properties.description, initial_description)
 
         await generate_aws_managed_policy_templates(
-            IAMBIC_TEST_DETAILS.config,
+            IAMBIC_TEST_DETAILS.config.aws,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 ManagedPolicyMessageDetails(
@@ -71,7 +71,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
         self.assertTrue(os.path.exists(self.template.file_path))
 
         await generate_aws_managed_policy_templates(
-            IAMBIC_TEST_DETAILS.config,
+            IAMBIC_TEST_DETAILS.config.aws,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 ManagedPolicyMessageDetails(
@@ -104,11 +104,11 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
         self.assertNotIn(deleted_account, file_sys_template.excluded_accounts)
 
         # Create the policy on all accounts except 1
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         # Refresh the template
         await generate_aws_managed_policy_templates(
-            IAMBIC_TEST_DETAILS.config,
+            IAMBIC_TEST_DETAILS.config.aws,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 ManagedPolicyMessageDetails(

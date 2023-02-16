@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from iambic.core.template_generation import merge_model
-from iambic.okta.group.models import OktaGroupTemplateProperties
+from iambic.plugins.v0_1_0.okta.group.models import OktaGroupTemplateProperties
 
 
 def test_merge_template_access_rules():
