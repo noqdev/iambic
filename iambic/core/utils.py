@@ -50,6 +50,23 @@ async def resource_file_upsert(
     content_as_dict: dict,
     replace_file: bool = False,
 ):
+    """
+    Update or create a resource file with the given content.
+
+    This function updates or creates a resource file at the given file path with the given content, which is
+    represented as a dictionary. If the file already exists and `replace_file` is False, the function merges
+    the existing content with the new content. If `replace_file` is True, the function overwrites the file
+    with the new content.
+
+    Args:
+    - file_path (Union[str, pathlib.Path]): The file path for the resource file.
+    - content_as_dict (dict): The content to be written to the resource file, represented as a dictionary.
+    - replace_file (bool, optional): A flag indicating whether to replace the file if it already exists.
+        Default is False.
+
+    Returns:
+    - None
+    """
     if (
         not replace_file
         and os.path.exists(file_path)
@@ -72,7 +89,7 @@ async def file_regex_search(file_path: str, re_pattern: str) -> Union[str, None]
 
 async def gather_templates(repo_dir: str, template_type: str = None) -> list[str]:
     if template_type and template_type.startswith("NOQ::"):
-        # Strip the prefix so it plays nice with NOQ_TEMPLATE_REGEX
+        # Strip the prefix, so it plays nice with NOQ_TEMPLATE_REGEX
         template_type = template_type.replace("NOQ::", "")
 
     regex_pattern = (
@@ -254,7 +271,7 @@ def sort_dict(original, prioritize=None):
     return d
 
 
-def transform_commments(yaml_dict):
+def transform_comments(yaml_dict):
 
     comment_dict = {}
     yaml_dict["metadata_commented_dict"] = comment_dict
@@ -262,9 +279,9 @@ def transform_commments(yaml_dict):
         comment_dict[key] = comment[2].value
         value = yaml_dict[key]
         if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
-            yaml_dict[key] = [transform_commments(n) for n in value]
+            yaml_dict[key] = [transform_comments(n) for n in value]
         elif isinstance(value, dict):
-            yaml_dict[key] = transform_commments(value)
+            yaml_dict[key] = transform_comments(value)
     return yaml_dict
 
 
@@ -298,6 +315,24 @@ def evaluate_on_provider(
     context: ExecutionContext,
     exclude_import_only: bool = True,
 ) -> bool:
+    """
+    Determine if the provided resource is on or should be on the given provider.
+
+    This function takes a resource, provider details, and an execution context, and returns a Boolean indicating
+    whether the resource should be evaluated on the provider. The evaluation is based on the rules defined in
+    the resource's `included_children`, `excluded_children`, `included_parents`, and `excluded_parents`
+    attributes, as well as the `iambic_managed` attribute of the resource and the provider details.
+
+    Args:
+    - resource: The resource to be evaluated.
+    - provider_details: The provider details to use for the evaluation.
+    - context (ExecutionContext): The execution context for the evaluation.
+    - exclude_import_only (bool, optional): A flag indicating whether to exclude resources that are marked as
+        import-only. Default is True.
+
+    Returns:
+    - A Boolean indicating whether the resource should be evaluated on the provider.
+    """
     from iambic.core.models import AccessModelMixin
 
     no_op_values = [IambicManaged.DISABLED]
@@ -369,6 +404,20 @@ def is_regex_match(regex, test_string):
 
 
 def get_provider_value(matching_values: list, identifiers: set[str]):
+    """
+    Get the provider value that matches the given identifiers.
+
+    This function takes a list of matching values and a set of identifiers, and returns the matching value that
+    has the highest priority for the given identifiers. The priority of the matching values is determined based
+    on the rules defined in the `included_children` and `excluded_children` attributes of each matching value.
+
+    Args:
+    - matching_values (list): A list of matching values to search through.
+    - identifiers (set[str]): A set of identifiers to match against the rules.
+
+    Returns:
+    - The matching value that has the highest priority for the given identifiers.
+    """
     included_account_map = dict()
     included_account_lists = list()
 
@@ -415,7 +464,7 @@ class GlobalRetryController:
     Attributes:
         wait_time (int): The time to wait before retrying the function in case of rate limit exceptions (default is 60
                         seconds).
-        rate_limit_exceptions (list): A list of exceptions that will trigger a retry (default is
+        retry_exceptions (list): A list of exceptions that will trigger a retry (default is
                                       [TimeoutError, asyncio.exceptions.TimeoutError, RateLimitException]).
         fn_identifier (str): An identifier for the function that is being executed, used to store the state of the rate
                              limit in the global storage (default is None, in which case the function name is used).
@@ -426,18 +475,18 @@ class GlobalRetryController:
     def __init__(
         self,
         wait_time: int = 60,
-        rate_limit_exceptions: Optional[list[Any]] = None,
+        retry_exceptions: Optional[list[Any]] = None,
         fn_identifier: Optional[str] = None,
         max_retries: int = 10,
     ):
-        if rate_limit_exceptions is None:
-            rate_limit_exceptions = [
+        if retry_exceptions is None:
+            retry_exceptions = [
                 TimeoutError,
                 asyncio.exceptions.TimeoutError,
                 RateLimitException,
             ]
         self.wait_time = wait_time
-        self.rate_limit_exceptions = rate_limit_exceptions
+        self.retry_exceptions = retry_exceptions
         self.fn_identifier = fn_identifier
         self.max_retries = max_retries
 
@@ -460,7 +509,7 @@ class GlobalRetryController:
                     log.info(f"Retry successful for {endpoint}.")
                 return res
             except Exception as e:
-                if type(e) not in self.rate_limit_exceptions:
+                if type(e) not in self.retry_exceptions:
                     raise e
                 if self.max_retries == retries + 1:
                     raise e

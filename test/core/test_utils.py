@@ -12,7 +12,7 @@ from iambic.core.utils import (
     GlobalRetryController,
     create_commented_map,
     sort_dict,
-    transform_commments,
+    transform_comments,
     yaml,
 )
 
@@ -71,9 +71,9 @@ TEST_COMMENTED_YAML = """forrest:  # forrest-comment
 """
 
 
-def test_commmented_yaml():
+def test_commented_yaml():
     yaml_dict = yaml.load(TEST_COMMENTED_YAML)
-    yaml_dict = transform_commments(yaml_dict)
+    yaml_dict = transform_comments(yaml_dict)
     commented_model = ForrestModel(**yaml_dict)
     commented_map = create_commented_map(commented_model.dict())
     as_yaml = yaml.dump(commented_map)
@@ -83,12 +83,12 @@ def test_commmented_yaml():
 class TestGlobalRetryController(unittest.TestCase):
     def setUp(self):
         self.wait_time = 1
-        self.rate_limit_exceptions = [TimeoutError, asyncio.exceptions.TimeoutError]
+        self.retry_exceptions = [TimeoutError, asyncio.exceptions.TimeoutError]
         self.fn_identifier = None
         self.max_retries = 10
         self.retry_controller = GlobalRetryController(
             wait_time=self.wait_time,
-            rate_limit_exceptions=self.rate_limit_exceptions,
+            retry_exceptions=self.retry_exceptions,
             fn_identifier=self.fn_identifier,
             max_retries=self.max_retries,
         )
@@ -154,7 +154,7 @@ class TestGlobalRetryController(unittest.TestCase):
         self.fn_identifier = "custom_endpoint"
         self.retry_controller = GlobalRetryController(
             wait_time=self.wait_time,
-            rate_limit_exceptions=self.rate_limit_exceptions,
+            retry_exceptions=self.retry_exceptions,
             fn_identifier=self.fn_identifier,
             max_retries=self.max_retries,
         )

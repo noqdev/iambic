@@ -21,10 +21,10 @@ class CreatePermissionSetTestCase(IsolatedAsyncioTestCase):
         await asyncio.sleep(5)
         await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
     async def test_create_permission_set(self):
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
         await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
 
         self.assertIn(
@@ -36,7 +36,7 @@ class CreatePermissionSetTestCase(IsolatedAsyncioTestCase):
         self.template = attach_access_rule(
             self.template, IAMBIC_TEST_DETAILS.identity_center_account
         )
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
         await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
 
         self.assertIn(

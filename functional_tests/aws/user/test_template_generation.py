@@ -5,10 +5,12 @@ from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.aws.user.utils import generate_user_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.aws.event_bridge.models import UserMessageDetails
-from iambic.aws.iam.user.models import UserTemplate
-from iambic.aws.iam.user.template_generation import generate_aws_user_templates
 from iambic.core.context import ctx
+from iambic.plugins.v0_1_0.aws.event_bridge.models import UserMessageDetails
+from iambic.plugins.v0_1_0.aws.iam.user.models import UserTemplate
+from iambic.plugins.v0_1_0.aws.iam.user.template_generation import (
+    generate_aws_user_templates,
+)
 
 
 class PartialImportUserTestCase(IsolatedAsyncioTestCase):
@@ -23,7 +25,7 @@ class PartialImportUserTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
     async def test_delete_user_template(self):
         included_account = self.all_account_ids[0]
@@ -34,7 +36,7 @@ class PartialImportUserTestCase(IsolatedAsyncioTestCase):
         self.assertTrue(os.path.exists(self.template.file_path))
 
         await generate_aws_user_templates(
-            IAMBIC_TEST_DETAILS.config,
+            IAMBIC_TEST_DETAILS.config.aws,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 UserMessageDetails(
@@ -61,11 +63,11 @@ class PartialImportUserTestCase(IsolatedAsyncioTestCase):
         self.assertNotIn(deleted_account, file_sys_template.excluded_accounts)
 
         # Create the policy on all accounts except 1
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         # Refresh the template
         await generate_aws_user_templates(
-            IAMBIC_TEST_DETAILS.config,
+            IAMBIC_TEST_DETAILS.config.aws,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 UserMessageDetails(
