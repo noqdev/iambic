@@ -284,6 +284,7 @@ def run_git_apply(
     repo_dir: str = str(pathlib.Path.cwd()),
     output_path: str = None,
 ):
+    ctx.eval_only = False
     template_changes = asyncio.run(
         apply_git_changes(
             config_path,
@@ -329,6 +330,7 @@ def run_git_plan(
     output_path: str,
     repo_dir: str = str(pathlib.Path.cwd()),
 ):
+    ctx.eval_only = True
     template_changes = asyncio.run(plan_git_changes(config_path, repo_dir))
     output_proposed_changes(template_changes, output_path=output_path)
 
