@@ -69,7 +69,7 @@ class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
     group_id: str = Field(
         "", description="Unique Group ID for the group. Usually it's {idp-name}-{name}"
     )
-    description: str = Field("", description="Description of the group")
+    description: Optional[str] = Field("", description="Description of the group")
     extra: Any = Field(None, description=("Extra attributes to store"))
     members: List[UserSimple] = Field([], description="Users in the group")
 

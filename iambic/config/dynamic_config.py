@@ -331,6 +331,9 @@ async def load_config(config_path: str) -> Config:
     """
     from iambic.config.templates import TEMPLATES
 
+    config_path = str(
+        config_path
+    )  # Ensure it's a string in case it's a Path for pydantic
     config_dict = yaml.load(open(config_path))
     base_config = Config(file_path=config_path, **config_dict)
     all_plugins = load_plugins(base_config.plugin_paths)

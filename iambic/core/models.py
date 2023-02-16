@@ -389,11 +389,20 @@ class AccessModelMixin:
         raise NotImplementedError
 
     def access_model_sort_weight(self):
+
+        # we have to pay the price eo sort it before using the value
+        # because the validators are only called during model creation
+        # and others have may have mutate the list value
+        sorted_included_children = sorted(self.included_children)
+        sorted_excluded_children = sorted(self.excluded_children)
+        sorted_included_parents = sorted(self.included_parents)
+        sorted_excluded_parents = sorted(self.excluded_parents)
+
         return (
-            str(self.included_children)
-            + str(self.excluded_children)
-            + str(self.included_parents)
-            + str(self.excluded_parents)
+            str(sorted_included_children)
+            + str(sorted_excluded_children)
+            + str(sorted_included_parents)
+            + str(sorted_excluded_parents)
         )
 
 
@@ -490,7 +499,7 @@ class BaseTemplate(
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
-        return {"iambic_managed", "file_path"}
+        return {"iambic_managed", "file_path", "owner"}
 
 
 class Variable(PydanticBaseModel):

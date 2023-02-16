@@ -1,45 +1,51 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 from typing import TYPE_CHECKING, List
 
 import okta.models as models
-import tenacity
 
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
+from iambic.core.utils import GlobalRetryController
 from iambic.plugins.v0_1_0.okta.group.utils import get_group
 from iambic.plugins.v0_1_0.okta.models import App, Assignment, Group
+from iambic.plugins.v0_1_0.okta.utils import handle_okta_fn
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
 
 
-@tenacity.retry(
-    wait=tenacity.wait_fixed(10),
-    stop=tenacity.stop_after_attempt(25),
-    retry=(tenacity.retry_if_exception_type(asyncio.exceptions.TimeoutError)),
-)
 async def list_app_user_assignments(
     okta_organization: OktaOrganization, app: App
 ) -> dict:
     client = await okta_organization.get_okta_client()
-    app_user_list, _, err = await client.list_application_users(app.id)
+    async with GlobalRetryController(
+        fn_identifier="okta.list_application_users"
+    ) as retry_controller:
+        fn = functools.partial(client.list_application_users, app.id)
+        app_user_list, _, err = await retry_controller(handle_okta_fn, fn)
     if err:
         log.error("Error encountered when listing app users", error=str(err))
 
     user_assignments = []
-    for user in app_user_list:
-        if user.scope == "GROUP":
-            continue
-        user_okta, _, err = await client.get_user(user.id)
-        if err:
-            if isinstance(err, asyncio.exceptions.TimeoutError):
-                raise err
-            log.error("Error encountered when getting user", error=str(err))
-            raise Exception("Error encountered when getting user")
-        user_assignments.append(user_okta.profile.login)
+    if app_user_list:
+        for user in app_user_list:
+            if user.scope == "GROUP":
+                continue
+            async with GlobalRetryController(
+                fn_identifier="okta.get_user"
+            ) as retry_controller:
+                fn = functools.partial(client.get_user, user.id)
+                user_okta, _, err = await retry_controller(handle_okta_fn, fn)
+            if err:
+                if isinstance(err, asyncio.exceptions.TimeoutError):
+                    raise err
+                log.error("Error encountered when getting user", error=str(err))
+                raise Exception("Error encountered when getting user")
+            user_assignments.append(user_okta.profile.login)
 
     return {
         "app_id": app.id,
@@ -47,14 +53,13 @@ async def list_app_user_assignments(
     }
 
 
-@tenacity.retry(
-    wait=tenacity.wait_fixed(10),
-    stop=tenacity.stop_after_attempt(25),
-    retry=(tenacity.retry_if_exception_type(asyncio.exceptions.TimeoutError)),
-)
 async def get_app(okta_organization: OktaOrganization, app_id: str) -> App:
     client = await okta_organization.get_okta_client()
-    app_raw, _, err = await client.get_application(app_id)
+    async with GlobalRetryController(
+        fn_identifier="okta.get_application"
+    ) as retry_controller:
+        fn = functools.partial(client.get_application, app_id)
+        app_raw, _, err = await retry_controller(handle_okta_fn, fn)
     if err:
         if isinstance(err, asyncio.exceptions.TimeoutError):
             raise err
@@ -89,9 +94,12 @@ async def list_app_group_assignments(
     okta_organization: OktaOrganization, app: App
 ) -> dict:
     client = await okta_organization.get_okta_client()
-    app_group_assignments, _, err = await client.list_application_group_assignments(
-        app.id
-    )
+    async with GlobalRetryController(
+        fn_identifier="okta.list_application_group_assignments"
+    ) as retry_controller:
+        fn = functools.partial(client.list_application_group_assignments, app.id)
+        app_group_assignments, _, err = await retry_controller(handle_okta_fn, fn)
+
     if err:
         log.error(
             "Error encountered when listing app group assignments", error=str(err)
@@ -101,7 +109,11 @@ async def list_app_group_assignments(
         )
     groups_assignments = []
     for assignment in app_group_assignments:
-        group, resp, err = await client.get_group(assignment.id)
+        async with GlobalRetryController(
+            fn_identifier="okta.get_group"
+        ) as retry_controller:
+            fn = functools.partial(client.get_group, assignment.id)
+            group, resp, err = await retry_controller(handle_okta_fn, fn)
         if err:
             log.error(
                 "Error encountered when getting group",
@@ -129,12 +141,19 @@ async def list_all_apps(okta_organization: OktaOrganization) -> List[App]:
 
     client = await okta_organization.get_okta_client()
     log.info("Listing apps", provder="Okta", organization=okta_organization.idp_name)
-    raw_apps, resp, err = await client.list_applications()
+    async with GlobalRetryController(
+        fn_identifier="okta.list_applications"
+    ) as retry_controller:
+        fn = functools.partial(client.list_applications)
+        raw_apps, resp, err = await retry_controller(handle_okta_fn, fn)
     if err:
         log.error("Error encountered when listing apps", error=str(err))
         raise Exception("Error encountered when listing apps")
     while resp.has_next():
-        next_apps, resp, err = await client.list_applications()
+        async with GlobalRetryController(
+            fn_identifier="okta.list_applications"
+        ) as retry_controller:
+            next_apps, err = await retry_controller(handle_okta_fn, resp.next)
         if err:
             log.error("Error encountered when listing apps", error=str(err))
             return []
@@ -269,12 +288,22 @@ async def update_app_assignments(
 
     if context.execute:
         for assignment in user_assignments_to_assign:
-            user_okta, _, err = await client.get_user(assignment)
+            async with GlobalRetryController(
+                fn_identifier="okta.get_user"
+            ) as retry_controller:
+                fn = functools.partial(client.get_user, assignment)
+                user_okta, _, err = await retry_controller(handle_okta_fn, fn)
             if err:
                 log.error("Error retrieving user", user=assignment, **log_params)
                 continue
             app_user = models.AppUser({"id": user_okta.id})
-            _, _, err = await client.assign_user_to_application(app.id, app_user)
+            async with GlobalRetryController(
+                fn_identifier="okta.assign_user_to_application"
+            ) as retry_controller:
+                fn = functools.partial(
+                    client.assign_user_to_application, app.id, app_user
+                )
+                _, _, err = await retry_controller(handle_okta_fn, fn)
             if err:
                 log.error(
                     "Error assigning user to app",
@@ -287,7 +316,11 @@ async def update_app_assignments(
             if not group:
                 log.error("Error retrieving group", group=assignment, **log_params)
                 continue
-            group_okta, _, err = await client.get_group(group.group_id)
+            async with GlobalRetryController(
+                fn_identifier="okta.get_group"
+            ) as retry_controller:
+                fn = functools.partial(client.get_group, group.group_id)
+                group_okta, _, err = await retry_controller(handle_okta_fn, fn)
             if err:
                 log.error("Error retrieving group", group=assignment, **log_params)
                 continue
@@ -296,9 +329,16 @@ async def update_app_assignments(
                     "id": group_okta.id,
                 }
             )
-            _, _, err = await client.create_application_group_assignment(
-                app.id, group_okta.id, group_assignment
-            )
+            async with GlobalRetryController(
+                fn_identifier="okta.create_application_group_assignment"
+            ) as retry_controller:
+                fn = functools.partial(
+                    client.create_application_group_assignment,
+                    app.id,
+                    group_okta.id,
+                    group_assignment,
+                )
+                _, _, err = await retry_controller(handle_okta_fn, fn)
             if err:
                 log.error(
                     "Error assigning group to app",
@@ -307,11 +347,21 @@ async def update_app_assignments(
                 )
                 continue
         for assignment in user_assignments_to_unassign:
-            user_okta, _, err = await client.get_user(assignment)
+            async with GlobalRetryController(
+                fn_identifier="okta.get_user"
+            ) as retry_controller:
+                fn = functools.partial(client.get_user, assignment)
+                user_okta, _, err = await retry_controller(handle_okta_fn, fn)
             if err:
                 log.error("Error retrieving user", user=assignment, **log_params)
                 continue
-            _, err = await client.delete_application_user(app.id, user_okta.id)
+            async with GlobalRetryController(
+                fn_identifier="okta.delete_application_user"
+            ) as retry_controller:
+                fn = functools.partial(
+                    client.delete_application_user, app.id, user_okta.id
+                )
+                _, err = await retry_controller(handle_okta_fn, fn)
             if err:
                 log.error(
                     "Error unassigning user from app",
@@ -324,13 +374,21 @@ async def update_app_assignments(
             if not group:
                 log.error("Error retrieving group", group=assignment, **log_params)
                 continue
-            group_okta, _, err = await client.get_group(group.group_id)
+            async with GlobalRetryController(
+                fn_identifier="okta.get_group"
+            ) as retry_controller:
+                fn = functools.partial(client.get_group, group.group_id)
+                group_okta, _, err = await retry_controller(handle_okta_fn, fn)
             if err:
                 log.error("Error retrieving group", group=assignment, **log_params)
                 continue
-            _, err = await client.delete_application_group_assignment(
-                app.id, group_okta.id
-            )
+            async with GlobalRetryController(
+                fn_identifier="okta.delete_application_group_assignment"
+            ) as retry_controller:
+                fn = functools.partial(
+                    client.delete_application_group_assignment, app.id, group_okta.id
+                )
+                _, err = await retry_controller(handle_okta_fn, fn)
             if err:
                 log.error(
                     "Error unassigning group from app",
@@ -371,7 +429,11 @@ async def update_app_name(
 
     if context.execute:
         client = await okta_organization.get_okta_client()
-        _, _, err = await client.update_application(app.id, app_model)
+        async with GlobalRetryController(
+            fn_identifier="okta.update_application"
+        ) as retry_controller:
+            fn = functools.partial(client.update_application, app.id, app_model)
+            _, _, err = await retry_controller(handle_okta_fn, fn)
         if err:
             raise ValueError(f"Error updating Okta app: {err}")
     return response
@@ -410,7 +472,11 @@ async def maybe_delete_app(
     )
     if context.execute:
         client = await okta_organization.get_okta_client()
-        _, err = await client.delete_app(app.id)
+        async with GlobalRetryController(
+            fn_identifier="okta.delete_app"
+        ) as retry_controller:
+            fn = functools.partial(client.delete_app, app.id)
+            _, err = await retry_controller(handle_okta_fn, fn)
         if err:
             raise Exception("Error deleting app")
     return response

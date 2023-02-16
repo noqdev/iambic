@@ -719,9 +719,10 @@ def merge_access_model_list(
                     if merged_model:
                         sub_merged_model_list.append(merged_model)
 
-            if sub_merged_model_list and len(resolved_children) != len(
-                new_model.included_children
-            ):
+            # Cannot short circuit simply by resolved_children and
+            # included_children length because included_children
+            # may not have been expanded (regex like prod*)
+            if sub_merged_model_list:
                 (
                     sub_merged_model_list,
                     resolved_children,
