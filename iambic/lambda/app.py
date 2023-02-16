@@ -72,7 +72,12 @@ def run_handler(event=None, context=None):
             return run_detect(REPO_BASE_PATH)
         case LambdaCommand.run_git_apply.value:
             return run_git_apply(
-                config_path, False, FROM_SHA, TO_SHA, repo_dir=REPO_BASE_PATH
+                config_path,
+                False,
+                FROM_SHA,
+                TO_SHA,
+                repo_dir=REPO_BASE_PATH,
+                output_path=PLAN_OUTPUT_PATH,
             )
         case LambdaCommand.run_git_plan.value:
             return run_git_plan(config_path, PLAN_OUTPUT_PATH, repo_dir=REPO_BASE_PATH)

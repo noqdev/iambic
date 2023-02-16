@@ -253,10 +253,29 @@ def run_apply(
     type=str,
     help="The to_sha to calculate diff",
 )
+@click.option(
+    "--plan-output",
+    "-o",
+    "plan_output",
+    type=click.Path(exists=True),
+    help="The location to output the plan Example: ./proposed_changes.yaml",
+)
 def git_apply(
-    config_path: str, repo_dir: str, allow_dirty: bool, from_sha: str, to_sha: str
+    config_path: str,
+    repo_dir: str,
+    allow_dirty: bool,
+    from_sha: str,
+    to_sha: str,
+    plan_output: str,
 ):
-    run_git_apply(config_path, allow_dirty, from_sha, to_sha, repo_dir=repo_dir)
+    run_git_apply(
+        config_path,
+        allow_dirty,
+        from_sha,
+        to_sha,
+        repo_dir=repo_dir,
+        output_path=plan_output,
+    )
 
 
 def run_git_apply(
@@ -265,6 +284,7 @@ def run_git_apply(
     from_sha: str,
     to_sha: str,
     repo_dir: str = str(pathlib.Path.cwd()),
+    output_path: str = None,
 ):
     template_changes = asyncio.run(
         apply_git_changes(
@@ -275,7 +295,7 @@ def run_git_apply(
             to_sha=to_sha,
         )
     )
-    output_proposed_changes(template_changes)
+    output_proposed_changes(template_changes, output_path=output_path)
 
 
 @cli.command()
@@ -291,7 +311,7 @@ def run_git_apply(
     "-o",
     "plan_output",
     type=click.Path(exists=True),
-    help="The location to output the plan Example: ./proposed_changes.json",
+    help="The location to output the plan Example: ./proposed_changes.yaml",
 )
 @click.option(
     "--repo-dir",

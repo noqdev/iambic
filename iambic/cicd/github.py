@@ -8,12 +8,12 @@ from enum import Enum
 from typing import Any, Callable
 from urllib.parse import urlparse
 
-import yaml
 from github import Github
 from github.PullRequest import PullRequest
 
 from iambic.core.git import Repo, clone_git_repo
 from iambic.core.logger import log
+from iambic.core.utils import yaml
 from iambic.main import run_detect, run_expire, run_import
 
 iambic_app = __import__("iambic.lambda.app", globals(), locals(), [], 0)
@@ -87,7 +87,13 @@ def prepare_local_repo_for_new_commits(
     if len(os.listdir(repo_path)) > 0:
         raise Exception(f"{repo_path} already exists. This is unexpected.")
     cloned_repo = clone_git_repo(repo_url, repo_path, None)
-    cloned_repo.git.checkout("-b", f"attempt/{purpose}")
+
+    repo_config_writer = cloned_repo.config_writer()
+    repo_config_writer.set_value("user", "name", "iambic automation")  # FIXME
+    repo_config_writer.set_value("user", "email", "automation@iambic.org")  # FIXME
+    repo_config_writer.release()
+
+    cloned_repo.git.checkout("-b", f"attempt/{purpose}", "origin/main")
 
     return cloned_repo
 
@@ -273,6 +279,7 @@ def handle_iambic_git_apply(
     pull_number: str,
     pull_request_branch_name: str,
     repo_url: str,
+    proposed_changes_path: str = None,
 ):
     if pull_request.mergeable_state != MERGEABLE_STATE_CLEAN:
         # TODO log error and also make a comment to PR
@@ -286,8 +293,19 @@ def handle_iambic_git_apply(
 
     try:
         prepare_local_repo(repo_url, lambda_repo_path, pull_request_branch_name)
+
+        if proposed_changes_path:
+            # code smell to have to change a module variable
+            # to control the destination of proposed_changes.yaml
+            # It's questionable if we still need to depend on the lambda interface
+            # because lambda interface was created to dynamic populate template config
+            # but templates config is now already stored in the templates repo itself.
+            getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH = proposed_changes_path
+
         lambda_run_handler(None, {"command": "git_apply"})
-        post_result_as_pr_comment(pull_request, context, "git-apply", None)
+        post_result_as_pr_comment(
+            pull_request, context, "git-apply", proposed_changes_path
+        )
         copy_data_to_data_directory()
         pull_request.merge()
         return HandleIssueCommentReturnCode.MERGED
@@ -381,15 +399,6 @@ def handle_detect_changes_from_eventbridge(
     try:
         repo = prepare_local_repo_for_new_commits(repo_url, lambda_repo_path, "detect")
 
-        repo_config_writer = repo.config_writer()
-        repo_config_writer.set_value(
-            "user", "name", context["iambic"]["IAMBIC_COMMIT_USERNAME"]
-        )
-        repo_config_writer.set_value(
-            "user", "email", context["iambic"]["IAMBIC_COMMIT_EMAIL"]
-        )
-        repo_config_writer.release()
-
         # TODO customize config.yaml filename
         run_detect(lambda_repo_path)
         repo.git.add(".")
@@ -418,15 +427,6 @@ def handle_import(github_client: Github, context: dict[str, Any]) -> None:
 
     try:
         repo = prepare_local_repo_for_new_commits(repo_url, lambda_repo_path, "import")
-
-        repo_config_writer = repo.config_writer()
-        repo_config_writer.set_value(
-            "user", "name", context["iambic"]["IAMBIC_COMMIT_USERNAME"]
-        )
-        repo_config_writer.set_value(
-            "user", "email", context["iambic"]["IAMBIC_COMMIT_EMAIL"]
-        )
-        repo_config_writer.release()
 
         # TODO customize config.yaml filename
         config_file = context["iambic"]["IAMBIC_CONFIG_FILE"]
@@ -458,15 +458,6 @@ def handle_expire(github_client: Github, context: dict[str, Any]) -> None:
 
     try:
         repo = prepare_local_repo_for_new_commits(repo_url, lambda_repo_path, "expire")
-
-        repo_config_writer = repo.config_writer()
-        repo_config_writer.set_value(
-            "user", "name", context["iambic"]["IAMBIC_COMMIT_USERNAME"]
-        )
-        repo_config_writer.set_value(
-            "user", "email", context["iambic"]["IAMBIC_COMMIT_EMAIL"]
-        )
-        repo_config_writer.release()
 
         # TODO customize config.yaml filename
         run_expire(None, lambda_repo_path)
