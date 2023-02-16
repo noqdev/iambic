@@ -17,7 +17,7 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, get_writable_directory, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import RoleMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.policy.models import AssumeRolePolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.role.models import (
@@ -38,7 +38,9 @@ from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 
-ROLE_RESPONSE_DIR = pathlib.Path.home().joinpath(".iambic", "resources", "aws", "roles")
+
+def get_role_response_dir() -> pathlib.Path:
+    return get_writable_directory().joinpath(".iambic", "resources", "aws", "roles")
 
 
 def get_role_dir(base_dir: str) -> str:
@@ -68,7 +70,7 @@ def get_templated_role_file_path(
 
 
 def get_account_role_resource_dir(account_id: str) -> str:
-    account_role_response_dir = os.path.join(ROLE_RESPONSE_DIR, account_id)
+    account_role_response_dir = os.path.join(get_role_response_dir(), account_id)
     os.makedirs(account_role_response_dir, exist_ok=True)
     return account_role_response_dir
 

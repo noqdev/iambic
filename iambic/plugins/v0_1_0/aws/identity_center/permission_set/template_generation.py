@@ -18,7 +18,7 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, get_writable_directory, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import PermissionSetMessageDetails
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
@@ -36,10 +36,12 @@ from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 
+
 # The dir to write the boto response to a file to prevent keeping too much in memory
-IDENTITY_CENTER_PERMISSION_SET_RESPONSE_DIR = pathlib.Path.home().joinpath(
-    ".iambic", "resources", "aws", "identity_center", "permission_sets"
-)
+def get_identity_center_permission_set_response_dir() -> pathlib.Path:
+    return get_writable_directory().joinpath(
+        ".iambic", "resources", "aws", "identity_center", "permission_sets"
+    )
 
 
 # TODO: Update all grouping functions to support org grouping once multiple orgs with IdentityCenter is functional
@@ -70,7 +72,7 @@ def get_templated_permission_set_file_path(
 
 def get_account_permission_set_resource_dir(account_id: str) -> str:
     account_resource_dir = os.path.join(
-        IDENTITY_CENTER_PERMISSION_SET_RESPONSE_DIR, account_id
+        get_identity_center_permission_set_response_dir(), account_id
     )
     os.makedirs(account_resource_dir, exist_ok=True)
     return account_resource_dir
