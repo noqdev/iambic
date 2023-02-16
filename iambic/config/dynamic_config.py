@@ -7,6 +7,7 @@ import os
 from collections import defaultdict
 from enum import Enum
 from typing import List, Optional, Union
+from uuid import uuid4
 
 from pydantic import BaseModel, Field
 from pydantic import create_model as create_pydantic_model
@@ -130,8 +131,14 @@ class Config(BaseTemplate):
                                         decoded_secret["secrets"][k] = v
 
                             for k, v in decoded_secret.get("secrets", {}).items():
+                                if k in decoded_secret:
+                                    log.warning(
+                                        "Secret key already exists. "
+                                        "This means it was defined in multiple secrets"
+                                        " or multiple times in the same secret.",
+                                        key=k,
+                                    )
                                 self.secrets.setdefault(k, v)
-                            break
 
     async def run_import(self, output_dir: str, messages: list = None):
         # It's the responsibility of the provider to handle throttling.
@@ -241,12 +248,20 @@ class Config(BaseTemplate):
         for plugin in self.plugins:
             if plugin.requires_secret:
                 if provider_config_dict := self.secrets.get(plugin.config_name):
-                    setattr(
-                        self,
-                        plugin.config_name,
-                        plugin.provider_config(**provider_config_dict),
-                    )
-                    await plugin.async_load_callable(self.get_config_plugin(plugin))
+                    try:
+                        setattr(
+                            self,
+                            plugin.config_name,
+                            plugin.provider_config(**provider_config_dict),
+                        )
+                        await plugin.async_load_callable(self.get_config_plugin(plugin))
+                    except Exception as err:
+                        log.critical(
+                            "Failed to configure plugin.",
+                            err=err,
+                            plugin=plugin.config_name,
+                        )
+                        raise
 
     def dict(
         self,
@@ -342,7 +357,7 @@ async def load_config(config_path: str) -> Config:
         config_fields[plugin.config_name] = (plugin.provider_config, None)
 
     dynamic_config = create_pydantic_model(
-        "DynamicConfig", __base__=Config, **config_fields
+        f"DynamicConfig-{uuid4()}", __base__=Config, **config_fields
     )
     config = dynamic_config(plugins=all_plugins, file_path=config_path, **config_dict)
     await config.configure_plugins()
