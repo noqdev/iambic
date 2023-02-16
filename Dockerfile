@@ -20,7 +20,8 @@ RUN yum update -y \
  && python -m ensurepip --upgrade \
  && python -m pip install --upgrade pip
 
-FROM ${ARCH}amazonlinux:${AWS_LINUX_VERSION} as base-layer
+
+FROM ${ARCH}amazonlinux:${AWS_LINUX_VERSION} as build-layer
 
 RUN yum groupinstall "Development Tools" -y \
  && yum install git -y
@@ -34,6 +35,33 @@ COPY --from=python-layer /usr/local/lib /usr/local/lib
 RUN ln -s /Python-${PYTHON_VERSION}/python /usr/bin/python
 RUN ln -s /Python-${PYTHON_VERSION}/pip3 /usr/bin/pip3
 
+COPY --chown=iambic:iambic iambic/ ${FUNCTION_DIR}/iambic
+COPY --chown=iambic:iambic poetry.lock ${FUNCTION_DIR}/poetry.lock
+COPY --chown=iambic:iambic pyproject.toml ${FUNCTION_DIR}/pyproject.toml
+COPY --chown=iambic:iambic README.md ${FUNCTION_DIR}/README.md
+
+WORKDIR ${FUNCTION_DIR}
+
+RUN pip install poetry \
+ && poetry install \
+ && poetry build
+
+
+FROM ${ARCH}amazonlinux:${AWS_LINUX_VERSION} as runtime-layer
+
+# copy over python
+ARG PYTHON_VERSION
+ARG FUNCTION_DIR="/app"
+COPY --from=python-layer /Python-${PYTHON_VERSION} /Python-${PYTHON_VERSION}
+COPY --from=python-layer /usr/local/bin /usr/local/bin
+COPY --from=python-layer /usr/local/lib /usr/local/lib
+RUN ln -s /Python-${PYTHON_VERSION}/python /usr/bin/python
+RUN ln -s /Python-${PYTHON_VERSION}/pip3 /usr/bin/pip3
+
+RUN yum install git shadow-utils -y
+
+COPY --chown=iambic:iambic docs/ ${FUNCTION_DIR}/docs
+
 RUN mkdir -p ${FUNCTION_DIR}/iambic \
  && curl -sL https://dl.yarnpkg.com/rpm/yarn.repo -o /etc/yum.repos.d/yarn.repo \
  && yum install nodejs npm yarn -y
@@ -42,33 +70,27 @@ RUN adduser --system --user-group --home ${FUNCTION_DIR} iambic \
  && chown -R iambic:iambic ${FUNCTION_DIR} \
  && chmod -R 755 ${FUNCTION_DIR}
 
-USER iambic:iambic
+COPY --from=build-layer ${FUNCTION_DIR}/dist ${FUNCTION_DIR}/dist
 
-RUN mkdir -p "${FUNCTION_DIR}"
-
-COPY --chown=iambic:iambic iambic ${FUNCTION_DIR}/iambic
-COPY --chown=iambic:iambic docs ${FUNCTION_DIR}/docs
-COPY --chown=iambic:iambic poetry.lock ${FUNCTION_DIR}/poetry.lock
-COPY --chown=iambic:iambic pyproject.toml ${FUNCTION_DIR}/pyproject.toml
-COPY --chown=iambic:iambic README.md ${FUNCTION_DIR}/README.md
+RUN pip install ${FUNCTION_DIR}/dist/*.whl \
+ && rm -rf ${FUNCTION_DIR}/dist
 
 ENV IAMBIC_REPO_DIR /templates
-ENV PATH=${PATH}:${FUNCTION_DIR}/.local/bin
+
+USER iambic:iambic
+
 VOLUME [ "/templates" ]
 
-WORKDIR ${FUNCTION_DIR}/docs
+WORKDIR ${FUNCTION_DIR}/docs/web
 
-RUN yarn
+RUN yarn \
+ && yarn install --frozen-lockfile
 
 EXPOSE 3000
 
 WORKDIR ${FUNCTION_DIR}
 
-ENV POETRY_VIRTUALENVS_PATH=${FUNCTION_DIR}/.local
-RUN pip install poetry \
- && poetry update \
- && poetry install
-
 ENV PYTHONPATH=${PYTHONPATH}:${FUNCTION_DIR}/.local/lib/python3.11/site-packages
+ENV IAMBIC_WEB_APP_DIR=${FUNCTION_DIR}/docs/web
 
 ENTRYPOINT [ "python", "-m", "iambic.main" ]
