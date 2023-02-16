@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
 
 OKTA_USER_TEMPLATE_TYPE = "NOQ::Okta::User"
-OKTA_GET_USER_SEMAPHORE = NoqSemaphore(get_user, 3)
+OKTA_GET_USER_SEMAPHORE = NoqSemaphore(get_user, 10)
 
 
 class Assignment(BaseModel):

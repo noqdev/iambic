@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, List, Optional, Union
 import boto3
 import botocore
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, constr
+from pydantic import Field, constr, validator
 from ruamel.yaml import YAML, yaml_object
 
 from iambic.core.context import ExecutionContext
@@ -102,6 +102,12 @@ class AccessModel(AccessModelMixin, BaseModel):
             "Org ids can be represented as a regex and string"
         ),
     )
+
+    @validator(
+        "included_accounts", "excluded_accounts", "included_orgs", "excluded_orgs"
+    )
+    def sort_list_of_str(cls, v: list[str]):
+        return sorted(v)
 
     @property
     def included_children(self):

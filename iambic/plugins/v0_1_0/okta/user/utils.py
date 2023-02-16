@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 from typing import TYPE_CHECKING, Any, List, Optional
 
 import okta.models as models
-import tenacity
 
 from iambic.core.context import ExecutionContext
+from iambic.core.exceptions import RateLimitException
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
+from iambic.core.utils import GlobalRetryController
 from iambic.plugins.v0_1_0.okta.exceptions import UserProfileNotUpdatableYet
 from iambic.plugins.v0_1_0.okta.models import User
-from iambic.plugins.v0_1_0.okta.utils import generate_user_profile
+from iambic.plugins.v0_1_0.okta.utils import generate_user_profile, handle_okta_fn
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
@@ -44,7 +46,11 @@ async def create_user(
 
     # Create the user
     if context.execute:
-        user, _, err = await client.create_user(user_model)
+        async with GlobalRetryController(
+            fn_identifier="okta.create_user"
+        ) as retry_controller:
+            fn = functools.partial(client.create_user, user_model)
+            user, _, err = await retry_controller(handle_okta_fn, fn)
         if err:
             raise Exception(f"Error creating user: {err}")
         return await get_user(
@@ -55,11 +61,6 @@ async def create_user(
     return None
 
 
-@tenacity.retry(
-    wait=tenacity.wait_fixed(10),
-    stop=tenacity.stop_after_attempt(25),
-    retry=(tenacity.retry_if_exception_type(asyncio.exceptions.TimeoutError)),
-)
 async def get_user(
     username: str,
     user_id: Optional[str],
@@ -78,9 +79,17 @@ async def get_user(
 
     client = await okta_organization.get_okta_client()
     if user_id:
-        user, _, err = await client.get_user(user_id)
+        async with GlobalRetryController(
+            fn_identifier="okta.get_user"
+        ) as retry_controller:
+            fn = functools.partial(client.get_user, user_id)
+            user, _, err = await retry_controller(handle_okta_fn, fn)
     else:
-        user, _, err = await client.get_user(username)
+        async with GlobalRetryController(
+            fn_identifier="okta.get_user"
+        ) as retry_controller:
+            fn = functools.partial(client.get_user, username)
+            user, _, err = await retry_controller(handle_okta_fn, fn)
     if err:
         if isinstance(err, asyncio.exceptions.TimeoutError):
             raise err
@@ -136,21 +145,19 @@ async def change_user_status(
     )
 
     if context.execute:
-        updated_user, resp, err = await client.update_user(
-            user.user_id,
-            {"status": new_status},
-        )
+        async with GlobalRetryController(
+            fn_identifier="okta.update_user"
+        ) as retry_controller:
+            fn = functools.partial(
+                client.update_user, user.user_id, {"status": new_status}
+            )
+            updated_user, _, err = await retry_controller(handle_okta_fn, fn)
         if err:
             raise Exception("Error updating user status")
         user.status = updated_user.status
     return response
 
 
-@tenacity.retry(
-    wait=tenacity.wait_fixed(10),
-    stop=tenacity.stop_after_attempt(25),
-    retry=(tenacity.retry_if_exception_type(UserProfileNotUpdatableYet)),
-)
 async def update_user_profile(
     proposed_user: OktaUserTemplate,
     user: User,
@@ -189,7 +196,17 @@ async def update_user_profile(
     if context.execute:
         client = await okta_organization.get_okta_client()
         updated_user_obj = models.User({"profile": new_profile})
-        _, _, err = await client.update_user(user.user_id, updated_user_obj)
+        async with GlobalRetryController(
+            fn_identifier="okta.update_user",
+            retry_exceptions=[
+                UserProfileNotUpdatableYet,
+                TimeoutError,
+                asyncio.exceptions.TimeoutError,
+                RateLimitException,
+            ],
+        ) as retry_controller:
+            fn = functools.partial(client.update_user, user.user_id, updated_user_obj)
+            _, _, err = await retry_controller(handle_okta_fn, fn)
         if err:
             log.error(
                 "Error updating user profile",
@@ -368,7 +385,11 @@ async def update_user_attribute(
     user_model = models.User({"profile": user_profile})
     if context.execute:
         client = await okta_organization.get_okta_client()
-        updated_user, resp, err = await client.update_user(user.user_id, user_model)
+        async with GlobalRetryController(
+            fn_identifier="okta.update_user"
+        ) as retry_controller:
+            fn = functools.partial(client.update_user, user.user_id, user_model)
+            updated_user, _, err = await retry_controller(handle_okta_fn, fn)
         if err:
             raise Exception(f"Error updating user's {attribute_name}")
         # TODO: Update
@@ -422,7 +443,11 @@ async def maybe_deprovision_user(
     )
     if context.execute:
         client = await okta_organization.get_okta_client()
-        _, err = await client.deactivate_or_delete_user(user.user_id)
+        async with GlobalRetryController(
+            fn_identifier="okta.deactivate_or_delete_user"
+        ) as retry_controller:
+            fn = functools.partial(client.deactivate_or_delete_user, user.user_id)
+            _, err = await retry_controller(handle_okta_fn, fn)
         if err:
             if err.error_code == "E0000007":
                 log.info(
@@ -500,11 +525,21 @@ async def update_user_assignments(
 
     if context.execute:
         for assignment in assignments_to_remove:
-            app, _, err = await client.get_app(assignment)
+            async with GlobalRetryController(
+                fn_identifier="okta.get_app"
+            ) as retry_controller:
+                fn = functools.partial(client.get_app, assignment)
+                app, _, err = await retry_controller(handle_okta_fn, fn)
             if err:
                 log.error("Error retrieving app", app=assignment, **log_params)
                 continue
-            _, err = await client.remove_user_from_app(user.id, app.id)
+            async with GlobalRetryController(
+                fn_identifier="okta.remove_user_from_app"
+            ) as retry_controller:
+                fn = functools.partial(
+                    client.remove_user_from_app, user.user_id, app.id
+                )
+                _, err = await retry_controller(handle_okta_fn, fn)
             if err:
                 log.error(
                     "Error removing user from app",
@@ -514,7 +549,11 @@ async def update_user_assignments(
                 )
                 continue
         for assignment in assignments_to_add:
-            app_id, _, err = await client.get_application_by_label(assignment)
+            async with GlobalRetryController(
+                fn_identifier="okta.get_application_by_label"
+            ) as retry_controller:
+                fn = functools.partial(client.get_application_by_label, assignment)
+                app_id, _, err = await retry_controller(handle_okta_fn, fn)
             if err:
                 log.error(
                     "Error retrieving application",
@@ -523,7 +562,13 @@ async def update_user_assignments(
                     **log_params,
                 )
                 continue
-            _, err = await client.assign_application_to_user(user.id, app_id)
+            async with GlobalRetryController(
+                fn_identifier="okta.assign_application_to_user"
+            ) as retry_controller:
+                fn = functools.partial(
+                    client.assign_application_to_user, user.user_id, app_id
+                )
+                _, err = await retry_controller(handle_okta_fn, fn)
             if err:
                 log.error(
                     "Error assigning application to user",
@@ -534,7 +579,11 @@ async def update_user_assignments(
                 continue
 
         for assignment in assignments_to_remove:
-            app_id, _, err = await client.get_application_by_label(assignment)
+            async with GlobalRetryController(
+                fn_identifier="okta.get_application_by_label"
+            ) as retry_controller:
+                fn = functools.partial(client.get_application_by_label, assignment)
+                app_id, _, err = await retry_controller(handle_okta_fn, fn)
             if err:
                 log.error(
                     "Error retrieving application",
@@ -543,7 +592,13 @@ async def update_user_assignments(
                     **log_params,
                 )
                 continue
-            _, err = await client.deassign_application_from_user(user.id, app_id)
+            async with GlobalRetryController(
+                fn_identifier="okta.deassign_application_from_user"
+            ) as retry_controller:
+                fn = functools.partial(
+                    client.deassign_application_from_user, user.user_id, app_id
+                )
+                _, err = await retry_controller(handle_okta_fn, fn)
             if err:
                 log.error(
                     "Error deassigning application from user",

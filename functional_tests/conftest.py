@@ -31,6 +31,9 @@ extends:
   - key: AWS_SECRETS_MANAGER
     value: arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/iambic_itest_secrets_v2-Ctmonc
     assume_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
+  - key: AWS_SECRETS_MANAGER
+    value: arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/github-token-iambic-templates-itest
+    assume_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
 
 aws:
   organizations:

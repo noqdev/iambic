@@ -29,7 +29,7 @@ from iambic.plugins.v0_1_0.okta.models import App, Assignment, Status
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
 
-OKTA_GET_APP_SEMAPHORE = NoqSemaphore(get_app, 3)
+OKTA_GET_APP_SEMAPHORE = NoqSemaphore(get_app, 10)
 
 
 class OktaAppTemplateProperties(ExpiryModel, BaseModel):
