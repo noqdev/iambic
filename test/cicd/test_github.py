@@ -79,7 +79,7 @@ def mock_lambda_run_handler():
     ) as _mock_lambda_run_handler:
         with patch("iambic.cicd.github.SHARED_CONTAINER_GITHUB_DIRECTORY", "/tmp") as _:
             with tempfile.TemporaryDirectory() as tmpdirname:
-                with patch("iambic.cicd.github.lambda_repo_path", tmpdirname):
+                with patch("iambic.lambda.app.REPO_BASE_PATH", tmpdirname):
                     yield _mock_lambda_run_handler
 
 
