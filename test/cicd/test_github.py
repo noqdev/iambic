@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from iambic.cicd.github import (
+from iambic.cicd.github import (  # prepare_local_repo,
     BODY_MAX_LENGTH,
     MERGEABLE_STATE_BLOCKED,
     MERGEABLE_STATE_CLEAN,
@@ -15,7 +15,6 @@ from iambic.cicd.github import (
     get_session_name,
     handle_issue_comment,
     handle_pull_request,
-    prepare_local_repo,
 )
 
 
@@ -155,13 +154,14 @@ def test_format_github_url():
     assert url == expected_url
 
 
-def test_prepare_local_repo():
-    temp_templates_directory = tempfile.mkdtemp(
-        prefix="iambic_test_temp_templates_directory"
-    )
-    prepare_local_repo(
-        "https://github.com/noqdev/consoleme", temp_templates_directory, "master"
-    )
+# def test_prepare_local_repo():
+#     temp_templates_directory = tempfile.mkdtemp(
+#         prefix="iambic_test_temp_templates_directory"
+#     )
+#     # FIX ME to avoid contacting external network
+#     prepare_local_repo(
+#         "https://github.com/noqdev/consoleme", temp_templates_directory, "master"
+#     )
 
 
 def test_ensure_body_length_fits_github_spec():
