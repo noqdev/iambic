@@ -6,16 +6,16 @@ from typing import TYPE_CHECKING, Any, List, Optional
 import okta.models as models
 import tenacity
 
-from iambic.config.models import OktaOrganization
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
-from iambic.okta.exceptions import UserProfileNotUpdatableYet
-from iambic.okta.models import User
-from iambic.okta.utils import generate_user_profile
+from iambic.plugins.v0_1_0.okta.exceptions import UserProfileNotUpdatableYet
+from iambic.plugins.v0_1_0.okta.models import User
+from iambic.plugins.v0_1_0.okta.utils import generate_user_profile
 
 if TYPE_CHECKING:
-    from iambic.okta.user.models import OktaUserTemplate
+    from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
+    from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate
 
 
 async def create_user(

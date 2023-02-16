@@ -13,8 +13,7 @@ import pytest
 from github import Github
 
 from functional_tests.conftest import all_config
-from iambic.config.dynamic_config import Config, load_config
-from iambic.config.models import ExtendsConfig
+from iambic.config.dynamic_config import Config, ExtendsConfig, load_config
 from iambic.core.git import clone_git_repo
 from iambic.plugins.v0_1_0.aws.iam.role.models import RoleTemplate
 

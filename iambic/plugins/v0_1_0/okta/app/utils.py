@@ -6,15 +6,14 @@ from typing import TYPE_CHECKING, List
 import okta.models as models
 import tenacity
 
-from iambic.config.models import OktaOrganization
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
-from iambic.okta.group.utils import get_group
-from iambic.okta.models import App, Assignment, Group
+from iambic.plugins.v0_1_0.okta.group.utils import get_group
+from iambic.plugins.v0_1_0.okta.models import App, Assignment, Group
 
 if TYPE_CHECKING:
-    pass
+    from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
 
 
 @tenacity.retry(

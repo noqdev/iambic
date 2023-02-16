@@ -6,6 +6,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, validator
 
 from iambic.core.iambic_plugin import ProviderPlugin
+from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.aws.handlers import (
     apply,
     aws_account_update_and_discovery,
@@ -75,6 +76,7 @@ class AWSConfig(BaseModel):
 
 IAMBIC_PLUGIN = ProviderPlugin(
     config_name="aws",
+    version=PLUGIN_VERSION,
     provider_config=AWSConfig,
     async_apply_callable=apply,
     async_import_callable=import_aws_resources,

@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import asyncio
 from enum import Enum
+from typing import TYPE_CHECKING
 
-from iambic.config.dynamic_config import Config
-from iambic.config.models import GoogleProject
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -13,6 +12,9 @@ from iambic.core.models import (
     ExpiryModel,
     TemplateChangeDetails,
 )
+
+if TYPE_CHECKING:
+    from iambic.plugins.v0_1_0.google.iambic_plugin import GoogleConfig, GoogleProject
 
 
 class WhoCanInvite(Enum):
@@ -89,7 +91,7 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
         raise NotImplementedError
 
     async def apply(
-        self, config: Config, context: ExecutionContext
+        self, config: GoogleConfig, context: ExecutionContext
     ) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
@@ -100,7 +102,7 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
         log_params = dict(
             resource_type=self.resource_type, resource_id=self.resource_id
         )
-        for account in config.google_projects:
+        for account in config.projects:
             # if evaluate_on_google_account(self, account):
             if context.execute:
                 log_str = "Applying changes to resource."

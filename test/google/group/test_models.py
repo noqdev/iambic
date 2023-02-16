@@ -5,7 +5,10 @@ from unittest.mock import MagicMock
 import pytest
 
 from iambic.core.template_generation import merge_model
-from iambic.google.group.models import GroupTemplateProperties, get_group_template
+from iambic.plugins.v0_1_0.google.group.models import (
+    GroupTemplateProperties,
+    get_group_template,
+)
 
 VALUE_UNDER_TEST = {
     "members": [

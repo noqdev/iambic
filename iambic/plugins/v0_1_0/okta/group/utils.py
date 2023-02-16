@@ -5,15 +5,15 @@ from typing import TYPE_CHECKING, List, Optional
 
 import okta.models as models
 
-from iambic.config.models import OktaOrganization
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
-from iambic.okta.models import Group, User
-from iambic.okta.utils import generate_user_profile
+from iambic.plugins.v0_1_0.okta.models import Group, User
+from iambic.plugins.v0_1_0.okta.utils import generate_user_profile
 
 if TYPE_CHECKING:
-    from iambic.okta.group.models import UserSimple
+    from iambic.plugins.v0_1_0.okta.group.models import UserSimple
+    from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
 
 
 async def list_all_users(okta_organization: OktaOrganization) -> List[User]:

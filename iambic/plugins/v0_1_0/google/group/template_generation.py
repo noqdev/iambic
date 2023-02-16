@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING
 
 from iambic.core.template_generation import (
     create_or_update_template as common_create_or_update_template,
 )
 from iambic.core.template_generation import get_existing_template_map
-from iambic.google.group.models import GOOGLE_GROUP_TEMPLATE_TYPE, GroupTemplate
-from iambic.google.group.utils import list_groups
+from iambic.plugins.v0_1_0.google.group.models import (
+    GOOGLE_GROUP_TEMPLATE_TYPE,
+    GroupTemplate,
+)
+from iambic.plugins.v0_1_0.google.group.utils import list_groups
+
+if TYPE_CHECKING:
+    from iambic.plugins.v0_1_0.google.iambic_plugin import GoogleConfig, GoogleProject
 
 
 def get_group_dir(
@@ -50,7 +57,9 @@ async def update_or_create_group_template(
     )
 
 
-async def generate_group_templates(config, domain, output_dir, google_project):
+async def generate_group_templates(
+    config: GoogleConfig, domain, output_dir: str, google_project: GoogleProject
+):
     """List all groups in the domain, along with members and
     settings"""
 

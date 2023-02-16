@@ -1,45 +1,24 @@
 from __future__ import annotations
 
 import os
-from enum import Enum
-from typing import Any, List, Optional
+from typing import Optional
 
 import googleapiclient.discovery
 from google.oauth2 import service_account
-from okta.client import Client as OktaClient
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 
 from iambic.core.iambic_enum import IambicManaged
+from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.models import Variable
 from iambic.core.utils import aio_wrapper
-from iambic.plugins.v0_1_0.aws.models import AWSAccount, AWSOrganization
+from iambic.plugins.v0_1_0 import PLUGIN_VERSION
+from iambic.plugins.v0_1_0.google.group.models import GroupTemplate
+from iambic.plugins.v0_1_0.google.handlers import import_google_resources, load
 
 
 class GoogleSubjects(BaseModel):
     domain: str
     service_account: str
-
-
-class OktaOrganization(BaseModel):
-    idp_name: str
-    org_url: str
-    api_token: str
-    request_timeout: int = 60
-    client: Any = None  # OktaClient
-
-    class Config:
-        arbitrary_types_allowed = True
-
-    async def get_okta_client(self):
-        if not self.client:
-            self.client = OktaClient(
-                {
-                    "orgUrl": self.org_url,
-                    "token": self.api_token,
-                    "requestTimeout": self.request_timeout,
-                }
-            )
-        return self.client
 
 
 class GoogleProject(BaseModel):
@@ -55,7 +34,7 @@ class GoogleProject(BaseModel):
     token_uri: str
     auth_provider_x509_cert_url: str
     client_x509_cert_url: str
-    variables: Optional[List[Variable]] = Field(
+    variables: Optional[list[Variable]] = Field(
         [],
         description="A list of variables to be used when creating templates",
     )
@@ -130,45 +109,18 @@ class GoogleProject(BaseModel):
         return self._service_connection_map[key]
 
 
-class ExtendsConfigKey(Enum):
-    AWS_SECRETS_MANAGER = "AWS_SECRETS_MANAGER"
-    LOCAL_FILE = "LOCAL_FILE"
+class GoogleConfig(BaseModel):
+    projects: list[GoogleProject] = Field(description="A list of Google Projects.")
 
 
-class ExtendsConfig(BaseModel):
-    key: ExtendsConfigKey
-    value: str
-    assume_role_arn: Optional[str]
-    external_id: Optional[str]
-
-
-class AWSConfig(BaseModel):
-    organizations: list[AWSOrganization] = Field(
-        [], description="A list of AWS Organizations to be managed by iambic"
-    )
-    accounts: List[AWSAccount] = Field(
-        [], description="A list of AWS Accounts to be managed by iambic"
-    )
-    min_accounts_required_for_wildcard_included_accounts: int = Field(
-        3,
-        description=(
-            "Iambic will set included_accounts=* on imported resources that exist on all accounts if the minimum number of accounts is met."
-        ),
-    )
-
-    @validator("organizations")
-    def validate_organizations(cls, organizations):
-        if len(organizations) > 1:
-            raise ValueError("Only one AWS Organization is supported at this time.")
-        return organizations
-
-    @property
-    def hub_role_arn(self):
-        if self.organizations:
-            return self.organizations[0].hub_role_arn
-        else:
-            return [
-                account.hub_role_arn
-                for account in self.accounts
-                if account.hub_role_arn
-            ][0]
+IAMBIC_PLUGIN = ProviderPlugin(
+    config_name="google",
+    version=PLUGIN_VERSION,
+    provider_config=GoogleConfig,
+    requires_secret=True,
+    async_import_callable=import_google_resources,
+    async_load_callable=load,
+    templates=[
+        GroupTemplate,
+    ],
+)

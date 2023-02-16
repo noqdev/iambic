@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import asyncio
 from itertools import chain
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import Field
 
-from iambic.config.models import GoogleProject
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -17,7 +16,7 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
-from iambic.google.group.utils import (
+from iambic.plugins.v0_1_0.google.group.utils import (
     create_group,
     get_group,
     get_group_members,
@@ -28,7 +27,7 @@ from iambic.google.group.utils import (
     update_group_members,
     update_group_name,
 )
-from iambic.google.models import (
+from iambic.plugins.v0_1_0.google.models import (
     GoogleTemplate,
     GroupMemberRole,
     GroupMemberStatus,
@@ -40,6 +39,9 @@ from iambic.google.models import (
     WhoCanViewGroup,
     WhoCanViewMembership,
 )
+
+if TYPE_CHECKING:
+    from iambic.plugins.v0_1_0.google.iambic_plugin import GoogleProject
 
 GOOGLE_GROUP_TEMPLATE_TYPE = "NOQ::Google::Group"
 

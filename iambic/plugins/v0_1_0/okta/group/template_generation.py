@@ -2,19 +2,23 @@ from __future__ import annotations
 
 import json
 import os
+from typing import TYPE_CHECKING
 
 from iambic.core.template_generation import (
     create_or_update_template as common_create_or_update_template,
 )
 from iambic.core.template_generation import get_existing_template_map
-from iambic.okta.group.models import (
+from iambic.plugins.v0_1_0.okta.group.models import (
     OKTA_GROUP_TEMPLATE_TYPE,
     OktaGroupTemplate,
     OktaGroupTemplateProperties,
     UserSimple,
 )
-from iambic.okta.group.utils import list_all_groups
-from iambic.okta.models import Group
+from iambic.plugins.v0_1_0.okta.group.utils import list_all_groups
+from iambic.plugins.v0_1_0.okta.models import Group
+
+if TYPE_CHECKING:
+    from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
 
 
 def get_group_dir(base_dir: str, idp_name: str) -> str:
@@ -67,7 +71,9 @@ async def update_or_create_group_template(
     )
 
 
-async def generate_group_templates(config, output_dir, okta_organization):
+async def generate_group_templates(
+    config: OktaConfig, output_dir: str, okta_organization: OktaOrganization
+):
     groups = await list_all_groups(okta_organization)
     base_path = os.path.expanduser(output_dir)
     existing_template_map = await get_existing_template_map(
