@@ -4,8 +4,8 @@ from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.aws.role.utils import generate_role_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.aws.iam.role.utils import get_role_across_accounts
 from iambic.core.context import ctx
+from iambic.plugins.v0_1_0.aws.iam.role.utils import get_role_across_accounts
 
 
 class CreateRoleTestCase(IsolatedAsyncioTestCase):
@@ -20,13 +20,13 @@ class CreateRoleTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
     async def test_create_role_all_accounts(self):
         self.template.included_accounts = ["*"]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         account_role_mapping = await get_role_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.role_name, False
@@ -47,7 +47,7 @@ class CreateRoleTestCase(IsolatedAsyncioTestCase):
         self.template.included_accounts = [included_account]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         account_role_mapping = await get_role_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.role_name, False
