@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 import os
+import tempfile
 import time
 from typing import Any, Callable
 from urllib.parse import urlparse
@@ -15,17 +16,17 @@ import jwt
 import requests
 from botocore.exceptions import ClientError
 
+import iambic.cicd.github
 from iambic.cicd.github import (
     HandleIssueCommentReturnCode,
+    _handle_detect_changes_from_eventbridge,
+    _handle_expire,
+    _handle_import,
     handle_iambic_git_apply,
     handle_iambic_git_plan,
     iambic_app,
-    lambda_repo_path,
-    lambda_run_handler,
-    prepare_local_repo_for_new_commits,
 )
 from iambic.core.logger import log
-from iambic.main import run_detect, run_expire, run_import
 
 GITHUB_APP_ID = "293178"  # FIXME
 GITHUB_APP_PEM_PATH = "/Users/stevenmoy/Downloads/steven-test-github-app.2023-02-13.private-key.pem"  # FIXME
@@ -194,6 +195,13 @@ def run_handler(event=None, context=None):
 
     github_client = github.Github(github_override_token)
 
+    # Handle lambda environment can only write to /tmp and make sure we don't leave previous
+    # state on a new function execution
+    temp_templates_directory = tempfile.mkdtemp(prefix="lambda")
+    getattr(iambic_app, "lambda").app.init_plan_output_path()
+    getattr(iambic_app, "lambda").app.init_repo_base_path()
+    iambic.cicd.github.init_shared_data_directory()
+
     f: Callable[[str, github.Github, dict[str, Any]]] = EVENT_DISPATCH_MAP.get(
         github_event
     )
@@ -227,7 +235,7 @@ def handle_pull_request(
         pull_number,
         pull_request_branch_name,
         repo_url,
-        proposed_changes_path="/tmp/proposed_changes.yaml",
+        proposed_changes_path=getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH,
     )
 
 
@@ -267,7 +275,7 @@ def handle_issue_comment(
         pull_number,
         pull_request_branch_name,
         repo_url,
-        proposed_changes_path="/tmp/proposed_changes.yaml",
+        proposed_changes_path=getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH,
     )
 
 
@@ -283,78 +291,8 @@ def handle_workflow_run(
 
     if workflow_path not in WORKFLOW_DISPATCH_MAP:
         log_params = {"workflow_path": workflow_path}
-        log.error("handle_issue_comment: no op", **log_params)
+        log.error("handle_workflow_run: no op", **log_params)
         return
-
-    workflow_func: Callable = WORKFLOW_DISPATCH_MAP[workflow_path]
-    return workflow_func(github_token, github_client, webhook_payload)
-
-
-def handle_expire(
-    github_token: str, github_client: github.Github, webhook_payload: dict[str, Any]
-) -> None:
-
-    # repo_name is already in the format {repo_owner}/{repo_short_name}
-    repository_url = webhook_payload["repository"]["clone_url"]
-    repo_url = format_github_url(repository_url, github_token)
-    try:
-        repo = prepare_local_repo_for_new_commits(repo_url, lambda_repo_path, "expire")
-
-        run_expire(None, lambda_repo_path)
-        repo.git.add(".")
-        diff_list = repo.head.commit.diff()
-        if len(diff_list) > 0:
-            repo.git.commit("-m", "expire")  # FIXME
-
-            getattr(
-                iambic_app, "lambda"
-            ).app.PLAN_OUTPUT_PATH = "/tmp/proposed_changes.yaml"
-            lambda_run_handler(None, {"command": "git_apply"})
-
-            # if it's in a PR, it's more natural to upload the proposed_changes.yaml to somewhere
-            # current implementation, it's just logging to standard out
-            lines = []
-            filepath = "/tmp/proposed_changes.yaml"
-            if os.path.exists(filepath):
-                with open(filepath) as f:
-                    lines = f.readlines()
-            log_params = {"proposed_changes": lines}
-            log.info("handle_expire ran", **log_params)
-
-            repo.remotes.origin.push(refspec="HEAD:main").raise_if_error()  # FIXME
-        else:
-            log.info("handle_expire no changes")
-    except Exception as e:
-        log.error("fault", exception=str(e))
-        raise e
-
-
-def handle_import(
-    github_token: str, github_client: github.Github, webhook_payload: dict[str, Any]
-) -> None:
-
-    repository_url = webhook_payload["repository"]["clone_url"]
-    repo_url = format_github_url(repository_url, github_token)
-
-    try:
-        repo = prepare_local_repo_for_new_commits(repo_url, lambda_repo_path, "import")
-
-        run_import(lambda_repo_path)
-        repo.git.add(".")
-        diff_list = repo.head.commit.diff()
-        if len(diff_list) > 0:
-            repo.git.commit("-m", "import")  # FIXME
-            repo.remotes.origin.push(refspec="HEAD:main").raise_if_error()  # FIXME
-        else:
-            log.info("handle_import no changes")
-    except Exception as e:
-        log.error("fault", exception=str(e))
-        raise e
-
-
-def handle_detect_changes_from_eventbridge(
-    github_token: str, github_client: github.Github, webhook_payload: dict[str, Any]
-) -> None:
 
     repository_url = webhook_payload["repository"]["clone_url"]
     repo_url = format_github_url(repository_url, github_token)
@@ -364,20 +302,8 @@ def handle_detect_changes_from_eventbridge(
     templates_repo = github_client.get_repo(repo_name)
     default_branch = templates_repo.default_branch
 
-    try:
-        repo = prepare_local_repo_for_new_commits(repo_url, lambda_repo_path, "detect")
-
-        run_detect(lambda_repo_path)
-        repo.git.add(".")
-        diff_list = repo.head.commit.diff()
-        if len(diff_list) > 0:
-            repo.git.commit("-m", "detect")  # FIXME
-            repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()
-        else:
-            log.info("handle_detect no changes")
-    except Exception as e:
-        log.error("fault", exception=str(e))
-        raise e
+    workflow_func: Callable = WORKFLOW_DISPATCH_MAP[workflow_path]
+    return workflow_func(repo_url, default_branch)
 
 
 EVENT_DISPATCH_MAP: dict[str, Callable] = {
@@ -393,9 +319,9 @@ COMMENT_DISPATCH_MAP: dict[str, Callable] = {
 }
 
 WORKFLOW_DISPATCH_MAP: dict[str, Callable] = {
-    ".github/workflows/iambic-expire.yml": handle_expire,
-    ".github/workflows/iambic-import.yml": handle_import,
-    ".github/workflows/iambic-detect.yml": handle_detect_changes_from_eventbridge,
+    ".github/workflows/iambic-expire.yml": _handle_expire,
+    ".github/workflows/iambic-import.yml": _handle_import,
+    ".github/workflows/iambic-detect.yml": _handle_detect_changes_from_eventbridge,
 }
 
 

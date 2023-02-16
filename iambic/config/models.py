@@ -340,12 +340,20 @@ class Config(BaseTemplate):
             self.slack_app = SlackBoltApp(token=slack_bot_token)
 
     def configure_google(self):
-        if self.secrets and (google_secrets := self.secrets.get("google")):
-            self.google_projects = [GoogleProject(**x) for x in google_secrets]
+        # likely throw away changes because of on-going changes of plugin-architecture
+        try:
+            if self.secrets and (google_secrets := self.secrets.get("google")):
+                self.google_projects = [GoogleProject(**x) for x in google_secrets]
+        except:
+            pass
 
     def configure_okta(self):
-        if self.secrets and (okta_secrets := self.secrets.get("okta")):
-            self.okta_organizations = [OktaOrganization(**x) for x in okta_secrets]
+        # likely throw away changes because of on-going changes of plugin-architecture
+        try:
+            if self.secrets and (okta_secrets := self.secrets.get("okta")):
+                self.okta_organizations = [OktaOrganization(**x) for x in okta_secrets]
+        except:
+            pass
 
     async def combine_extended_configs(self):
         if self.extends:
@@ -372,7 +380,7 @@ class Config(BaseTemplate):
 
     async def configure_plugins(self):
         await self.combine_extended_configs()
-        self.configure_slack()
+        # self.configure_slack()
         self.configure_google()
         self.configure_okta()
 
