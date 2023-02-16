@@ -25,21 +25,22 @@ Basic run:
     docker run public.ecr.aws/s2p9s3r8/iambic:latest <command>
 
 Where <command\> is one of:
-* apply
-* config-discovery
-* git-apply
-* git-plan
-* import
-* setup
-* doc_serve: starts the documentation server on port 3000; you can then view this documentation when browsing to [http://localhost:3000](http://localhost:3000) locally
+* apply: generates and executes an execution plan for the specified Iambic templates; using this command you can apply the changes as specified in the templates.
+* config-discovery: pull in provider config related changes like a new AWS account being added to an org.
+* git-apply: similar to `apply`, but only considers changes from the currently checkout branch compared to origin/main.
+* git-plan: similar to `plan` (see below), but only considers changes from the currently checkout branch compared to origin/main.
+* import: updates your repo with the current state of all providers defined in your config. This includes adding, updating, and removing templates.
+* plan: similar to `apply`, but shows the execution plan for the specified Iambic templates without executing; using this command you can get an idea of what changes would be made to the system.
+* setup: launch the configuration wizard
+* doc-serve: starts the documentation server on port 3000; you can then view this documentation when browsing to [http://localhost:3000](http://localhost:3000) locally
 
 We recommend mounting a local volume for the templates that are imported:
 
-    docker run -v <local_dir>:/templates public.ecr.aws/s2p9s3r8/iambic:latest <command>
+    docker run -p 3000:3000 -u $(id -u):$(id -g) -v <local_dir>:/templates public.ecr.aws/s2p9s3r8/iambic:latest <command>
 
 Optionally you can store the volume in your system's docker context:
 
-    docker run -v /templates public.ecr.aws/s2p9s3r8/iambic:latest <command>
+    docker run -p 3000:3000 -u $(id -u):$(id -g) -v /templates public.ecr.aws/s2p9s3r8/iambic:latest <command>
 
 > Bonus:
 > If you want to browse this documentation locally, you can start the self-contained http server within the container using the `doc_serve` command: `run -v /templates public.ecr.aws/s2p9s3r8/iambic:latest doc_serve`. Then browse to [http://localhost:3000](http://localhost:3000).
@@ -50,7 +51,7 @@ Optionally you can store the volume in your system's docker context:
 We recommend that you add the following to your ~/.bashrc or ~/.bash_profile:
 
 ```bash
-alias iambic="docker run -v /templates public.ecr.aws/s2p9s3r8/iambic:latest"
+alias iambic="docker run -p 3000:3000 -u $(id -u):$(id -g) -v /templates public.ecr.aws/s2p9s3r8/iambic:latest"
 ```
 
 That way you can just execute iambic seamlessly as an application within your system:

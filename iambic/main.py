@@ -3,8 +3,11 @@ from __future__ import annotations
 import asyncio
 import os
 import pathlib
+import signal
+import socket
 import subprocess
 import warnings
+import time
 from typing import Optional
 
 import click
@@ -195,9 +198,28 @@ def apply(force: bool, config_path: str, templates: list[str], repo_dir: str):
 
 
 @cli.command()
-def doc_serve():
-    subprocess.run(["yarn", "start"], shell=True, check=True)
+@click.option(
+    "--web-app-dir",
+    "-w",
+    "web_app_dir",
+    required=False,
+    type=click.Path(exists=True),
+    default=os.environ.get("IAMBIC_WEB_APP_DIR") or str(pathlib.Path.cwd().joinpath("docs", "web")),
+    help="The directory containing the web app. Example: /app/docs/web",
+)
+def doc_serve(web_app_dir):
+    my_ip = socket.gethostbyname(socket.gethostname())
+    log.info("Launching docs server... please wait")
+    proc = subprocess.Popen(["yarn", "start"], shell=True, cwd=web_app_dir)
+    log.info(f"Serving docs at http://{my_ip}:3000")
+    log.info("Press Ctrl+C to stop")
 
+    try:
+        proc.wait()
+    except KeyboardInterrupt:
+        proc.send_signal(signal.SIGINT)
+        proc.wait()
+    
 
 def run_apply(
     force: bool,
