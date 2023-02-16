@@ -17,6 +17,7 @@ import requests
 from botocore.exceptions import ClientError
 
 import iambic.cicd.github
+import iambic.core.utils
 from iambic.cicd.github import (
     HandleIssueCommentReturnCode,
     _handle_detect_changes_from_eventbridge,
@@ -198,9 +199,13 @@ def run_handler(event=None, context=None):
     # Handle lambda environment can only write to /tmp and make sure we don't leave previous
     # state on a new function execution
     temp_templates_directory = tempfile.mkdtemp(prefix="lambda")
+    os.chdir(
+        temp_templates_directory
+    )  # the rest of the system seems to use filesystem for stuff
     getattr(iambic_app, "lambda").app.init_plan_output_path()
     getattr(iambic_app, "lambda").app.init_repo_base_path()
     iambic.cicd.github.init_shared_data_directory()
+    iambic.core.utils.init_writable_directory()
 
     f: Callable[[str, github.Github, dict[str, Any]]] = EVENT_DISPATCH_MAP.get(
         github_event
