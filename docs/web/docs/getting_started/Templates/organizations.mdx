@@ -1,0 +1,30 @@
+---
+title: AWS Organization Template Examples
+---
+
+The below provides a sample organization within AWS.
+
+- org_id: specifies the organization id as provided by AWS.
+- hub_role_arn: specifies the hub role with access to the account under which the organization is defined.
+- org_name: a human-friendly name for the organization. In the example below the name is staging to reflect that the account under which the organization entity was created is the `staging` account.
+- org_account_id: the identifier for the account under which the organization was created.
+
+
+```yaml
+  - org_id: 'o-yfdp0r70sq'
+    hub_role_arn: 'arn:aws:iam::392149037201:role/IambicHubRole'
+    org_name: 'staging'
+    org_account_id: '392149037201'
+    identity_center_account:
+      account_id: '392149037201'
+      region: 'us-east-1'
+    account_rules:
+      - included_accounts:
+        - '*'
+        enabled: true
+      - included_accounts:
+        - '969947703986'
+      enabled: false
+    default_rule:
+      enabled: true
+```
