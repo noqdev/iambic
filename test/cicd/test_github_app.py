@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 
-import iambic.cicd.github_app
 from iambic.cicd.github_app import calculate_signature, verify_signature
 
 
@@ -23,11 +24,12 @@ def test_calculate_signature(secret, payload, expected_signature):
 
 @pytest.fixture()
 def mock_github_webhook_secret():
-    old_value = iambic.cicd.github_app.__GITHUB_APP_WEBHOOK_SECRET__
     secret = "e9aec442806878a2ab7bc0676c515e03c1a8ab59"
-    iambic.cicd.github_app.__GITHUB_APP_WEBHOOK_SECRET__ = secret
-    yield secret
-    iambic.cicd.github_app.__GITHUB_APP_WEBHOOK_SECRET__ = old_value
+    with patch(
+        "iambic.cicd.github_app.get_app_webhook_secret_as_lambda_context", autospec=True
+    ) as _mock_github_webhook_secret:
+        _mock_github_webhook_secret.return_value = secret
+        yield secret
 
 
 def test_verify_signature(mock_github_webhook_secret):
