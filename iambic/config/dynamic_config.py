@@ -4,8 +4,10 @@ import asyncio
 import importlib
 import itertools
 import os
+import subprocess
 from collections import defaultdict
 from enum import Enum
+from pathlib import Path
 from typing import List, Optional, Union
 from uuid import uuid4
 
@@ -17,45 +19,65 @@ from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, TemplateChangeDetails
 from iambic.core.utils import sort_dict, yaml
-from iambic.plugins import v0_1_0
+from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, google, okta
 
 CURRENT_IAMBIC_VERSION = "1"
 
 
-def load_plugins(paths: list[str]) -> List[tuple[ProviderPlugin, BaseModel]]:
-    """
-    Load all plugins from the given paths.
-    This will search recursively for all files ending in iambic_plugin.py
-    It will retrieve the variable IAMBIC_PLUGIN set in the iambic_plugin module.
-
-    :param paths: A list of paths to search for plugins.
-    :return: A list of tuples containing the plugin and the plugin config model.
-    """
-    plugins = []
-    for path in paths:
-        for root, dirs, files in os.walk(path):
-            for file in files:
-                if file.endswith("iambic_plugin.py"):
-                    module_name, _ = os.path.splitext(file)
-                    module_path = os.path.join(root, file)
-                    module = importlib.machinery.SourceFileLoader(
-                        module_name, module_path
-                    ).load_module()
-                    if iambic_plugin := getattr(module, "IAMBIC_PLUGIN"):
-                        plugins.append(iambic_plugin)
-                    else:
-                        log.error(
-                            "Could not find the IAMBIC_PLUGIN variable",
-                            plugin_file_path=file,
-                        )
-
-    log.debug("Loading discovered plugins", discovered_plugin_count=len(plugins))
-    return plugins
+class PluginType(Enum):
+    DIRECTORY_PATH = "DIRECTORY_PATH"
+    # GIT = "GIT"
 
 
 class ExtendsConfigKey(Enum):
     AWS_SECRETS_MANAGER = "AWS_SECRETS_MANAGER"
     LOCAL_FILE = "LOCAL_FILE"
+
+
+class PluginDefinition(BaseModel):
+    type: PluginType
+    location: str = Field(
+        description="The location of the plugin. "
+        "For a DIRECTORY_PATH, this is the path to the plugin. "
+        "For a GIT plugin, this is the git url."
+    )
+    version: str
+
+
+def load_plugins(
+    plugin_defs: list[PluginDefinition],
+) -> List[tuple[ProviderPlugin, BaseModel]]:
+    """
+    Load all plugins from the given paths.
+    This will search recursively for all files ending in iambic_plugin.py
+    It will retrieve the variable IAMBIC_PLUGIN set in the iambic_plugin module.
+
+    :param plugin_defs: A list of PluginDefinition instances to load.
+    :return: A list of tuples containing the plugin and the plugin config model.
+    """
+    plugins = []
+    for plugin_def in plugin_defs:
+        if plugin_def.type == PluginType.DIRECTORY_PATH:
+            for root, dirs, files in os.walk(plugin_def.location):
+                for file in files:
+                    if file.endswith("iambic_plugin.py"):
+                        module_name, _ = os.path.splitext(file)
+                        module_path = os.path.join(root, file)
+                        module = importlib.machinery.SourceFileLoader(
+                            module_name, module_path
+                        ).load_module()
+                        if iambic_plugin := getattr(module, "IAMBIC_PLUGIN"):
+                            plugins.append(iambic_plugin)
+                        else:
+                            log.error(
+                                "Could not find the IAMBIC_PLUGIN variable",
+                                plugin_file_path=file,
+                            )
+        # TODO: Add git support here.
+        #  Would work by trying to find the cloned repo in a defined dir
+
+    log.debug("Loading discovered plugins", discovered_plugin_count=len(plugins))
+    return plugins
 
 
 class ExtendsConfig(BaseModel):
@@ -70,11 +92,25 @@ class Config(BaseTemplate):
     version: str = Field(
         description="Do not change! The version of iambic this repo is compatible with.",
     )
-    plugin_paths: Optional[list[str]] = Field(
+    plugins: Optional[list[PluginDefinition]] = Field(
         default=[
-            v0_1_0.__path__[0],
+            PluginDefinition(
+                type=PluginType.DIRECTORY_PATH,
+                location=aws.__path__[0],
+                version=PLUGIN_VERSION,
+            ),
+            PluginDefinition(
+                type=PluginType.DIRECTORY_PATH,
+                location=google.__path__[0],
+                version=PLUGIN_VERSION,
+            ),
+            PluginDefinition(
+                type=PluginType.DIRECTORY_PATH,
+                location=okta.__path__[0],
+                version=PLUGIN_VERSION,
+            ),
         ],
-        description="The paths to the plugins that should be loaded.",
+        description="The plugins used by your IAMbic template repo.",
     )
     extends: List[ExtendsConfig] = []
     secrets: Optional[dict] = Field(
@@ -82,7 +118,7 @@ class Config(BaseTemplate):
         exclude=True,
         default={},
     )
-    plugins: Optional[list[ProviderPlugin]] = Field(
+    plugin_instances: Optional[list[ProviderPlugin]] = Field(
         description="A list of the plugin instances parsed as part of the plugin paths.",
         exclude=True,
     )
@@ -98,7 +134,9 @@ class Config(BaseTemplate):
 
     @property
     def configured_plugins(self):
-        return [plugin for plugin in self.plugins if self.get_config_plugin(plugin)]
+        return [
+            plugin for plugin in self.plugin_instances if self.get_config_plugin(plugin)
+        ]
 
     async def set_config_secrets(self):
         if self.extends:
@@ -117,7 +155,7 @@ class Config(BaseTemplate):
                             plugin.async_decode_secret_callable(
                                 self.get_config_plugin(plugin), extend
                             )
-                            for plugin in self.plugins
+                            for plugin in self.plugin_instances
                             if plugin.async_decode_secret_callable
                         ]
                     )
@@ -157,7 +195,7 @@ class Config(BaseTemplate):
         # It's the responsibility of the provider to handle throttling.
         # Build a map of a plugin's template types to the plugin
         template_provider_map = {}
-        for plugin in self.plugins:
+        for plugin in self.plugin_instances:
             for template in plugin.templates:
                 template_provider_map[
                     template.__fields__["template_type"].default
@@ -170,7 +208,7 @@ class Config(BaseTemplate):
             plugin_templates[provider].append(template)
 
         tasks = []
-        for plugin in self.plugins:
+        for plugin in self.plugin_instances:
             if templates := plugin_templates.get(plugin.config_name):
                 if plugin_config := self.get_config_plugin(plugin):
                     tasks.append(plugin.async_apply_callable(plugin_config, templates))
@@ -245,7 +283,7 @@ class Config(BaseTemplate):
 
         await self.set_config_secrets()
 
-        for plugin in self.plugins:
+        for plugin in self.plugin_instances:
             if plugin.requires_secret:
                 if provider_config_dict := self.secrets.get(plugin.config_name):
                     try:
@@ -278,13 +316,12 @@ class Config(BaseTemplate):
         exclude_defaults: bool = False,
         exclude_none: bool = True,
     ) -> "DictStrAny":  # noqa
-        required_exclude = {
-            "secrets",
-            "file_path",
-        }
-        for plugin in self.plugins:
-            if plugin.requires_secret:
-                required_exclude.add(plugin.config_name)
+        required_exclude = {"secrets", "file_path", "plugin_instances"}
+
+        if self.plugin_instances:
+            for plugin in self.plugin_instances:
+                if plugin.requires_secret:
+                    required_exclude.add(plugin.config_name)
 
         if exclude:
             exclude.update(required_exclude)
@@ -351,7 +388,7 @@ async def load_config(config_path: str) -> Config:
     )  # Ensure it's a string in case it's a Path for pydantic
     config_dict = yaml.load(open(config_path))
     base_config = Config(file_path=config_path, **config_dict)
-    all_plugins = load_plugins(base_config.plugin_paths)
+    all_plugins = load_plugins(base_config.plugins)
     config_fields = {}
     for plugin in all_plugins:
         config_fields[plugin.config_name] = (plugin.provider_config, None)
@@ -359,14 +396,68 @@ async def load_config(config_path: str) -> Config:
     dynamic_config = create_pydantic_model(
         f"DynamicConfig-{uuid4()}", __base__=Config, **config_fields
     )
-    config = dynamic_config(plugins=all_plugins, file_path=config_path, **config_dict)
+    config = dynamic_config(
+        plugin_instances=all_plugins, file_path=config_path, **config_dict
+    )
     await config.configure_plugins()
 
     TEMPLATES.set_templates(
         list(
             itertools.chain.from_iterable(
-                [plugin.templates for plugin in config.plugins]
+                [plugin.templates for plugin in config.plugin_instances]
             )
         )
     )
     return config
+
+
+async def init_plugins(config_path: str):
+    """
+    Download plugins and install plugin dependencies
+    """
+    config_path = str(
+        config_path
+    )  # Ensure it's a string in case it's a Path for pydantic
+    config_dict = yaml.load(open(config_path))
+    config = Config(file_path=config_path, **config_dict)
+    errors = defaultdict(dict)
+
+    for plugin in config.plugins:
+        if plugin.type == PluginType.DIRECTORY_PATH:
+            plugin_path = plugin.location
+        # elif plugin.type == PluginType.GIT:
+        # Clone repo, set plugin_path
+
+        if "aws" in plugin_path:
+            continue
+
+        required_files = ["iambic_plugin.py", "pyproject.toml"]
+        for required_file in required_files:
+            file_path = Path(os.path.join(plugin_path, required_file))
+            if not file_path.is_file():
+                errors[plugin.location].setdefault("missing_required_file", []).append(
+                    str(file_path)
+                )
+
+        if plugin.location in errors:
+            continue
+
+        try:
+            log.info("Installing plugin dependencies", plugin=plugin.location)
+            subprocess.run(
+                [
+                    "poetry",
+                    "install",
+                ],
+                cwd=plugin_path,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as err:
+            errors[plugin.location]["install_failed"] = dict(error=err.stderr)
+        except Exception as err:
+            errors[plugin.location]["install_failed"] = dict(error=repr(err))
+
+    if errors:
+        log.error("Failed to initialize all plugins", **errors)

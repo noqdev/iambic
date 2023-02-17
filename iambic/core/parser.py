@@ -12,10 +12,10 @@ def load_templates(template_paths: list[str]) -> list[BaseTemplate]:
     templates = []
 
     for template_path in template_paths:
+        template_dict = transform_comments(yaml.load(open(template_path)))
+        if template_dict["template_type"] in ["NOQ::Core::Config"]:
+            continue
         try:
-            template_dict = transform_comments(yaml.load(open(template_path)))
-            if template_dict["template_type"] in ["NOQ::Core::Config"]:
-                continue
             template_cls = TEMPLATES.template_map[template_dict["template_type"]]
             template_cls.update_forward_refs()
             templates.append(template_cls(file_path=template_path, **template_dict))
