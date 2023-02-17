@@ -116,6 +116,43 @@ def test_run_handler_with_bad_signature(mock_pull_request_webhook_lambda_event):
 def test_run_handler_with_unknown_event(
     skip_authentication, mock_github_cls, mock_unknown_webhook_lambda_event
 ):
+
+    from iambic.plugins.v0_1_0.github.github_app import iambic_app
+
+    output_path_before_lambda_call = getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH
+    repo_base_path_before_lambda_call = getattr(iambic_app, "lambda").app.REPO_BASE_PATH
+
+    import iambic.plugins.v0_1_0.github.github
+
+    data_path_before_lambda_call = (
+        iambic.plugins.v0_1_0.github.github.SHARED_CONTAINER_GITHUB_DIRECTORY
+    )
+
+    import iambic.core.utils
+
+    writable_directory_before_lambda_call = iambic.core.utils.get_writable_directory()
+
     with pytest.raises(Exception) as excinfo:
         run_handler(mock_unknown_webhook_lambda_event, None)
         assert "no supported handler" in excinfo.value
+
+        # verify during lambda call, filesystem path are updated
+        output_path_after_lambda_call = getattr(
+            iambic_app, "lambda"
+        ).app.PLAN_OUTPUT_PATH
+        repo_base_path_after_lambda_call = getattr(
+            iambic_app, "lambda"
+        ).app.REPO_BASE_PATH
+        assert output_path_before_lambda_call != output_path_after_lambda_call
+        assert repo_base_path_before_lambda_call != repo_base_path_after_lambda_call
+        data_path_after_lambda_call = (
+            iambic.plugins.v0_1_0.github.github.SHARED_CONTAINER_GITHUB_DIRECTORY
+        )
+        assert data_path_before_lambda_call != data_path_after_lambda_call
+        writable_directory_after_lambda_call = (
+            iambic.core.utils.get_writable_directory()
+        )
+        assert (
+            writable_directory_before_lambda_call
+            != writable_directory_after_lambda_call
+        )
