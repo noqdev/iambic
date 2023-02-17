@@ -6,7 +6,6 @@ import tempfile
 
 import git
 import pytest
-
 from iambic.core import git as the_git_module
 from iambic.core.git import GitDiff, create_templates_for_modified_files
 from iambic.core.models import BaseModel, BaseTemplate

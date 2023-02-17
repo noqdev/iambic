@@ -19,29 +19,29 @@ class CreatePermissionSetTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         await asyncio.sleep(5)
-        await IAMBIC_TEST_DETAILS.identity_center.set_identity_center_details()
+        await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
         self.template.deleted = True
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
     async def test_create_permission_set(self):
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
-        await IAMBIC_TEST_DETAILS.identity_center.set_identity_center_details()
+        await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
 
         self.assertIn(
             self.template.identifier,
-            IAMBIC_TEST_DETAILS.identity_center.identity_center_details.permission_set_map,
+            IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.permission_set_map,
         )
 
     async def test_create_permission_set_with_account_assignment(self):
         self.template = attach_access_rule(
-            self.template, IAMBIC_TEST_DETAILS.identity_center
+            self.template, IAMBIC_TEST_DETAILS.identity_center_account
         )
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
-        await IAMBIC_TEST_DETAILS.identity_center.set_identity_center_details()
+        await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
 
         self.assertIn(
             self.template.identifier,
-            IAMBIC_TEST_DETAILS.identity_center.identity_center_details.permission_set_map,
+            IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.permission_set_map,
         )
 
         # TODO: Validate account assignments with response of get_permission_set_users_and_groups

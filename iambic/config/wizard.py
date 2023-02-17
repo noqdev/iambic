@@ -169,12 +169,12 @@ def set_google_client_cert_url(default_val: str = None):
     return set_required_text_value("client_x509_cert_url", default_val)
 
 
-def set_identity_center_account(
+def set_identity_center(
     region: str = RegionName.us_east_1,
 ) -> AWSIdentityCenter:
     region = set_aws_region("What region is your Identity Center (SSO) set to?", region)
-    identity_center_account = AWSIdentityCenter(region=region)
-    return identity_center_account
+    identity_center = AWSIdentityCenter(region=region)
+    return identity_center
 
 
 class ConfigurationWizard:
@@ -640,8 +640,8 @@ class ConfigurationWizard:
             if action == "Go back":
                 return
             elif action == "Update IdentityCenter":
-                org_to_edit.identity_center_account = set_identity_center_account(
-                    org_to_edit.identity_center_account.region_name
+                org_to_edit.identity_center = set_identity_center(
+                    org_to_edit.identity_center.region_name
                 )
                 asyncio.run(self.attempt_aws_account_refresh())
                 for account in self.config.aws.accounts:
@@ -719,7 +719,7 @@ class ConfigurationWizard:
                 "Would you like to setup Identity Center (SSO) support?", default=False
             ).ask()
         ):
-            aws_org.identity_center = set_identity_center_account()
+            aws_org.identity_center = set_identity_center()
 
         if not questionary.confirm("Keep these settings?").ask():
             if questionary.confirm(
