@@ -7,7 +7,6 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import aiofiles
-
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
