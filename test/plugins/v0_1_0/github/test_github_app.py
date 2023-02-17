@@ -40,3 +40,10 @@ def test_verify_signature(mock_github_webhook_secret):
     signature = "b611249a28989845434bfbe56cc4ebe0dfeb89161203157f82f43dd97de7eaa9"
     payload = "fe11f072e13fd8deefe7d906e7d59a673f1d7a7d"
     verify_signature(signature, payload)
+
+
+def test_verify_signature_exception(mock_github_webhook_secret):
+    signature = "b611249a28989845434bfbe56cc4ebe0dfeb89161203157f82f43dd97de7eaa9"
+    payload = "foo"
+    with pytest.raises(Exception):
+        verify_signature(signature, payload)
