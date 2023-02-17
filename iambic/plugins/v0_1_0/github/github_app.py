@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import json
@@ -10,10 +11,10 @@ import time
 from typing import Any, Callable
 from urllib.parse import urlparse
 
+import aiohttp
 import boto3
 import github
 import jwt
-import requests
 from botocore.exceptions import ClientError
 
 import iambic.core.utils
@@ -101,21 +102,20 @@ def get_app_webhook_secret_as_lambda_context():
     return get_secret_value_response["SecretString"]
 
 
-def get_installation_token(app_id, installation_id):
+async def _get_installation_token(app_id, installation_id):
     encoded_jwt = get_app_bearer_token(get_app_private_key_as_lambda_context(), app_id)
     access_tokens_url = (
         f"https://api.github.com/app/installations/{installation_id}/access_tokens"
     )
-    response = requests.post(
-        access_tokens_url,
-        headers={
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {encoded_jwt}",
-        },
-    )
-    payload = json.loads(response.text)
-    installation_token = payload["token"]
-    return installation_token
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {encoded_jwt}",
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.post(access_tokens_url, headers=headers) as resp:
+            payload = json.loads(await resp.text())
+            installation_token = payload["token"]
+            return installation_token
 
 
 def run_handler(event=None, context=None):
@@ -139,7 +139,9 @@ def run_handler(event=None, context=None):
 
     webhook_payload = json.loads(event["body"])
     installation_id = webhook_payload["installation"]["id"]
-    github_override_token = get_installation_token(app_id, installation_id)
+    github_override_token = asyncio.run(
+        _get_installation_token(app_id, installation_id)
+    )
 
     github_client = github.Github(github_override_token)
 
