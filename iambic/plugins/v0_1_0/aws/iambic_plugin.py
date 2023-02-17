@@ -60,11 +60,9 @@ class AWSConfig(BaseModel):
 
     async def set_identity_center_details(self):
         if self.accounts:
-            identity_center_detail_set_tasks = []
-            identity_center_detail_set_tasks.extend(
-                [account.set_identity_center_details() for account in self.accounts]
+            await asyncio.gather(
+                *[account.set_identity_center_details() for account in self.accounts]
             )
-            await asyncio.gather(*identity_center_detail_set_tasks)
 
     async def get_boto_session_from_arn(self, arn: str, region_name: str = None):
         region_name = region_name or arn.split(":")[3]

@@ -42,7 +42,7 @@ from iambic.plugins.v0_1_0.aws.models import (
     ARN_RE,
     IAMBIC_SPOKE_ROLE_NAME,
     AWSAccount,
-    AWSIdentityCenterAccount,
+    AWSIdentityCenter,
     AWSOrganization,
     BaseAWSOrgRule,
     Partition,
@@ -171,9 +171,9 @@ def set_google_client_cert_url(default_val: str = None):
 
 def set_identity_center_account(
     region: str = RegionName.us_east_1,
-) -> AWSIdentityCenterAccount:
+) -> AWSIdentityCenter:
     region = set_aws_region("What region is your Identity Center (SSO) set to?", region)
-    identity_center_account = AWSIdentityCenterAccount(region=region)
+    identity_center_account = AWSIdentityCenter(region=region)
     return identity_center_account
 
 
@@ -719,7 +719,7 @@ class ConfigurationWizard:
                 "Would you like to setup Identity Center (SSO) support?", default=False
             ).ask()
         ):
-            aws_org.identity_center_account = set_identity_center_account()
+            aws_org.identity_center = set_identity_center_account()
 
         if not questionary.confirm("Keep these settings?").ask():
             if questionary.confirm(

@@ -278,13 +278,12 @@ class Config(BaseTemplate):
         exclude_defaults: bool = False,
         exclude_none: bool = True,
     ) -> "DictStrAny":  # noqa
-        required_exclude = {
-            "secrets",
-            "file_path",
-        }
-        for plugin in self.plugins:
-            if plugin.requires_secret:
-                required_exclude.add(plugin.config_name)
+        required_exclude = {"secrets", "file_path", "plugins"}
+
+        if self.plugins:
+            for plugin in self.plugins:
+                if plugin.requires_secret:
+                    required_exclude.add(plugin.config_name)
 
         if exclude:
             exclude.update(required_exclude)
