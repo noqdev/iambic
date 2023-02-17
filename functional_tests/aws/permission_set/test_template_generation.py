@@ -44,9 +44,9 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
 
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
         await asyncio.sleep(5)
-        await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
+        await IAMBIC_TEST_DETAILS.identity_center.set_identity_center_details()
 
-        identity_center_account = IAMBIC_TEST_DETAILS.identity_center_account
+        identity_center_account = IAMBIC_TEST_DETAILS.identity_center
         identity_center_details = identity_center_account.identity_center_details
 
         permission_set_properties = identity_center_details.permission_set_map.get(
@@ -73,7 +73,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
         self.assertEqual(file_sys_template.properties.description, updated_description)
 
     async def test_delete_permission_set_template(self):
-        identity_center_account = IAMBIC_TEST_DETAILS.identity_center_account
+        identity_center_account = IAMBIC_TEST_DETAILS.identity_center
         self.template.write()
 
         self.assertTrue(os.path.exists(self.template.file_path))
