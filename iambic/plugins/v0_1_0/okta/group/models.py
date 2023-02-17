@@ -4,8 +4,6 @@ import asyncio
 from itertools import chain
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from pydantic import Field
-
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -27,6 +25,7 @@ from iambic.plugins.v0_1_0.okta.group.utils import (
     update_group_name,
 )
 from iambic.plugins.v0_1_0.okta.models import Group, UserStatus
+from pydantic import Field
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
@@ -72,6 +71,10 @@ class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
     description: Optional[str] = Field("", description="Description of the group")
     extra: Any = Field(None, description=("Extra attributes to store"))
     members: List[UserSimple] = Field([], description="Users in the group")
+
+    @classmethod
+    def iambic_specific_knowledge(cls) -> set[str]:
+        return {"extra"}
 
     @property
     def resource_type(self) -> str:
