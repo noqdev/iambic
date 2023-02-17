@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from itertools import chain
-from typing import TYPE_CHECKING, List, Optional
-
-from pydantic import Field
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
@@ -39,6 +37,7 @@ from iambic.plugins.v0_1_0.google.models import (
     WhoCanViewGroup,
     WhoCanViewMembership,
 )
+from pydantic import Field
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.google.iambic_plugin import GoogleProject
@@ -79,6 +78,11 @@ class GroupTemplateProperties(BaseModel):
     who_can_view_group: WhoCanViewGroup = "ALL_MANAGERS_CAN_VIEW"
     who_can_view_membership: WhoCanViewMembership = "ALL_MANAGERS_CAN_VIEW"
     iambic_managed: IambicManaged = IambicManaged.UNDEFINED
+    extra: Any = Field(None, description=("Extra attributes to store"))
+
+    @classmethod
+    def iambic_specific_knowledge(cls) -> set[str]:
+        return {"extra"}
 
     @property
     def resource_type(self):
