@@ -4,7 +4,10 @@ from unittest.mock import patch
 
 import pytest
 
-from iambic.cicd.github_app import calculate_signature, verify_signature
+from iambic.plugins.v0_1_0.github.github_app import (
+    calculate_signature,
+    verify_signature,
+)
 
 
 @pytest.mark.parametrize(
@@ -26,7 +29,8 @@ def test_calculate_signature(secret, payload, expected_signature):
 def mock_github_webhook_secret():
     secret = "e9aec442806878a2ab7bc0676c515e03c1a8ab59"
     with patch(
-        "iambic.cicd.github_app.get_app_webhook_secret_as_lambda_context", autospec=True
+        "iambic.plugins.v0_1_0.github.github_app.get_app_webhook_secret_as_lambda_context",
+        autospec=True,
     ) as _mock_github_webhook_secret:
         _mock_github_webhook_secret.return_value = secret
         yield secret
