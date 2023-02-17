@@ -41,9 +41,6 @@ def init_repo_base_path():
     os.makedirs(os.path.dirname(REPO_BASE_PATH), exist_ok=True)
 
 
-init_repo_base_path()
-
-
 def init_plan_output_path():
     # Have to be careful when setting REPO_BASE_PATH because lambda execution
     # environment can be very straight on only /tmp is writable
@@ -56,9 +53,6 @@ def init_plan_output_path():
 
     this_module = sys.modules[__name__]
     setattr(this_module, "PLAN_OUTPUT_PATH", PLAN_OUTPUT_PATH)
-
-
-init_plan_output_path()
 
 
 class LambdaCommand(Enum):
@@ -122,6 +116,10 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         raise Exception("You must pass a command")
     command = sys.argv[1]
+
+    init_repo_base_path()
+    init_plan_output_path()
+
     # `schedule` is just for development and demo purposes
     if command == "schedule":
         while True:
