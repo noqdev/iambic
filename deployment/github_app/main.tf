@@ -10,7 +10,7 @@ terraform {
 }
 
 provider "aws" {
-  region  = "us-west-2"
+  region  = var.aws_region
 }
 
 data "aws_caller_identity" "current" {}
@@ -33,7 +33,7 @@ resource "aws_ecr_repository" "iambic_private_ecr" {
 /*
   provisioner "local-exec" {
     command = <<EOF
-        aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${local.account_id}.dkr.ecr.us-west-2.amazonaws.com
+        aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${local.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com
         docker pull ${local.iambic_public_repo}:${local.iambic_image_tag}
         docker tag ${local.iambic_public_repo}:${local.iambic_image_tag} ${aws_ecr_repository.iambic_private_ecr.repository_url}:${local.ecr_image_tag}
         docker push ${aws_ecr_repository.iambic_private_ecr.repository_url}:${local.ecr_image_tag}
@@ -64,6 +64,13 @@ resource "aws_lambda_function" "iambic_github_app" {
 
   image_config {
     command = ["iambic.cicd.github_app.run_handler"]
+  }
+
+  environment {
+    variables = {
+      GITHUB_APP_SECRET_KEY_SECRET_ID = var.github_app_private_key_secret_id
+      GITHUB_APP_WEBHOOK_SECRET_SECRET_ID = var.github_webhook_secret_secret_id
+    }
   }
 
   depends_on = [
