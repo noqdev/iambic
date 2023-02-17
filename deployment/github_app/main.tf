@@ -63,7 +63,7 @@ resource "aws_lambda_function" "iambic_github_app" {
   source_code_hash = trimprefix(data.aws_ecr_image.iambic_private_ecr.id, "sha256:")
 
   image_config {
-    command = ["iambic.cicd.github_app.run_handler"]
+    command = ["iambic.plugins.v0_1_0.github.github_app.run_handler"]
   }
 
   environment {
