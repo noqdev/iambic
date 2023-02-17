@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from iambic.cicd.github import (  # prepare_local_repo,
+from iambic.plugins.v0_1_0.github.github import (  # prepare_local_repo,
     BODY_MAX_LENGTH,
     MERGEABLE_STATE_BLOCKED,
     MERGEABLE_STATE_CLEAN,
@@ -20,7 +20,9 @@ from iambic.cicd.github import (  # prepare_local_repo,
 
 @pytest.fixture
 def mock_github_client():
-    with patch("iambic.cicd.github.Github", autospec=True) as mock_github:
+    with patch(
+        "iambic.plugins.v0_1_0.github.github.Github", autospec=True
+    ) as mock_github:
         yield mock_github
 
 
@@ -75,9 +77,12 @@ def issue_comment_git_plan_context():
 @pytest.fixture
 def mock_lambda_run_handler():
     with patch(
-        "iambic.cicd.github.lambda_run_handler", autospec=True
+        "iambic.plugins.v0_1_0.github.github.lambda_run_handler", autospec=True
     ) as _mock_lambda_run_handler:
-        with patch("iambic.cicd.github.SHARED_CONTAINER_GITHUB_DIRECTORY", "/tmp") as _:
+        with patch(
+            "iambic.plugins.v0_1_0.github.github.SHARED_CONTAINER_GITHUB_DIRECTORY",
+            "/tmp",
+        ) as _:
             with tempfile.TemporaryDirectory() as tmpdirname:
                 with patch("iambic.lambda.app.REPO_BASE_PATH", tmpdirname):
                     yield _mock_lambda_run_handler

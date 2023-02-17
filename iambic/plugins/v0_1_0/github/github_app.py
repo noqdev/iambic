@@ -16,9 +16,10 @@ import jwt
 import requests
 from botocore.exceptions import ClientError
 
-import iambic.cicd.github
 import iambic.core.utils
-from iambic.cicd.github import (
+import iambic.plugins.v0_1_0.github.github
+from iambic.core.logger import log
+from iambic.plugins.v0_1_0.github.github import (
     HandleIssueCommentReturnCode,
     _handle_detect_changes_from_eventbridge,
     _handle_expire,
@@ -27,7 +28,6 @@ from iambic.cicd.github import (
     handle_iambic_git_plan,
     iambic_app,
 )
-from iambic.core.logger import log
 
 # FIXME Lambda execution time is at most 15 minutes, and the Github installation token is at most
 # 10 min validation period.
@@ -151,7 +151,7 @@ def run_handler(event=None, context=None):
     )  # the rest of the system seems to use filesystem for stuff
     getattr(iambic_app, "lambda").app.init_plan_output_path()
     getattr(iambic_app, "lambda").app.init_repo_base_path()
-    iambic.cicd.github.init_shared_data_directory()
+    iambic.plugins.v0_1_0.github.github.init_shared_data_directory()
     iambic.core.utils.init_writable_directory()
 
     f: Callable[[str, github.Github, dict[str, Any]]] = EVENT_DISPATCH_MAP.get(
