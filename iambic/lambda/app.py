@@ -7,6 +7,7 @@ import tempfile
 import time
 from enum import Enum
 
+from iambic.config.dynamic_config import load_config
 from iambic.config.utils import resolve_config_template_path
 from iambic.core.models import BaseModel
 from iambic.main import (
@@ -89,6 +90,7 @@ def run_handler(event=None, context=None):
     lambda_context = LambdaContext(**context)
 
     config_path = asyncio.run(resolve_config_template_path(REPO_BASE_PATH))
+    asyncio.run(load_config(config_path))
 
     match lambda_context.command:
         case LambdaCommand.run_import.value:
