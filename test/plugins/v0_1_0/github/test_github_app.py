@@ -6,6 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from iambic.plugins.v0_1_0.github.github_app import (
+    _get_installation_token,
     calculate_signature,
     run_handler,
     verify_signature,
@@ -48,10 +49,18 @@ def skip_signature_verification():
 @pytest.fixture()
 def skip_installation_token():
     with patch(
-        "iambic.plugins.v0_1_0.github.github_app.get_installation_token",
+        "iambic.plugins.v0_1_0.github.github_app._get_installation_token",
         autospec=True,
-    ) as _:
-        yield _
+    ):
+        with patch(
+            "iambic.plugins.v0_1_0.github.github_app.get_app_private_key_as_lambda_context",
+            autospec=True,
+        ):
+            with patch(
+                "iambic.plugins.v0_1_0.github.github_app.get_app_bearer_token",
+                autospec=True,
+            ) as _:
+                yield _
 
 
 @pytest.fixture()
@@ -156,3 +165,28 @@ def test_run_handler_with_unknown_event(
             writable_directory_before_lambda_call
             != writable_directory_after_lambda_call
         )
+
+
+class MockResponse:
+    def __init__(self, text, status):
+        self._text = text
+        self.status = status
+
+    async def text(self):
+        return self._text
+
+    async def __aexit__(self, exc_type, exc, tb):
+        pass
+
+    async def __aenter__(self):
+        return self
+
+
+@pytest.mark.asyncio
+async def test_get_installation_token(skip_authentication):
+    data = {"token": "fake_token"}
+    resp = MockResponse(json.dumps(data), 200)
+
+    with patch("aiohttp.ClientSession.post", return_value=resp):
+        token = await _get_installation_token("fake_app_id", "fake_installation_id")
+        assert token == "fake_token"
