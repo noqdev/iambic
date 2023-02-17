@@ -201,7 +201,17 @@ def create_templates_for_modified_files(
     templates = []
     for git_diff in modified_files:
         main_template_dict = yaml.load(StringIO(git_diff.content))
-        template_cls = TEMPLATES.template_map[main_template_dict["template_type"]]
+        template_type_string = main_template_dict["template_type"]
+        template_cls = TEMPLATES.template_map.get(template_type_string, None)
+
+        if template_cls is None:
+            # well the case is the previous version is an unknown config type now.
+            # this is typically the config file
+            log_params = {"template_type": template_type_string}
+            log.warning(
+                "template_type is not registered among template_map", **log_params
+            )
+            continue
 
         main_template = template_cls(file_path=git_diff.path, **main_template_dict)
 
