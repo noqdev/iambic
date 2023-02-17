@@ -28,7 +28,7 @@ MERGEABLE_STATE_BLOCKED = "blocked"
 
 COMMIT_MESSAGE_FOR_DETECT = "Import changes from detect operation"
 COMMIT_MESSAGE_FOR_IMPORT = "Import changes from import operation"
-COMMIT_MESSAGE_FOR_EXPIRE = "Periodic Expire"
+COMMIT_MESSAGE_FOR_EXPIRE = "Periodic Expiration"
 SHARED_CONTAINER_GITHUB_DIRECTORY = "/root/data"
 
 
