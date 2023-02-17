@@ -1,15 +1,37 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 
 import boto3
 import structlog
 
+
+def pretty_log(logger, method_name, event_dict):
+    return_dict = {}
+
+    # Uncomment this if we want to default to single line logging. Can get hard to read with long resources though.
+    # if not any(bool(isinstance(value, dict) or isinstance(value, list)) for value in event_dict.values()):
+    #     return event_dict
+
+    for key, value in event_dict.items():
+        if key != "event":
+            key = f"\n  {key}"
+
+        if isinstance(value, dict) or isinstance(value, list):
+            value = "\n  ".join(str(json.dumps(value, indent=2)).split("\n"))
+
+        return_dict[key] = value
+
+    return return_dict
+
+
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 logging.basicConfig(level=LOG_LEVEL)
 structlog.configure(
     processors=[
+        pretty_log,
         structlog.processors.add_log_level,
         structlog.processors.StackInfoRenderer(),
         structlog.dev.set_exc_info,
