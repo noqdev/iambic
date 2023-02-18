@@ -5,7 +5,6 @@ import json
 from typing import Union
 
 from deepdiff import DeepDiff
-
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType

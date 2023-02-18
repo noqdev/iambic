@@ -36,7 +36,7 @@ def aws_accounts():
 def test_config():
     config_path = "cool_file_man.yaml"
     base_config = Config(version=CURRENT_IAMBIC_VERSION, file_path=config_path)
-    all_plugins = load_plugins(base_config.plugin_paths)
+    all_plugins = load_plugins(base_config.plugins)
     config_fields = {}
     log.warning("All plugins", plugins=[plugin.config_name for plugin in all_plugins])
     for plugin in all_plugins:
@@ -48,14 +48,15 @@ def test_config():
     config = dynamic_config(
         version=CURRENT_IAMBIC_VERSION,
         file_path=config_path,
-        plugins=all_plugins,
+        plugins=base_config.plugins,
+        plugin_instances=all_plugins,
         aws=AWSConfig(),
     )
 
     TEMPLATES.set_templates(
         list(
             itertools.chain.from_iterable(
-                [plugin.templates for plugin in config.plugins]
+                [plugin.templates for plugin in config.plugin_instances]
             )
         )
     )
