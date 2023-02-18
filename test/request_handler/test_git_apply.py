@@ -145,7 +145,7 @@ def templates_repo(template_class):
         config = asyncio.run(
             load_config(f"{temp_templates_directory}/{TEST_CONFIG_PATH}")
         )
-        config.plugins = [TEST_IAMBIC_PLUGIN]
+        config.plugin_instances = [TEST_IAMBIC_PLUGIN]
         setattr(config, TEST_IAMBIC_PLUGIN.config_name, config)
         the_git_module.TEMPLATES.set_templates([TestTemplate])
         async_mock = AsyncMock(return_value=config)

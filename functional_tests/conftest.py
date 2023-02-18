@@ -41,7 +41,7 @@ aws:
       hub_role_arn: 'arn:aws:iam::580605962305:role/IambicHubRole'
       org_name: 'iambic_test_org_account'
       org_account_id: '580605962305'
-      identity_center_account:
+      identity_center:
         region: 'us-east-1'
       account_rules:
         - included_accounts:
