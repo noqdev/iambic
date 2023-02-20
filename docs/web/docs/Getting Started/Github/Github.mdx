@@ -1,5 +1,3 @@
-
-
 ## Overview
 IAMbic's Github integration is designed to facilitate team collaboration on IAMbic templates. This page will walk you thorugh the steps to configure IAMbic, Github, and AWS to work together.
 
@@ -160,7 +158,7 @@ Add the following statement into the Allow statement block
 1. Copy the following .github/workflows folder into your template directory. <!-- #TODO should this be a code block? -->
 2. mkdir -p ~/github
 3. git clone https://github.com/noqdev/iambic-templates-example/ iambic-templates-example
-4. git clone <YOUR OWN IAMBIC repo> iambic-templates
+4. git clone \<YOUR OWN IAMBIC repo\> iambic-templates
 5. cd iambic-templates
 6. git checkout -b task/install_gh_actions origin/main
 7. cp -R ../iambic-templates-example/.github .
