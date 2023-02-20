@@ -8,8 +8,8 @@ from functional_tests.aws.managed_policy.utils import (
     generate_managed_policy_template_from_base,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.aws.iam.policy.models import ManagedPolicyTemplate
-from iambic.aws.utils import remove_expired_resources
+from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyTemplate
+from iambic.plugins.v0_1_0.aws.utils import remove_expired_resources
 
 
 class ManagedPolicyExpirationTestCase(IsolatedAsyncioTestCase):

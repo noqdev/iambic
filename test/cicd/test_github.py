@@ -4,7 +4,6 @@ import tempfile
 from unittest.mock import patch
 
 import pytest
-
 from iambic.cicd.github import (
     BODY_MAX_LENGTH,
     MERGEABLE_STATE_BLOCKED,

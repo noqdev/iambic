@@ -7,11 +7,11 @@ import tempfile
 
 import pytest
 
-from iambic.aws.models import AWSAccount
-from iambic.config.models import Config
+from iambic.config.dynamic_config import Config, load_config
 from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.main import run_import
+from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
 if not os.environ.get("GITHUB_ACTIONS", None):
     # We will select a particular AWS_PROFILE to run on developer local machine
@@ -29,7 +29,10 @@ version: '1'
 
 extends:
   - key: AWS_SECRETS_MANAGER
-    value: arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/iambic_itest_secrets_20230213-2xapdG
+    value: arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/iambic_itest_secrets_v2-Ctmonc
+    assume_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
+  - key: AWS_SECRETS_MANAGER
+    value: arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/github-token-iambic-templates-itest
     assume_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
 
 aws:
@@ -38,7 +41,7 @@ aws:
       hub_role_arn: 'arn:aws:iam::580605962305:role/IambicHubRole'
       org_name: 'iambic_test_org_account'
       org_account_id: '580605962305'
-      identity_center_account:
+      identity_center:
         region: 'us-east-1'
       account_rules:
         - included_accounts:
@@ -109,8 +112,9 @@ def generate_templates_fixture(request):
         log.info("Finished generating templates for testing")
 
     log.info("Setting up config for testing")
-    IAMBIC_TEST_DETAILS.config = Config.load(IAMBIC_TEST_DETAILS.config_path)
-    asyncio.run(IAMBIC_TEST_DETAILS.config.setup_aws_accounts())
+    IAMBIC_TEST_DETAILS.config = asyncio.run(
+        load_config(IAMBIC_TEST_DETAILS.config_path)
+    )
 
     for aws_account in IAMBIC_TEST_DETAILS.config.aws.accounts:
         if aws_account.identity_center_details:

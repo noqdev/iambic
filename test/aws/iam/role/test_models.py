@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from iambic.aws.iam.role.models import RoleProperties, RoleTemplate
 from iambic.core.template_generation import merge_model
+from iambic.plugins.v0_1_0.aws.iam.role.models import RoleProperties, RoleTemplate
 
 
 def test_merge_role_template_without_sid(aws_accounts):

@@ -4,8 +4,8 @@ from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.aws.user.utils import generate_user_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.aws.iam.user.utils import get_user_across_accounts
 from iambic.core.context import ctx
+from iambic.plugins.v0_1_0.aws.iam.user.utils import get_user_across_accounts
 
 
 class CreateUserTestCase(IsolatedAsyncioTestCase):
@@ -20,13 +20,13 @@ class CreateUserTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
     async def test_create_user_all_accounts(self):
         self.template.included_accounts = ["*"]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         account_user_mapping = await get_user_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.user_name, False
@@ -47,7 +47,7 @@ class CreateUserTestCase(IsolatedAsyncioTestCase):
         self.template.included_accounts = [included_account]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         account_user_mapping = await get_user_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.user_name, False
