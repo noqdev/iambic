@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.google.iambic_plugin import GoogleConfig
 
 
-async def load(config: GoogleConfig) -> GoogleConfig:
+async def load(config: GoogleConfig, sparse: bool = False) -> GoogleConfig:
     return config
 
 

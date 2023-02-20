@@ -6,7 +6,6 @@ import json
 from typing import TYPE_CHECKING, Union
 
 import boto3
-
 from iambic.config.dynamic_config import ExtendsConfig, ExtendsConfigKey
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import IambicManaged
@@ -48,10 +47,12 @@ if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 
 
-async def load(config: AWSConfig) -> AWSConfig:
+async def load(config: AWSConfig, sparse: bool = False) -> AWSConfig:
     config_account_idx_map = {
         account.account_id: idx for idx, account in enumerate(config.accounts)
     }
+    if sparse:
+        return config
     if config.organizations:
         if any(account.hub_role_arn for account in config.accounts):
             raise AttributeError(
