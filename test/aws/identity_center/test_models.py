@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from iambic.aws.identity_center.permission_set.models import (
+from iambic.core.template_generation import merge_model
+from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetTemplate,
 )
-from iambic.core.template_generation import merge_model
 
 
 def test_merge_template_access_rules(aws_accounts):
