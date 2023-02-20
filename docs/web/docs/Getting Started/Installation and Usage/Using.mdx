@@ -1,0 +1,25 @@
+---
+title: Using IAMbic
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+## Using IAMbic
+
+Once IAMbic is installed on your system, you can use it. Generally there are three major modes of operation:
+
+1. Plan: an operation to dry-run a particular permission set without applying it; this is a great method to test how IAMbic will mutate your environment before applying the changes.
+1. Apply: applies the permission set changes by mutating your environment. This operation requires *read/write* rights to your cloud environment.
+1. Import: reads and stores your current environment on disk in IAMbic configuration files. Generally you start here to download all your current roles and their permissions.
+
+Execute IAMbic by running the `iambic` command: `iambic <command>`
+
+Where **<command\>** is one of:
+* apply: generates and executes an execution plan for the specified Iambic templates; using this command you can apply the changes as specified in the templates.
+* config-discovery: pull in provider config related changes like a new AWS account being added to an org.
+* git-apply: similar to `apply`, but only considers changes from the currently checkout branch compared to origin/main.
+* git-plan: similar to `plan` (see below), but only considers changes from the currently checkout branch compared to origin/main.
+* import: updates your repo with the current state of all providers defined in your config. This includes adding, updating, and removing templates.
+* plan: similar to `apply`, but shows the execution plan for the specified Iambic templates without executing; using this command you can get an idea of what changes would be made to the system.
+* setup: launch the configuration wizard
+* doc-serve: starts the documentation server on port 3000; you can then view this documentation when browsing to [http://localhost:3000](http://localhost:3000) locally

@@ -1,12 +1,12 @@
 ---
-title: IAMbic and Docker
+title: Install via Docker
 toc_min_heading_level: 2
 toc_max_heading_level: 5
 ---
 
-# Running the IAMbic docker container locally
+## Running the IAMbic docker container locally
 
-## Prerequisites
+### Prerequisites
 
 Before you begin, you'll need to have the following tools installed on your system:
 
@@ -16,23 +16,15 @@ If you don't have these tools installed, follow the instructions below:
 
 * [Install Docker](https://docs.docker.com/get-docker/)
 
-## Steps
+### Steps
+
+> Note: for instructions on how to use IAMbic, reference [Using IAMbic](./Using.mdx)
 
 To run the docker container locally, you can use the docker command:
 
 Basic run:
 
     docker run public.ecr.aws/s2p9s3r8/iambic:latest <command>
-
-Where <command\> is one of:
-* apply: generates and executes an execution plan for the specified Iambic templates; using this command you can apply the changes as specified in the templates.
-* config-discovery: pull in provider config related changes like a new AWS account being added to an org.
-* git-apply: similar to `apply`, but only considers changes from the currently checkout branch compared to origin/main.
-* git-plan: similar to `plan` (see below), but only considers changes from the currently checkout branch compared to origin/main.
-* import: updates your repo with the current state of all providers defined in your config. This includes adding, updating, and removing templates.
-* plan: similar to `apply`, but shows the execution plan for the specified Iambic templates without executing; using this command you can get an idea of what changes would be made to the system.
-* setup: launch the configuration wizard
-* doc-serve: starts the documentation server on port 3000; you can then view this documentation when browsing to [http://localhost:3000](http://localhost:3000) locally
 
 We recommend mounting a local volume for the templates that are imported:
 
@@ -46,7 +38,7 @@ Optionally you can store the volume in your system's docker context:
 > If you want to browse this documentation locally, you can start the self-contained http server within the container using the `doc_serve` command: `run -v /templates public.ecr.aws/s2p9s3r8/iambic:latest doc_serve`. Then browse to [http://localhost:3000](http://localhost:3000).
 >
 
-## Shortcut
+### Shortcut
 
 We recommend that you add the following to your ~/.bashrc or ~/.bash_profile:
 
@@ -58,13 +50,17 @@ That way you can just execute iambic seamlessly as an application within your sy
 
     iambic import
 
-# Installing the IAMbic docker container with your Github Actions
+## Installing the IAMbic docker container with your Github Actions
 
-# Building the IAMbic docker container
+You can automate your workflows by installing the IAMbic docker container with your Github Actions flow.
+
+Reference [IAMbic on Github](../Github/Github.mdx) for more information.
+
+## Building the IAMbic docker container
 
 You can also build your own IAMbic docker container by cloning the IAMbic repo and following the below steps:
 
-## Prerequisites
+### Prerequisites
 Before you begin, you'll need to have the following tools installed on your system:
 
 * Docker
@@ -75,15 +71,15 @@ If you don't have these tools installed, follow the instructions below:
 * [Install Docker](https://docs.docker.com/get-docker/)
 * [Install Docker Compose](https://docs.docker.com/compose/install/)
 
-## Steps
+### Steps
 
-### Clone the IAMbic repository to your local machine.
+#### Clone the IAMbic repository to your local machine.
 
 ```bash
 git clone https://github.com/noqdev/iambic.git
 ```
 
-### Navigate to the project directory.
+#### Navigate to the project directory.
 
 ```bash
 cd iambic/
@@ -95,7 +91,7 @@ docker build -t your-username/project-name:tag .
 
 Replace your-username/project-name:tag with the name you want to give your Docker image. For example, johnsmith/my-project:v1.0.0. The . at the end of the command specifies that the Dockerfile is located in the current directory.
 
-### Test the Docker image.
+#### Test the Docker image.
 
 Run the following command to start a Docker container using the image you just built:
 
@@ -107,7 +103,7 @@ This command starts the container using the Docker image you just built.
 
 You should be able to start the documentation server by typing: `docker run your-username/project-name:tag doc_serve`. Then try to access this documentation resource on http://localhost:3000.
 
-### Push the Docker image to Docker Hub or a private repository.
+#### Push the Docker image to Docker Hub or a private repository.
 
 [Docker Hub](https://hub.docker.com/) is a popular registry for storing and sharing Docker images. If you don't have a Docker Hub account, sign up for one.
 
