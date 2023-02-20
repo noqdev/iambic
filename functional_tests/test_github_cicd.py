@@ -13,24 +13,14 @@ import pytest
 from github import Github
 
 from functional_tests.conftest import all_config
-from iambic.aws.iam.role.models import RoleTemplate
-from iambic.config.models import Config, ExtendsConfig
+from iambic.config.dynamic_config import Config, load_config
 from iambic.core.git import clone_git_repo
 from iambic.core.logger import log
+from iambic.plugins.v0_1_0.aws.iam.role.models import RoleTemplate
 
 os.environ["TESTING"] = "true"
 
-
-github_config = ExtendsConfig(
-    key="AWS_SECRETS_MANAGER",
-    value="arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/github-token-iambic-templates-itest",
-    assume_role_arn="arn:aws:iam::442632209887:role/IambicSpokeRole",
-)
-
-
 TEMPLATE_REPO_NAME = "noqdev/iambic-templates-itest"
-
-
 GITHUB_CICID_TEMPLATE_TARGET_PATH = (
     "resources/aws/roles/iambic_test_spoke_account_1/iambic_itest_github_cicd.yaml"
 )
@@ -41,6 +31,7 @@ identifier: iambic_itest_for_github_cicd
 included_accounts:
   - iambic_test_spoke_account_1
 properties:
+  description: {new_description}
   assume_role_policy_document:
     statement:
       - action: sts:AssumeRole
@@ -48,7 +39,6 @@ properties:
         principal:
           service: ec2.amazonaws.com
     version: '2012-10-17'
-  description: {new_description}
   role_name: iambic_itest_for_github_cicd
 """
 
@@ -61,6 +51,7 @@ expires_at: {relative_time}
 included_accounts:
   - iambic_test_spoke_account_1
 properties:
+  description: itest github for expiring
   assume_role_policy_document:
     statement:
       - action: sts:AssumeRole
@@ -68,7 +59,6 @@ properties:
         principal:
           service: ec2.amazonaws.com
     version: '2012-10-17'
-  description: itest github for expiring
   role_name: iambic_expiring_itest_for_github_cicd
 """
 
@@ -77,6 +67,7 @@ identifier: iambic_expiring_itest_for_github_cicd
 included_accounts:
   - iambic_test_spoke_account_1
 properties:
+  description: itest github for expiring
   assume_role_policy_document:
     statement:
       - action: sts:AssumeRole
@@ -89,7 +80,6 @@ properties:
         principal:
           service: athena.amazonaws.com
     version: '2012-10-17'
-  description: itest github for expiring
   inline_policies:
     - policy_name: spoke-acct-policy
       statement:
@@ -118,9 +108,7 @@ def filesystem():
         temp_file.write(all_config)
 
     try:
-        config: Config = Config.load(temp_config_filename)
-        asyncio.run(config.setup_aws_accounts())
-        asyncio.run(config.combine_extended_configs())
+        config = asyncio.run(load_config(temp_config_filename))
         yield (temp_config_filename, temp_templates_directory, config)
     finally:
         try:
@@ -152,13 +140,11 @@ def build_push_container():
 
 
 def get_github_token(config: Config) -> str:
-    github_secret = asyncio.run(config.get_aws_secret(github_config))
-    return github_secret["secrets"]["github-token-iambic-templates-itest"]
+    return config.secrets["github-token-iambic-templates-itest"]
 
 
 def get_aws_key_dict(config: Config) -> str:
-    github_secret = asyncio.run(config.get_aws_secret(github_config))
-    return github_secret["secrets"]["aws-iambic-github-cicid-itest"]
+    return config.secrets["aws-iambic-github-cicid-itest"]
 
 
 def prepare_template_repo(github_token: str, temp_templates_directory: str):

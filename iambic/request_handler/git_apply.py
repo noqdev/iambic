@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import asyncio
-
-from iambic.aws.identity_center.permission_set.utils import generate_permission_set_map
-from iambic.config.models import Config
+from iambic.config.dynamic_config import load_config
 from iambic.core.context import ExecutionContext, ctx
 from iambic.core.git import (
     create_templates_for_deleted_files,
@@ -42,8 +39,7 @@ async def apply_git_changes(
     if context is None:
         context = ctx
 
-    config = Config.load(config_path)
-    await config.setup_aws_accounts()
+    config = await load_config(config_path)
     file_changes = await retrieve_git_changes(
         repo_dir, allow_dirty=allow_dirty, from_sha=from_sha, to_sha=to_sha
     )
@@ -63,23 +59,4 @@ async def apply_git_changes(
         create_templates_for_modified_files(config, file_changes["modified_files"])
     )
 
-    if config.aws and config.aws.accounts:
-        await generate_permission_set_map(config.aws.accounts, templates)
-
-    template_changes = await asyncio.gather(
-        *[template.apply(config, context) for template in templates]
-    )
-    template_changes = [
-        template_change
-        for template_change in template_changes
-        if template_change.proposed_changes
-    ]
-
-    if context.execute and template_changes:
-        log.info("Finished applying changes.")
-    elif not context.execute:
-        log.info("Finished scanning for changes.")
-    else:
-        log.info("No changes found.")
-
-    return template_changes
+    return await config.run_apply(templates)
