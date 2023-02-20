@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig
 
 
-async def load(config: OktaConfig) -> OktaConfig:
+async def load(config: OktaConfig, sparse: bool = False) -> OktaConfig:
     return config
 
 

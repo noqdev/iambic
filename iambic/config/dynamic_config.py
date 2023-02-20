@@ -11,15 +11,14 @@ from pathlib import Path
 from typing import List, Optional, Union
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
-from pydantic import create_model as create_pydantic_model
-
 from iambic.core.context import ctx
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, TemplateChangeDetails
 from iambic.core.utils import sort_dict, yaml
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, google, okta
+from pydantic import BaseModel, Field
+from pydantic import create_model as create_pydantic_model
 
 CURRENT_IAMBIC_VERSION = "1"
 
@@ -271,20 +270,22 @@ class Config(BaseTemplate):
         )
         self.write()
 
-    async def configure_plugins(self):
+    async def configure_plugins(self, sparse: bool = False):
         """
         Called to set plugin metadata that is generated at run-time.
         """
 
         # Sync to prevent issues updating the config
         for plugin in self.configured_plugins:
-            if not plugin.requires_secret:
-                await plugin.async_load_callable(self.get_config_plugin(plugin))
-
-        await self.set_config_secrets()
+            if sparse or not plugin.requires_secret:
+                await plugin.async_load_callable(
+                    self.get_config_plugin(plugin), sparse=sparse
+                )
+        if not sparse:
+            await self.set_config_secrets()
 
         for plugin in self.plugin_instances:
-            if plugin.requires_secret:
+            if not sparse and plugin.requires_secret:
                 if provider_config_dict := self.secrets.get(plugin.config_name):
                     try:
                         setattr(
@@ -292,7 +293,9 @@ class Config(BaseTemplate):
                             plugin.config_name,
                             plugin.provider_config(**provider_config_dict),
                         )
-                        await plugin.async_load_callable(self.get_config_plugin(plugin))
+                        await plugin.async_load_callable(
+                            self.get_config_plugin(plugin), sparse
+                        )
                     except Exception as err:
                         log.critical(
                             "Failed to configure plugin.",
@@ -360,7 +363,7 @@ class Config(BaseTemplate):
         log.info("Config successfully written", config_location=file_path)
 
 
-async def load_config(config_path: str) -> Config:
+async def load_config(config_path: str, sparse: bool = False) -> Config:
     """
     Load the configuration from the specified file path.
 
@@ -399,7 +402,7 @@ async def load_config(config_path: str) -> Config:
     config = dynamic_config(
         plugin_instances=all_plugins, file_path=config_path, **config_dict
     )
-    await config.configure_plugins()
+    await config.configure_plugins(sparse=sparse)
 
     TEMPLATES.set_templates(
         list(
