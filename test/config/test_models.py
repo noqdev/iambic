@@ -3,13 +3,14 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from iambic.aws.models import (
-    AWSIdentityCenterAccount,
+from iambic.config.dynamic_config import Config
+from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+from iambic.plugins.v0_1_0.aws.models import (
+    AWSIdentityCenter,
     AWSOrgAccountRule,
     AWSOrganization,
     BaseAWSOrgRule,
 )
-from iambic.config.models import AWSConfig, Config
 
 
 @pytest.fixture
@@ -35,7 +36,7 @@ def test_aws_config_instantiate_with_organizations():
         AWSOrganization(
             org_id="o-123456789",
             org_account_id="123456789012",
-            identity_center_account=AWSIdentityCenterAccount(
+            identity_center=AWSIdentityCenter(
                 account_id="123456789012", region="us-west-2"
             ),
             default_rule=BaseAWSOrgRule(enabled=True),
@@ -52,7 +53,7 @@ def test_aws_config_raises_error_for_multiple_configured():
         AWSOrganization(
             org_id="o-123456789",
             org_account_id="123456789012",
-            identity_center_account=AWSIdentityCenterAccount(
+            identity_center=AWSIdentityCenter(
                 account_id="123456789012", region="us-west-2"
             ),
             default_rule=BaseAWSOrgRule(enabled=True),
@@ -62,7 +63,7 @@ def test_aws_config_raises_error_for_multiple_configured():
         AWSOrganization(
             org_id="o-234567891",
             org_account_id="234567890123",
-            identity_center_account=AWSIdentityCenterAccount(
+            identity_center=AWSIdentityCenter(
                 account_id="234567890123", region="us-west-2"
             ),
             default_rule=BaseAWSOrgRule(enabled=True),

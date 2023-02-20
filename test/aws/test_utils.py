@@ -3,10 +3,10 @@ from __future__ import annotations
 import pytest
 import yaml
 
-from iambic.aws.models import AWSAccount
-from iambic.config.templates import TEMPLATE_TYPE_MAP
 from iambic.core.context import ExecutionContext
 from iambic.core.utils import evaluate_on_provider
+from iambic.plugins.v0_1_0.aws.iam.role.models import RoleTemplate
+from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
 TEMPLATE_UNDER_TEST = """
 template_type: NOQ::AWS::IAM::Role
@@ -27,7 +27,7 @@ properties:
 """
 
 template_dict = yaml.safe_load(TEMPLATE_UNDER_TEST)
-template_cls = TEMPLATE_TYPE_MAP[template_dict["template_type"]]
+template_cls = RoleTemplate
 resource_under_test = template_cls(file_path="/dev/null", **template_dict)
 eval_only_context = ExecutionContext()
 eval_only_context.eval_only = True

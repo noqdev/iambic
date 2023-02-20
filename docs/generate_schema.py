@@ -3,19 +3,18 @@ from __future__ import annotations
 import os
 
 import jsonschema2md2
-
-from iambic.aws.iam.group.models import GroupTemplate as AWSGroupTemplate
-from iambic.aws.iam.policy.models import ManagedPolicyTemplate
-from iambic.aws.iam.role.models import RoleTemplate
-from iambic.aws.identity_center.permission_set.models import (
-    AWSIdentityCenterPermissionSetTemplate,
-)
-from iambic.aws.models import AWSAccount, AWSOrganization
-from iambic.config.models import Config, ExtendsConfig
+from iambic.config.dynamic_config import Config, ExtendsConfig
 from iambic.core.models import Variable
 from iambic.core.utils import camel_to_snake
-from iambic.google.group.models import GroupTemplate
-from iambic.okta.group.models import OktaGroupTemplate
+from iambic.plugins.v0_1_0.aws.iam.group.models import GroupTemplate as AWSGroupTemplate
+from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyTemplate
+from iambic.plugins.v0_1_0.aws.iam.role.models import RoleTemplate
+from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
+    AWSIdentityCenterPermissionSetTemplate,
+)
+from iambic.plugins.v0_1_0.aws.models import AWSAccount, AWSOrganization
+from iambic.plugins.v0_1_0.google.group.models import GroupTemplate
+from iambic.plugins.v0_1_0.okta.group.models import OktaGroupTemplate
 
 
 def create_model_schemas(

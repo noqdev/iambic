@@ -5,10 +5,12 @@ from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.aws.group.utils import generate_group_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.aws.event_bridge.models import GroupMessageDetails
-from iambic.aws.iam.group.models import GroupTemplate
-from iambic.aws.iam.group.template_generation import generate_aws_group_templates
 from iambic.core.context import ctx
+from iambic.plugins.v0_1_0.aws.event_bridge.models import GroupMessageDetails
+from iambic.plugins.v0_1_0.aws.iam.group.models import GroupTemplate
+from iambic.plugins.v0_1_0.aws.iam.group.template_generation import (
+    generate_aws_group_templates,
+)
 
 
 class PartialImportGroupTestCase(IsolatedAsyncioTestCase):
@@ -23,7 +25,7 @@ class PartialImportGroupTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
     async def test_delete_group_template(self):
         included_account = self.all_account_ids[0]
@@ -34,7 +36,7 @@ class PartialImportGroupTestCase(IsolatedAsyncioTestCase):
         self.assertTrue(os.path.exists(self.template.file_path))
 
         await generate_aws_group_templates(
-            IAMBIC_TEST_DETAILS.config,
+            IAMBIC_TEST_DETAILS.config.aws,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 GroupMessageDetails(
@@ -61,11 +63,11 @@ class PartialImportGroupTestCase(IsolatedAsyncioTestCase):
         self.assertNotIn(deleted_account, file_sys_template.excluded_accounts)
 
         # Create the policy on all accounts except 1
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         # Refresh the template
         await generate_aws_group_templates(
-            IAMBIC_TEST_DETAILS.config,
+            IAMBIC_TEST_DETAILS.config.aws,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 GroupMessageDetails(

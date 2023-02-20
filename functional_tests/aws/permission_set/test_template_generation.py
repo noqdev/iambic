@@ -8,14 +8,14 @@ from functional_tests.aws.permission_set.utils import (
     generate_permission_set_template_from_base,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.aws.event_bridge.models import PermissionSetMessageDetails
-from iambic.aws.identity_center.permission_set.models import (
+from iambic.core.context import ctx
+from iambic.plugins.v0_1_0.aws.event_bridge.models import PermissionSetMessageDetails
+from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetTemplate,
 )
-from iambic.aws.identity_center.permission_set.template_generation import (
+from iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation import (
     generate_aws_permission_set_templates,
 )
-from iambic.core.context import ctx
 
 
 class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
@@ -26,7 +26,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
     async def test_update_permission_set_attribute(self):
         initial_description = "This was created by a functional test."
@@ -42,7 +42,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
         )
         self.assertEqual(file_sys_template.properties.description, initial_description)
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
         await asyncio.sleep(5)
         await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
 
@@ -54,7 +54,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
         )
 
         await generate_aws_permission_set_templates(
-            IAMBIC_TEST_DETAILS.config,
+            IAMBIC_TEST_DETAILS.config.aws,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 PermissionSetMessageDetails(
@@ -83,7 +83,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
         )[0]
 
         await generate_aws_permission_set_templates(
-            IAMBIC_TEST_DETAILS.config,
+            IAMBIC_TEST_DETAILS.config.aws,
             IAMBIC_TEST_DETAILS.template_dir_path,
             [
                 PermissionSetMessageDetails(
