@@ -7,7 +7,10 @@ from iambic.core.logger import log
 from iambic.core.template_generation import (
     create_or_update_template as common_create_or_update_template,
 )
-from iambic.core.template_generation import get_existing_template_map
+from iambic.core.template_generation import (
+    delete_orphaned_templates,
+    get_existing_template_map,
+)
 from iambic.plugins.v0_1_0.okta.group.utils import list_all_users
 from iambic.plugins.v0_1_0.okta.models import User
 from iambic.plugins.v0_1_0.okta.user.models import (
@@ -38,7 +41,7 @@ def get_templated_resource_file_path(
 
 async def update_or_create_user_template(
     user: User, existing_template_map: dict, user_dir: str
-):
+) -> User:
     """
     Update or create an OktaUserTemplate object from the provided User object.
 
@@ -58,7 +61,7 @@ async def update_or_create_user_template(
     file_path = get_templated_resource_file_path(user_dir, user.username)
     OktaUserTemplate.update_forward_refs()
 
-    common_create_or_update_template(
+    return common_create_or_update_template(
         file_path,
         existing_template_map,
         user.user_id,
@@ -82,10 +85,11 @@ async def generate_user_templates(
     )
     user_dir = get_user_dir(base_path, okta_organization.idp_name)
 
+    all_resource_ids = set()
     for okta_user in users:
-        await update_or_create_user_template(okta_user, existing_template_map, user_dir)
+        resource_template = await update_or_create_user_template(
+            okta_user, existing_template_map, user_dir
+        )
+        all_resource_ids.add(resource_template.resource_id)
 
-    discovered_user_ids = [user.user_id for user in users]
-    for user_id, template in existing_template_map.items():
-        if user_id not in discovered_user_ids:
-            template.delete()
+    delete_orphaned_templates(list(existing_template_map.values()), all_resource_ids)

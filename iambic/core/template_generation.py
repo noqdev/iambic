@@ -8,7 +8,7 @@ import xxhash
 from iambic.core import noq_json as json
 from iambic.core.context import ctx
 from iambic.core.logger import log
-from iambic.core.models import AccessModelMixin, BaseModel, ProviderChild
+from iambic.core.models import AccessModelMixin, BaseModel, BaseTemplate, ProviderChild
 from iambic.core.parser import load_templates
 from iambic.core.utils import (
     evaluate_on_provider,
@@ -884,3 +884,23 @@ def merge_model(
         elif key not in iambic_fields:
             setattr(merged_model, key, new_value)
     return merged_model
+
+
+def delete_orphaned_templates(
+    existing_templates: list[BaseTemplate], resource_ids: set[str]
+):
+    """
+    Delete templates that were not found in the latest import for a single template type
+
+    Args:
+    - existing_templates (list[BaseTemplate]): List of templates that were already in IAMbic
+    - resource_ids (set[str]): The set of resource ids that were found in the latest import
+    """
+    for existing_template in existing_templates:
+        if existing_template.resource_id not in resource_ids:
+            log.warning(
+                "Removing template that references deleted resource",
+                resource_type=existing_template.resource_type,
+                resource_id=existing_template.resource_id,
+            )
+            existing_template.delete()

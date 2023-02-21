@@ -13,6 +13,7 @@ from iambic.core.logger import log
 from iambic.core.template_generation import (
     base_group_str_attribute,
     create_or_update_template,
+    delete_orphaned_templates,
     get_existing_template_map,
     group_dict_attribute,
     group_int_or_str_attribute,
@@ -442,19 +443,6 @@ async def generate_aws_user_templates(
             [{"aws_account": aws_account} for aws_account in aws_account_map.values()]
         )
 
-        # Remove templates not in any AWS account
-        all_user_names = set(
-            itertools.chain.from_iterable(
-                [
-                    [account_user["name"] for account_user in account["users"]]
-                    for account in account_users
-                ]
-            )
-        )
-        for existing_template in existing_template_map.values():
-            if existing_template.properties.user_name not in all_user_names:
-                existing_template.delete()
-
     messages = []
     # Upsert users
     for account_user in account_users:
@@ -500,14 +488,22 @@ async def generate_aws_user_templates(
     grouped_user_map = await base_group_str_attribute(aws_account_map, account_users)
 
     log.info("Writing templated users")
+    all_resource_ids = set()
     for user_name, user_refs in grouped_user_map.items():
-        await create_templated_user(
+        resource_template = await create_templated_user(
             aws_account_map,
             user_name,
             user_refs,
             user_dir,
             existing_template_map,
             config,
+        )
+        all_resource_ids.add(resource_template.resource_id)
+
+    if not user_messages:
+        # NEVER call this if messages are passed in because all_resource_ids will only contain those resources
+        delete_orphaned_templates(
+            list(existing_template_map.values()), all_resource_ids
         )
 
     log.info("Finished templated user generation")

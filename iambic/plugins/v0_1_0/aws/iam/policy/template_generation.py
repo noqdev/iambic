@@ -13,6 +13,7 @@ from iambic.core.logger import log
 from iambic.core.template_generation import (
     base_group_str_attribute,
     create_or_update_template,
+    delete_orphaned_templates,
     get_existing_template_map,
     group_dict_attribute,
     group_int_or_str_attribute,
@@ -370,22 +371,6 @@ async def generate_aws_managed_policy_templates(
             )
         )
 
-        # Remove templates not in any AWS account
-        all_policy_names = set(
-            itertools.chain.from_iterable(
-                [
-                    [
-                        managed_policy["policy_name"]
-                        for managed_policy in account["managed_policies"]
-                    ]
-                    for account in account_managed_policies
-                ]
-            )
-        )
-        for existing_template in existing_template_map.values():
-            if existing_template.properties.policy_name not in all_policy_names:
-                existing_template.delete()
-
     # Upsert Managed Policies
     messages = []
     for account in account_managed_policies:
@@ -430,14 +415,22 @@ async def generate_aws_managed_policy_templates(
     )
 
     log.info("Writing templated managed policies")
+    all_resource_ids = set()
     for policy_name, policy_refs in grouped_managed_policy_map.items():
-        await create_templated_managed_policy(
+        resource_template = await create_templated_managed_policy(
             aws_account_map,
             policy_name,
             policy_refs,
             resource_dir,
             existing_template_map,
             config,
+        )
+        all_resource_ids.add(resource_template.resource_id)
+
+    if not managed_policy_messages:
+        # NEVER call this if messages are passed in because all_resource_ids will only contain those resources
+        delete_orphaned_templates(
+            list(existing_template_map.values()), all_resource_ids
         )
 
     log.info("Finished templated managed policy generation")

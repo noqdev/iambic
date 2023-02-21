@@ -13,6 +13,7 @@ from iambic.core.logger import log
 from iambic.core.template_generation import (
     base_group_str_attribute,
     create_or_update_template,
+    delete_orphaned_templates,
     get_existing_template_map,
     group_dict_attribute,
     group_int_or_str_attribute,
@@ -461,19 +462,6 @@ async def generate_aws_role_templates(
             [{"aws_account": aws_account} for aws_account in aws_account_map.values()]
         )
 
-        # Remove templates not in any AWS account
-        all_role_names = set(
-            itertools.chain.from_iterable(
-                [
-                    [account_role["name"] for account_role in account["roles"]]
-                    for account in account_roles
-                ]
-            )
-        )
-        for existing_template in existing_template_map.values():
-            if existing_template.properties.role_name not in all_role_names:
-                existing_template.delete()
-
     messages = []
     # Upsert roles
     for account_role in account_roles:
@@ -495,9 +483,9 @@ async def generate_aws_role_templates(
     log.info("Finished retrieving role details")
 
     # Use these for testing `create_templated_role`
-    # account_role_output = json.dumps(account_roles)
-    # with open("account_role_output.json", "w") as f:
-    #     f.write(account_role_output)
+    account_role_output = json.dumps(account_roles)
+    with open("account_role_output.json", "w") as f:
+        f.write(account_role_output)
     # with open("account_role_output.json") as f:
     #     account_roles = json.loads(f.read())
 
@@ -517,14 +505,22 @@ async def generate_aws_role_templates(
     grouped_role_map = await base_group_str_attribute(aws_account_map, account_roles)
 
     log.info("Writing templated roles")
+    all_resource_ids = set()
     for role_name, role_refs in grouped_role_map.items():
-        await create_templated_role(
+        resource_template = await create_templated_role(
             aws_account_map,
             role_name,
             role_refs,
             role_dir,
             existing_template_map,
             config,
+        )
+        all_resource_ids.add(resource_template.resource_id)
+
+    if not role_messages:
+        # NEVER call this if messages are passed in because all_resource_ids will only contain those resources
+        delete_orphaned_templates(
+            list(existing_template_map.values()), all_resource_ids
         )
 
     log.info("Finished templated role generation")
