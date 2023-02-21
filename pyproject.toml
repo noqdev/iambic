@@ -39,7 +39,7 @@ google-api-python-client = "^2.64.0"
 google-auth = "^2.12.0"
 jsonschema2md2 = "^0.6.0"
 GitPython = "^3.1.30"
-PyGithub = "==1.57"
+PyGithub = "==1.57" # Since 1.58, PyGithub does not work with Lambda. See https://github.com/PyGithub/PyGithub/issues/2430
 pydantic-factories = "^1.12.0"
 okta = "^2.8.0"
 asyncache = "^0.3.1"
