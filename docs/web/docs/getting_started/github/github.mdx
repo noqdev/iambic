@@ -249,3 +249,14 @@ Return to the Github App settings page to connect the Githbu App to the just dep
 15. Click "Configure" on "Iambic Integrations"
 16. Select your iambic templates repository under "Repository access" section.
 17. Click Save
+
+Enable iambic-integrations to bypass review rules for "main" branch
+
+Typical pull-requests review flow requires reviewers approval. Action such as auto import, auto expire require changes being pushed back into main branch without manual approvals.
+
+1. Go to your iambic templates repository settings (https://github.com/ExampleOrg/ExampleIambicTemplatesRepository/settings)
+2. Click "Branches" in the top left navigation.
+3. Click on "Edit" for "main" under "Branch protection rules"
+4. Click on "Allow specified actors to bypass required pull requests"
+5. In "Search for people, teams or apps", type in `iambic-integrations` to click on the Github App we have created.
+6. Click "Save changes".
