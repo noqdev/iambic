@@ -6,7 +6,10 @@ from typing import TYPE_CHECKING
 from iambic.core.template_generation import (
     create_or_update_template as common_create_or_update_template,
 )
-from iambic.core.template_generation import get_existing_template_map
+from iambic.core.template_generation import (
+    delete_orphaned_templates,
+    get_existing_template_map,
+)
 from iambic.plugins.v0_1_0.google.group.models import (
     GOOGLE_GROUP_TEMPLATE_TYPE,
     GroupTemplate,
@@ -39,14 +42,14 @@ async def update_or_create_group_template(
     discovered_group_template: GroupTemplate,
     existing_template_map: dict,
     group_dir: str,
-):
+) -> GroupTemplate:
 
     discovered_group_template.file_path = get_templated_resource_file_path(
         group_dir,
         discovered_group_template.properties.email,
     )
 
-    common_create_or_update_template(
+    return common_create_or_update_template(
         discovered_group_template.file_path,
         existing_template_map,
         discovered_group_template.resource_id,
@@ -71,11 +74,12 @@ async def generate_group_templates(
     group_dir = get_group_dir(base_path, domain)
 
     # Update or create templates
+    all_resource_ids = set()
     for group in groups:
-        await update_or_create_group_template(group, existing_template_map, group_dir)
+        resource_template = await update_or_create_group_template(
+            group, existing_template_map, group_dir
+        )
+        all_resource_ids.add(resource_template.resource_id)
 
     # Delete templates that no longer exist
-    discovered_groups = [g.resource_id for g in groups]
-    for group_id, template in existing_template_map.items():
-        if group_id not in discovered_groups:
-            template.delete()
+    delete_orphaned_templates(list(existing_template_map.values()), all_resource_ids)

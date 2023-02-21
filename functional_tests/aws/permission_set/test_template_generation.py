@@ -73,27 +73,13 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
         self.assertEqual(file_sys_template.properties.description, updated_description)
 
     async def test_delete_permission_set_template(self):
-        identity_center_account = IAMBIC_TEST_DETAILS.identity_center_account
         self.template.write()
 
         self.assertTrue(os.path.exists(self.template.file_path))
 
-        permission_set_properties = list(
-            identity_center_account.identity_center_details.permission_set_map.values()
-        )[0]
-
         await generate_aws_permission_set_templates(
             IAMBIC_TEST_DETAILS.config.aws,
             IAMBIC_TEST_DETAILS.template_dir_path,
-            [
-                PermissionSetMessageDetails(
-                    account_id=identity_center_account.account_id,
-                    instance_arn=identity_center_account.identity_center_details.instance_arn,
-                    permission_set_arn=permission_set_properties.get(
-                        "PermissionSetArn"
-                    ),
-                )
-            ],
         )
 
         self.assertFalse(os.path.exists(self.template.file_path))
