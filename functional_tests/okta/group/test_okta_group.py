@@ -92,9 +92,10 @@ properties:
     group_template.write()
 
     # Set expiry for the entire group
-    group_template.expires_at = datetime.datetime.now(
-        datetime.timezone.utc
-    ) - datetime.timedelta(days=1)
+    # group_template.expires_at = datetime.datetime.now(
+    #     datetime.timezone.utc
+    # ) - datetime.timedelta(days=1)
+    group_template.expires_at = "yesterday"
     group_template.write()
     run_apply(
         True,
@@ -105,3 +106,5 @@ properties:
 
     group_template = load_templates([test_group_fp])[0]
     assert group_template.deleted is True
+    assert group_template.expires_at != "yesterday"
+    assert isinstance(group_template.expires_at, datetime.datetime)
