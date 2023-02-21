@@ -206,6 +206,7 @@ def run_apply(
     ctx.eval_only = not force
 
     templates = load_templates(templates)
+    asyncio.run(flag_expired_resources([template.file_path for template in templates]))
     template_changes = asyncio.run(config.run_apply(templates))
     output_proposed_changes(template_changes)
 
