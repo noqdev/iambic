@@ -52,9 +52,6 @@ def init_shared_data_directory():
     )
 
 
-init_shared_data_directory()
-
-
 def get_lambda_repo_path() -> str:
     return getattr(iambic_app, "lambda").app.REPO_BASE_PATH
 
