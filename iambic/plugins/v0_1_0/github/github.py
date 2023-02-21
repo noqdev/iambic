@@ -27,6 +27,8 @@ MERGEABLE_STATE_CLEAN = "clean"
 MERGEABLE_STATE_BLOCKED = "blocked"
 
 
+COMMIT_MESSAGE_USER_NAME = "Iambic Automation"
+COMMIT_MESSAGE_USER_EMAIL = "iambic-automation@iambic.org"
 COMMIT_MESSAGE_FOR_DETECT = "Import changes from detect operation"
 COMMIT_MESSAGE_FOR_IMPORT = "Import changes from import operation"
 COMMIT_MESSAGE_FOR_EXPIRE = "Periodic Expiration"
@@ -115,8 +117,8 @@ def prepare_local_repo_for_new_commits(
     cloned_repo = clone_git_repo(repo_url, repo_path, None)
 
     repo_config_writer = cloned_repo.config_writer()
-    repo_config_writer.set_value("user", "name", "iambic automation")  # FIXME
-    repo_config_writer.set_value("user", "email", "automation@iambic.org")  # FIXME
+    repo_config_writer.set_value("user", "name", COMMIT_MESSAGE_USER_NAME)
+    repo_config_writer.set_value("user", "email", COMMIT_MESSAGE_USER_EMAIL)
     repo_config_writer.release()
 
     cloned_repo.git.checkout("-b", f"attempt/{purpose}", "origin/main")
@@ -148,8 +150,8 @@ def prepare_local_repo(
     # Note, this is for local usage, we don't actually
     # forward this commit upstream
     repo_config_writer = cloned_repo.config_writer()
-    repo_config_writer.set_value("user", "name", "Iambic Merger")
-    repo_config_writer.set_value("user", "email", "iambic-merger@iambic.org")
+    repo_config_writer.set_value("user", "name", COMMIT_MESSAGE_USER_NAME)
+    repo_config_writer.set_value("user", "email", COMMIT_MESSAGE_USER_EMAIL)
     repo_config_writer.release()
 
     cloned_repo.git.merge(f"origin/{pull_request_branch_name}")
