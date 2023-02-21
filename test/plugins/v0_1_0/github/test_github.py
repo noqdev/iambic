@@ -20,9 +20,7 @@ from iambic.plugins.v0_1_0.github.github import (  # prepare_local_repo,
 
 @pytest.fixture
 def mock_github_client():
-    with patch(
-        "iambic.plugins.v0_1_0.github.github.Github", autospec=True
-    ) as mock_github:
+    with patch("github.Github", autospec=True) as mock_github:
         yield mock_github
 
 

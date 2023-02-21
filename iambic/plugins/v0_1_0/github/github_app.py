@@ -28,6 +28,7 @@ from iambic.plugins.v0_1_0.github.github import (
     handle_iambic_git_apply,
     handle_iambic_git_plan,
     iambic_app,
+    is_last_commit_relative_to_absolute_change,
 )
 
 # FIXME Lambda execution time is at most 15 minutes, and the Github installation token is at most
@@ -169,10 +170,11 @@ def run_handler(event=None, context=None):
 def handle_pull_request(
     github_token: str, github_client: github.Github, webhook_payload: dict[str, Any]
 ) -> None:
-    # replace with a different github client because we need a different
-    # identity to leave the "iambic git-plan". Otherwise, it won't be able
-    # to trigger the correct react-to-comment workflow.
-    # repo_name is already in the format {repo_owner}/{repo_short_name}
+
+    action = webhook_payload["action"]
+    if action not in ["opened", "synchronize"]:
+        return
+
     repo_name = webhook_payload["repository"]["full_name"]
     pull_number = webhook_payload["pull_request"]["number"]
     # repository_url_token
@@ -182,8 +184,20 @@ def handle_pull_request(
     repo_url = format_github_url(repository_url, github_token)
     pull_request_branch_name = pull_request.head.ref
 
+    if action == "synchronize":
+        # check if the last log message is relative time -> absolute time
+        if is_last_commit_relative_to_absolute_change(
+            repo_url, pull_request_branch_name
+        ):
+            log.info(
+                "github_app ignore synchronize event since its likely triggered by itself"
+            )
+            return
+
     return handle_iambic_git_plan(
         None,
+        github_client,
+        templates_repo,
         pull_request,
         repo_name,
         pull_number,
@@ -197,13 +211,24 @@ def handle_issue_comment(
     github_token: str, github_client: github.Github, webhook_payload: dict[str, Any]
 ) -> HandleIssueCommentReturnCode:
 
+    action = webhook_payload["action"]
+    if action != "created":
+        return
+
     comment_body = webhook_payload["comment"]["body"]
+    comment_user_login = webhook_payload["comment"]["user"]["login"]
     log_params = {"COMMENT_DISPATCH_MAP_KEYS": COMMENT_DISPATCH_MAP.keys()}
     log.info("COMMENT_DISPATCH_MAP keys", **log_params)
     if comment_body not in COMMENT_DISPATCH_MAP:
         log_params = {"comment_body": comment_body}
         log.error("handle_issue_comment: no op", **log_params)
         return HandleIssueCommentReturnCode.NO_MATCHING_BODY
+
+    # FIXME: Need to find a mechanism to avoid infinite loop
+    # the following is a very crude one
+    if comment_user_login.endswith("[bot]"):
+        # return early
+        return HandleIssueCommentReturnCode.UNDEFINED
 
     repo_name = webhook_payload["repository"]["full_name"]
     pull_number = webhook_payload["issue"]["number"]
@@ -224,6 +249,8 @@ def handle_issue_comment(
     comment_func: Callable = COMMENT_DISPATCH_MAP[comment_body]
     return comment_func(
         None,
+        github_client,
+        templates_repo,
         pull_request,
         repo_name,
         pull_number,
