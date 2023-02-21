@@ -14,6 +14,7 @@ from iambic.core.logger import log
 from iambic.core.template_generation import (
     base_group_str_attribute,
     create_or_update_template,
+    delete_orphaned_templates,
     get_existing_template_map,
     group_dict_attribute,
     group_int_or_str_attribute,
@@ -395,24 +396,19 @@ async def generate_aws_permission_set_templates(
     )
 
     messages = []
-
-    # Remove templates not in any AWS account
-    permission_sets_in_aws = set(
-        list(
-            itertools.chain.from_iterable(
-                [
-                    aws_account.identity_center_details.permission_set_map.keys()
-                    for aws_account in identity_center_accounts
-                ]
-            )
-        )
-    )
-    for resource_id, resource_template in existing_template_map.items():
-        if resource_id not in permission_sets_in_aws:
-            resource_template.delete()
-
     permission_set_names = []
     if permission_set_messages:
+        permission_sets_in_aws = set(
+            list(
+                itertools.chain.from_iterable(
+                    [
+                        aws_account.identity_center_details.permission_set_map.keys()
+                        for aws_account in identity_center_accounts
+                    ]
+                )
+            )
+        )
+
         permission_set_names = await gather_permission_set_names(
             identity_center_accounts,
             permission_set_messages,
@@ -508,13 +504,21 @@ async def generate_aws_permission_set_templates(
         "Writing templated AWS Identity Center Permission Set.",
         unique_identities=len(grouped_permission_set_map),
     )
+    all_resource_ids = set()
     for name, refs in grouped_permission_set_map.items():
-        await create_templated_permission_set(
+        resource_template = await create_templated_permission_set(
             aws_account_map,
             name,
             refs,
             resource_dir,
             existing_template_map,
+        )
+        all_resource_ids.add(resource_template.resource_id)
+
+    if not permission_set_messages:
+        # NEVER call this if messages are passed in because all_resource_ids will only contain those resources
+        delete_orphaned_templates(
+            list(existing_template_map.values()), all_resource_ids
         )
 
     log.info("Finished templated AWS Identity Center Permission Set generation")
