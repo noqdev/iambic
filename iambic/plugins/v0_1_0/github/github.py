@@ -6,11 +6,12 @@ import re
 import shutil
 import sys
 import tempfile
+import time
 from enum import Enum
 from typing import Any, Callable
 from urllib.parse import urlparse
 
-from github import Github
+import github
 from github.PullRequest import PullRequest
 
 from iambic.core.git import Repo, clone_git_repo
@@ -29,6 +30,7 @@ MERGEABLE_STATE_BLOCKED = "blocked"
 COMMIT_MESSAGE_FOR_DETECT = "Import changes from detect operation"
 COMMIT_MESSAGE_FOR_IMPORT = "Import changes from import operation"
 COMMIT_MESSAGE_FOR_EXPIRE = "Periodic Expiration"
+COMMIT_MESSAGE_FOR_GIT_APPLY_ABSOLUTE_TIME = "Replace relative time with absolute time"
 SHARED_CONTAINER_GITHUB_DIRECTORY = "/root/data"
 
 
@@ -70,11 +72,11 @@ def run_handler(context: dict[str, Any]):
     event_name: str = context["event_name"]
     log_params = {"event_name": event_name}
     log.info("run_handler", **log_params)
-    github_client = Github(github_token)
+    github_client = github.Github(github_token)
     # TODO Support Github Enterprise with custom hostname
     # g = Github(base_url="https://{hostname}/api/v3", login_or_token="access_token")
 
-    f: Callable[[Github, dict[str, Any]]] = EVENT_DISPATCH_MAP.get(event_name)
+    f: Callable[[github.Github, dict[str, Any]]] = EVENT_DISPATCH_MAP.get(event_name)
     if f:
         f(github_client, context)
     else:
@@ -82,11 +84,13 @@ def run_handler(context: dict[str, Any]):
         raise Exception("no supported handler")
 
 
-def handle_iambic_command(github_client: Github, context: dict[str, Any]) -> None:
+def handle_iambic_command(
+    github_client: github.Github, context: dict[str, Any]
+) -> None:
     github_token: str = context["iambic"]["GH_OVERRIDE_TOKEN"]
     command: str = context["iambic"]["IAMBIC_CLOUD_IMPORT_CMD"]
-    github_client = Github(github_token)
-    f: Callable[[Github, dict[str, Any]]] = IAMBIC_CLOUD_IMPORT_DISPATCH_MAP.get(
+    github_client = github.Github(github_token)
+    f: Callable[[github.Github, dict[str, Any]]] = IAMBIC_CLOUD_IMPORT_DISPATCH_MAP.get(
         command
     )
     if f:
@@ -118,6 +122,17 @@ def prepare_local_repo_for_new_commits(
     cloned_repo.git.checkout("-b", f"attempt/{purpose}", "origin/main")
 
     return cloned_repo
+
+
+def is_last_commit_relative_to_absolute_change(
+    repo_url: str, pull_request_branch_name: str
+) -> Repo:
+    repo_path = tempfile.mkdtemp(prefix="github")
+
+    if len(os.listdir(repo_path)) > 0:
+        raise Exception(f"{repo_path} already exists. This is unexpected.")
+    cloned_repo = clone_git_repo(repo_url, repo_path, pull_request_branch_name)
+    return cloned_repo.head.commit.message == COMMIT_MESSAGE_FOR_GIT_APPLY_ABSOLUTE_TIME
 
 
 def prepare_local_repo(
@@ -248,7 +263,7 @@ def get_session_name(repo_name: str, pull_request_number: str) -> str:
 
 
 def handle_issue_comment(
-    github_client: Github, context: dict[str, Any]
+    github_client: github.Github, context: dict[str, Any]
 ) -> HandleIssueCommentReturnCode:
 
     comment_body = context["event"]["comment"]["body"]
@@ -275,6 +290,8 @@ def handle_issue_comment(
     comment_func: Callable = COMMENT_DISPATCH_MAP[comment_body]
     return comment_func(
         context,
+        github_client,
+        templates_repo,
         pull_request,
         repo_name,
         pull_number,
@@ -285,6 +302,8 @@ def handle_issue_comment(
 
 def handle_iambic_git_apply(
     context: dict[str, Any],
+    github_client: github.Github,
+    templates_repo: github.Repo,
     pull_request: PullRequest,
     repo_name: str,
     pull_number: str,
@@ -303,7 +322,9 @@ def handle_iambic_git_apply(
     os.environ["IAMBIC_SESSION_NAME"] = session_name
 
     try:
-        prepare_local_repo(repo_url, get_lambda_repo_path(), pull_request_branch_name)
+        repo = prepare_local_repo(
+            repo_url, get_lambda_repo_path(), pull_request_branch_name
+        )
 
         if proposed_changes_path:
             # code smell to have to change a module variable
@@ -314,12 +335,37 @@ def handle_iambic_git_apply(
             getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH = proposed_changes_path
 
         lambda_run_handler(None, {"command": "git_apply"})
+
+        # In the event git_apply changes relative time to absolute time
+        repo.git.add(".")
+        diff_list = repo.head.commit.diff()
+        if len(diff_list) > 0:
+            repo.git.commit("-m", COMMIT_MESSAGE_FOR_GIT_APPLY_ABSOLUTE_TIME)
+            repo.remotes.origin.push(
+                refspec=f"HEAD:{pull_request_branch_name}"
+            ).raise_if_error()
+            log_params = {"sha": repo.head.commit.hexsha}
+            log.info("git-apply new sha is", **log_params)
+        else:
+            log.debug("git_apply did not introduce additional changes")
+
         post_result_as_pr_comment(
             pull_request, context, "git-apply", proposed_changes_path
         )
         copy_data_to_data_directory()
-        pull_request.merge()
+
+        for i in range(5):
+            pull_request = templates_repo.get_pull(pull_number)
+            if pull_request.mergeable_state != MERGEABLE_STATE_CLEAN:
+                log.info("PR not merge-able yet, sleep for 5 seconds")
+                time.sleep(5)
+
+        pull_request = templates_repo.get_pull(pull_number)
+        pull_request.merge(
+            sha=repo.head.commit.hexsha
+        )  # Concern, whether we need the exact sha on the remote
         return HandleIssueCommentReturnCode.MERGED
+
     except Exception as e:
         log.error("fault", exception=str(e))
         pull_request.create_issue_comment(
@@ -332,6 +378,8 @@ def handle_iambic_git_apply(
 
 def handle_iambic_git_plan(
     context: dict[str, Any],
+    github_client: github.Github,
+    templates_repo: github.Repo,
     pull_request: PullRequest,
     repo_name: str,
     pull_number: str,
@@ -369,11 +417,11 @@ def handle_iambic_git_plan(
         raise e
 
 
-def handle_pull_request(github_client: Github, context: dict[str, Any]) -> None:
+def handle_pull_request(github_client: github.Github, context: dict[str, Any]) -> None:
     # replace with a different github client because we need a different
     # identity to leave the "iambic git-plan". Otherwise, it won't be able
     # to trigger the correct react-to-comment workflow.
-    github_client = Github(context["iambic"]["GH_OVERRIDE_TOKEN"])
+    github_client = github.Github(context["iambic"]["GH_OVERRIDE_TOKEN"])
     # repo_name is already in the format {repo_owner}/{repo_short_name}
     repo_name = context["repository"]
     pull_number = context["event"]["pull_request"]["number"]
@@ -394,7 +442,7 @@ def handle_pull_request(github_client: Github, context: dict[str, Any]) -> None:
 
 
 def handle_detect_changes_from_eventbridge(
-    github_client: Github, context: dict[str, Any]
+    github_client: github.Github, context: dict[str, Any]
 ) -> None:
 
     # we need a different github token because we will need to push to main without PR
@@ -425,7 +473,7 @@ def _handle_detect_changes_from_eventbridge(repo_url: str, default_branch: str) 
         raise e
 
 
-def handle_import(github_client: Github, context: dict[str, Any]) -> None:
+def handle_import(github_client: github.Github, context: dict[str, Any]) -> None:
 
     # we need a different github token because we will need to push to main without PR
     github_token = context["iambic"]["GH_OVERRIDE_TOKEN"]
@@ -455,7 +503,7 @@ def _handle_import(repo_url: str, default_branch: str) -> None:
         raise e
 
 
-def handle_expire(github_client: Github, context: dict[str, Any]) -> None:
+def handle_expire(github_client: github.Github, context: dict[str, Any]) -> None:
 
     # we need a different github token because we will need to push to main without PR
     github_token = context["iambic"]["GH_OVERRIDE_TOKEN"]
