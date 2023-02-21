@@ -483,9 +483,9 @@ async def generate_aws_role_templates(
     log.info("Finished retrieving role details")
 
     # Use these for testing `create_templated_role`
-    account_role_output = json.dumps(account_roles)
-    with open("account_role_output.json", "w") as f:
-        f.write(account_role_output)
+    # account_role_output = json.dumps(account_roles)
+    # with open("account_role_output.json", "w") as f:
+    #     f.write(account_role_output)
     # with open("account_role_output.json") as f:
     #     account_roles = json.loads(f.read())
 
