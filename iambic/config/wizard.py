@@ -219,7 +219,7 @@ class ConfigurationWizard:
                 ).get_caller_identity()
                 caller_arn = get_identity_arn(default_caller_identity)
                 default_hub_account_id = caller_arn.split(":")[4]
-            except (botocore.exceptions.ClientError, AttributeError, IndexError):
+            except (AttributeError, IndexError, NoCredentialsError, ClientError):
                 default_hub_account_id = None
                 default_caller_identity = {}
         else:
@@ -352,7 +352,7 @@ class ConfigurationWizard:
         try:
             if len(available_profiles) == 0:
                 log.error(
-                    "Please create a profile with access to the Hub Account. "
+                    "Please create an AWS profile with access to the Hub Account. "
                     "See https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html"
                 )
                 sys.exit(0)
