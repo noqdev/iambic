@@ -14,6 +14,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 from pydantic import create_model as create_pydantic_model
 
+import iambic.plugins.v0_1_0.github
 from iambic.core.context import ctx
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
@@ -107,6 +108,11 @@ class Config(BaseTemplate):
             PluginDefinition(
                 type=PluginType.DIRECTORY_PATH,
                 location=okta.__path__[0],
+                version=PLUGIN_VERSION,
+            ),
+            PluginDefinition(
+                type=PluginType.DIRECTORY_PATH,
+                location=iambic.plugins.v0_1_0.github.__path__[0],
                 version=PLUGIN_VERSION,
             ),
         ],
