@@ -6,6 +6,8 @@ import glob
 import os
 import pathlib
 import re
+import sys
+import tempfile
 import typing
 from datetime import datetime
 from io import StringIO
@@ -24,6 +26,23 @@ from iambic.core.logger import log
 
 NOQ_TEMPLATE_REGEX = r".*template_type:\n?.*NOQ::"
 RATE_LIMIT_STORAGE: dict[str, int] = {}
+
+__WRITABLE_DIRECTORY__ = pathlib.Path.home()
+
+
+def init_writable_directory() -> None:
+    if os.environ.get("AWS_LAMBDA_FUNCTION_NAME", False):
+        temp_writable_directory = tempfile.mkdtemp(prefix="lambda")
+        __WRITABLE_DIRECTORY__ = pathlib.Path(temp_writable_directory)
+    else:
+        __WRITABLE_DIRECTORY__ = pathlib.Path.home()
+
+    this_module = sys.modules[__name__]
+    setattr(this_module, "__WRITABLE_DIRECTORY__", __WRITABLE_DIRECTORY__)
+
+
+def get_writable_directory() -> pathlib.Path:
+    return __WRITABLE_DIRECTORY__
 
 
 def camel_to_snake(str_obj: str) -> str:
