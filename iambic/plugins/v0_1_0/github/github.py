@@ -72,6 +72,10 @@ def run_handler(context: dict[str, Any]):
     log_params = {"event_name": event_name}
     log.info("run_handler", **log_params)
     github_client = github.Github(github_token)
+
+    getattr(iambic_app, "lambda").app.init_plan_output_path()
+    getattr(iambic_app, "lambda").app.init_repo_base_path()
+
     # TODO Support Github Enterprise with custom hostname
     # g = Github(base_url="https://{hostname}/api/v3", login_or_token="access_token")
 
