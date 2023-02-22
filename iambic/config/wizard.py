@@ -10,7 +10,7 @@ from typing import Union
 import boto3
 import botocore
 import questionary
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, NoCredentialsError
 
 from iambic.config.dynamic_config import (
     CURRENT_IAMBIC_VERSION,
@@ -219,7 +219,7 @@ class ConfigurationWizard:
                 ).get_caller_identity()
                 caller_arn = get_identity_arn(default_caller_identity)
                 default_hub_account_id = caller_arn.split(":")[4]
-            except (botocore.exceptions.ClientError, AttributeError, IndexError):
+            except (AttributeError, IndexError, NoCredentialsError, ClientError):
                 default_hub_account_id = None
                 default_caller_identity = {}
         else:
@@ -233,7 +233,7 @@ class ConfigurationWizard:
                     "This is the account that will be used to assume into all other accounts by IAMbic.\n"
                     "If you have an AWS Organization, that would be your hub account.\n"
                     "However, if you are just trying IAMbic out, you can provide any account.\n"
-                    "Just be sure to remove any delete all IAMbic stacks when/if you decide to use a different account as your hub.",
+                    "Just be sure to delete all IAMbic stacks when/if you decide to use a different account as your hub.",
                     default_val=default_hub_account_id,
                 )
                 if is_valid_account_id(self.hub_account_id):
@@ -328,7 +328,7 @@ class ConfigurationWizard:
                 os.remove(self.config_path)
                 sys.exit(1)
 
-        with contextlib.suppress(ClientError):
+        with contextlib.suppress(ClientError, NoCredentialsError):
             self.autodetected_org_settings = self.boto3_session.client(
                 "organizations"
             ).describe_organization()["Organization"]
@@ -352,7 +352,7 @@ class ConfigurationWizard:
         try:
             if len(available_profiles) == 0:
                 log.error(
-                    "Please create a profile with access to the Hub Account. "
+                    "Please create an AWS profile with access to the Hub Account. "
                     "See https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html"
                 )
                 sys.exit(0)
@@ -401,7 +401,7 @@ class ConfigurationWizard:
             self.set_boto3_session()
 
         self.profile_name = profile_name
-        with contextlib.suppress(ClientError):
+        with contextlib.suppress(ClientError, NoCredentialsError):
             self.autodetected_org_settings = self.boto3_session.client(
                 "organizations"
             ).describe_organization()["Organization"]
