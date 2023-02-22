@@ -395,10 +395,6 @@ class RoleTemplate(AWSTemplate, AccessModel):
 
         return account_change_details
 
-    @property
-    def resource_id(self):
-        return self.properties.role_name
-
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
         return {"access_rules", "file_path", "iambic_managed"}
