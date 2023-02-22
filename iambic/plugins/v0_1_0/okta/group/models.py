@@ -74,7 +74,7 @@ class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
-        return {"extra"}
+        return {"extra", "metadata_commented_dict"}
 
     @property
     def resource_type(self) -> str:
