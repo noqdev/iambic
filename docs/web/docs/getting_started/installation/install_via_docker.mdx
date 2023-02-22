@@ -44,14 +44,14 @@ Optionally you can store the volume in your system's docker context - be forwarn
 
 Depending on where your cloud credentials are stored, you may have to mount the relevant directory inside the docker container as well:
 
-    docker run -u $(id -u):$(id -g) -v ${HOME}/.aws:/root/.aws -v ${pwd}:/templates public.ecr.aws/s2p9s3r8/iambic:latest <command>
+    docker run -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e "AWS_PROFILE=${AWS_PROFILE}" -v ${pwd}:/templates public.ecr.aws/s2p9s3r8/iambic:latest <command>
 
 ### Shortcut
 
 We recommend that you add the following to your ~/.bashrc or ~/.bash_profile:
 
 ```bash
-alias iambic="docker run -u $(id -u):$(id -g) -v <local_dir\>:/templates public.ecr.aws/s2p9s3r8/iambic:latest"
+alias iambic="docker run -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e "AWS_PROFILE=${AWS_PROFILE}" -v <local_dir\>:/templates public.ecr.aws/s2p9s3r8/iambic:latest <command>"
 ```
 
 That way you can just execute iambic seamlessly as an application within your system:
