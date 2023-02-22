@@ -408,6 +408,14 @@ class ConfigurationWizard:
 
     def get_boto3_session_for_account(self, account_id: str):
         if account_id == self.hub_account_id:
+            if not self.profile_name:
+                if profile_name := os.getenv("AWS_PROFILE"):
+                    self.profile_name = profile_name
+                else:
+                    self.profile_name = self.set_aws_profile_name(
+                        "Please specify the profile to use to access to the AWS Account.",
+                        allow_none=False,
+                    )
             return self.boto3_session, self.profile_name
         else:
             profile_name = self.set_aws_profile_name(
@@ -467,7 +475,9 @@ class ConfigurationWizard:
                 "What is the name of the AWS Account?"
             )
             if not questionary.confirm(
-                "Create required Hub and Spoke roles via CloudFormation?"
+                "Create required Hub and Spoke roles via CloudFormation?\n"
+                "The templates that will be used can be found here:\n"
+                "  https://github.com/noqdev/iambic/tree/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates"
             ).unsafe_ask():
                 log.info(
                     "Unable to add the AWS Account without creating the required roles."
@@ -488,7 +498,9 @@ class ConfigurationWizard:
                 return
 
             if not questionary.confirm(
-                "Create required Spoke role via CloudFormation?"
+                "Create required Spoke role via CloudFormation?\n"
+                "The template that will be used can be found here:\n"
+                "  https://github.com/noqdev/iambic/blob/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates/IambicSpokeRole.yml"
             ).unsafe_ask():
                 log.info(
                     "Unable to add the AWS account without creating the required role."
@@ -538,11 +550,10 @@ class ConfigurationWizard:
             account_name=account_name,
             spoke_role_arn=get_spoke_role_arn(account_id),
             iambic_managed=IambicManaged.READ_AND_WRITE,
+            aws_profile=profile_name,
         )
         if is_hub_account:
             account.hub_role_arn = get_hub_role_arn(account_id)
-
-        account.aws_profile = profile_name
         # account.partition = set_aws_account_partition(account.partition)
 
         if not questionary.confirm("Keep these settings?").unsafe_ask():
@@ -701,7 +712,9 @@ class ConfigurationWizard:
             return
 
         if not questionary.confirm(
-            "Create required Hub and Spoke roles via CloudFormation?"
+            "Create required Hub and Spoke roles via CloudFormation?\n"
+            "The templates that will be used can be found here:\n"
+            "  https://github.com/noqdev/iambic/tree/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates"
         ).unsafe_ask():
             log.info("Unable to add the AWS Org without creating the required roles.")
             return
@@ -725,11 +738,8 @@ class ConfigurationWizard:
             region=org_region,
             default_rule=BaseAWSOrgRule(),
             hub_role_arn=get_hub_role_arn(account_id),
+            aws_profile=profile_name,
         )
-        aws_org.aws_profile = profile_name
-        if not aws_org.aws_profile:
-            aws_org.aws_profile = self.profile_name
-
         aws_org.default_rule.iambic_managed = IambicManaged.READ_AND_WRITE
 
         self.config.aws.organizations.append(aws_org)
@@ -820,7 +830,7 @@ class ConfigurationWizard:
 
         client = session.client(service_name="secretsmanager")
         response = client.create_secret(
-            Name="iambic-config-secrets_DELETE_ME2",
+            Name="iambic-config-secrets",
             Description="IAMbic managed secret used to store protected config values",
             SecretString=yaml.dump({"secrets": self.config.secrets}),
         )

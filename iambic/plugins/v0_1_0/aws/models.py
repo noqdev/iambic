@@ -297,6 +297,9 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
         elif boto3_session := self.boto3_session_map.get(region_name):
             return boto3_session
 
+        if not self.hub_session_info:
+            await self.set_hub_session_info()
+
         boto3_session = await create_assume_role_session(
             self.hub_session_info["boto3_session"],
             self.spoke_role_arn,
