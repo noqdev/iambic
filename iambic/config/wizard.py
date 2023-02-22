@@ -242,9 +242,9 @@ class ConfigurationWizard:
         if self.hub_account_id == default_hub_account_id:
             identity_arn = get_identity_arn(default_caller_identity)
             if questionary.confirm(
-                f"IAMbic detected you are using {identity_arn} for AWS access. "
+                f"IAMbic detected you are using {identity_arn} for AWS access.\n"
                 f"This role will require the ability to create"
-                f"CloudFormation stacks, stack sets, and stack set instances. "
+                f"CloudFormation stacks, stack sets, and stack set instances.\n"
                 f"Would you like to use this role?"
             ).ask():
                 self.caller_identity = default_caller_identity
@@ -500,7 +500,7 @@ class ConfigurationWizard:
             return
 
         if is_hub_account and not profile_name:
-            profile_name = self.set_aws_profile_name(allow_none=True)
+            profile_name = self.profile_name
         elif not is_hub_account:
             profile_name = None
 
@@ -728,7 +728,7 @@ class ConfigurationWizard:
         )
         aws_org.aws_profile = profile_name
         if not aws_org.aws_profile:
-            aws_org.aws_profile = self.set_aws_profile_name(allow_none=True)
+            aws_org.aws_profile = self.profile_name
 
         aws_org.default_rule.iambic_managed = IambicManaged.READ_AND_WRITE
 
