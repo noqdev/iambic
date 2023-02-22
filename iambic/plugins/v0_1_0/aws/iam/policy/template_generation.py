@@ -18,7 +18,7 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, get_writable_directory, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import ManagedPolicyMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.policy.models import (
     ManagedPolicyProperties,
@@ -34,9 +34,11 @@ from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 
-MANAGED_POLICY_RESPONSE_DIR = pathlib.Path.home().joinpath(
-    ".iambic", "resources", "aws", "managed_policies"
-)
+
+def get_managed_policy_response_dir() -> pathlib.Path:
+    return get_writable_directory().joinpath(
+        ".iambic", "resources", "aws", "managed_policies"
+    )
 
 
 def get_managed_policy_dir(base_dir: str) -> str:
@@ -66,7 +68,7 @@ def get_templated_managed_policy_file_path(
 
 
 def get_account_managed_policy_resource_dir(account_id: str) -> str:
-    account_resource_dir = os.path.join(MANAGED_POLICY_RESPONSE_DIR, account_id)
+    account_resource_dir = os.path.join(get_managed_policy_response_dir(), account_id)
     os.makedirs(account_resource_dir, exist_ok=True)
     return account_resource_dir
 

@@ -133,3 +133,7 @@ dmypy.json
 proposed_changes.json
 proposed_changes.yaml
 .DS_Store
+
+# terraform things
+deployment/github_app/.terraform/
+deployment/github_app/terraform.tfstate*
