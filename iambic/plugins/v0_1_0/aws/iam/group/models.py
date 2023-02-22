@@ -276,11 +276,3 @@ class GroupTemplate(AWSTemplate, AccessModel):
             )
 
         return account_change_details
-
-    @property
-    def resource_id(self):
-        return self.properties.group_name
-
-    @property
-    def resource_type(self):
-        return self.properties.resource_type
