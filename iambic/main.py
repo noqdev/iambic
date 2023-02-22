@@ -79,7 +79,7 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
 
     asyncio.run(flag_expired_resources(templates))
     ctx.eval_only = True
-    output_proposed_changes(asyncio.run(config.run_apply(templates)))
+    output_proposed_changes(asyncio.run(config.run_apply(load_templates(templates))))
 
 
 @cli.command()

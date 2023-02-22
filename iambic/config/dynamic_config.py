@@ -260,6 +260,7 @@ class Config(BaseTemplate):
             return "\n".join(change_str_list)
 
     async def run_discover_upstream_config_changes(self, repo_dir: str):
+        log.info("Scanning for upstream changes to config attributes.")
         await asyncio.gather(
             *[
                 plugin.async_discover_upstream_config_changes_callable(
@@ -269,6 +270,7 @@ class Config(BaseTemplate):
                 if plugin.async_discover_upstream_config_changes_callable
             ]
         )
+        log.info("Finished scanning for upstream changes to config attributes.")
         self.write()
 
     async def configure_plugins(self):
@@ -383,6 +385,7 @@ async def load_config(config_path: str) -> Config:
     """
     from iambic.config.templates import TEMPLATES
 
+    log.info("Loading config...")
     config_path = str(
         config_path
     )  # Ensure it's a string in case it's a Path for pydantic
@@ -399,7 +402,10 @@ async def load_config(config_path: str) -> Config:
     config = dynamic_config(
         plugin_instances=all_plugins, file_path=config_path, **config_dict
     )
+
+    log.info("Setting config metadata...")
     await config.configure_plugins()
+    log.info("Config loaded successfully...")
 
     TEMPLATES.set_templates(
         list(
