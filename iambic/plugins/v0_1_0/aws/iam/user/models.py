@@ -354,7 +354,3 @@ class UserTemplate(AWSTemplate, AccessModel):
             )
 
         return account_change_details
-
-    @property
-    def resource_id(self):
-        return self.properties.user_name

@@ -734,8 +734,12 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
         return template_changes
 
     @property
+    def resource_id(self):
+        return self.properties.resource_id
+
+    @property
     def resource_type(self):
-        return self.identifier
+        return self.properties.resource_type
 
 
 class Description(AccessModel):
