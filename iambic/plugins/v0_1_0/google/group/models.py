@@ -4,6 +4,8 @@ import asyncio
 from itertools import chain
 from typing import TYPE_CHECKING, Any, List, Optional
 
+from pydantic import Field
+
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -37,7 +39,6 @@ from iambic.plugins.v0_1_0.google.models import (
     WhoCanViewGroup,
     WhoCanViewMembership,
 )
-from pydantic import Field
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.google.iambic_plugin import GoogleProject

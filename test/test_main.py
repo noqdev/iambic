@@ -4,9 +4,8 @@ import os
 import shutil
 import tempfile
 
-import pytest
-
 import iambic.plugins.v0_1_0.example
+import pytest
 from iambic.main import run_apply
 
 TEST_TEMPLATE_YAML = """template_type: NOQ::Example::LocalFile

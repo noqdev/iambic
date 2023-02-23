@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from pydantic import ValidationError
-
 from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate
 from iambic.core.utils import transform_comments, yaml
+from pydantic import ValidationError
 
 
-def load_templates(template_paths: list[str]) -> list[BaseTemplate]:
+def load_templates(
+    template_paths: list[str], raise_validation_err: bool = True
+) -> list[BaseTemplate]:
     templates = []
 
     for template_path in template_paths:
@@ -27,8 +28,11 @@ def load_templates(template_paths: list[str]) -> list[BaseTemplate]:
             )
             # We should allow to continue to allow unknown template type; otherwise,
             # we cannot support forward or backward compatibility during version changes.
-        except ValidationError:
-            log.critical("Invalid template structure", file_path=template_path)
-            raise
+        except ValidationError as err:
+            log.critical(
+                "Invalid template structure", file_path=template_path, error=repr(err)
+            )
+            if raise_validation_err:
+                raise
 
     return templates

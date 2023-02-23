@@ -4,8 +4,6 @@ import asyncio
 import functools
 from typing import TYPE_CHECKING, List
 
-import okta.models as models
-
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
@@ -13,6 +11,8 @@ from iambic.core.utils import GlobalRetryController
 from iambic.plugins.v0_1_0.okta.group.utils import get_group
 from iambic.plugins.v0_1_0.okta.models import App, Assignment, Group
 from iambic.plugins.v0_1_0.okta.utils import handle_okta_fn
+
+import okta.models as models
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
