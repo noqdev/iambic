@@ -287,6 +287,9 @@ class ProposedChange(PydanticBaseModel):
     current_value: Optional[Union[list, dict, str, int]]
     new_value: Optional[Union[list, dict, str, int]]
     change_summary: Optional[dict]
+    exceptions_seen: list[str] = Field(
+        default=[]
+    )  # FIXME, can we do better than string?
 
 
 class AccountChangeDetails(PydanticBaseModel):
@@ -296,9 +299,7 @@ class AccountChangeDetails(PydanticBaseModel):
     current_value: Optional[dict]
     new_value: Optional[dict]
     proposed_changes: list[ProposedChange] = Field(default=[])
-    exceptions_seen: list[str] = Field(
-        default=[]
-    )  # FIXME, can we do better than string?
+    exceptions_seen: list[ProposedChange] = Field(default=[])
 
 
 class TemplateChangeDetails(PydanticBaseModel):
@@ -307,6 +308,9 @@ class TemplateChangeDetails(PydanticBaseModel):
     template_path: str
     # Supports multi-account providers and single-account providers
     proposed_changes: list[Union[AccountChangeDetails, ProposedChange]] = []
+    exceptions_seen: list[Union[AccountChangeDetails, ProposedChange]] = Field(
+        default=[]
+    )
 
     class Config:
         json_encoders = {PrettyOrderedSet: list}

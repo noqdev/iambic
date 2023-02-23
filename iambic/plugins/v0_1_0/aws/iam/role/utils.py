@@ -5,7 +5,6 @@ import json
 from typing import Union
 
 from deepdiff import DeepDiff
-
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
@@ -143,46 +142,85 @@ async def apply_role_tags(
         tag["Key"] for tag in existing_tags if tag["Key"] not in template_tag_map.keys()
     ]:
         log_str = "Stale tags discovered."
-        response.append(
-            ProposedChange(
-                change_type=ProposedChangeType.DETACH,
-                attribute="tags",
-                change_summary={"TagKeys": tags_to_remove},
-            )
-        )
         if context.execute:
             log_str = f"{log_str} Removing tags..."
-            tasks.append(
-                boto_crud_call(
-                    iam_client.untag_role, RoleName=role_name, TagKeys=tags_to_remove
+
+            async def untag_role():
+                exceptions = []
+                try:
+                    await boto_crud_call(
+                        iam_client.untag_role,
+                        RoleName=role_name,
+                        TagKeys=tags_to_remove,
+                    )
+                except Exception as e:
+                    exceptions.append(str(e))
+                return [
+                    ProposedChange(
+                        change_type=ProposedChangeType.DETACH,
+                        attribute="tags",
+                        change_summary={"TagKeys": tags_to_remove},
+                        exceptions_seen=exceptions,
+                    )
+                ]
+
+            tasks.append(untag_role())
+        else:
+            response.append(
+                ProposedChange(
+                    change_type=ProposedChangeType.DETACH,
+                    attribute="tags",
+                    change_summary={"TagKeys": tags_to_remove},
                 )
             )
+
         log.info(log_str, tags=tags_to_remove, **log_params)
 
     if tags_to_apply:
         log_str = "New tags discovered in AWS."
-        for tag in tags_to_apply:
-            response.append(
-                ProposedChange(
-                    change_type=ProposedChangeType.ATTACH,
-                    attribute="tags",
-                    new_value=tag,
-                )
-            )
+
         if context.execute:
             log_str = f"{log_str} Adding tags..."
-            tasks.append(
-                boto_crud_call(
-                    iam_client.tag_role, RoleName=role_name, Tags=tags_to_apply
+
+            async def tag_role():
+                exceptions = []
+                response = []
+                try:
+                    await boto_crud_call(
+                        iam_client.tag_role, RoleName=role_name, Tags=tags_to_apply
+                    )
+                except Exception as e:
+                    exceptions.append(str(e))
+                for tag in tags_to_apply:
+                    response.append(
+                        ProposedChange(
+                            change_type=ProposedChangeType.ATTACH,
+                            attribute="tags",
+                            new_value=tag,
+                            exceptions_seen=exceptions,
+                        )
+                    )
+                return response
+
+            tasks.append(tag_role())
+        else:
+            for tag in tags_to_apply:
+                response.append(
+                    ProposedChange(
+                        change_type=ProposedChangeType.ATTACH,
+                        attribute="tags",
+                        new_value=tag,
+                    )
                 )
-            )
         log.info(log_str, tags=tags_to_apply, **log_params)
 
-    if tasks:
-        await asyncio.gather(*tasks, return_exceptions=True)
+    if tasks and context.execute:
+        results: list[list[ProposedChange]] = await asyncio.gather(
+            *tasks, return_exceptions=True
+        )
+        for r in results:
+            response.extend(r)
 
-    # FIXME: i worry that response may not actually match actual work done
-    # since we append to response prior to actual cloud calls.
     return response
 
 

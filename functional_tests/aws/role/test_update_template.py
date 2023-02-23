@@ -35,7 +35,8 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
         cls.template.deleted = True
         asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
 
-    async def test_update_tag(self):
+    # empty tag string value is a valid input
+    async def test_update_tag_with_empty_string(self):
         self.template.properties.tags = [Tag(key="test", value="")]
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
@@ -55,6 +56,44 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
                     self.template.properties.tags[0].value,
                     role["Tags"][0]["Value"],
                     f"{account_id} has invalid tag key for role {self.role_name}",
+                )
+
+    # tag None string value is not acceptable
+    async def test_update_tag_with_bad_input(self):
+        self.template.properties.description = "Updated description"  # good input
+        self.template.properties.tags = [Tag(key="*", value="")]  # bad input
+        try:
+            account_change_details = await self.template.apply(
+                IAMBIC_TEST_DETAILS.config.aws, ctx
+            )
+        except Exception as e:
+            # because it should still crash
+            # FIXME check assert here
+            print(e)
+
+        assert len(account_change_details.proposed_changes) > 0
+        assert len(account_change_details.exceptions_seen) > 0
+
+        account_role_mapping = await get_role_across_accounts(
+            IAMBIC_TEST_DETAILS.config.aws.accounts, self.role_name, False
+        )
+
+        # Check description was updated across all accounts the role is on
+        for account_id, role in account_role_mapping.items():
+            if role:
+                self.assertEqual(
+                    self.template.properties.description,
+                    role["Description"],
+                    f"{account_id} has invalid description for role {self.role_name}",
+                )
+
+        # Check tags was NOT updated across all accounts the role is on
+        for account_id, role in account_role_mapping.items():
+            if role:
+                self.assertNotIn(
+                    "Tags",
+                    role,
+                    f"{account_id} should not have tags for role {self.role_name}",
                 )
 
     async def test_update_description(self):
