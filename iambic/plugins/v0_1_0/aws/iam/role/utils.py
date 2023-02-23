@@ -5,6 +5,7 @@ import json
 from typing import Union
 
 from deepdiff import DeepDiff
+
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
@@ -130,7 +131,10 @@ async def apply_role_tags(
     tags_to_apply = [
         tag
         for tag in template_tags
-        if tag.get("Value", "") != existing_tag_map.get(tag["Key"], "")
+        if tag.get("Value", "")
+        != existing_tag_map.get(
+            tag["Key"], None
+        )  # existing_tag_map default cannot be "", because "" is an valid value for a tag
     ]
     tasks = []
     response = []
@@ -175,8 +179,10 @@ async def apply_role_tags(
         log.info(log_str, tags=tags_to_apply, **log_params)
 
     if tasks:
-        await asyncio.gather(*tasks)
+        await asyncio.gather(*tasks, return_exceptions=True)
 
+    # FIXME: i worry that response may not actually match actual work done
+    # since we append to response prior to actual cloud calls.
     return response
 
 
