@@ -10,6 +10,7 @@ from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.role.utils import get_role_across_accounts
+from iambic.plugins.v0_1_0.aws.models import Tag
 
 
 class UpdateRoleTestCase(IsolatedAsyncioTestCase):
@@ -33,6 +34,28 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
     def tearDownClass(cls):
         cls.template.deleted = True
         asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+
+    async def test_update_tag(self):
+        self.template.properties.tags = [Tag(key="test", value="")]
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+
+        account_role_mapping = await get_role_across_accounts(
+            IAMBIC_TEST_DETAILS.config.aws.accounts, self.role_name, False
+        )
+
+        # Check description was updated across all accounts the role is on
+        for account_id, role in account_role_mapping.items():
+            if role:
+                self.assertEqual(
+                    self.template.properties.tags[0].key,
+                    role["Tags"][0]["Key"],
+                    f"{account_id} has invalid tag key for role {self.role_name}",
+                )
+                self.assertEqual(
+                    self.template.properties.tags[0].value,
+                    role["Tags"][0]["Value"],
+                    f"{account_id} has invalid tag key for role {self.role_name}",
+                )
 
     async def test_update_description(self):
         self.template.properties.description = "Updated description"

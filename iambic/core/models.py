@@ -192,7 +192,9 @@ class BaseModel(IambicPydanticBaseModel):
                 for k in properties.__dict__.keys()
                 if k not in exclude_keys
             }
-            resource_dict = {k: v for k, v in resource_dict.items() if bool(v)}
+            resource_dict = {
+                k: v for k, v in resource_dict.items() if v is not None
+            }  # using bool(v) will make it impossible to handle empty string tag value
         else:
             resource_dict = properties.dict(
                 exclude=exclude_keys, exclude_none=True, exclude_unset=False
@@ -294,6 +296,9 @@ class AccountChangeDetails(PydanticBaseModel):
     current_value: Optional[dict]
     new_value: Optional[dict]
     proposed_changes: list[ProposedChange] = Field(default=[])
+    exceptions_seen: list[str] = Field(
+        default=[]
+    )  # FIXME, can we do better than string?
 
 
 class TemplateChangeDetails(PydanticBaseModel):

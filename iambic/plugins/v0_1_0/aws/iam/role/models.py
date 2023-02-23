@@ -368,13 +368,22 @@ class RoleTemplate(AWSTemplate, AccessModel):
             ]
         )
         try:
-            changes_made = await asyncio.gather(*tasks)
+            changes_made = await asyncio.gather(*tasks, return_exceptions=True)
+
+            # separate out the success versus failure calls
+            exceptions = [str(r) for r in changes_made if isinstance(r, Exception)]
+            changes_made = [r for r in changes_made if not isinstance(r, Exception)]
+
         except Exception as e:
             log.exception("Unable to apply changes to resource", error=e, **log_params)
             return account_change_details
         if any(changes_made):
             account_change_details.proposed_changes.extend(
                 list(chain.from_iterable(changes_made))
+            )
+        if any(exceptions):
+            account_change_details.exceptions_seen.extend(
+                list(chain.from_iterable(exceptions))
             )
 
         if context.execute:
