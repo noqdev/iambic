@@ -42,19 +42,24 @@ def get_iambic_spoke_role_template_body() -> str:
 async def create_stack(
     client, stack_name: str, template_body: str, parameters: list[dict], **kwargs
 ) -> bool:
-    existing_stack = await legacy_paginated_search(
-        client.describe_stacks,
-        response_key="Stacks",
-        StackName=stack_name,
-    )
-    if existing_stack:
-        log.info(
-            "Stack already exists. Skipping creation. "
-            "If this is not the desired behavior, please delete the stack in the console and try again.\n",
-            stack_name=stack_name,
-            stack_url="https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks\n",
+    try:
+        existing_stack = await legacy_paginated_search(
+            client.describe_stacks,
+            response_key="Stacks",
+            StackName=stack_name,
         )
-        return True
+        if existing_stack:
+            log.info(
+                "Stack already exists. Skipping creation. "
+                "If this is not the desired behavior, please delete the stack in the console and try again.\n",
+                stack_name=stack_name,
+                stack_url="https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks\n",
+            )
+            return True
+    except client.exceptions.ClientError as e:
+        # ValidationError means the stack doesn't exist
+        if e.response["Error"]["Code"] != "ValidationError":
+            raise
 
     response = await boto_crud_call(
         client.create_stack,

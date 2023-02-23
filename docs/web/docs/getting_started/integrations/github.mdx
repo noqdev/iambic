@@ -197,3 +197,68 @@ Add the following statement into the Allow statement block
 4. Can I set IAMbic to run on just a small porton of my cloud? How do I do that?
 
 	A: <!-- #TODO  -->
+
+
+# Github App integration
+
+By installing Iambic Github App, the app can integrate with the pull-request and merge flow in your iambic templates repository.
+
+## Create a Github App in your organization
+
+1. Visit your organization Github App settings. (https://github.com/organizations/ExampleOrg/settings/apps)
+2. Click "New Github App"
+3. Input `Iambic Integrations` for "GitHub App name"
+4. Input `https://iambic.org/` for "Homepage URL"
+5. Uncheck "Active" for "Webhook"
+6. Select "Read and Write" for "Content" Under "Permissions"
+7. Select "Read and Write" for "Pull requests" Under "Permissions"
+8. Leave default "Only on this account" for "Where can this Github App bed installed?"
+9. Click "Create Github App"
+10. Scroll down to "Private Keys"
+11. Click "Generate a private key"
+12. A file named "iambic-integrations.2023-02-17.private-key.pem" should be downloaded by your browser. (the exact filename may be different due to timestamp)
+
+Store the following secrets in AWS SecretManager in the same AWS account running Github App lambda function
+
+1. Store the earlier downloaded private key contents (not the filename) to SecretManager and name it `dev/test-github-app-private-key` (This is the default name in the later terraform. If you use another name, be sure to update it in the terraform procedure later)
+
+2. Generate a webhook secret. (e.g., by taking the output of ruby -rsecurerandom -e 'puts SecureRandom.hex(20)' at the terminal). Store the webhook secret in SecretManager and name it `dev/test-github-app-webhook-secret`
+
+We have create the Github App. A Github App has to be a hosted application. We need to deploy the Github App as a lambda function.
+
+1. Checkout iambic repository
+2. `cd deployment/github_app`
+3. `terraform init`
+4. `terraform apply` (Examine the plan, it is the resources it will create). Enter `yes` if you accept the plan to continue.
+5. `terraform output` will contain the lambda function URL. this is the URL to be used for the Github app webhook.
+
+Return to the Github App settings page to connect the Githbu App to the just deployed Lambda
+
+1. https://github.com/organizations/ExampleOrg/settings/apps/iambic-integrations
+2. Ensure you are in the "General" section in the left navigation bar
+3. Scroll down to "Webhook" section
+4. Paste in the url from the lambda function URL. (.e.g ) "https://UNIQUE_ID.lambda-url.us-west-2.on.aws/"
+5. Paste in the Webhook secret generated earlier.
+6. Click "Save changes"
+7. Click "Permissions & events" section in the left navigation bar
+8. Scroll down to "Subscribe to events"
+9. Ensure the following are selected: "Meta", "Issue Comment", "Pull request", and "Workflow run"
+10. Click "Save changes"
+11. Click "Install App" in the left navigation bar
+12. Click "Install" for your organization
+13. Go to your organization settings (https://github.com/organizations/ExampleOrg/settings/profile)
+14. Select "Github Apps" under "Third-party Access" in the left navigation bar
+15. Click "Configure" on "Iambic Integrations"
+16. Select your iambic templates repository under "Repository access" section.
+17. Click Save
+
+Enable iambic-integrations to bypass review rules for "main" branch
+
+Typical pull-requests review flow requires reviewers approval. Action such as auto import, auto expire require changes being pushed back into main branch without manual approvals.
+
+1. Go to your iambic templates repository settings (https://github.com/ExampleOrg/ExampleIambicTemplatesRepository/settings)
+2. Click "Branches" in the top left navigation.
+3. Click on "Edit" for "main" under "Branch protection rules"
+4. Click on "Allow specified actors to bypass required pull requests"
+5. In "Search for people, teams or apps", type in `iambic-integrations` to click on the Github App we have created.
+6. Click "Save changes".

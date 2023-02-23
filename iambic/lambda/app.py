@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+import tempfile
 import time
 from enum import Enum
 
@@ -20,10 +21,38 @@ from iambic.main import (
 )
 
 REPO_BASE_PATH = os.path.expanduser("~/.iambic/repos/")
-os.makedirs(os.path.dirname(REPO_BASE_PATH), exist_ok=True)
 PLAN_OUTPUT_PATH = os.environ.get("PLAN_OUTPUT_PATH", None)
 FROM_SHA = os.environ.get("FROM_SHA", None)
 TO_SHA = os.environ.get("TO_SHA", None)
+
+
+def init_repo_base_path():
+    # Have to be careful when setting REPO_BASE_PATH because lambda execution
+    # environment can be very straight on only /tmp is writable
+
+    if os.environ.get("AWS_LAMBDA_FUNCTION_NAME", False):
+        temp_templates_directory = tempfile.mkdtemp(prefix="lambda")
+        REPO_BASE_PATH = f"{temp_templates_directory}/.iambic/repos/"
+    else:
+        REPO_BASE_PATH = os.path.expanduser("~/.iambic/repos/")
+
+    this_module = sys.modules[__name__]
+    setattr(this_module, "REPO_BASE_PATH", REPO_BASE_PATH)
+    os.makedirs(os.path.dirname(REPO_BASE_PATH), exist_ok=True)
+
+
+def init_plan_output_path():
+    # Have to be careful when setting REPO_BASE_PATH because lambda execution
+    # environment can be very straight on only /tmp is writable
+
+    if os.environ.get("AWS_LAMBDA_FUNCTION_NAME", False):
+        temp_templates_directory = tempfile.mkdtemp(prefix="lambda")
+        PLAN_OUTPUT_PATH = f"{temp_templates_directory}/proposed_changes.yaml"
+    else:
+        PLAN_OUTPUT_PATH = os.environ.get("PLAN_OUTPUT_PATH", None)
+
+    this_module = sys.modules[__name__]
+    setattr(this_module, "PLAN_OUTPUT_PATH", PLAN_OUTPUT_PATH)
 
 
 class LambdaCommand(Enum):
@@ -68,7 +97,12 @@ def run_handler(event=None, context=None):
             return run_detect(REPO_BASE_PATH)
         case LambdaCommand.run_git_apply.value:
             return run_git_apply(
-                config_path, False, FROM_SHA, TO_SHA, repo_dir=REPO_BASE_PATH
+                config_path,
+                False,
+                FROM_SHA,
+                TO_SHA,
+                repo_dir=REPO_BASE_PATH,
+                output_path=PLAN_OUTPUT_PATH,
             )
         case LambdaCommand.run_git_plan.value:
             return run_git_plan(config_path, PLAN_OUTPUT_PATH, repo_dir=REPO_BASE_PATH)
@@ -82,6 +116,10 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         raise Exception("You must pass a command")
     command = sys.argv[1]
+
+    init_repo_base_path()
+    init_plan_output_path()
+
     # `schedule` is just for development and demo purposes
     if command == "schedule":
         while True:
