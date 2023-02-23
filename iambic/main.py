@@ -302,6 +302,12 @@ def run_git_apply(
         )
     )
     output_proposed_changes(template_changes, output_path=output_path)
+    exceptions = [
+        change.exceptions_seen for change in template_changes if change.exceptions_seen
+    ]
+    # figure out a way to log the useful information
+    if exceptions:
+        os.exit(1)
 
 
 @cli.command()

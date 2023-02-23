@@ -6,8 +6,6 @@ from itertools import chain
 from typing import Callable, Optional, Union
 
 import botocore
-from pydantic import Field, constr, validator
-
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -41,6 +39,7 @@ from iambic.plugins.v0_1_0.aws.models import (
     Tag,
 )
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
+from pydantic import Field, constr, validator
 
 AWS_IAM_ROLE_TEMPLATE_TYPE = "NOQ::AWS::IAM::Role"
 
@@ -299,16 +298,30 @@ class RoleTemplate(AWSTemplate, AccessModel):
                             f"{log_str} Updating resource...",
                             **update_resource_log_params,
                         )
-                        tasks.append(
-                            boto_crud_call(
-                                client.update_role,
-                                RoleName=role_name,
-                                **{
-                                    k: account_role.get(k)
-                                    for k in supported_update_keys
-                                },
-                            )
-                        )
+
+                        async def update_role():
+                            exceptions = []
+                            try:
+                                await boto_crud_call(
+                                    client.update_role,
+                                    RoleName=role_name,
+                                    **{
+                                        k: account_role.get(k)
+                                        for k in supported_update_keys
+                                    },
+                                )
+                            except Exception as e:
+                                exceptions.append(str(e))
+                            return [
+                                ProposedChange(
+                                    change_type=ProposedChangeType.UPDATE,
+                                    resource_id=role_name,
+                                    resource_type=self.resource_type,
+                                    exceptions_seen=exceptions,
+                                )
+                            ]
+
+                        tasks.append(update_role())
                     else:
                         log.info(log_str, **update_resource_log_params)
                         account_change_details.proposed_changes.append(
@@ -368,11 +381,20 @@ class RoleTemplate(AWSTemplate, AccessModel):
             ]
         )
         try:
-            changes_made = await asyncio.gather(*tasks, return_exceptions=True)
+            results: list[list[ProposedChange]] = await asyncio.gather(
+                *tasks, return_exceptions=True
+            )
 
             # separate out the success versus failure calls
-            exceptions = [str(r) for r in changes_made if isinstance(r, Exception)]
-            changes_made = [r for r in changes_made if not isinstance(r, Exception)]
+            exceptions: list[ProposedChange] = []
+            changes_made: list[ProposedChange] = []
+            for result in results:
+                for r in result:
+                    if isinstance(r, ProposedChange):
+                        if len(r.exceptions_seen) == 0:
+                            changes_made.append(r)
+                        else:
+                            exceptions.append(r)
 
         except Exception as e:
             log.exception("Unable to apply changes to resource", error=e, **log_params)
