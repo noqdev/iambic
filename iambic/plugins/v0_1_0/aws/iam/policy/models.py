@@ -405,10 +405,6 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
 
         return account_change_details
 
-    @property
-    def resource_id(self):
-        return self.properties.policy_name
-
 
 class ManagedPolicyRef(AccessModel, ExpiryModel):
     policy_arn: constr(regex=ARN_RE)

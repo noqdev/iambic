@@ -14,6 +14,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 from pydantic import create_model as create_pydantic_model
 
+import iambic.plugins.v0_1_0.github
 from iambic.core.context import ctx
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
@@ -107,6 +108,11 @@ class Config(BaseTemplate):
             PluginDefinition(
                 type=PluginType.DIRECTORY_PATH,
                 location=okta.__path__[0],
+                version=PLUGIN_VERSION,
+            ),
+            PluginDefinition(
+                type=PluginType.DIRECTORY_PATH,
+                location=iambic.plugins.v0_1_0.github.__path__[0],
                 version=PLUGIN_VERSION,
             ),
         ],
@@ -260,6 +266,7 @@ class Config(BaseTemplate):
             return "\n".join(change_str_list)
 
     async def run_discover_upstream_config_changes(self, repo_dir: str):
+        log.info("Scanning for upstream changes to config attributes.")
         await asyncio.gather(
             *[
                 plugin.async_discover_upstream_config_changes_callable(
@@ -269,6 +276,7 @@ class Config(BaseTemplate):
                 if plugin.async_discover_upstream_config_changes_callable
             ]
         )
+        log.info("Finished scanning for upstream changes to config attributes.")
         self.write()
 
     async def configure_plugins(self):
@@ -383,6 +391,7 @@ async def load_config(config_path: str) -> Config:
     """
     from iambic.config.templates import TEMPLATES
 
+    log.info("Loading config...")
     config_path = str(
         config_path
     )  # Ensure it's a string in case it's a Path for pydantic
@@ -399,7 +408,10 @@ async def load_config(config_path: str) -> Config:
     config = dynamic_config(
         plugin_instances=all_plugins, file_path=config_path, **config_dict
     )
+
+    log.info("Setting config metadata...")
     await config.configure_plugins()
+    log.info("Config loaded successfully...")
 
     TEMPLATES.set_templates(
         list(

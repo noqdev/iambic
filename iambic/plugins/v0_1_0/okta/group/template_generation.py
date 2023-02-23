@@ -7,7 +7,10 @@ from typing import TYPE_CHECKING
 from iambic.core.template_generation import (
     create_or_update_template as common_create_or_update_template,
 )
-from iambic.core.template_generation import get_existing_template_map
+from iambic.core.template_generation import (
+    delete_orphaned_templates,
+    get_existing_template_map,
+)
 from iambic.plugins.v0_1_0.okta.group.models import (
     OKTA_GROUP_TEMPLATE_TYPE,
     OktaGroupTemplate,
@@ -39,7 +42,7 @@ def get_templated_resource_file_path(
 
 async def update_or_create_group_template(
     group: Group, existing_template_map: dict, group_dir: str
-):
+) -> Group:
     """
     Update or create an OktaGroupTemplate object from the provided Group object.
 
@@ -60,7 +63,7 @@ async def update_or_create_group_template(
     UserSimple.update_forward_refs()
     OktaGroupTemplate.update_forward_refs()
 
-    common_create_or_update_template(
+    return common_create_or_update_template(
         file_path,
         existing_template_map,
         group.group_id,
@@ -82,13 +85,11 @@ async def generate_group_templates(
     group_dir = get_group_dir(base_path, okta_organization.idp_name)
 
     # Update or create templates
+    all_resource_ids = set()
     for okta_group in groups:
-        await update_or_create_group_template(
+        resource_template = await update_or_create_group_template(
             okta_group, existing_template_map, group_dir
         )
+        all_resource_ids.add(resource_template.resource_id)
 
-    # Delete templates that no longer exist
-    discovered_group_ids = [g.group_id for g in groups]
-    for group_id, template in existing_template_map.items():
-        if group_id not in discovered_group_ids:
-            template.delete()
+    delete_orphaned_templates(list(existing_template_map.values()), all_resource_ids)

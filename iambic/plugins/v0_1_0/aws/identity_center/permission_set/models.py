@@ -742,10 +742,6 @@ class AWSIdentityCenterPermissionSetTemplate(
         return template_changes
 
     @property
-    def resource_id(self) -> str:
-        return self.identifier
-
-    @property
     def included_children(self):
         return []
 

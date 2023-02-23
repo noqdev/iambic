@@ -10,6 +10,7 @@ from iambic.core.git import (
 from iambic.core.logger import log
 from iambic.core.models import TemplateChangeDetails
 from iambic.core.parser import load_templates
+from iambic.request_handler.expire_resources import flag_expired_resources
 
 
 async def apply_git_changes(
@@ -58,5 +59,5 @@ async def apply_git_changes(
     templates.extend(
         create_templates_for_modified_files(config, file_changes["modified_files"])
     )
-
+    await flag_expired_resources([template.file_path for template in templates])
     return await config.run_apply(templates)
