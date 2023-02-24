@@ -8,11 +8,10 @@ from typing import TYPE_CHECKING, Optional
 from deepdiff import DeepDiff
 from git import Repo
 from git.exc import GitCommandError
-from pydantic import BaseModel as PydanticBaseModel
-
 from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
 from iambic.core.utils import NOQ_TEMPLATE_REGEX, file_regex_search, yaml
+from pydantic import BaseModel as PydanticBaseModel
 
 if TYPE_CHECKING:
     from iambic.config.dynamic_config import Config
