@@ -307,7 +307,7 @@ def run_git_apply(
     ]
     # figure out a way to log the useful information
     if exceptions:
-        os.exit(1)
+        raise SystemExit(1)
 
 
 @cli.command()
