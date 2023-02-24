@@ -4,8 +4,6 @@ import asyncio
 from typing import Callable, Optional, Union
 
 import botocore
-from pydantic import Field, constr, validator
-
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -34,6 +32,7 @@ from iambic.plugins.v0_1_0.aws.models import (
     Tag,
 )
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
+from pydantic import Field, constr, validator
 
 AWS_IAM_USER_TEMPLATE_TYPE = "NOQ::AWS::IAM::User"
 
@@ -171,6 +170,7 @@ class UserTemplate(AWSTemplate, AccessModel):
             resource_id=user_name,
             new_value=dict(**account_user),
             proposed_changes=[],
+            exceptions_seen=[],
         )
         log_params = dict(
             resource_type=self.resource_type,
