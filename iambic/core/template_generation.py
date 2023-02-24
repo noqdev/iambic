@@ -467,6 +467,7 @@ def create_or_update_template(
                 error=str(err),
                 template_params=template_params,
             )
+            raise
     else:
         try:
             new_template.write()
@@ -477,6 +478,7 @@ def create_or_update_template(
                 error=str(err),
                 template_params=template_params,
             )
+            raise
 
 
 def get_resource_id_to_model_map(models: list[BaseModel]) -> dict[str, BaseModel]:
