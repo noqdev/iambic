@@ -727,12 +727,14 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
             if any(account_change.exceptions_seen)
         ]
 
-        if account_changes and context.execute:
+        proposed_changes = [x for x in account_changes if x.proposed_changes]
+
+        if proposed_changes and context.execute:
             log.info(
                 "Successfully applied resource changes to all aws_accounts.",
                 **log_params,
             )
-        elif account_changes and not context.execute:
+        elif proposed_changes and not context.execute:
             log.info(
                 "Successfully detected required resource changes on all aws_accounts.",
                 **log_params,
