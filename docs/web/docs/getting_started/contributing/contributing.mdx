@@ -4,6 +4,8 @@ title: How to contribute
 
 ## Interested in contributing?
 
+This guide assumes that you already have a [local git repository](../installation/local_git_repo) that contains your IAMbic templates. If you have not yet setup a local git repository for IAMbic to store templates in, head on over to [setup the local git repository](../installation/local_git_repo) first.
+
 ### Setting up your local environment
 
 :::info
@@ -71,20 +73,3 @@ Guidance can be found in our Local Development guide below.
 
 - Confirm Docker is installed properly:
 `docker run --rm busybox true`
-
-
-### Create a local Git Repository
-
-IAMbic can use any folder as a database-on-disk. We strongly suggest using a version control system, as this will allow IAMbic to keep a historical record of changes to your Cloud IAM over time. We have created GitHub action workflows to automate the IAMbic processes as much as possible. For the purposes of the tutorials in IAMbic, we will use a Git repository that only exists on your system. If you wish to configure IAMbic in production, we recommend configuring a repository in GitHub, as IAMbic ships with GitHub actions that keep your local repo in-sync with your cloud environment. (#TODO: Link to a production setup flow and reference this doc: Guidance on how to create a repository can be found in [Github&#39;s guide for creating a repo](https://docs.github.com/en/get-started/quickstart/create-a-repo).)
-
-Create a private GitHub repository called `iambic-templates`.
-
-```bash
-mkdir iambic-templates
-cd iambic-templates
-git init
-cat <<EOF > .gitignore
-**/secrets.yaml
-EOF
-```
-
