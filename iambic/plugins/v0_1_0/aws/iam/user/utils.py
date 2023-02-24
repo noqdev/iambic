@@ -432,36 +432,23 @@ async def apply_user_groups(
     for group in template_groups:
         if group not in existing_groups:
             log_str = "New groups discovered."
-
+            proposed_changes = [
+                ProposedChange(
+                    change_type=ProposedChangeType.CREATE,
+                    resource_id=group,
+                    attribute="groups",
+                )
+            ]
+            response.extend(proposed_changes)
             if context.execute:
                 log_str = f"{log_str} Adding user to group..."
-
-                async def add_user_to_group():
-                    exceptions = []
-                    try:
-                        await boto_crud_call(
-                            iam_client.add_user_to_group,
-                            GroupName=group,
-                            UserName=user_name,
-                        )
-                    except Exception as e:
-                        exceptions.append(str(e))
-                    return ProposedChange(
-                        change_type=ProposedChangeType.CREATE,
-                        resource_id=group,
-                        attribute="groups",
-                        exceptions_seen=exceptions,
-                    )
-
-                tasks.append(add_user_to_group())
-            else:
-                response.append(
-                    ProposedChange(
-                        change_type=ProposedChangeType.CREATE,
-                        resource_id=group,
-                        attribute="groups",
-                    )
+                apply_awaitable = boto_crud_call(
+                    iam_client.add_user_to_group,
+                    GroupName=group,
+                    UserName=user_name,
                 )
+                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
+
             log.info(log_str, group_name=group, **log_params)
 
     # Remove stale groups
@@ -469,42 +456,30 @@ async def apply_user_groups(
         if group not in template_groups:
             log_str = "Stale groups discovered."
 
+            proposed_changes = [
+                ProposedChange(
+                    change_type=ProposedChangeType.DELETE,
+                    resource_id=group,
+                    attribute="groups",
+                )
+            ]
+            response.extend(proposed_changes)
             if context.execute:
                 log_str = f"{log_str} Removing user from group..."
-
-                async def remove_user_from_group():
-                    exceptions = []
-                    try:
-                        await boto_crud_call(
-                            iam_client.remove_user_from_group,
-                            GroupName=group,
-                            UserName=user_name,
-                        )
-                    except Exception as e:
-                        exceptions.append(str(e))
-                    return ProposedChange(
-                        change_type=ProposedChangeType.DELETE,
-                        resource_id=group,
-                        attribute="groups",
-                        exceptions_seen=exceptions,
-                    )
-
-                tasks.append(remove_user_from_group())
-            else:
-                response.append(
-                    ProposedChange(
-                        change_type=ProposedChangeType.DELETE,
-                        resource_id=group,
-                        attribute="groups",
-                    )
+                apply_awaitable = boto_crud_call(
+                    iam_client.remove_user_from_group,
+                    GroupName=group,
+                    UserName=user_name,
                 )
+                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
+
             log.info(log_str, group_name=group, **log_params)
 
     if tasks:
-        results: list[ProposedChange] = await asyncio.gather(*tasks)
-        response.extend(results)
-
-    return response
+        results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+        return list(chain.from_iterable(results))
+    else:
+        return response
 
 
 async def delete_iam_user(user_name: str, iam_client, log_params: dict):
