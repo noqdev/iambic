@@ -68,7 +68,8 @@ RUN mkdir -p ${FUNCTION_DIR}/iambic \
 
 RUN adduser --system --user-group --home ${FUNCTION_DIR} iambic \
  && chown -R iambic:iambic ${FUNCTION_DIR} \
- && chmod -R 755 ${FUNCTION_DIR}
+ && chmod -R 755 ${FUNCTION_DIR} \
+ && chmod -R 777 ${FUNCTION_DIR}
 
 COPY --from=build-layer ${FUNCTION_DIR}/dist ${FUNCTION_DIR}/dist
 
@@ -77,8 +78,6 @@ RUN pip install ${FUNCTION_DIR}/dist/*.whl \
 
 ENV IAMBIC_REPO_DIR /templates
 
-USER iambic:iambic
-
 VOLUME [ "/templates" ]
 
 WORKDIR ${FUNCTION_DIR}/docs/web
@@ -86,11 +85,10 @@ WORKDIR ${FUNCTION_DIR}/docs/web
 RUN yarn \
  && yarn install --frozen-lockfile
 
-EXPOSE 3000
-
 WORKDIR ${FUNCTION_DIR}
 
 ENV PYTHONPATH=${PYTHONPATH}:${FUNCTION_DIR}/.local/lib/python3.11/site-packages
 ENV IAMBIC_WEB_APP_DIR=${FUNCTION_DIR}/docs/web
+ENV IAMBIC_DOCKER_CONTAINER=1
 
 ENTRYPOINT [ "python", "-m", "iambic.main" ]
