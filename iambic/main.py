@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import os
 import pathlib
+import resource
+import sys
 import warnings
 from typing import Optional
 
@@ -19,6 +21,8 @@ from iambic.core.utils import gather_templates, yaml
 from iambic.request_handler.expire_resources import flag_expired_resources
 from iambic.request_handler.git_apply import apply_git_changes
 from iambic.request_handler.git_plan import plan_git_changes
+
+DEFAULT_USER_RESOURCE_LIMIT = 4096
 
 warnings.filterwarnings("ignore", category=FutureWarning, module="botocore.client")
 
@@ -39,6 +43,19 @@ def output_proposed_changes(
                     [template_change.dict() for template_change in template_changes],
                 )
             )
+
+
+def check_and_update_resource_limit():
+    soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+    if soft_limit < DEFAULT_USER_RESOURCE_LIMIT:
+        try:
+            resource.setrlimit(resource.RLIMIT_NOFILE, (DEFAULT_USER_RESOURCE_LIMIT, hard_limit))
+        except PermissionError:
+            log.error("Cannot increase resource limit: the process does not have permission.")
+            sys.exit(1)
+        except Exception:
+            log.error("Unable to increase resource limit: please manually update the soft limit to atleast 4096.")
+            sys.exit(1)
 
 
 @click.group()
@@ -440,9 +457,11 @@ def init_plugins_cmd(repo_dir: str):
     default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory. Example: ~/iambic-templates",
 )
+
 def setup(repo_dir: str):
     ConfigurationWizard(repo_dir).run()
 
 
 if __name__ == "__main__":
+    check_and_update_resource_limit()
     cli()
