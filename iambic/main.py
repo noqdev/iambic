@@ -7,7 +7,6 @@ import warnings
 from typing import Optional
 
 import click
-
 from iambic.config.dynamic_config import init_plugins, load_config
 from iambic.config.utils import resolve_config_template_path
 from iambic.config.wizard import ConfigurationWizard
@@ -381,6 +380,39 @@ def run_import(
         config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
     asyncio.run(config.run_import(repo_dir))
+
+
+@cli.command()
+@click.option(
+    "--template",
+    "-t",
+    "templates",
+    required=False,
+    multiple=True,
+    type=click.Path(exists=True),
+    help="The template file path(s) to expire. Example: ./aws/roles/engineering.yaml",
+)
+@click.option(
+    "--repo-dir",
+    "-d",
+    "repo_dir",
+    required=False,
+    type=click.Path(exists=True),
+    default=os.getenv("IAMBIC_REPO_DIR"),
+    help="The repo directory containing the templates. Example: ~/iambic-templates",
+)
+def lint(templates: list[str], repo_dir: str):
+    ctx.eval_only = True
+    config_path = asyncio.run(resolve_config_template_path(repo_dir))
+    asyncio.run(load_config(config_path, configure_plugins=False))
+
+    if not templates:
+        templates = asyncio.run(gather_templates(repo_dir))
+
+    templates = load_templates(templates, False)
+    log.info("Formatting templates.")
+    for template in templates:
+        template.write()
 
 
 @cli.command(name="init")

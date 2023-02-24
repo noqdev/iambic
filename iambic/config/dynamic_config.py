@@ -371,7 +371,7 @@ class Config(BaseTemplate):
         log.info("Config successfully written", config_location=file_path)
 
 
-async def load_config(config_path: str) -> Config:
+async def load_config(config_path: str, configure_plugins: bool = True) -> Config:
     """
     Load the configuration from the specified file path.
 
@@ -412,9 +412,10 @@ async def load_config(config_path: str) -> Config:
         plugin_instances=all_plugins, file_path=config_path, **config_dict
     )
 
-    log.info("Setting config metadata...")
-    await config.configure_plugins()
-    log.info("Config loaded successfully...")
+    if configure_plugins:
+        log.info("Setting config metadata...")
+        await config.configure_plugins()
+        log.info("Config loaded successfully...")
 
     TEMPLATES.set_templates(
         list(

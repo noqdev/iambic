@@ -4,6 +4,7 @@ import asyncio
 from unittest import IsolatedAsyncioTestCase
 
 import dateparser
+
 from functional_tests.aws.user.utils import generate_user_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
