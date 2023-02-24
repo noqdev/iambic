@@ -297,6 +297,9 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
         elif boto3_session := self.boto3_session_map.get(region_name):
             return boto3_session
 
+        if not self.hub_session_info:
+            await self.set_hub_session_info()
+
         boto3_session = await create_assume_role_session(
             self.hub_session_info["boto3_session"],
             self.spoke_role_arn,
@@ -457,7 +460,7 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
                 "account_id",
                 "account_name",
                 "org_id",
-                "identity_center_account",
+                "identity_center",
                 "default_rule",
             ],
         )
@@ -482,11 +485,7 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
 
 
 class BaseAWSOrgRule(BaseModel):
-    enabled: Optional[bool] = Field(
-        True,
-        description="If set to False, iambic will ignore the included accounts.",
-    )
-    iambic_managed: Optional[IambicManaged] = Field(
+    iambic_managed: IambicManaged = Field(
         IambicManaged.UNDEFINED,
         description="Controls the directionality of iambic changes",
     )
@@ -525,7 +524,7 @@ class AWSOrgAccountRule(AccessModelMixin, BaseAWSOrgRule):
         return []
 
 
-class AWSIdentityCenterAccount(PydanticBaseModel):
+class AWSIdentityCenter(PydanticBaseModel):
     region: Optional[RegionName] = Field(
         RegionName.us_east_1,
         description="Region identity center is configured on",
@@ -544,7 +543,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
     org_account_id: constr(min_length=12, max_length=12) = Field(
         description="The AWS Organization's master account ID"
     )
-    identity_center_account: Optional[AWSIdentityCenterAccount] = Field(
+    identity_center: Optional[AWSIdentityCenter] = Field(
         default=None,
         description="The AWS Account ID and region of the AWS Identity Center instance to use for this organization",
     )
@@ -579,9 +578,9 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
             account_rule = new_rule
 
         region_name = self.region_name
-        if self.identity_center_account and self.org_account_id == account_id:
+        if self.identity_center and self.org_account_id == account_id:
             identity_center_details = IdentityCenterDetails(
-                region=self.identity_center_account.region
+                region=self.identity_center.region
             )
         else:
             identity_center_details = None
@@ -640,7 +639,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         )
         response = [account for account in discovered_accounts if account]
 
-        if self.identity_center_account:
+        if self.identity_center:
             for elem, account in enumerate(response):
                 if account.account_id == self.org_account_id:
                     response[elem].identity_center_details.org_account_map = {
@@ -735,8 +734,12 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
         return template_changes
 
     @property
+    def resource_id(self):
+        return self.properties.resource_id
+
+    @property
     def resource_type(self):
-        return self.identifier
+        return self.properties.resource_type
 
 
 class Description(AccessModel):

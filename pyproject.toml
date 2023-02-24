@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "iambic"
-version = "0.1.32"
+version = "0.1.40"
 description = "The python package used to generate, parse, and execute noqform yaml templates."
 authors = ["Noq Software <hello@noq.dev>"]
 readme = "README.md"
@@ -39,7 +39,7 @@ google-api-python-client = "^2.64.0"
 google-auth = "^2.12.0"
 jsonschema2md2 = "^0.6.0"
 GitPython = "^3.1.30"
-PyGithub = "^1.57"
+PyGithub = "==1.57" # Since 1.58, PyGithub does not work with Lambda. See https://github.com/PyGithub/PyGithub/issues/2430
 pydantic-factories = "^1.12.0"
 okta = "^2.8.0"
 asyncache = "^0.3.1"
@@ -48,6 +48,7 @@ pytest-mock = "^3.10.0"
 questionary = "^1.10.0"
 types-dateparser = "^1.1.4.5"
 msal = "^1.21.0"
+cryptography = "^39.0.1"
 
 [tool.poetry.scripts]
 iambic = "iambic.main:cli"

@@ -10,13 +10,14 @@ from typing import Union
 import boto3
 import botocore
 import questionary
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, NoCredentialsError
 
 from iambic.config.dynamic_config import (
     CURRENT_IAMBIC_VERSION,
     Config,
     ExtendsConfig,
     ExtendsConfigKey,
+    load_config,
 )
 from iambic.config.utils import resolve_config_template_path
 from iambic.core.context import ctx
@@ -38,11 +39,12 @@ from iambic.plugins.v0_1_0.aws.iam.role.models import (
 from iambic.plugins.v0_1_0.aws.iam.role.template_generation import (
     generate_aws_role_templates,
 )
+from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import (
     ARN_RE,
     IAMBIC_SPOKE_ROLE_NAME,
     AWSAccount,
-    AWSIdentityCenterAccount,
+    AWSIdentityCenter,
     AWSOrganization,
     BaseAWSOrgRule,
     Partition,
@@ -54,8 +56,8 @@ from iambic.plugins.v0_1_0.aws.utils import (
     get_identity_arn,
     is_valid_account_id,
 )
-from iambic.plugins.v0_1_0.google.iambic_plugin import GoogleProject
-from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
+from iambic.plugins.v0_1_0.google.iambic_plugin import GoogleConfig, GoogleProject
+from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
 
 CUSTOM_AUTO_COMPLETE_STYLE = questionary.Style(
     [
@@ -68,7 +70,9 @@ CUSTOM_AUTO_COMPLETE_STYLE = questionary.Style(
 def set_aws_region(question_text: str, default_val: Union[str, RegionName]) -> str:
     default_val = default_val if isinstance(default_val, str) else default_val.value
     choices = [default_val] + [e.value for e in RegionName if e.value != default_val]
-    return questionary.select(question_text, choices=choices, default=default_val).ask()
+    return questionary.select(
+        question_text, choices=choices, default=default_val
+    ).unsafe_ask()
 
 
 def set_aws_account_partition(default_val: Union[str, Partition]) -> str:
@@ -76,7 +80,7 @@ def set_aws_account_partition(default_val: Union[str, Partition]) -> str:
         "Which AWS partition is the account on?",
         choices=[e.value for e in Partition],
         default=default_val if isinstance(default_val, str) else default_val.value,
-    ).ask()
+    ).unsafe_ask()
 
 
 def set_aws_role_arn(account_id: str):
@@ -84,7 +88,7 @@ def set_aws_role_arn(account_id: str):
         role_arn = questionary.text(
             "(Optional) Provide a role arn that CloudFormation will assume to create the stack(s) "
             "or hit enter to use your current access."
-        ).ask()
+        ).unsafe_ask()
         if not role_arn or (account_id in role_arn and re.search(ARN_RE, role_arn)):
             return role_arn or None
         else:
@@ -98,83 +102,89 @@ def set_aws_role_arn(account_id: str):
 def set_required_text_value(human_readable_name: str, default_val: str = None):
     while True:
         if response := questionary.text(
-            f"What is the {human_readable_name}?",
+            human_readable_name,
             default=default_val or "",
-        ).ask():
+        ).unsafe_ask():
             return response
         else:
-            print(f"Please enter a valid {human_readable_name}.")
+            print("Please enter a valid response.")
 
 
 def set_okta_idp_name(default_val: str = None):
-    return set_required_text_value("Okta Identity Provider Name", default_val)
+    return set_required_text_value(
+        "What is the Okta Identity Provider Name?", default_val
+    )
 
 
 def set_okta_org_url(default_val: str = None):
-    return set_required_text_value("Okta Organization URL", default_val)
+    return set_required_text_value("What is the Okta Organization URL?", default_val)
 
 
 def set_okta_api_token(default_val: str = None):
-    return set_required_text_value("Okta API Token", default_val)
+    return set_required_text_value("What is the Okta API Token?", default_val)
 
 
 def set_google_subject(default_domain: str = None, default_service: str = None) -> dict:
     return {
-        "domain": set_required_text_value("Google Domain", default_domain),
+        "domain": set_required_text_value("What is the Google Domain?", default_domain),
         "service_account": set_required_text_value(
-            "Google Service Account", default_service
+            "What is the Google Service Account?", default_service
         ),
     }
 
 
 def set_google_project_type(default_val: str = None):
     return set_required_text_value(
-        "Google Project Type", default_val or "service_account"
+        "What is the Google Project Type?", default_val or "service_account"
     )
 
 
 def set_google_project_id(default_val: str = None):
-    return set_required_text_value("Project ID", default_val)
+    return set_required_text_value("What is the Project ID?", default_val)
 
 
 def set_google_private_key(default_val: str = None):
-    return set_required_text_value("Private Key", default_val)
+    return set_required_text_value("What is the Private Key?", default_val)
 
 
 def set_google_private_key_id(default_val: str = None):
-    return set_required_text_value("Private Key ID", default_val)
+    return set_required_text_value("What is the Private Key ID?", default_val)
 
 
 def set_google_client_id(default_val: str = None):
-    return set_required_text_value("Client ID", default_val)
+    return set_required_text_value("What is the Client ID?", default_val)
 
 
 def set_google_client_email(default_val: str = None):
-    return set_required_text_value("Client E-Mail", default_val)
+    return set_required_text_value("What is the Client E-Mail?", default_val)
 
 
 def set_google_auth_uri(default_val: str = None):
-    return set_required_text_value("Auth URI", default_val)
+    return set_required_text_value("What is the Auth URI?", default_val)
 
 
 def set_google_token_uri(default_val: str = None):
-    return set_required_text_value("Token URI", default_val)
+    return set_required_text_value("What is the Token URI?", default_val)
 
 
 def set_google_auth_provider_cert_url(default_val: str = None):
-    return set_required_text_value("auth_provider_x509_cert_url", default_val)
+    return set_required_text_value(
+        "What is the auth_provider_x509_cert_url?", default_val
+    )
 
 
 def set_google_client_cert_url(default_val: str = None):
-    return set_required_text_value("client_x509_cert_url", default_val)
+    return set_required_text_value("What is the client_x509_cert_url?", default_val)
 
 
-def set_identity_center_account(
+def set_identity_center(
     region: str = RegionName.us_east_1,
-) -> AWSIdentityCenterAccount:
-    region = set_aws_region("What region is your Identity Center (SSO) set to?", region)
-    identity_center_account = AWSIdentityCenterAccount(region=region)
-    return identity_center_account
+) -> AWSIdentityCenter:
+    identity_center = AWSIdentityCenter()
+    identity_center.region = set_aws_region(
+        "What region is your Identity Center (SSO) set to?", region
+    )
+    return identity_center
 
 
 class ConfigurationWizard:
@@ -195,9 +205,9 @@ class ConfigurationWizard:
         self.caller_identity = {}
         self.profile_name = ""
 
-        self.set_config_details()
+        asyncio.run(self.set_config_details())
 
-        if self.config.aws.accounts or self.config.aws.organizations:
+        if self.config.aws:
             self.hub_account_id = self.config.aws.hub_role_arn.split(":")[4]
         else:
             self.hub_account_id = None
@@ -209,7 +219,7 @@ class ConfigurationWizard:
                 ).get_caller_identity()
                 caller_arn = get_identity_arn(default_caller_identity)
                 default_hub_account_id = caller_arn.split(":")[4]
-            except (botocore.exceptions.ClientError, AttributeError, IndexError):
+            except (AttributeError, IndexError, NoCredentialsError, ClientError):
                 default_hub_account_id = None
                 default_caller_identity = {}
         else:
@@ -219,11 +229,11 @@ class ConfigurationWizard:
         if not self.hub_account_id:
             while True:
                 self.hub_account_id = set_required_text_value(
-                    " the Account ID where you would like to deploy the Iambic hub role. "
-                    "This is the account that will be used to assume into all other accounts by IAMbic. "
+                    "What is the Account ID where you would like to deploy the IAMbic hub role?\n"
+                    "This is the account that will be used to assume into all other accounts by IAMbic.\n"
                     "If you have an AWS Organization, that would be your hub account.\n"
-                    "However, if you are just trying IAMbic out, you can provide any account. "
-                    "Just be sure to remove any delete all IAMbic stacks when/if you decide to use a different account as your hub.",
+                    "However, if you are just trying IAMbic out, you can provide any account.\n"
+                    "Just be sure to delete all IAMbic stacks when/if you decide to use a different account as your hub.",
                     default_val=default_hub_account_id,
                 )
                 if is_valid_account_id(self.hub_account_id):
@@ -232,9 +242,9 @@ class ConfigurationWizard:
         if self.hub_account_id == default_hub_account_id:
             identity_arn = get_identity_arn(default_caller_identity)
             if questionary.confirm(
-                f"IAMbic detected you are using {identity_arn} for AWS access. "
+                f"IAMbic detected you are using {identity_arn} for AWS access.\n"
                 f"This role will require the ability to create"
-                f"CloudFormation stacks, stack sets, and stack set instances. "
+                f"CloudFormation stacks, stack sets, and stack set instances.\n"
                 f"Would you like to use this role?"
             ).ask():
                 self.caller_identity = default_caller_identity
@@ -250,14 +260,18 @@ class ConfigurationWizard:
     @property
     def has_cf_permissions(self):
         if self._has_cf_permissions is None:
-            self._has_cf_permissions = questionary.confirm(
-                f"This requires that you have the ability to "
-                f"create CloudFormation stacks, stack sets, and stack set instances. "
-                f"If you are using an AWS Organization, be sure that trusted access is enabled. "
-                f"You can check this using the AWS Console "
-                f"https://{self.default_region}.console.aws.amazon.com/organizations/v2/home/services/CloudFormation%20StackSets . "
-                f"Proceed?"
-            ).ask()
+            try:
+                self._has_cf_permissions = questionary.confirm(
+                    f"This requires that you have the ability to "
+                    f"create CloudFormation stacks, stack sets, and stack set instances.\n"
+                    f"If you are using an AWS Organization, be sure that trusted access is enabled.\n"
+                    f"You can check this using the AWS Console:\n  "
+                    f"https://{self.default_region}.console.aws.amazon.com/organizations/v2/home/services/CloudFormation%20StackSets\n"
+                    f"Proceed?"
+                ).unsafe_ask()
+            except KeyboardInterrupt:
+                log.info("Exiting...")
+                sys.exit(0)
 
         return self._has_cf_permissions
 
@@ -280,23 +294,41 @@ class ConfigurationWizard:
 
         return self._cf_role_arn
 
-    def set_config_details(self):
+    async def set_config_details(self):
         try:
-            self.config_path = str(
-                asyncio.run(resolve_config_template_path(self.repo_dir))
-            )
+            self.config_path = str((await resolve_config_template_path(self.repo_dir)))
         except RuntimeError:
             self.config_path = f"{self.repo_dir}/iambic_config.yaml"
-        self.config: Config = Config(
-            file_path=self.config_path, version=CURRENT_IAMBIC_VERSION
-        )
 
         if os.path.exists(self.config_path) and os.path.getsize(self.config_path) != 0:
             log.info("Found existing configuration file", config_path=self.config_path)
-            with contextlib.suppress(FileNotFoundError):
-                # Try to load a configuration
-                self.config = Config.load(self.config_path)
-        with contextlib.suppress(ClientError):
+            try:
+                self.config = await load_config(self.config_path)
+            except Exception as err:
+                log.error(
+                    "Unable to load existing configuration file",
+                    config_path=self.config_path,
+                    error=repr(err),
+                )
+                sys.exit(1)
+        else:
+            # Create a stubbed out config file to use for the wizard
+            config: Config = Config(
+                file_path=self.config_path, version=CURRENT_IAMBIC_VERSION
+            )
+            config.write()
+            try:
+                self.config = await load_config(self.config_path)
+            except Exception as err:
+                log.error(
+                    "Error creating the configuration file",
+                    config_path=self.config_path,
+                    error=repr(err),
+                )
+                os.remove(self.config_path)
+                sys.exit(1)
+
+        with contextlib.suppress(ClientError, NoCredentialsError):
             self.autodetected_org_settings = self.boto3_session.client(
                 "organizations"
             ).describe_organization()["Organization"]
@@ -317,25 +349,29 @@ class ConfigurationWizard:
                 f"CloudFormation stacks, stack sets, and stack set instances."
             )
 
-        if len(available_profiles) == 0:
-            log.error(
-                "Please create a profile with access to the Hub Account. "
-                "See https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html"
-            )
+        try:
+            if len(available_profiles) == 0:
+                log.error(
+                    "Please create an AWS profile with access to the Hub Account. "
+                    "See https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html"
+                )
+                sys.exit(0)
+            elif len(available_profiles) < 10:
+                profile_name = questionary.select(
+                    question_text,
+                    choices=available_profiles,
+                    default=os.getenv("AWS_PROFILE", ""),
+                ).unsafe_ask()
+            else:
+                profile_name = questionary.autocomplete(
+                    question_text,
+                    choices=available_profiles,
+                    style=CUSTOM_AUTO_COMPLETE_STYLE,
+                    default=os.getenv("AWS_PROFILE", ""),
+                ).unsafe_ask()
+        except KeyboardInterrupt:
+            log.info("Exiting...")
             sys.exit(0)
-        elif len(available_profiles) < 10:
-            profile_name = questionary.select(
-                question_text,
-                choices=available_profiles,
-                default=os.getenv("AWS_PROFILE", ""),
-            ).ask()
-        else:
-            profile_name = questionary.autocomplete(
-                question_text,
-                choices=available_profiles,
-                style=CUSTOM_AUTO_COMPLETE_STYLE,
-                default=os.getenv("AWS_PROFILE", ""),
-            ).ask()
 
         return profile_name if profile_name != "None" else None
 
@@ -365,17 +401,25 @@ class ConfigurationWizard:
             self.set_boto3_session()
 
         self.profile_name = profile_name
-        with contextlib.suppress(ClientError):
+        with contextlib.suppress(ClientError, NoCredentialsError):
             self.autodetected_org_settings = self.boto3_session.client(
                 "organizations"
             ).describe_organization()["Organization"]
 
     def get_boto3_session_for_account(self, account_id: str):
         if account_id == self.hub_account_id:
+            if not self.profile_name:
+                if profile_name := os.getenv("AWS_PROFILE"):
+                    self.profile_name = profile_name
+                else:
+                    self.profile_name = self.set_aws_profile_name(
+                        "Please specify the profile to use to access to the AWS Account.",
+                        allow_none=False,
+                    )
             return self.boto3_session, self.profile_name
         else:
             profile_name = self.set_aws_profile_name(
-                "Please specify the profile to use to access to the AWS Account. "
+                "Please specify the profile to use to access to the AWS Account.\n"
                 "If None is selected the AWS Account will be skipped.",
                 allow_none=True,
             )
@@ -396,10 +440,8 @@ class ConfigurationWizard:
             return
 
         try:
-            await self.config.setup_aws_accounts()
-            for account in self.config.aws.accounts:
-                if account.identity_center_details:
-                    await account.set_identity_center_details()
+            await self.config.run_discover_upstream_config_changes(self.repo_dir)
+            await self.config.aws.set_identity_center_details()
         except Exception as err:
             log.info("Failed to refresh AWS accounts", error=err)
 
@@ -415,7 +457,7 @@ class ConfigurationWizard:
 
         self.config.write()
         role_template.write(exclude_unset=False)
-        await role_template.apply(self.config, ctx)
+        await role_template.apply(self.config.aws, ctx)
 
     def configuration_wizard_aws_account_add(self):  # noqa: C901
         if not self.has_cf_permissions:
@@ -429,12 +471,14 @@ class ConfigurationWizard:
         )
         if is_hub_account:
             account_id = self.hub_account_id
-            account_name = questionary.text(
+            account_name = set_required_text_value(
                 "What is the name of the AWS Account?"
-            ).ask()
+            )
             if not questionary.confirm(
-                "Create required Hub and Spoke roles via CloudFormation?"
-            ).ask():
+                "Create required Hub and Spoke roles via CloudFormation?\n"
+                "The templates that will be used can be found here:\n"
+                "  https://github.com/noqdev/iambic/tree/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates"
+            ).unsafe_ask():
                 log.info(
                     "Unable to add the AWS Account without creating the required roles."
                 )
@@ -442,10 +486,10 @@ class ConfigurationWizard:
         else:
             account_id = questionary.text(
                 "What is the AWS Account ID? Usually this looks like `12345689012`"
-            ).ask()
+            ).unsafe_ask()
             account_name = questionary.text(
                 "What is the name of the AWS Account?"
-            ).ask()
+            ).unsafe_ask()
             if not is_valid_account_id(account_id):
                 log.info("Invalid AWS Account ID")
                 return
@@ -454,8 +498,10 @@ class ConfigurationWizard:
                 return
 
             if not questionary.confirm(
-                "Create required Spoke role via CloudFormation?"
-            ).ask():
+                "Create required Spoke role via CloudFormation?\n"
+                "The template that will be used can be found here:\n"
+                "  https://github.com/noqdev/iambic/blob/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates/IambicSpokeRole.yml"
+            ).unsafe_ask():
                 log.info(
                     "Unable to add the AWS account without creating the required role."
                 )
@@ -466,7 +512,7 @@ class ConfigurationWizard:
             return
 
         if is_hub_account and not profile_name:
-            profile_name = self.set_aws_profile_name(allow_none=True)
+            profile_name = self.profile_name
         elif not is_hub_account:
             profile_name = None
 
@@ -504,23 +550,21 @@ class ConfigurationWizard:
             account_name=account_name,
             spoke_role_arn=get_spoke_role_arn(account_id),
             iambic_managed=IambicManaged.READ_AND_WRITE,
+            aws_profile=profile_name,
         )
         if is_hub_account:
             account.hub_role_arn = get_hub_role_arn(account_id)
-
-        account.aws_profile = profile_name
         # account.partition = set_aws_account_partition(account.partition)
 
-        if not questionary.confirm("Keep these settings?").ask():
+        if not questionary.confirm("Keep these settings?").unsafe_ask():
             if questionary.confirm(
                 "The AWS account will not be added to the config and wizard will exit. "
                 "Proceed?"
-            ).ask():
+            ).unsafe_ask():
                 log.info("Exiting")
                 sys.exit(0)
 
         self.config.aws.accounts.append(account)
-        self.config.write()
 
         if is_hub_account:
             log.info("Importing AWS identities")
@@ -530,7 +574,7 @@ class ConfigurationWizard:
                     asyncio.run(account.set_identity_center_details())
             asyncio.run(
                 generate_aws_role_templates(
-                    self.config,
+                    self.config.aws,
                     self.repo_dir,
                 )
             )
@@ -548,7 +592,7 @@ class ConfigurationWizard:
                 "Which AWS Account would you like to edit?",
                 choices=["Go back", *account_names],
                 style=CUSTOM_AUTO_COMPLETE_STYLE,
-            ).ask()
+            ).unsafe_ask()
             if action == "Go back":
                 return
             account = next(
@@ -565,7 +609,7 @@ class ConfigurationWizard:
         else:
             account = self.config.aws.accounts[0]
 
-        choices = ["Go back", "Update Iambic control"]
+        choices = ["Go back", "Update IAMbic control"]
         if not account.org_id:
             choices.append("Update name")
 
@@ -573,14 +617,14 @@ class ConfigurationWizard:
             action = questionary.select(
                 "What would you like to do?",
                 choices=choices,
-            ).ask()
+            ).unsafe_ask()
             if action == "Go back":
                 return
             elif action == "Update name":
                 account.account_name = questionary.text(
                     "What is the name of the AWS Account?",
                     default=account.account_name,
-                ).ask()
+                ).unsafe_ask()
 
             self.config.aws.accounts[
                 account_id_to_config_elem_map[account.account_id]
@@ -593,7 +637,7 @@ class ConfigurationWizard:
                 action = questionary.select(
                     "What would you like to do?",
                     choices=["Go back", "Add AWS Account", "Edit AWS Account"],
-                ).ask()
+                ).unsafe_ask()
                 if action == "Go back":
                     return
                 elif action == "Add AWS Account":
@@ -602,8 +646,6 @@ class ConfigurationWizard:
                     self.configuration_wizard_aws_account_edit()
             else:
                 self.configuration_wizard_aws_account_add()
-
-            self.config.write()
 
     def configuration_wizard_aws_organizations_edit(self):
         org_ids = [org.org_id for org in self.config.aws.organizations]
@@ -614,7 +656,7 @@ class ConfigurationWizard:
             action = questionary.select(
                 "Which AWS Organization would you like to edit?",
                 choices=["Go back", *org_ids],
-            ).ask()
+            ).unsafe_ask()
             if action == "Go back":
                 return
             org_to_edit = next(
@@ -630,23 +672,20 @@ class ConfigurationWizard:
         choices = [
             "Go back",
             "Update IdentityCenter",
-            "Update Iambic control",
+            "Update IAMbic control",
         ]
         while True:
             action = questionary.select(
                 "What would you like to do?",
                 choices=choices,
-            ).ask()
+            ).unsafe_ask()
             if action == "Go back":
                 return
             elif action == "Update IdentityCenter":
-                org_to_edit.identity_center_account = set_identity_center_account(
-                    org_to_edit.identity_center_account.region_name
+                org_to_edit.identity_center = set_identity_center(
+                    org_to_edit.identity_center.region_name
                 )
                 asyncio.run(self.attempt_aws_account_refresh())
-                for account in self.config.aws.accounts:
-                    if account.identity_center_details:
-                        asyncio.run(account.set_identity_center_details())
 
             self.config.aws.organizations[
                 org_id_to_config_elem_map[org_to_edit.org_id]
@@ -665,7 +704,7 @@ class ConfigurationWizard:
         org_id = questionary.text(
             f"What is the AWS Organization ID? It can be found here {org_console_url}",
             default=self.autodetected_org_settings.get("Id", ""),
-        ).ask()
+        ).unsafe_ask()
 
         account_id = self.hub_account_id
         session, profile_name = self.get_boto3_session_for_account(account_id)
@@ -673,8 +712,10 @@ class ConfigurationWizard:
             return
 
         if not questionary.confirm(
-            "Create required Hub and Spoke roles via CloudFormation?"
-        ).ask():
+            "Create required Hub and Spoke roles via CloudFormation?\n"
+            "The templates that will be used can be found here:\n"
+            "  https://github.com/noqdev/iambic/tree/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates"
+        ).unsafe_ask():
             log.info("Unable to add the AWS Org without creating the required roles.")
             return
 
@@ -697,11 +738,8 @@ class ConfigurationWizard:
             region=org_region,
             default_rule=BaseAWSOrgRule(),
             hub_role_arn=get_hub_role_arn(account_id),
+            aws_profile=profile_name,
         )
-        aws_org.aws_profile = profile_name
-        if not aws_org.aws_profile:
-            aws_org.aws_profile = self.set_aws_profile_name(allow_none=True)
-
         aws_org.default_rule.iambic_managed = IambicManaged.READ_AND_WRITE
 
         self.config.aws.organizations.append(aws_org)
@@ -717,40 +755,32 @@ class ConfigurationWizard:
             session
             and questionary.confirm(
                 "Would you like to setup Identity Center (SSO) support?", default=False
-            ).ask()
+            ).unsafe_ask()
         ):
-            aws_org.identity_center_account = set_identity_center_account()
+            aws_org.identity_center = set_identity_center()
 
-        if not questionary.confirm("Keep these settings?").ask():
+        if not questionary.confirm("Keep these settings?").unsafe_ask():
             if questionary.confirm(
                 "The AWS Org will not be added to the config and wizard will exit. "
                 "Proceed?"
-            ).ask():
+            ).unsafe_ask():
                 log.info("Exiting")
                 sys.exit(0)
 
-        log.info("Saving config and importing AWS identities")
-
+        log.info("Saving config.")
         self.config.write()
 
-        asyncio.run(self.attempt_aws_account_refresh())
-        for account in self.config.aws.accounts:
-            if account.identity_center_details:
-                asyncio.run(account.set_identity_center_details())
+        if not questionary.confirm(
+            "Add the org accounts to the config and import the org's AWS identities?"
+        ).unsafe_ask():
+            if questionary.confirm(
+                "This is required to finish the setup process. Wizard will exit if this has not been setup. "
+                "Exit?"
+            ).unsafe_ask():
+                log.info("Exiting")
+                sys.exit(0)
 
-        if questionary.confirm(
-            "Would you like to update the config to include the Organization's accounts?"
-        ).ask():
-            asyncio.run(self.config.run_discover_upstream_config_changes(self.repo_dir))
-        else:
-            # We at least need to import the hub accounts roles to make any required changes to the spoke role
-            # Examples would be granting access to the change detection queue or decoding the secret
-            asyncio.run(
-                generate_aws_role_templates(
-                    self.config,
-                    self.repo_dir,
-                )
-            )
+        asyncio.run(self.attempt_aws_account_refresh())
 
     def configuration_wizard_aws_organizations(self):
         # Currently only 1 org per config is supported.
@@ -759,16 +789,14 @@ class ConfigurationWizard:
         else:
             self.configuration_wizard_aws_organizations_add()
 
-        self.config.write()
-
     def configuration_wizard_aws(self):
         while True:
             action = questionary.select(
-                "What would you like to configure in AWS? "
-                "We recommend configuring Iambic with AWS Organizations, "
+                "What would you like to configure in AWS?\n"
+                "We recommend configuring IAMbic with AWS Organizations, "
                 "but you may also manually configure accounts.",
                 choices=["Go back", "AWS Organizations", "AWS Accounts"],
-            ).ask()
+            ).unsafe_ask()
             if action == "Go back":
                 return
             elif action == "AWS Organizations":
@@ -791,7 +819,7 @@ class ConfigurationWizard:
         if role_name:
             question_text += f" and update the {role_name} IAMbic template"
 
-        if not questionary.confirm(f"{question_text}?").ask():
+        if not questionary.confirm(f"{question_text}?").unsafe_ask():
             self.config.secrets = {}
             return
 
@@ -837,14 +865,15 @@ class ConfigurationWizard:
             asyncio.run(self.save_and_deploy_changes(role_template))
 
     def update_secret(self):
-        self.config.secrets = {}
-        if self.config.okta_organizations:
-            self.config.secrets["okta"] = [
-                org.dict() for org in self.config.okta_organizations
+        if not self.config.secrets:
+            self.config.secrets = {}
+        if self.config.okta:
+            self.config.secrets.setdefault("okta", {})["organizations"] = [
+                org.dict() for org in self.config.okta.organizations
             ]
 
-        if self.config.google_projects:
-            self.config.secrets["google"] = [
+        if self.config.google:
+            self.config.secrets.setdefault("google", {})["projects"] = [
                 project.dict(
                     include={
                         "subjects",
@@ -860,7 +889,7 @@ class ConfigurationWizard:
                         "client_x509_cert_url",
                     }
                 )
-                for project in self.config.google_projects
+                for project in self.config.google.projects
             ]
 
         secret_details = self.config.extends[0]
@@ -894,30 +923,32 @@ class ConfigurationWizard:
             "client_x509_cert_url": set_google_client_cert_url(),
         }
         if self.config.secrets:
-            self.config.secrets.setdefault("google", []).append(google_obj)
-            self.config.google_projects.append(GoogleProject(**google_obj))
+            self.config.secrets.setdefault("google", {}).setdefault(
+                "projects", []
+            ).append(google_obj)
+            self.config.google = GoogleConfig(projects=[GoogleProject(**google_obj)])
             self.update_secret()
         else:
-            self.config.secrets = {"google": [google_obj]}
+            self.config.secrets = {"google": {"projects": [google_obj]}}
             self.create_secret()
 
     def configuration_wizard_google_project_edit(self):
-        project_ids = [project.project_id for project in self.config.google_projects]
+        project_ids = [project.project_id for project in self.config.google.projects]
         project_id_to_config_elem_map = {
             project.project_id: elem
-            for elem, project in enumerate(self.config.google_projects)
+            for elem, project in enumerate(self.config.google.projects)
         }
         if len(project_ids) > 1:
             action = questionary.select(
                 "Which Google Project would you like to edit?",
                 choices=["Go back", *project_ids],
-            ).ask()
+            ).unsafe_ask()
             if action == "Go back":
                 return
             project_to_edit = next(
                 (
                     project
-                    for project in self.config.google_projects
+                    for project in self.config.google.projects
                     if project.project_id == action
                 ),
                 None,
@@ -926,7 +957,7 @@ class ConfigurationWizard:
                 log.debug("Could not find AWS Organization to edit", org_id=action)
                 return
         else:
-            project_to_edit = self.config.google_projects[0]
+            project_to_edit = self.config.google.projects[0]
 
         project_id = project_to_edit.project_id
         choices = [
@@ -945,13 +976,13 @@ class ConfigurationWizard:
             action = questionary.select(
                 "What would you like to do?",
                 choices=choices,
-            ).ask()
+            ).unsafe_ask()
             if action == "Go back":
                 return
             elif action == "Update Subject":
                 if project_to_edit.subjects:
                     default_domain = project_to_edit.subjects[0].domain
-                    default_service = project_to_edit.subjects[0].service
+                    default_service = project_to_edit.subjects[0].service_account
                 else:
                     default_domain = None
                     default_service = None
@@ -993,7 +1024,7 @@ class ConfigurationWizard:
                     project_to_edit.client_x509_cert_url
                 )
 
-            self.config.google_projects[
+            self.config.google.projects[
                 project_id_to_config_elem_map[project_id]
             ] = project_to_edit
             self.update_secret()
@@ -1004,11 +1035,12 @@ class ConfigurationWizard:
             "For details on how to retrieve the information required to add a Google Project "
             "to IAMbic check out our docs: https://iambic.org/getting_started/google/"
         )
-        if self.config.google_projects:
+
+        if self.config.google:
             action = questionary.select(
                 "What would you like to do?",
                 choices=["Go back", "Add", "Edit"],
-            ).ask()
+            ).unsafe_ask()
             if action == "Go back":
                 return
             elif action == "Add":
@@ -1025,30 +1057,32 @@ class ConfigurationWizard:
             "api_token": set_okta_api_token(),
         }
         if self.config.secrets:
-            self.config.secrets.setdefault("okta", []).append(okta_obj)
-            self.config.okta_organizations.append(OktaOrganization(**okta_obj))
+            self.config.secrets.setdefault("okta", {}).setdefault(
+                "organizations", []
+            ).append(okta_obj)
+            self.config.okta = OktaConfig(organizations=[OktaOrganization(**okta_obj)])
             self.update_secret()
         else:
-            self.config.secrets = {"okta": [okta_obj]}
+            self.config.secrets = {"okta": {"organizations": [okta_obj]}}
             self.create_secret()
 
     def configuration_wizard_okta_organization_edit(self):
-        org_names = [org.idp_name for org in self.config.okta_organizations]
+        org_names = [org.idp_name for org in self.config.okta.organizations]
         org_name_to_config_elem_map = {
             org.idp_name: elem
-            for elem, org in enumerate(self.config.okta_organizations)
+            for elem, org in enumerate(self.config.okta.organizations)
         }
         if len(org_names) > 1:
             action = questionary.select(
                 "Which Okta Organization would you like to edit?",
                 choices=["Go back", *org_names],
-            ).ask()
+            ).unsafe_ask()
             if action == "Go back":
                 return
             org_to_edit = next(
                 (
                     org
-                    for org in self.config.okta_organizations
+                    for org in self.config.okta.organizations
                     if org.idp_name == action
                 ),
                 None,
@@ -1057,7 +1091,7 @@ class ConfigurationWizard:
                 log.debug("Could not find Okta Organization to edit", idp_name=action)
                 return
         else:
-            org_to_edit = self.config.okta_organizations[0]
+            org_to_edit = self.config.okta.organizations[0]
 
         org_name = org_to_edit.idp_name
         choices = [
@@ -1070,7 +1104,7 @@ class ConfigurationWizard:
             action = questionary.select(
                 "What would you like to do?",
                 choices=choices,
-            ).ask()
+            ).unsafe_ask()
             if action == "Go back":
                 return
             elif action == "Update name":
@@ -1080,7 +1114,7 @@ class ConfigurationWizard:
             elif action == "Update API Token":
                 org_to_edit.api_token = set_okta_api_token(org_to_edit.api_token)
 
-            self.config.okta_organizations[
+            self.config.okta.organizations[
                 org_name_to_config_elem_map[org_name]
             ] = org_to_edit
             self.update_secret()
@@ -1091,11 +1125,11 @@ class ConfigurationWizard:
             "For details on how to retrieve the information required to add an Okta Organization "
             "to IAMbic check out our docs: https://iambic.org/getting_started/okta/"
         )
-        if self.config.okta_organizations:
+        if self.config.okta:
             action = questionary.select(
                 "What would you like to do?",
                 choices=["Go back", "Add", "Edit"],
-            ).ask()
+            ).unsafe_ask()
             if action == "Go back":
                 return
             elif action == "Add":
@@ -1111,10 +1145,12 @@ class ConfigurationWizard:
             "However, you can modify the generated output to work with your Git provider."
         )
 
-        if questionary.confirm("Proceed?").ask():
-            commit_email = set_required_text_value("E-Mail address to use for commits")
+        if questionary.confirm("Proceed?").unsafe_ask():
+            commit_email = set_required_text_value(
+                "What is the E-Mail address to use for commits?"
+            )
             repo_name = set_required_text_value(
-                "Name of the repository, including the organization (example: github_org/repo_name)"
+                "What is the name of the repository, including the organization (example: github_org/repo_name)?"
             )
             if self.config.aws and self.config.aws.organizations:
                 aws_org = self.config.aws.organizations[0]
@@ -1137,10 +1173,10 @@ class ConfigurationWizard:
         if not questionary.confirm(
             "To setup change detection for iambic requires "
             "creating CloudFormation stacks "
-            "and a CloudFormation stack set. "
-            "This will also update the IAMbic Hub Role to add the required policy to consume the changes. "
+            "and a CloudFormation stack set.\n"
+            "This will also update the IAMbic Hub Role to add the required policy to consume the changes.\n"
             "Proceed?"
-        ).ask():
+        ).unsafe_ask():
             return
 
         session, _ = self.get_boto3_session_for_account(aws_org.org_account_id)
@@ -1181,10 +1217,16 @@ class ConfigurationWizard:
             )
         )
 
-        self.config.sqs_cloudtrail_changes_queues = [sqs_arn]
+        self.config.aws.sqs_cloudtrail_changes_queues = [sqs_arn]
         asyncio.run(self.save_and_deploy_changes(role_template))
 
-    def run(self):
+    def run(self):  # noqa: C901
+        if "aws" not in self.config.__fields__:
+            log.info("The config wizard requires the IAMbic AWS plugin.")
+            return
+        elif not self.config.aws:
+            self.config.aws = AWSConfig()
+
         while True:
             choices = ["AWS", "Done"]
             secret_in_config = bool(self.config.extends)
@@ -1194,57 +1236,73 @@ class ConfigurationWizard:
                 secret_question_text = "This requires permissions to update a role and create an AWS Secret."
 
             if self.config.aws.accounts or self.config.aws.organizations:
-                self.existing_role_template_map = asyncio.run(
-                    get_existing_template_map(self.repo_dir, AWS_IAM_ROLE_TEMPLATE_TYPE)
-                )
+                if not self.existing_role_template_map:
+                    log.info("Loading AWS role templates...")
+                    self.existing_role_template_map = asyncio.run(
+                        get_existing_template_map(
+                            self.repo_dir, AWS_IAM_ROLE_TEMPLATE_TYPE
+                        )
+                    )
                 if self.existing_role_template_map:
-                    choices = [
-                        "AWS",
-                        "Google",
-                        "Okta",
-                        "Generate Github Action Workflows",
-                        "Done",
-                    ]
+                    choices = ["AWS"]
+                    # Currently, the config wizard only support IAMbic plugins
+                    if "google" in self.config.__fields__:
+                        choices.append("Google")
+                    if "okta" in self.config.__fields__:
+                        choices.append("Okta")
+
+                    choices.extend(["Generate Github Action Workflows", "Done"])
 
                 if (
                     self.config.aws.organizations
                     and self.existing_role_template_map
-                    and not self.config.sqs_cloudtrail_changes_queues
+                    and not self.config.aws.sqs_cloudtrail_changes_queues
                 ):
                     choices.insert(-1, "Setup AWS change detection")
 
-            action = questionary.select(
-                "What would you like to configure?",
-                choices=choices,
-            ).ask()
+            try:
+                action = questionary.select(
+                    "What would you like to configure?",
+                    choices=choices,
+                ).unsafe_ask()
+            except KeyboardInterrupt:
+                log.info("Exiting...")
+                return
 
             # Let's try really hard not to use a switch statement since it depends on Python 3.10
-            if action == "Done":
-                self.config.write()
-                return
-            elif action == "AWS":
-                self.configuration_wizard_aws()
-            elif action == "Google":
-                if questionary.confirm(f"{secret_question_text} Proceed?").ask():
-                    self.configuration_wizard_google()
-            elif action == "Okta":
-                if questionary.confirm(f"{secret_question_text} Proceed?").ask():
-                    self.configuration_wizard_okta()
-            elif action == "Generate Github Action Workflows":
-                self.configuration_wizard_github_workflow()
-            elif action == "Setup AWS change detection":
-                if self.has_cf_permissions:
-                    log.info(
-                        f"IAMbic change detection relies on CloudTrail being enabled all IAMbic aware accounts. "
-                        f"You can check that you have CloudTrail setup by going to "
-                        f"https://{self.default_region}.console.aws.amazon.com/cloudtrail/home\n"
-                        f"If you do not have CloudTrail setup, you can set it up by going to "
-                        f"https://{self.default_region}.console.aws.amazon.com/cloudtrail/home?region={self.default_region}#/create"
-                    )
-                    self.configuration_wizard_change_detection_setup(
-                        self.config.aws.organizations[0]
-                    )
-                else:
-                    log.info(
-                        "Unable to edit this attribute without CloudFormation permissions."
-                    )
+            try:
+                if action == "Done":
+                    self.config.write()
+                    return
+                elif action == "AWS":
+                    self.configuration_wizard_aws()
+                elif action == "Google":
+                    if questionary.confirm(
+                        f"{secret_question_text} Proceed?"
+                    ).unsafe_ask():
+                        self.configuration_wizard_google()
+                elif action == "Okta":
+                    if questionary.confirm(
+                        f"{secret_question_text} Proceed?"
+                    ).unsafe_ask():
+                        self.configuration_wizard_okta()
+                elif action == "Generate Github Action Workflows":
+                    self.configuration_wizard_github_workflow()
+                elif action == "Setup AWS change detection":
+                    if self.has_cf_permissions:
+                        log.info(
+                            f"IAMbic change detection relies on CloudTrail being enabled all IAMbic aware accounts. "
+                            f"You can check that you have CloudTrail setup by going to "
+                            f"https://{self.default_region}.console.aws.amazon.com/cloudtrail/home\n"
+                            f"If you do not have CloudTrail setup, you can set it up by going to "
+                            f"https://{self.default_region}.console.aws.amazon.com/cloudtrail/home?region={self.default_region}#/create"
+                        )
+                        self.configuration_wizard_change_detection_setup(
+                            self.config.aws.organizations[0]
+                        )
+                    else:
+                        log.info(
+                            "Unable to edit this attribute without CloudFormation permissions."
+                        )
+            except KeyboardInterrupt:
+                ...

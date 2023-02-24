@@ -13,11 +13,12 @@ from iambic.core.logger import log
 from iambic.core.template_generation import (
     base_group_str_attribute,
     create_or_update_template,
+    delete_orphaned_templates,
     get_existing_template_map,
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, get_writable_directory, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import GroupMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.group.models import (
     AWS_IAM_GROUP_TEMPLATE_TYPE,
@@ -36,9 +37,9 @@ from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 
-GROUP_RESPONSE_DIR = pathlib.Path.home().joinpath(
-    ".iambic", "resources", "aws", "groups"
-)
+
+def get_group_response_dir() -> pathlib.Path:
+    return get_writable_directory().joinpath(".iambic", "resources", "aws", "groups")
 
 
 def get_group_dir(base_dir: str) -> str:
@@ -68,7 +69,7 @@ def get_templated_group_file_path(
 
 
 def get_account_group_resource_dir(account_id: str) -> str:
-    account_group_response_dir = os.path.join(GROUP_RESPONSE_DIR, account_id)
+    account_group_response_dir = os.path.join(get_group_response_dir(), account_id)
     os.makedirs(account_group_response_dir, exist_ok=True)
     return account_group_response_dir
 
@@ -368,19 +369,6 @@ async def generate_aws_group_templates(
             [{"aws_account": aws_account} for aws_account in aws_account_map.values()]
         )
 
-        # Remove templates not in any AWS account
-        all_group_names = set(
-            itertools.chain.from_iterable(
-                [
-                    [account_group["name"] for account_group in account["groups"]]
-                    for account in account_groups
-                ]
-            )
-        )
-        for existing_template in existing_template_map.values():
-            if existing_template.properties.group_name not in all_group_names:
-                existing_template.delete()
-
     if not any(account_group["groups"] for account_group in account_groups):
         log.info("No groups found in any AWS accounts.")
         return
@@ -428,14 +416,22 @@ async def generate_aws_group_templates(
     grouped_group_map = await base_group_str_attribute(aws_account_map, account_groups)
 
     log.info("Writing templated groups")
+    all_resource_ids = set()
     for group_name, group_refs in grouped_group_map.items():
-        await create_templated_group(
+        resource_template = await create_templated_group(
             aws_account_map,
             group_name,
             group_refs,
             group_dir,
             existing_template_map,
             config,
+        )
+        all_resource_ids.add(resource_template.resource_id)
+
+    if not group_messages:
+        # NEVER call this if messages are passed in because all_resource_ids will only contain those resources
+        delete_orphaned_templates(
+            list(existing_template_map.values()), all_resource_ids
         )
 
     log.info("Finished templated group generation")

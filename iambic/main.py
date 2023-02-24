@@ -8,7 +8,7 @@ from typing import Optional
 
 import click
 
-from iambic.config.dynamic_config import load_config
+from iambic.config.dynamic_config import init_plugins, load_config
 from iambic.config.utils import resolve_config_template_path
 from iambic.config.wizard import ConfigurationWizard
 from iambic.core.context import ctx
@@ -22,6 +22,8 @@ from iambic.request_handler.git_apply import apply_git_changes
 from iambic.request_handler.git_plan import plan_git_changes
 
 warnings.filterwarnings("ignore", category=FutureWarning, module="botocore.client")
+
+os.environ.setdefault("IAMBIC_REPO_DIR", str(pathlib.Path.cwd()))
 
 
 def output_proposed_changes(
@@ -61,7 +63,7 @@ def cli():
     "repo_dir",
     required=False,
     type=click.Path(exists=True),
-    default=os.environ.get("IAMBIC_REPO_DIR") or str(pathlib.Path.cwd()),
+    default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
 def plan(templates: list[str], repo_dir: str):
@@ -77,7 +79,7 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
 
     asyncio.run(flag_expired_resources(templates))
     ctx.eval_only = True
-    output_proposed_changes(asyncio.run(config.run_apply(templates)))
+    output_proposed_changes(asyncio.run(config.run_apply(load_templates(templates))))
 
 
 @cli.command()
@@ -96,7 +98,7 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
     "repo_dir",
     required=False,
     type=click.Path(exists=True),
-    default=os.environ.get("IAMBIC_REPO_DIR") or str(pathlib.Path.cwd()),
+    default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
 def expire(templates: list[str], repo_dir: str):
@@ -130,7 +132,7 @@ def detect(repo_dir: str):
 def run_detect(repo_dir: str):
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
-    asyncio.run(config.run_detect_changes(repo_dir or str(pathlib.Path.cwd())))
+    asyncio.run(config.run_detect_changes(repo_dir))
 
 
 @cli.command()
@@ -183,7 +185,7 @@ def run_clone_repos(repo_dir: str = str(pathlib.Path.cwd())):
     "repo_dir",
     required=False,
     type=click.Path(exists=True),
-    default=os.environ.get("IAMBIC_REPO_DIR") or str(pathlib.Path.cwd()),
+    default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
 def apply(force: bool, config_path: str, templates: list[str], repo_dir: str):
@@ -204,6 +206,7 @@ def run_apply(
     ctx.eval_only = not force
 
     templates = load_templates(templates)
+    asyncio.run(flag_expired_resources([template.file_path for template in templates]))
     template_changes = asyncio.run(config.run_apply(templates))
     output_proposed_changes(template_changes)
 
@@ -228,7 +231,7 @@ def run_apply(
     "repo_dir",
     required=False,
     type=click.Path(exists=True),
-    default=os.environ.get("IAMBIC_REPO_DIR") or str(pathlib.Path.cwd()),
+    default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
 @click.option(
@@ -251,10 +254,29 @@ def run_apply(
     type=str,
     help="The to_sha to calculate diff",
 )
+@click.option(
+    "--plan-output",
+    "-o",
+    "plan_output",
+    type=click.Path(exists=True),
+    help="The location to output the plan Example: ./proposed_changes.yaml",
+)
 def git_apply(
-    config_path: str, repo_dir: str, allow_dirty: bool, from_sha: str, to_sha: str
+    config_path: str,
+    repo_dir: str,
+    allow_dirty: bool,
+    from_sha: str,
+    to_sha: str,
+    plan_output: str,
 ):
-    run_git_apply(config_path, allow_dirty, from_sha, to_sha, repo_dir=repo_dir)
+    run_git_apply(
+        config_path,
+        allow_dirty,
+        from_sha,
+        to_sha,
+        repo_dir=repo_dir,
+        output_path=plan_output,
+    )
 
 
 def run_git_apply(
@@ -263,6 +285,7 @@ def run_git_apply(
     from_sha: str,
     to_sha: str,
     repo_dir: str = str(pathlib.Path.cwd()),
+    output_path: str = None,
 ):
 
     ctx.eval_only = False
@@ -272,13 +295,13 @@ def run_git_apply(
     template_changes = asyncio.run(
         apply_git_changes(
             config_path,
-            repo_dir or str(pathlib.Path.cwd()),
+            repo_dir,
             allow_dirty=allow_dirty,
             from_sha=from_sha,
             to_sha=to_sha,
         )
     )
-    output_proposed_changes(template_changes)
+    output_proposed_changes(template_changes, output_path=output_path)
 
 
 @cli.command()
@@ -294,7 +317,7 @@ def run_git_apply(
     "-o",
     "plan_output",
     type=click.Path(exists=True),
-    help="The location to output the plan Example: ./proposed_changes.json",
+    help="The location to output the plan Example: ./proposed_changes.yaml",
 )
 @click.option(
     "--repo-dir",
@@ -302,7 +325,7 @@ def run_git_apply(
     "repo_dir",
     required=False,
     type=click.Path(exists=True),
-    default=os.environ.get("IAMBIC_REPO_DIR") or str(pathlib.Path.cwd()),
+    default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
 def git_plan(config_path: str, plan_output: str, repo_dir: str):
@@ -328,7 +351,7 @@ def run_git_plan(
     "repo_dir",
     required=False,
     type=click.Path(exists=True),
-    default=os.environ.get("IAMBIC_REPO_DIR") or str(pathlib.Path.cwd()),
+    default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
 def config_discovery(repo_dir: str):
@@ -344,7 +367,7 @@ def config_discovery(repo_dir: str):
     "repo_dir",
     required=False,
     type=click.Path(exists=True),
-    default=os.environ.get("IAMBIC_REPO_DIR") or str(pathlib.Path.cwd()),
+    default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
 def import_(repo_dir: str):
@@ -357,7 +380,22 @@ def run_import(
     if not config_path:
         config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
-    asyncio.run(config.run_import(repo_dir or str(pathlib.Path.cwd())))
+    asyncio.run(config.run_import(repo_dir))
+
+
+@cli.command(name="init")
+@click.option(
+    "--repo-dir",
+    "-d",
+    "repo_dir",
+    required=False,
+    type=click.Path(exists=True),
+    default=os.getenv("IAMBIC_REPO_DIR"),
+    help="The repo directory. Example: ~/iambic-templates",
+)
+def init_plugins_cmd(repo_dir: str):
+    config_path = asyncio.run(resolve_config_template_path(repo_dir))
+    asyncio.run(init_plugins(config_path))
 
 
 @cli.command()
@@ -367,11 +405,11 @@ def run_import(
     "repo_dir",
     required=False,
     type=click.Path(exists=True),
-    default=os.environ.get("IAMBIC_REPO_DIR") or str(pathlib.Path.cwd()),
+    default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory. Example: ~/iambic-templates",
 )
 def setup(repo_dir: str):
-    ConfigurationWizard(repo_dir or str(pathlib.Path.cwd())).run()
+    ConfigurationWizard(repo_dir).run()
 
 
 if __name__ == "__main__":
