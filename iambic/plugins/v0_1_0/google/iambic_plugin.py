@@ -4,9 +4,6 @@ import os
 from typing import Optional
 
 import googleapiclient.discovery
-from google.oauth2 import service_account
-from pydantic import BaseModel, Field
-
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.models import Variable
@@ -14,6 +11,9 @@ from iambic.core.utils import aio_wrapper
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.google.group.models import GroupTemplate
 from iambic.plugins.v0_1_0.google.handlers import import_google_resources, load
+from pydantic import BaseModel, Field, SecretStr
+
+from google.oauth2 import service_account
 
 
 class GoogleSubjects(BaseModel):
@@ -27,7 +27,7 @@ class GoogleProject(BaseModel):
     subjects: list[GoogleSubjects]
     type: str
     private_key_id: str
-    private_key: str
+    private_key: SecretStr
     client_email: str
     client_id: str
     auth_uri: str
