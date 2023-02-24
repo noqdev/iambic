@@ -4,6 +4,9 @@ import os
 from typing import Optional
 
 import googleapiclient.discovery
+from google.oauth2 import service_account
+from pydantic import BaseModel, Field, SecretStr
+
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.models import Variable
@@ -11,9 +14,6 @@ from iambic.core.utils import aio_wrapper
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.google.group.models import GroupTemplate
 from iambic.plugins.v0_1_0.google.handlers import import_google_resources, load
-from pydantic import BaseModel, Field, SecretStr
-
-from google.oauth2 import service_account
 
 
 class GoogleSubjects(BaseModel):
@@ -62,22 +62,23 @@ class GoogleProject(BaseModel):
         if not os.environ.get("TESTING"):
             if service_conn := self._service_connection_map.get(key):
                 return service_conn
-
+        credentials = self.dict(
+            include={
+                "type",
+                "project_id",
+                "private_key_id",
+                "private_key",
+                "client_email",
+                "client_id",
+                "auth_uri",
+                "token_uri",
+                "auth_provider_x509_cert_url",
+                "client_x509_cert_url",
+            }
+        )
+        credentials["private_key"] = credentials["private_key"].get_secret_value()
         admin_credentials = service_account.Credentials.from_service_account_info(
-            self.dict(
-                include={
-                    "type",
-                    "project_id",
-                    "private_key_id",
-                    "private_key",
-                    "client_email",
-                    "client_id",
-                    "auth_uri",
-                    "token_uri",
-                    "auth_provider_x509_cert_url",
-                    "client_x509_cert_url",
-                }
-            ),
+            credentials,
             scopes=[
                 "https://www.googleapis.com/auth/admin.directory.user.security",
                 "https://www.googleapis.com/auth/admin.reports.audit.readonly",
