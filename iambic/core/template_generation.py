@@ -876,11 +876,19 @@ def merge_model(
             else:
                 setattr(merged_model, key, new_value)
         elif isinstance(existing_value, BaseModel):
-            setattr(
-                merged_model,
-                key,
-                merge_model(new_value, existing_value, all_provider_children),
-            )
+            if value_as_list:
+                if not isinstance(existing_value, list):
+                    existing_value = [existing_value]
+                new_value = merge_model_list(
+                    new_value, existing_value, all_provider_children
+                )
+                setattr(merged_model, key, new_value)
+            else:
+                setattr(
+                    merged_model,
+                    key,
+                    merge_model(new_value, existing_value, all_provider_children),
+                )
         elif key not in iambic_fields:
             setattr(merged_model, key, new_value)
     return merged_model
