@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-from itertools import chain
 from typing import Callable, Optional, Union
 
 import botocore
+from pydantic import Field, constr, validator
+
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -33,7 +34,6 @@ from iambic.plugins.v0_1_0.aws.models import (
     Tag,
 )
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
-from pydantic import Field, constr, validator
 
 AWS_IAM_USER_TEMPLATE_TYPE = "NOQ::AWS::IAM::User"
 
@@ -229,7 +229,7 @@ class UserTemplate(AWSTemplate, AccessModel):
                     ]
                 )
 
-                supported_update_keys = ["Description", "MaxSessionDuration"]
+                supported_update_keys = ["Path", "UserName"]
                 update_resource_log_params = {**log_params}
                 update_user_params = {}
                 for k in supported_update_keys:
@@ -239,8 +239,7 @@ class UserTemplate(AWSTemplate, AccessModel):
                         update_resource_log_params[k] = dict(
                             old_value=current_user.get(k), new_value=account_user.get(k)
                         )
-                        update_user_params[k] = current_user.get(k)
-
+                        update_user_params[f"New{k}"] = account_user.get(k)
                 if update_user_params:
                     log_str = "Out of date resource found."
                     if context.execute:
@@ -248,16 +247,30 @@ class UserTemplate(AWSTemplate, AccessModel):
                             f"{log_str} Updating resource...",
                             **update_resource_log_params,
                         )
-                        tasks.append(
-                            boto_crud_call(
-                                client.update_user,
-                                UserName=user_name,
-                                **{
-                                    k: account_user.get(k)
-                                    for k in supported_update_keys
-                                },
-                            )
-                        )
+
+                        async def update_user():
+                            exceptions = []
+                            try:
+                                await boto_crud_call(
+                                    client.update_user,
+                                    UserName=user_name,
+                                    **{
+                                        k: update_user_params.get(k)
+                                        for k in update_user_params
+                                    },
+                                )
+                            except Exception as e:
+                                exceptions.append(str(e))
+                            return [
+                                ProposedChange(
+                                    change_type=ProposedChangeType.UPDATE,
+                                    resource_id=user_name,
+                                    resource_type=self.resource_type,
+                                    exceptions_seen=exceptions,
+                                )
+                            ]
+
+                        tasks.append(update_user())
                     else:
                         log.info(log_str, **update_resource_log_params)
                         account_change_details.proposed_changes.append(
@@ -322,14 +335,28 @@ class UserTemplate(AWSTemplate, AccessModel):
             ]
         )
         try:
-            changes_made = await asyncio.gather(*tasks)
+            results: list[list[ProposedChange]] = await asyncio.gather(
+                *tasks, return_exceptions=True
+            )
+
+            # separate out the success versus failure calls
+            exceptions: list[ProposedChange] = []
+            changes_made: list[ProposedChange] = []
+            for result in results:
+                for r in result:
+                    if isinstance(r, ProposedChange):
+                        if len(r.exceptions_seen) == 0:
+                            changes_made.append(r)
+                        else:
+                            exceptions.append(r)
+
         except Exception as e:
             log.exception("Unable to apply changes to resource", error=e, **log_params)
             return account_change_details
         if any(changes_made):
-            account_change_details.proposed_changes.extend(
-                list(chain.from_iterable(changes_made))
-            )
+            account_change_details.proposed_changes.extend(changes_made)
+        if any(exceptions):
+            account_change_details.exceptions_seen.extend(exceptions)
 
         if context.execute:
             if self.deleted:
