@@ -31,6 +31,27 @@ Noq Enterprise offers many more enhancements on top of Iambic. Visit [https://ww
 | Prune Unused IAM Permissions, Access, Identities,`<br>`and Credentials                                      | Coming`<br>`Soon! |
 | Generate Dynamic Reports based on`<br>`human identities, cloud identities, access, `<br>`and permissions | Coming`<br>`Soon! |
 
+
+## License
+
+### IAMbic (This repo)
+
+IAMbic is licensed under the AGPL-3.0 license. Commercial licenses are also available from Noq Software, Inc.
+
+### Provider Plugins
+
+Provider Plugins (Such as the AWS, Okta, and Google-Suite plugins) are licensed under Apache 2. You are free to write your own provider plugins for internal services without releasing its source code.
+
+### Licensing Policy
+
+Our goal in selecting the AGPL v3.0 as our open source license is to require that enhancements to IAMbic be released to the community. Traditional GPL often does not achieve this anymore as a huge amount of software runs in the cloud. We also make our provider plugins available under the Apache License v2.0 to encourage proprietary plugin contribution.
+
+If use of our drivers under the Apache License v2.0 or the database under the AGPL v3 does not satisfy your organization’s vast legal department (some will not approve GPL in any form), commercial licenses are available with Noq Software. Feel free to contact us for more details.
+
+### Noq Trademark Guidelines
+
+IAMbic, Noq, and the Noq logo are registered trademarks of Noq Software, Inc.. For trademark use approval or any questions you have about using these trademarks, please email trademark@noq.dev.
+
 ## Setup for development
 
 # `python3.10 -m venv env`
