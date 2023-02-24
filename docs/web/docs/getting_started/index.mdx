@@ -20,6 +20,8 @@ To create a new bare repository, create a directory and initialize the git repos
 
 Now you are ready to use IAMbic - follow the instructions in the next step "Using IAMbic".
 
+> More information: read more information on [setting up a local git repo](./installation/local_git_repo).
+
 ### Using IAMbic
 
 The preferred way to use IAMbic is to install it as a docker container. You can either
@@ -27,9 +29,37 @@ The preferred way to use IAMbic is to install it as a docker container. You can 
 1. Download the image from our build servers
 1. Build the image yourself
 
+Noq recommends that you just add an alias to your bash/zsh profile - copy the below and paste it into your terminal:
+
+For BASH:
+
+```bash
+echo 'alias iambic="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e "AWS_PROFILE=${AWS_PROFILE}" -v <local_dir\>:/templates:Z public.ecr.aws/s2p9s3r8/iambic:latest <command>"' >> ~/.bashrc
+```
+
+For ZSH:
+
+```zsh
+echo 'alias iambic="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e "AWS_PROFILE=${AWS_PROFILE}" -v <local_dir\>:/templates:Z public.ecr.aws/s2p9s3r8/iambic:latest <command>"' >> ~/.zshrc
+```
+
 Please reference the [IAMbic and Docker](./installation/install_via_docker) section for more details on using the IAMbic docker container.
 
-When running IAMbic for the first time, use the `iambic setup` command to launch the [Wizard](./configuration/using_the_wizard).
+Make sure you export the AWS profile that you would like for IAMbic to use:
+
+    export AWS_PROFILE=<profile name here\>
+
+Test whether you can run IAMbic: `iambic --help`
+
+> More information: if you want more information on installing the [docker container](./installation/install_via_docker), you can also [install the wheel](./installation/install_via_the_wheel) or [check out the repo](./installation/download_the_repo).
+
+### Configuring IAMbic
+
+In order to be successful, once you can run the **iambic** command, you will need to configure IAMbic. The `iambic` command provides a configuration wizard that simplifies configuration by asking pointed questions.
+
+Use the `iambic setup` command to launch the [Wizard](./configuration/using_the_wizard).
+
+> More information: [Wizard](./configuration/using_the_wizard) or for more detail [Create the configuration by hand](./configuration/create_the_configuration)
 
 ### Onto the Next Steps
 
@@ -38,5 +68,3 @@ Now that you have IAMbic installed, you're ready to move on to the next steps. A
 - [Continue with AWS](./integrations/aws)
 - [Continue with Okta](./integrations/okta)
 - [Continue with Google](./integrations/google)
-
-<!-- #TODO: presumably these will be links -->
