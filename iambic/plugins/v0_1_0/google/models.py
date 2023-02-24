@@ -119,12 +119,12 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
         ]
         if account_changes and context.execute:
             log.info(
-                "Successfully applied resource changes to all Google projects.",
+                "Successfully applied all or some resource changes to all Google projects. Any unapplied resources will have an accompanying error message.",
                 **log_params,
             )
         elif account_changes:
             log.info(
-                "Successfully detected required resource changes on all Google projects.",
+                "Successfully detected all or some required resource changes on all Google projects. Any unapplied resources will have an accompanying error message.",
                 **log_params,
             )
         else:

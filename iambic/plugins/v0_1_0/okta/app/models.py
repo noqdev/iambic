@@ -99,12 +99,12 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
         ]
         if account_changes and context.execute:
             log.info(
-                "Successfully applied resource changes to all Okta organizations.",
+                "Successfully applied all or some resource changes to all Okta organizations. Any unapplied resources will have an accompanying error message.",
                 **log_params,
             )
         elif account_changes:
             log.info(
-                "Successfully detected required resource changes on all Okta organizations.",
+                "Successfully detected all or some required resource changes on all Okta organizations. Any unapplied resources will have an accompanying error message.",
                 **log_params,
             )
         else:
