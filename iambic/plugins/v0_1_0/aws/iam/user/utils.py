@@ -299,7 +299,7 @@ async def apply_user_managed_policies(
         log.info(log_str, managed_policies=existing_managed_policies, **log_params)
 
     if tasks:
-        results: list[ProposedChange] = await asyncio.gather(*tasks)
+        results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
         return list(chain.from_iterable(results))
     else:
         return response
@@ -328,35 +328,25 @@ async def apply_user_inline_policies(
         if not template_policy_map.get(policy_name):
             log_str = "Stale inline policies discovered."
 
+            proposed_changes = [
+                ProposedChange(
+                    change_type=ProposedChangeType.DELETE,
+                    resource_id=policy_name,
+                    attribute="inline_policies",
+                )
+            ]
+            response.extend(proposed_changes)
+
             if context.execute:
                 log_str = f"{log_str} Removing inline policy..."
 
-                async def delete_user_policy():
-                    exceptions = []
-                    try:
-                        await boto_crud_call(
-                            iam_client.delete_user_policy,
-                            UserName=user_name,
-                            PolicyName=policy_name,
-                        )
-                    except Exception as e:
-                        exceptions.append(str(e))
-                    return ProposedChange(
-                        change_type=ProposedChangeType.DELETE,
-                        resource_id=policy_name,
-                        attribute="inline_policies",
-                        exceptions_seen=exceptions,
-                    )
-
-                tasks.append(delete_user_policy())
-            else:
-                response.append(
-                    ProposedChange(
-                        change_type=ProposedChangeType.DELETE,
-                        resource_id=policy_name,
-                        attribute="inline_policies",
-                    )
+                apply_awaitable = boto_crud_call(
+                    iam_client.delete_user_policy,
+                    UserName=user_name,
+                    PolicyName=policy_name,
                 )
+                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
+
             log.info(log_str, policy_name=policy_name, **log_params)
 
     for policy_name, policy_document in template_policy_map.items():
@@ -381,75 +371,48 @@ async def apply_user_inline_policies(
                 log_params["policy_drift"] = policy_drift
                 boto_action = "Updating"
                 resource_existence = "Stale"
-
+                proposed_changes = [
+                    ProposedChange(
+                        change_type=ProposedChangeType.UPDATE,
+                        resource_id=policy_name,
+                        attribute="inline_policies",
+                        change_summary=policy_drift,
+                        current_value=existing_policy_doc,
+                        new_value=policy_document,
+                    )
+                ]
             else:
                 boto_action = "Creating"
                 resource_existence = "New"
+                proposed_changes = [
+                    ProposedChange(
+                        change_type=ProposedChangeType.CREATE,
+                        resource_id=policy_name,
+                        attribute="inline_policies",
+                        new_value=policy_document,
+                    )
+                ]
+            response.extend(proposed_changes)
 
             log_str = f"{resource_existence} inline policies discovered."
             if context.execute and policy_document:
                 log_str = f"{log_str} {boto_action} inline policy..."
 
-                async def put_user_policy():
-                    exceptions = []
-                    try:
-                        await boto_crud_call(
-                            iam_client.put_user_policy,
-                            UserName=user_name,
-                            PolicyName=policy_name,
-                            PolicyDocument=json.dumps(policy_document),
-                        )
-                    except Exception as e:
-                        exceptions.append(str(e))
-                    if policy_drift:
-                        return ProposedChange(
-                            change_type=ProposedChangeType.UPDATE,
-                            resource_id=policy_name,
-                            attribute="inline_policies",
-                            change_summary=policy_drift,
-                            current_value=existing_policy_doc,
-                            new_value=policy_document,
-                            exceptions_seen=exceptions,
-                        )
-                    else:
-                        return ProposedChange(
-                            change_type=ProposedChangeType.CREATE,
-                            resource_id=policy_name,
-                            attribute="inline_policies",
-                            new_value=policy_document,
-                            exceptions_seen=exceptions,
-                        )
-
-                tasks.append(put_user_policy())
-            else:
-                if policy_drift:
-                    response.append(
-                        ProposedChange(
-                            change_type=ProposedChangeType.UPDATE,
-                            resource_id=policy_name,
-                            attribute="inline_policies",
-                            change_summary=policy_drift,
-                            current_value=existing_policy_doc,
-                            new_value=policy_document,
-                        )
-                    )
-                else:
-                    response.append(
-                        ProposedChange(
-                            change_type=ProposedChangeType.CREATE,
-                            resource_id=policy_name,
-                            attribute="inline_policies",
-                            new_value=policy_document,
-                        )
-                    )
+                apply_awaitable = boto_crud_call(
+                    iam_client.put_user_policy,
+                    UserName=user_name,
+                    PolicyName=policy_name,
+                    PolicyDocument=json.dumps(policy_document),
+                )
+                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
 
             log.info(log_str, policy_name=policy_name, **log_params)
 
     if tasks:
-        results: list[ProposedChange] = await asyncio.gather(*tasks)
-        response.extend(results)
-
-    return response
+        results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+        return list(chain.from_iterable(results))
+    else:
+        return response
 
 
 async def apply_user_groups(
