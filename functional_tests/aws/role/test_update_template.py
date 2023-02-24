@@ -60,10 +60,12 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
 
     # tag None string value is not acceptable
     async def test_update_tag_with_bad_input(self):
-        self.template.properties.description = "Updated description"  # good input
+        self.template.properties.description = "{0}_bad_input".format(
+            self.template.properties.description
+        )  # good input
         self.template.properties.tags = [Tag(key="*", value="")]  # bad input
         try:
-            account_change_details = await self.template.apply(
+            template_change_details = await self.template.apply(
                 IAMBIC_TEST_DETAILS.config.aws, ctx
             )
         except Exception as e:
@@ -71,8 +73,8 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
             # FIXME check assert here
             print(e)
 
-        assert len(account_change_details.proposed_changes) > 0
-        assert len(account_change_details.exceptions_seen) > 0
+        assert len(template_change_details.proposed_changes) > 0
+        assert len(template_change_details.exceptions_seen) > 0
 
         account_role_mapping = await get_role_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.role_name, False
