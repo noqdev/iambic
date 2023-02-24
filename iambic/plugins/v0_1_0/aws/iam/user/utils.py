@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from itertools import chain
 from typing import Union
 
 from deepdiff import DeepDiff
@@ -9,7 +10,7 @@ from deepdiff import DeepDiff
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
-from iambic.core.utils import aio_wrapper
+from iambic.core.utils import aio_wrapper, plugin_apply_wrapper
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, paginated_search
 
@@ -149,83 +150,54 @@ async def apply_user_tags(
     ]:
         log_str = "Stale tags discovered."
 
+        proposed_changes = [
+            ProposedChange(
+                change_type=ProposedChangeType.DETACH,
+                attribute="tags",
+                change_summary={"TagKeys": tags_to_remove},
+            )
+        ]
+
+        response.extend(proposed_changes)
+
         if context.execute:
             log_str = f"{log_str} Removing tags..."
 
-            async def untag_user():
-                exceptions = []
-                try:
-                    await boto_crud_call(
-                        iam_client.untag_user,
-                        UserName=user_name,
-                        TagKeys=tags_to_remove,
-                    )
-                except Exception as e:
-                    exceptions.append(str(e))
-                return [
-                    ProposedChange(
-                        change_type=ProposedChangeType.DETACH,
-                        attribute="tags",
-                        change_summary={"TagKeys": tags_to_remove},
-                        exceptions_seen=exceptions,
-                    )
-                ]
-
-            tasks.append(untag_user())
-        else:
-            response.append(
-                ProposedChange(
-                    change_type=ProposedChangeType.DETACH,
-                    attribute="tags",
-                    change_summary={"TagKeys": tags_to_remove},
-                )
+            apply_awaitable = boto_crud_call(
+                iam_client.untag_user,
+                UserName=user_name,
+                TagKeys=tags_to_remove,
             )
+            tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
+
         log.info(log_str, tags=tags_to_remove, **log_params)
 
     if tags_to_apply:
         log_str = "New tags discovered in AWS."
 
+        proposed_changes = [
+            ProposedChange(
+                change_type=ProposedChangeType.ATTACH,
+                attribute="tags",
+                new_value=tag,
+            )
+            for tag in tags_to_apply
+        ]
+        response.extend(proposed_changes)
         if context.execute:
             log_str = f"{log_str} Adding tags..."
+            apply_awaitable = boto_crud_call(
+                iam_client.tag_user, UserName=user_name, Tags=tags_to_apply
+            )
+            tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
 
-            async def tag_user():
-                exceptions = []
-                try:
-                    await boto_crud_call(
-                        iam_client.tag_user, UserName=user_name, Tags=tags_to_apply
-                    )
-                except Exception as e:
-                    exceptions.append(str(e))
-                async_results = []
-                for tag in tags_to_apply:
-                    async_results.append(
-                        ProposedChange(
-                            change_type=ProposedChangeType.ATTACH,
-                            attribute="tags",
-                            new_value=tag,
-                            exceptions_seen=exceptions,
-                        )
-                    )
-                return async_results
-
-            tasks.append(tag_user())
-        else:
-            for tag in tags_to_apply:
-                response.append(
-                    ProposedChange(
-                        change_type=ProposedChangeType.ATTACH,
-                        attribute="tags",
-                        new_value=tag,
-                    )
-                )
         log.info(log_str, tags=tags_to_apply, **log_params)
 
     if tasks:
         results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
-        for r in results:
-            response.extend(r)
-
-    return response
+        return list(chain.from_iterable(results))
+    else:
+        return response
 
 
 async def apply_user_managed_policies(
