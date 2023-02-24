@@ -6,7 +6,6 @@ from itertools import chain
 from typing import Union
 
 from deepdiff import DeepDiff
-
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
@@ -222,38 +221,37 @@ async def apply_user_managed_policies(
     if new_managed_policies:
         log_str = "New managed policies discovered."
 
+        proposed_changes = [
+            ProposedChange(
+                change_type=ProposedChangeType.ATTACH,
+                resource_id=policy_arn,
+                attribute="managed_policies",
+            )
+            for policy_arn in new_managed_policies
+        ]
+        response.extend(proposed_changes)
+
         if context.execute:
             log_str = f"{log_str} Attaching managed policies..."
 
-            async def attach_user_policy(policy_arn):
-                exceptions = []
-                try:
-                    await boto_crud_call(
+            tasks = [
+                plugin_apply_wrapper(
+                    boto_crud_call(
                         iam_client.attach_user_policy,
                         UserName=user_name,
                         PolicyArn=policy_arn,
-                    )
-                except Exception as e:
-                    exceptions.append(str(e))
-                return ProposedChange(
-                    change_type=ProposedChangeType.ATTACH,
-                    resource_id=policy_arn,
-                    attribute="managed_policies",
-                    exceptions_seen=exceptions,
+                    ),
+                    [
+                        ProposedChange(
+                            change_type=ProposedChangeType.ATTACH,
+                            resource_id=policy_arn,
+                            attribute="managed_policies",
+                        )
+                    ],
                 )
-
-            tasks = [
-                attach_user_policy(policy_arn) for policy_arn in new_managed_policies
+                for policy_arn in new_managed_policies
             ]
-        else:
-            for policy_arn in new_managed_policies:
-                response.append(
-                    ProposedChange(
-                        change_type=ProposedChangeType.ATTACH,
-                        resource_id=policy_arn,
-                        attribute="managed_policies",
-                    )
-                )
+
         log.info(log_str, managed_policies=new_managed_policies, **log_params)
 
     # Delete existing managed policies not in template
@@ -265,48 +263,46 @@ async def apply_user_managed_policies(
     if existing_managed_policies:
         log_str = "Stale managed policies discovered."
 
+        proposed_changes = [
+            ProposedChange(
+                change_type=ProposedChangeType.DETACH,
+                resource_id=policy_arn,
+                attribute="managed_policies",
+            )
+            for policy_arn in existing_managed_policies
+        ]
+        response.extend(proposed_changes)
+
         if context.execute:
             log_str = f"{log_str} Detaching managed policies..."
 
-            async def detach_user_policy(policy_arn):
-                exceptions = []
-                try:
-                    await boto_crud_call(
-                        iam_client.detach_user_policy,
-                        UserName=user_name,
-                        PolicyArn=policy_arn,
-                    )
-                except Exception as e:
-                    exceptions.append(str(e))
-                return ProposedChange(
-                    change_type=ProposedChangeType.DETACH,
-                    resource_id=policy_arn,
-                    attribute="managed_policies",
-                    exceptions_seen=exceptions,
-                )
-
             tasks.extend(
                 [
-                    detach_user_policy(policy_arn)
+                    plugin_apply_wrapper(
+                        boto_crud_call(
+                            iam_client.detach_user_policy,
+                            UserName=user_name,
+                            PolicyArn=policy_arn,
+                        ),
+                        [
+                            ProposedChange(
+                                change_type=ProposedChangeType.DETACH,
+                                resource_id=policy_arn,
+                                attribute="managed_policies",
+                            )
+                        ],
+                    )
                     for policy_arn in existing_managed_policies
                 ]
             )
-        else:
-            for policy_arn in existing_managed_policies:
-                response.append(
-                    ProposedChange(
-                        change_type=ProposedChangeType.DETACH,
-                        resource_id=policy_arn,
-                        attribute="managed_policies",
-                    )
-                )
+
         log.info(log_str, managed_policies=existing_managed_policies, **log_params)
 
     if tasks:
         results: list[ProposedChange] = await asyncio.gather(*tasks)
-        response.extend(results)
-
-    return response
+        return list(chain.from_iterable(results))
+    else:
+        return response
 
 
 async def apply_user_inline_policies(
