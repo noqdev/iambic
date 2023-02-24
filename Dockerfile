@@ -60,6 +60,11 @@ RUN ln -s /Python-${PYTHON_VERSION}/pip3 /usr/bin/pip3
 
 RUN yum install git shadow-utils -y
 
+COPY --from=build-layer ${FUNCTION_DIR}/dist ${FUNCTION_DIR}/dist
+
+RUN pip install ${FUNCTION_DIR}/dist/*.whl \
+ && rm -rf ${FUNCTION_DIR}/dist
+
 COPY --chown=iambic:iambic docs/ ${FUNCTION_DIR}/docs
 
 RUN mkdir -p ${FUNCTION_DIR}/iambic \
@@ -70,11 +75,6 @@ RUN adduser --system --user-group --home ${FUNCTION_DIR} iambic \
  && chown -R iambic:iambic ${FUNCTION_DIR} \
  && chmod -R 755 ${FUNCTION_DIR} \
  && chmod -R 777 ${FUNCTION_DIR}
-
-COPY --from=build-layer ${FUNCTION_DIR}/dist ${FUNCTION_DIR}/dist
-
-RUN pip install ${FUNCTION_DIR}/dist/*.whl \
- && rm -rf ${FUNCTION_DIR}/dist
 
 ENV IAMBIC_REPO_DIR /templates
 
@@ -90,5 +90,7 @@ WORKDIR ${FUNCTION_DIR}
 ENV PYTHONPATH=${PYTHONPATH}:${FUNCTION_DIR}/.local/lib/python3.11/site-packages
 ENV IAMBIC_WEB_APP_DIR=${FUNCTION_DIR}/docs/web
 ENV IAMBIC_DOCKER_CONTAINER=1
+
+USER iambic:iambic
 
 ENTRYPOINT [ "python", "-m", "iambic.main" ]
