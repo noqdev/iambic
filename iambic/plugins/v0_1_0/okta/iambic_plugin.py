@@ -2,21 +2,21 @@ from __future__ import annotations
 
 from typing import Any
 
+from okta.client import Client as OktaClient
+from pydantic import BaseModel, Field, SecretStr
+
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.okta.app.models import OktaAppTemplate
 from iambic.plugins.v0_1_0.okta.group.models import OktaGroupTemplate
 from iambic.plugins.v0_1_0.okta.handlers import import_okta_resources, load
 from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate
-from pydantic import BaseModel, Field
-
-from okta.client import Client as OktaClient
 
 
 class OktaOrganization(BaseModel):
     idp_name: str
     org_url: str
-    api_token: str
+    api_token: SecretStr
     request_timeout: int = 60
     client: Any = None  # OktaClient
 
@@ -28,7 +28,7 @@ class OktaOrganization(BaseModel):
             self.client = OktaClient(
                 {
                     "orgUrl": self.org_url,
-                    "token": self.api_token,
+                    "token": self.api_token.get_secret_value(),
                     "requestTimeout": self.request_timeout,
                     "rateLimit": {"maxRetries": 0},
                 }
