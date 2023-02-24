@@ -92,7 +92,7 @@
             "console": "integratedTerminal",
             "envFile": "${workspaceFolder}/.env",
             "args": [
-                "import",
+                "import"
             ],
             "justMyCode": true
         },
