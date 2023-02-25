@@ -1,2 +1,2 @@
-# So you wanna contribute?
-Follow these rules: ...
+# Want to contribute to IAMbic?
+Here's how:
