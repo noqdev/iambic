@@ -11,9 +11,9 @@ This page will guide you through setting up the required technologies that will 
 
 ### Set up a Git repository
 
-You'll need to create a dedicated Git repository. If you're just trying out IAMbic, create a [local Git repository](./installation/local_git_repo).
+You'll need to create a dedicated Git repository. If you're just trying out IAMbic, create a [local Git repository](/technical_reference/installation/local_git_repo).
 When you're ready to deploy IAMbic, create a [Github repository](https://docs.github.com/en/get-started/quickstart/create-a-repo).
-GitHub is preferable because Noq provides [Github workflows](./integrations/github) that keep IAM entitlements updated within your repository.
+GitHub is preferable because Noq provides [Github workflows](/getting_started/github) that keep IAM entitlements updated within your repository.
 
 Now you are ready to use IAMbic - follow the instructions in the next step "Using IAMbic".
 
@@ -43,21 +43,21 @@ ZSH:
 echo 'alias iambic="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e "AWS_PROFILE=${AWS_PROFILE}" -v <local_dir\>:/templates:Z public.ecr.aws/s2p9s3r8/iambic:latest "$@""' >> ~/.zshrc
 ```
 
-Please reference the [IAMbic and Docker](./installation/install_via_docker) section for more details on using the IAMbic docker container.
+Please reference the [IAMbic and Docker](/technical_reference/installation/install_via_docker) section for more details on using the IAMbic docker container.
 
 Test whether you can run IAMbic: `iambic --help`
 
-> More information: if you want more information on installing the [docker container](./installation/install_via_docker), you can also [install the wheel](./installation/install_via_the_wheel) or [check out the repo](./installation/download_the_repo).
+> More information: if you want more information on installing the [docker container](/technical_reference/installation/install_via_docker), you can also [install the wheel](/technical_reference/installation/install_via_the_wheel) or [check out the repo](/technical_reference/installation/download_the_repo).
 
 ### Configuring IAMbic
 
-Run `iambic setup` command to launch the [Configuration Wizard](./configuration/using_the_wizard). Alternatively, you can [create the configuration by hand](./configuration/create_the_configuration).
+Run `iambic setup` command to launch the [Configuration Wizard](/how_to_guides/configure_iambic_with_wizard). Alternatively, you can [create the configuration by hand](/how_to_guides/manually_create_the_configuration).
 
 
 ### Next Steps
 
 Now that you have IAMbic installed, you're ready to move on to the next steps. At this point, your experience will vary depending on the goals you want to achieve:
 
-- [Continue with AWS](./integrations/aws)
-- [Continue with Okta](./integrations/okta)
-- [Continue with Google](./integrations/google)
+- [Continue with AWS](./aws)
+- [Continue with Okta](./okta)
+- [Continue with Google](./google)
