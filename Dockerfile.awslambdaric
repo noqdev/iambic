@@ -26,7 +26,7 @@ FROM ${ARCH}amazonlinux:${AWS_LINUX_VERSION} as base-layer
 RUN yum groupinstall "Development Tools" -y
 RUN yum install git -y
 
-# copy over python
+# copy python to the necessary locations
 ARG PYTHON_VERSION
 COPY --from=python-layer /Python-${PYTHON_VERSION} /Python-${PYTHON_VERSION}
 COPY --from=python-layer /usr/local/bin /usr/local/bin
@@ -73,7 +73,7 @@ ENTRYPOINT [ "python", "-m", "awslambdaric" ]
 # CMD [ "main.app" ]```
 ######## ############################### ########################
 # Install Requirements
-# Install the function's dependencies
+# Install the functions dependencies
 RUN pip3 install poetry awslambdaric argh watchdog
 WORKDIR ${FUNCTION_DIR}
 COPY pyproject.toml ${FUNCTION_DIR}
