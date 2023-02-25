@@ -2,30 +2,55 @@
 slug: /
 title: Overview
 ---
-IAMbic is a multi-cloud identity and access management (IAM) control plane that allows you to view and manage your AWS cloud identities (IAM roles, and SSO permission sets), and your human identities from Okta and Google in a single location.
+# Introduction
+IAMbic is a multi-cloud identity and access management (IAM) control plane that allows you to view and manage your
+AWS cloud identities (IAM roles, and SSO permission sets), and your human identities from Okta and Google
+in a single location.
 
-IAMbic creates a centralized, organized, complete copy of your human and cloud identities <!-- #TODO is "identities" a broad enough characterization? --> in version control and keeps this copy updated with any changes from your cloud environment. This central record makes it easy to audit changes over time. IAMbic intelligently groups similar identities across accounts, allowing for variations in policies or access rules for each defined identity.
+IAMbic creates a centralized, organized, complete copy of your human and cloud identities, principals, and permissions
+in version control and keeps this copy updated with any changes from your cloud environment.
+This central record makes it easy to audit changes over time. IAMbic intelligently groups similar
+identities across accounts, allowing for dynamic definitions of policies or access rules depending on context
+(e.g. AWS accounts).
 
-IAMbic also lets you manage changes to your identities, access rules, and permissions. It facilitates temporary access, group memberships, IAM permissions, and breakglass flows for end-users. With IAMbic, you have a single source of truth that ties together human identities, cloud identities, cloud permissions, and the relationships among them.
+IAMbic also lets you manage changes to your identities, access rules, and permissions. It facilitates
+temporary access, group memberships, IAM permissions, and breakglass flows for end-users.
+With IAMbic, you have a single source of truth that ties together human identities, cloud identities,
+cloud permissions, and the relationships among them.
 
-The Noq Platform is built on top of IAMbic to provide user-friendly self-service request flows, access reviews, and unused permissions removal.
+The Noq Platform is built on top of IAMbic to provide user-friendly self-service request flows,
+access reviews, and unused permissions removal.
 
-IAMbic is so simple, even a developer can use it! <!-- #TODO Does this really contribute? --> 
+## Why IAMbic?
 
-To get started with IAMbic:
+Modern, cloud-first companies have empowered employees with an unprecedented level of freedom and control
+through shifting left, adopting the cloud, and countless SaaS products. However, as an unintended side effect,
+security and compliance teams have lost both control and visibility regarding who has access
+to what within their organization.
 
-* Head over to [Getting Started](./getting_started/index.mdx)
+The impact of this problem is that security and compliance teams face increased risks,
+including data breaches and non-compliance with regulations. This can lead to damage to company
+reputation, loss of trust among customers, and significant financial penalties. The lack of visibility
+and control also creates inefficiencies, as security and compliance teams struggle to keep up with
+the volume of access requests and the difficulties in auditing their systems. This results in a
+decreased ability to respond to changing business needs and a decreased ability to secure their cloud
+environments.
 
-* Choose your preferred method to install IAMbic
-  * [Install via Docker](./getting_started/installation_and_usage/install_via_docker) **preferred method**
-  * [Install via the Wheel](./getting_started/installation_and_usage/install_via_the_wheel)
-  * [Download the Repo](./getting_started/installation_and_usage/download_the_repo)
+### The Solution
 
-* Create your IAMbic configuration that is specific to your environment
-  * [Using the Wizard](./getting_started/installation_and_usage/create_the_configuration) **preferred method**
-  * [Create it by hand](./getting_started/installation_and_usage/create_the_configuration)
+IAMbic's approach to regaining control over cloud entitlements and access management is to provide a system
+of record that has the necessary depth into custom permission frameworks (i.e. The 7 layers and
+13,000 actions in AWS policy language) and breadth (i.e. downstream SaaS applications) to meet the
+needs of modern enterprises. This system of record, a modern cloud enterprise directory, combines
+records of SSO and cloud identity into one central location, as well as tracking all related entitlements
+for those identities. This comprehensive record enables cross-account management, and providing a single
+source of truth for entitlements.
 
-* [Run IAMbic!](./getting_started/installation_and_usage/using)
+IAMbic intends to standardize the request workflow across the organization, enabling self-serve access
+requests in the developer workflow, and standardizing request justification for various scenarios, such as
+break-glass access. Approvals for shared access are integrated into the Git workflow, providing a streamlined
+and efficient process for managing cloud entitlements.
 
+## Getting started
 
-<!-- #TODO NOAH write more here about how this page will start you on your journey -->
+To get started with IAMbic, head on over to [Install and Configure](./getting_started/1-install_and_configure.mdx).
