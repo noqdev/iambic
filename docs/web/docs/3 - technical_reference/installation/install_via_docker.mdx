@@ -35,7 +35,7 @@ If you want to run IAMbic from the current directory, you can use a BASH trick t
     docker run -it -v ${pwd}:/templates public.ecr.aws/s2p9s3r8/iambic:latest <command>
 
 It is best to run as the current user to make sure that templates written to disk are written in the user and group currently active on the host:
-    
+
     docker run -it -u $(id -u):$(id -g) -v ${pwd}:/templates public.ecr.aws/s2p9s3r8/iambic:latest <command>
 
 Optionally you can store the volume in your system's docker context - be forwarned that the docker context could be coerced to delete the volume without warning using a command like `docker system prune` - it is generally best to store templates on your hard drive in a place where the chances of accidental deletion are minimized:
