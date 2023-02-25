@@ -7,7 +7,7 @@ FROM ${ARCH}amazonlinux:${AWS_LINUX_VERSION} as python-layer
 
 ARG PYTHON_VERSION
 
-# install pytho
+# install python
 RUN yum update -y \
  && yum groupinstall "Development Tools" -y \
  && yum install libffi-devel bzip2-devel wget openssl openssl-devel sqlite-devel -y \
@@ -26,7 +26,7 @@ FROM ${ARCH}amazonlinux:${AWS_LINUX_VERSION} as build-layer
 RUN yum groupinstall "Development Tools" -y \
  && yum install git -y
 
-# copy over python
+# copy python to the necessary locations
 ARG PYTHON_VERSION
 ARG FUNCTION_DIR="/app"
 COPY --from=python-layer /Python-${PYTHON_VERSION} /Python-${PYTHON_VERSION}
@@ -49,7 +49,7 @@ RUN pip install poetry \
 
 FROM ${ARCH}amazonlinux:${AWS_LINUX_VERSION} as runtime-layer
 
-# copy over python
+# copy python to the necessary locations
 ARG PYTHON_VERSION
 ARG FUNCTION_DIR="/app"
 COPY --from=python-layer /Python-${PYTHON_VERSION} /Python-${PYTHON_VERSION}
