@@ -1,0 +1,9 @@
+---
+title: AWS Hub and Spoke Roles
+---
+
+IAMbic uses a Hub-and-Spoke model to manage AWS. If you configure IAMbic with AWS Organizations,
+your AWS Organizations Management Account will serve as the Hub account.
+If you configure IAMbic with individual AWS accounts, you will need to specify the account that will
+serve as the Hub account. The `IambicHubRole` will be created on this account. The `IambicSpokeRole` role will be created
+on all of your AWS accounts (including the Hub account), and it will be assumed by the `IambicHubRole` to perform actions on the accounts.
