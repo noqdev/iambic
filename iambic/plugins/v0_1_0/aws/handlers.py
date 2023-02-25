@@ -111,14 +111,14 @@ async def apply(
     ):
         await generate_permission_set_map(config.accounts, templates)
 
-    template_changes = await asyncio.gather(
+    template_changes: list[TemplateChangeDetails] = await asyncio.gather(
         *[template.apply(config, ctx) for template in templates]
     )
 
     return [
         template_change
         for template_change in template_changes
-        if template_change.proposed_changes
+        if template_change.proposed_changes or template_change.exceptions_seen
     ]
 
 
