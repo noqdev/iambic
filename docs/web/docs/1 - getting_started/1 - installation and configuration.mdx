@@ -1,0 +1,63 @@
+---
+title: Installing and Configuring
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+
+## Getting Started
+
+This page will guide you through setting up the required technologies that will allow you to run IAMbic.
+
+### Set up a Git repository
+
+You'll need to create a dedicated Git repository. If you're just trying out IAMbic, create a [local Git repository](./installation/local_git_repo).
+When you're ready to deploy IAMbic, create a [Github repository](https://docs.github.com/en/get-started/quickstart/create-a-repo).
+GitHub is preferable because Noq provides [Github workflows](./integrations/github) that keep IAM entitlements updated within your repository.
+
+Now you are ready to use IAMbic - follow the instructions in the next step "Using IAMbic".
+
+### Using IAMbic
+
+#### Configure IAM credentials
+
+Configure AWS credentials before running IAMbic. You can accomplish this by either setting environment variables with your credentials, setting an AWS_PROFILE, or another supported method.
+Please reference the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html) for more details.
+
+#### Docker
+
+The easiest way to get started with IAMbic is through Docker and alias `iambic` to the docker command. This will allow you to run IAMbic from anywhere on your system.
+
+Follow these instructions to set up the Alias depending on your shell. Be sure to replace `<local_dir\>` with the location of
+the git repository that you created earlier to store your templates.
+
+Bash:
+
+```bash
+echo 'alias iambic="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e "AWS_PROFILE=${AWS_PROFILE}" -v <local_dir\>:/templates:Z public.ecr.aws/s2p9s3r8/iambic:latest "$@""' >> ~/.bashrc
+```
+
+ZSH:
+
+```zsh
+echo 'alias iambic="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e "AWS_PROFILE=${AWS_PROFILE}" -v <local_dir\>:/templates:Z public.ecr.aws/s2p9s3r8/iambic:latest "$@""' >> ~/.zshrc
+```
+
+Please reference the [IAMbic and Docker](./installation/install_via_docker) section for more details on using the IAMbic docker container.
+
+Test whether you can run IAMbic: `iambic --help`
+
+> More information: if you want more information on installing the [docker container](./installation/install_via_docker), you can also [install the wheel](./installation/install_via_the_wheel) or [check out the repo](./installation/download_the_repo).
+
+### Configuring IAMbic
+
+Run `iambic setup` command to launch the [Configuration Wizard](./configuration/using_the_wizard). Alternatively, you can [create the configuration by hand](./configuration/create_the_configuration).
+
+
+### Next Steps
+
+Now that you have IAMbic installed, you're ready to move on to the next steps. At this point, your experience will vary depending on the goals you want to achieve:
+
+- [Continue with AWS](./integrations/aws)
+- [Continue with Okta](./integrations/okta)
+- [Continue with Google](./integrations/google)
