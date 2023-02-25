@@ -467,6 +467,7 @@ def create_or_update_template(
                 error=str(err),
                 template_params=template_params,
             )
+            raise
     else:
         try:
             new_template.write()
@@ -477,6 +478,7 @@ def create_or_update_template(
                 error=str(err),
                 template_params=template_params,
             )
+            raise
 
 
 def get_resource_id_to_model_map(models: list[BaseModel]) -> dict[str, BaseModel]:
@@ -834,7 +836,9 @@ def merge_model(
         If the new value is a list while the existing value is not:
             Cast existing model to a list and have merge_access_model_list attempt to resolve the matching model
         """
+        existing_model = [existing_model]
         merged_model = [merged_model]
+
     elif isinstance(merged_model, list) and not isinstance(new_model, list):
         """
         If the existing value is a list while the new value is not:

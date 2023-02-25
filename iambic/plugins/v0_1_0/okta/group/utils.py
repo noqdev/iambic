@@ -4,14 +4,14 @@ import asyncio
 import functools
 from typing import TYPE_CHECKING, List, Optional
 
+import okta.models as models
+
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import GlobalRetryController
 from iambic.plugins.v0_1_0.okta.models import Group, User
 from iambic.plugins.v0_1_0.okta.utils import generate_user_profile, handle_okta_fn
-
-import okta.models as models
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.group.models import UserSimple

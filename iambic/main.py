@@ -6,8 +6,8 @@ import pathlib
 import signal
 import socket
 import subprocess
-import warnings
 import time
+import warnings
 from typing import Optional
 
 import click
@@ -306,6 +306,15 @@ def run_git_apply(
         )
     )
     output_proposed_changes(template_changes, output_path=output_path)
+    exceptions = [
+        change.exceptions_seen for change in template_changes if change.exceptions_seen
+    ]
+    # figure out a way to log the useful information
+    if exceptions:
+        log.error(
+            "exceptions encountered. some operations failed. read proposed_changes for details."
+        )
+        raise SystemExit(1)
 
 
 @cli.command()
@@ -385,6 +394,39 @@ def run_import(
         config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
     asyncio.run(config.run_import(repo_dir))
+
+
+@cli.command()
+@click.option(
+    "--template",
+    "-t",
+    "templates",
+    required=False,
+    multiple=True,
+    type=click.Path(exists=True),
+    help="The template file path(s) to expire. Example: ./aws/roles/engineering.yaml",
+)
+@click.option(
+    "--repo-dir",
+    "-d",
+    "repo_dir",
+    required=False,
+    type=click.Path(exists=True),
+    default=os.getenv("IAMBIC_REPO_DIR"),
+    help="The repo directory containing the templates. Example: ~/iambic-templates",
+)
+def lint(templates: list[str], repo_dir: str):
+    ctx.eval_only = True
+    config_path = asyncio.run(resolve_config_template_path(repo_dir))
+    asyncio.run(load_config(config_path, configure_plugins=False))
+
+    if not templates:
+        templates = asyncio.run(gather_templates(repo_dir))
+
+    templates = load_templates(templates, False)
+    log.info("Formatting templates.")
+    for template in templates:
+        template.write()
 
 
 @cli.command(name="init")

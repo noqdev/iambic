@@ -4,11 +4,13 @@ import asyncio
 from unittest import IsolatedAsyncioTestCase
 
 import dateparser
+
 from functional_tests.aws.user.utils import generate_user_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.user.utils import get_user_across_accounts
+from iambic.plugins.v0_1_0.aws.models import Tag
 
 
 class UpdateUserTestCase(IsolatedAsyncioTestCase):
@@ -32,6 +34,17 @@ class UpdateUserTestCase(IsolatedAsyncioTestCase):
     def tearDownClass(cls):
         cls.template.deleted = True
         asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+
+    # tag None string value is not acceptable
+    async def test_update_tag_with_bad_input(self):
+        self.template.properties.path = "/engineering/"  # good input
+        self.template.properties.tags = [Tag(key="*", value="")]  # bad input
+        template_change_details = await self.template.apply(
+            IAMBIC_TEST_DETAILS.config.aws, ctx
+        )
+
+        assert len(template_change_details.proposed_changes) > 0
+        assert len(template_change_details.exceptions_seen) > 0
 
     async def test_update_managed_policies(self):
         if self.template.properties.managed_policies:

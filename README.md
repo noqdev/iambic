@@ -1,65 +1,74 @@
-# Iambic
+# IAMbic: Entitlements as Code
 
+IAMbic revolutionizes cloud entitlements management by providing a centralized and organized way to track and edit your cloud access and permissions. With IAMbic, teams can easily manage changes to identities, access rules, and permissions, and grant temporary or emergency access for end-users, all while reducing the latency, overhead, and risk associated with permissions management. IAMbic integrates with GitHub actions to keep your repository updated with the live state of your cloud entitlements, regardless of whether they are managed through IAMbic,
+infrastructure-as-code, or ClickOps.
 
-> IAM-better-in-config
-> The python package used to generate, parse, and execute IAMbic yaml templates.
+IAMbic provides a plugin-based architecture, and can be customized to support internal authentication and authorization providers. The current implementation ships with plugins for AWS IAM, AWS Identity Center (Formerly known as AWS SSO), Okta, and Google. We are planning to release additional plugins, and we welcome contributions from the community.
 
-Features:
+The goal of IAMbic is to provide an open source and standardized request workflow, allowing self-serve access requests within the developer workflow. Approvals for shared access are integrated into the Git workflow, providing a streamlined and efficient process for managing cloud entitlements. IAMbic should only take an hour to get up and running, and will import entitlements from your existing environment.
 
-|                                                                                                                               |                     |
-| ----------------------------------------------------------------------------------------------------------------------------- | ------------------- |
-| Multi-Account Aware (Automatically recognizes and populates new accounts with default resources and identities) | X                   |
-| Stateless (and *fast!*)                                                                                                      | X                   |
-| Continuous Drift Correction Out of the Box (*What you see is what you git)*                                          | X                   |
-| Dynamically define identity permissions across accounts                                                                | X                   |
-| Centralize and link all human and cloud identities in a single repository                                              | X                   |
-| Simple YAML DSL                                                                  | X                   |
-| Easy Rollback Changes (*git revert* actually *reverts)*                                                           | X                   |
-| Transpile into Terraform                                                                                                      | Coming Soon! |
+## Features
 
-Noq Enterprise offers many more enhancements on top of Iambic. Visit [https://www.noq.dev](https://www.noq.dev) to learn more and sign up for early access.
+- Human-readable entitlements across AWS, Okta, Google. More to come soon.
+- Always up-to-date entitlements, with historical tracking of changes through Git
+- Selective management of entitlements without interfering with other flows you may be using (Such as Terraform or CloudFormation)
+- Multi-Account AWS Roles with dynamic permissions and access rules depending on the account
+- Temporary Access Rules (For AWS Identity Center, Okta Apps/Groups, Google Apps/Groups)
+- Temporary Fine-Grained AWS Permissions (For AWS IAM Roles/Users/Groups/Policies and Identity Center Permission Sets)
 
-|                                                                                                               |                     |
-| ------------------------------------------------------------------------------------------------------------- | ------------------- |
-| Self-Service ChatOps and Web UI (With type-aheads for **all** the things)                        | Coming Soon! |
-| Generate Cookie-Cutter Team Roles based on usage data                                                  | Coming Soon! |
-| Alert on Unauthorized Out-of-band Changes (Convert to change request with one click)                   | Coming Soon! |
-| Automatically Approve Low-Risk Permissions Requests                                                    | Coming Soon! |
-| Discover the IAM Permissions of a Local Application                                                    | Coming Soon! |
-| Lint changes automatically with Access Analyzer                                                        | Coming Soon! |
-| Automatically Generate Service Control Policies base on usage                                          | Coming Soon! |
-| Prune Unused IAM Permissions, Access, Identities, and Credentials                                      | Coming Soon! |
-| Generate Dynamic Reports based on human identities, cloud identities, access, and permissions | Coming Soon! |
+## Getting Started
 
-## Run these commands to setup IAMbic for development <!-- are these lines meant to be commented out? Otherwise they're all H1 headlines -->
+Please follow our quick-start guide here to get IAMbic up and running: http://iambic.org/getting_started/.
 
-# `python3.10 -m venv env`
+## Development Setup
 
-# `. env/bin/activate`
+### IAMbic Development
 
-# `pip install poetry` # (last tested with poetry version 1.2.2)
+IAMbic is written in Python. We provide VSCode run configurations to make it easy to get started. Here is a quick guide:
 
-# `poetry install`
+```bash
+# Clone IAMbic
+git clone git@github.com:noqdev/iambic.git
 
-## How to run IAMbic
+# Set up Python depenedencies
+cd iambic
+python3.10 -m venv env
+. env/bin/activate
+pip install poetry
+poetry install
+```
 
-`python -m iambic.main import -c demo/config.yaml`
+### Documentation Development
 
-## Documentation
+Documentation requires [Yarn](https://classic.yarnpkg.com/lang/en/docs/install/#debian-stable) and [nodejs/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
 
 Documentation is located in docs/web and can be launched by following these steps:
 
-Note: you may have to first install yarn: https://classic.yarnpkg.com/lang/en/docs/install/#debian-stable and possibly nodejs/npm: https://docs.npmjs.com/downloading-and-installing-node-js-and-npm
+```bash
+# From the `iambic` repository directory
+cd docs/web
+yarn
+yarn start
+```
 
-In `docs/web`:
+This will open your browser to http://localhost:3000 where you can view the IAMbic documentation and see live edits to the Markdown files.
 
-* `yarn`
-* `yarn start`
+## License
 
-This will open your browser to http://localhost:3000 where you can view the IAMbic documentation.
+### IAMbic (This repo)
 
-## Additional Documentation
+IAMbic is licensed under the AGPL-3.0 license. Commercial licenses and support are also available from Noq Software, Inc.
 
-* [Schemas](docs/SCHEMA.md)
-* [Contributing](docs/CONTRIBUTING.md)
-* [Docker](docs/DOCKER.md)
+### Provider Plugins
+
+Provider Plugins (Such as the AWS, Okta, and Google-Suite plugins) are licensed under Apache 2. You are free to write your own provider plugins for internal services without releasing its source code.
+
+### Licensing Policy
+
+Our purpose in choosing the AGPL v3.0 as our open source license is to ensure that any improvements made to IAMbic are shared with the community. This is because the traditional GPL license is no longer effective for a large amount of cloud-based software. To encourage contributions for proprietary providers, our provider plugins are made available under the Apache License v2.0. You are also free to write plugins for internal providers without needing to open source the plugin code.
+
+If the use of our plugins under the Apache License v2.0 or IAMbic core under the AGPLv3 does not meet the legal requirements of your organization (as some may not accept the GPL in any form), commercial licenses are available through Noq Software. Please reach out to us for more information.
+
+### Noq Trademark Guidelines
+
+IAMbic, Noq, and the Noq logo are registered trademarks of Noq Software, Inc.. For trademark use approval or any questions you have about using these trademarks, please email trademark@noq.dev.
