@@ -6,17 +6,31 @@ toc_max_heading_level: 5
 
 ## Configuration File Reference
 
-The configuration file is written in YAML and needs to be created before IAMbic can be used the first time. It stores all the information about your environment and provides credentials to cloud services and Github. You can use the Wizard to quickly start creating your configuration file.
+The configuration file is written in YAML and needs to be created before IAMbic can be used the first time.
+It stores all the information about your environment and provides credentials to cloud services and Github.
+You can use the Wizard to quickly start creating your configuration file.
 
-This document provides an overview of the YAML configuration for NOQ::Core::Config. This configuration is used to specify AWS accounts and organizations that IAMbic has access to, via hub and spoke roles.
+This document provides an overview of the YAML configuration for NOQ::Core::Config.
+This configuration is used to specify AWS accounts and organizations that IAMbic has access to,
+via [Hub and Spoke roles](/technical_reference/aws_hub_and_spoke_roles).
 
-    - template_type: `NOQ::Core::Config`
-    - extends: ...
-    - version: `1`
-    - aws:
-        - organizations: ...
-        - accounts: ...
 
+The following is an example configuration for AWS Organizations:
+
+```yaml
+template_type: NOQ::Core::Config
+version: '1'
+
+aws:
+  organizations:
+    - default_rule:
+        iambic_managed: read_and_write
+      hub_role_arn: arn:aws:iam::123456789012:role/IambicHubRole
+      identity_center:
+        region: us-east-1
+      org_account_id: '123456789012'
+      org_id: o-yabc0a10zs
+```
 
 ### Template Type
 The template_type field specifies the type of template, which is NOQ::Core::Config.
