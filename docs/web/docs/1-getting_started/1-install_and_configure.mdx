@@ -19,6 +19,20 @@ Now you are ready to use IAMbic - follow the instructions in the next step "Usin
 Configure AWS credentials before running IAMbic. You can accomplish this by either setting environment variables with your credentials, setting an AWS_PROFILE, or another supported method.
 Please reference the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html) for more details.
 
+#### One Liner Installation script
+
+If you want to use our install script to install iambic, you can use this command: `curl https://github.com/noqdev/iambic/install.sh | ${SHELL}`.
+
+If you are getting an error with the curl command, you may find that this command: `curl https://github.com/noqdev/iambic/install.sh | bash` might be more reliable.
+
+Note: this automatically creates the IAMbic templates git repository on your system under `~/iambic_templates`, if you'd like to setup IAMbic's 
+template git repo elsewhere, use the `IAMBIC_GIT_REPO_PATH` env var when calling our install script:
+
+```bash
+export IAMBIC_GIT_REPO_PATH="~/path/to/your/templates/repo" # this directory will get created and initialized if it does not yet exist.
+curl https://github.com/noqdev/iambic/install.sh | ${SHELL}
+```
+
 #### Docker
 
 The easiest way to get started with IAMbic is through Docker and alias `iambic` to the docker command. This will allow you to run IAMbic from anywhere on your system.

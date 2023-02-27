@@ -6,7 +6,9 @@ title: Getting Started
 
 The pages in this section will guide you through setting up and configuring IAMbic, followed by your desired providers.
 
-Start with the [Installation](/getting_started/install_and_configure) page to get IAMbic up and running. Then install a provider
+You can install iambic on your system with this command: `curl https://github.com/noqdev/iambic/install.sh | sh`
+
+Alternatively, start with the [Installation](/getting_started/install_and_configure) page to get IAMbic up and running. Then install a provider
 of your choice:
 
 * [AWS](/getting_started/aws)
