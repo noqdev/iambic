@@ -6,7 +6,7 @@ import tempfile
 
 import iambic.plugins.v0_1_0.example
 import pytest
-from iambic.main import run_apply
+from iambic.main import run_force_apply
 
 TEST_TEMPLATE_YAML = """template_type: NOQ::Example::LocalFile
 name: test_template
@@ -65,7 +65,7 @@ def test_run_apply(example_test_filesystem):
     with open(f"{repo_dir}/{TEST_TEMPLATE_PATH}", "r") as f:
         before_template_content = "\n".join(f.readlines())
     assert "tomorrow" in before_template_content
-    run_apply(False, config_path, None, repo_dir)
+    run_force_apply(config_path, [], repo_dir)
     with open(f"{repo_dir}/{TEST_TEMPLATE_PATH}", "r") as f:
         after_template_content = "\n".join(f.readlines())
     assert "tomorrow" not in after_template_content

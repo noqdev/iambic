@@ -3,8 +3,9 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, List, Optional, Union
 
-from iambic.core.models import BaseModel, ExpiryModel
 from pydantic import Field
+
+from iambic.core.models import BaseModel, ExpiryModel
 
 # Reference: https://www.guidodiepen.nl/2019/02/implementing-a-simple-plugin-framework-in-python/
 

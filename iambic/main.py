@@ -55,41 +55,6 @@ def cli():
     required=False,
     multiple=True,
     type=click.Path(exists=True),
-    help="The template file path(s) to apply. Example: ./resources/aws/roles/engineering.yaml",
-)
-@click.option(
-    "--repo-dir",
-    "-d",
-    "repo_dir",
-    required=False,
-    type=click.Path(exists=True),
-    default=os.getenv("IAMBIC_REPO_DIR"),
-    help="The repo directory containing the templates. Example: ~/iambic-templates",
-)
-def plan(templates: list[str], repo_dir: str):
-    run_plan(templates, repo_dir=repo_dir)
-
-
-def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
-    if not templates:
-        templates = asyncio.run(gather_templates(repo_dir))
-
-    config_path = asyncio.run(resolve_config_template_path(repo_dir))
-    config = asyncio.run(load_config(config_path))
-
-    asyncio.run(flag_expired_resources(templates))
-    ctx.eval_only = True
-    output_proposed_changes(asyncio.run(config.run_apply(load_templates(templates))))
-
-
-@cli.command()
-@click.option(
-    "--template",
-    "-t",
-    "templates",
-    required=False,
-    multiple=True,
-    type=click.Path(exists=True),
     help="The template file path(s) to expire. Example: ./aws/roles/engineering.yaml",
 )
 @click.option(
@@ -155,76 +120,24 @@ def run_clone_repos(repo_dir: str = str(pathlib.Path.cwd())):
     asyncio.run(clone_git_repos(config, repo_dir))
 
 
-@cli.command()
-@click.option(
-    "--force",
-    "-f",
-    is_flag=True,
-    show_default=True,
-    help="Apply changes without asking for permission?",
-)
-@click.option(
-    "--config",
-    "-c",
-    "config_path",
-    type=click.Path(exists=True),
-    help="The config.yaml file path to apply. Example: ./prod/config.yaml",
-)
-@click.option(
-    "--template",
-    "-t",
-    "templates",
-    required=False,
-    multiple=True,
-    type=click.Path(exists=True),
-    help="The template file path(s) to apply. Example: ./aws/roles/engineering.yaml",
-)
-@click.option(
-    "--repo-dir",
-    "-d",
-    "repo_dir",
-    required=False,
-    type=click.Path(exists=True),
-    default=os.getenv("IAMBIC_REPO_DIR"),
-    help="The repo directory containing the templates. Example: ~/iambic-templates",
-)
-def apply(force: bool, config_path: str, templates: list[str], repo_dir: str):
-    run_apply(force, config_path, templates, repo_dir=repo_dir)
-
-
-def run_apply(
-    force: bool,
+def run_force_apply(
     config_path: str,
     templates: list[str],
     repo_dir: str = str(pathlib.Path.cwd()),
 ):
+    ctx.eval_only = False
+
     if not templates:
         templates = asyncio.run(gather_templates(repo_dir))
     if not config_path:
         config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
-    ctx.eval_only = not force
 
     templates = load_templates(templates)
     asyncio.run(flag_expired_resources([template.file_path for template in templates]))
-    template_changes = asyncio.run(config.run_apply(templates))
-    output_proposed_changes(template_changes)
-
-    if ctx.eval_only and template_changes and click.confirm("Proceed?"):
-        ctx.eval_only = False
-        asyncio.run(config.run_apply(templates))
-    # This was here before, but I don't think it's needed. Leaving it here for now to see if anything breaks.
-    # asyncio.run(config.run_detect_changes(repo_dir))
+    asyncio.run(config.run_apply(templates))
 
 
-@cli.command(name="git-apply")
-@click.option(
-    "--config",
-    "-c",
-    "config_path",
-    type=click.Path(exists=True),
-    help="The config.yaml file path to apply. Example: ./prod/config.yaml",
-)
 @click.option(
     "--repo-dir",
     "-d",
@@ -261,16 +174,14 @@ def run_apply(
     type=click.Path(exists=True),
     help="The location to output the plan Example: ./proposed_changes.yaml",
 )
-def git_apply(
-    config_path: str,
+def apply(
     repo_dir: str,
     allow_dirty: bool,
     from_sha: str,
     to_sha: str,
     plan_output: str,
 ):
-    run_git_apply(
-        config_path,
+    run_apply(
         allow_dirty,
         from_sha,
         to_sha,
@@ -279,8 +190,7 @@ def git_apply(
     )
 
 
-def run_git_apply(
-    config_path: str,
+def run_apply(
     allow_dirty: bool,
     from_sha: str,
     to_sha: str,
@@ -313,14 +223,6 @@ def run_git_apply(
         raise SystemExit(1)
 
 
-@cli.command()
-@click.option(
-    "--config",
-    "-c",
-    "config_path",
-    type=click.Path(exists=True),
-    help="The config.yaml file path to apply. Example: ./prod/config.yaml",
-)
 @click.option(
     "--plan-output",
     "-o",
@@ -337,12 +239,11 @@ def run_git_apply(
     default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
-def git_plan(config_path: str, plan_output: str, repo_dir: str):
-    run_git_plan(config_path, plan_output, repo_dir=repo_dir)
+def plan(plan_output: str, repo_dir: str):
+    run_plan(plan_output, repo_dir=repo_dir)
 
 
-def run_git_plan(
-    config_path: str,
+def run_plan(
     output_path: str,
     repo_dir: str = str(pathlib.Path.cwd()),
 ):

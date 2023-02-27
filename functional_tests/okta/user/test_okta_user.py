@@ -7,7 +7,7 @@ import time
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.parser import load_templates
-from iambic.main import run_apply
+from iambic.main import run_force_apply
 
 
 def test_okta_user():
@@ -34,8 +34,7 @@ properties:
         temp_file.write(iambic_functional_test_user_yaml)
 
     # Create user
-    run_apply(
-        True,
+    run_force_apply(
         temp_config_filename,
         [test_user_fp],
         temp_templates_directory,
@@ -50,8 +49,7 @@ properties:
     user_template.write()
     # Sleep to give profile time to propagate
     time.sleep(30)
-    run_apply(
-        True,
+    run_force_apply(
         temp_config_filename,
         [test_user_fp],
         temp_templates_directory,
@@ -71,8 +69,7 @@ properties:
     orig_first_name = user_template.properties.profile["firstName"]
     user_template.properties.profile["firstName"] = "shouldNotWork"
     user_template.write()
-    run_apply(
-        True,
+    run_force_apply(
         temp_config_filename,
         [test_user_fp],
         temp_templates_directory,
@@ -86,8 +83,7 @@ properties:
     user_template.properties.profile["firstName"] = orig_first_name
     user_template.write()
 
-    run_apply(
-        True,
+    run_force_apply(
         temp_config_filename,
         [test_user_fp],
         temp_templates_directory,
@@ -99,8 +95,7 @@ properties:
         datetime.timezone.utc
     ) - datetime.timedelta(days=1)
     user_template.write()
-    run_apply(
-        True,
+    run_force_apply(
         temp_config_filename,
         [test_user_fp],
         temp_templates_directory,
@@ -110,8 +105,7 @@ properties:
     # Needed to really delete the user and file
     user_template.force_delete = True
     user_template.write()
-    run_apply(
-        True,
+    run_force_apply(
         temp_config_filename,
         [test_user_fp],
         temp_templates_directory,

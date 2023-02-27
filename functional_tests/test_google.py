@@ -5,7 +5,7 @@ import os
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.parser import load_templates
-from iambic.main import run_apply
+from iambic.main import run_force_apply
 
 
 def test_google():
@@ -30,8 +30,7 @@ properties:
         temp_file.write(iambic_functional_test_group_yaml)
 
     # Create group
-    run_apply(
-        True,
+    run_force_apply(
         IAMBIC_TEST_DETAILS.config_path,
         [test_group_fp],
         IAMBIC_TEST_DETAILS.template_dir_path,
@@ -51,8 +50,7 @@ properties:
     ) + datetime.timedelta(days=1)
     # Write new template, apply, and confirm access removed
     group_template.write()
-    run_apply(
-        True,
+    run_force_apply(
         IAMBIC_TEST_DETAILS.config_path,
         [test_group_fp],
         IAMBIC_TEST_DETAILS.template_dir_path,
@@ -62,8 +60,7 @@ properties:
     # Set expiry for the entire group
     group_template.expires_at = datetime.datetime.now() - datetime.timedelta(days=1)
     group_template.write()
-    run_apply(
-        True,
+    run_force_apply(
         IAMBIC_TEST_DETAILS.config_path,
         [test_group_fp],
         IAMBIC_TEST_DETAILS.template_dir_path,

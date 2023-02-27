@@ -6,7 +6,7 @@ import os
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.parser import load_templates
-from iambic.main import run_apply
+from iambic.main import run_force_apply
 
 
 def test_okta_group():
@@ -32,8 +32,7 @@ properties:
         temp_file.write(iambic_functional_test_group_yaml)
 
     # Create group
-    run_apply(
-        True,
+    run_force_apply(
         temp_config_filename,
         [test_group_fp],
         temp_templates_directory,
@@ -53,8 +52,7 @@ properties:
     ) + datetime.timedelta(days=1)
     # Write new template, apply, and confirm access removed
     group_template.write()
-    run_apply(
-        True,
+    run_force_apply(
         temp_config_filename,
         [test_group_fp],
         temp_templates_directory,
@@ -76,8 +74,7 @@ properties:
         0
     ].username = "this_user_should_not_exist@example.com"
     group_template.write()
-    run_apply(
-        True,
+    run_force_apply(
         temp_config_filename,
         [test_group_fp],
         temp_templates_directory,
@@ -94,8 +91,7 @@ properties:
     # Set expiry for the entire group
     group_template.expires_at = "yesterday"
     group_template.write()
-    run_apply(
-        True,
+    run_force_apply(
         temp_config_filename,
         [test_group_fp],
         temp_templates_directory,
