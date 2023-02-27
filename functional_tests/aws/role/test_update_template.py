@@ -10,6 +10,7 @@ from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.role.utils import get_role_across_accounts
+from iambic.plugins.v0_1_0.aws.models import Tag
 
 
 class UpdateRoleTestCase(IsolatedAsyncioTestCase):
@@ -33,6 +34,69 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
     def tearDownClass(cls):
         cls.template.deleted = True
         asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+
+    # empty tag string value is a valid input
+    async def test_update_tag_with_empty_string(self):
+        self.template.properties.tags = [Tag(key="test", value="")]
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+
+        account_role_mapping = await get_role_across_accounts(
+            IAMBIC_TEST_DETAILS.config.aws.accounts, self.role_name, False
+        )
+
+        # Check description was updated across all accounts the role is on
+        for account_id, role in account_role_mapping.items():
+            if role:
+                self.assertEqual(
+                    self.template.properties.tags[0].key,
+                    role["Tags"][0]["Key"],
+                    f"{account_id} has invalid tag key for role {self.role_name}",
+                )
+                self.assertEqual(
+                    self.template.properties.tags[0].value,
+                    role["Tags"][0]["Value"],
+                    f"{account_id} has invalid tag key for role {self.role_name}",
+                )
+
+    # tag None string value is not acceptable
+    async def test_update_tag_with_bad_input(self):
+        self.template.properties.description = "{0}_bad_input".format(
+            self.template.properties.description
+        )  # good input
+        self.template.properties.tags = [Tag(key="*", value="")]  # bad input
+        try:
+            template_change_details = await self.template.apply(
+                IAMBIC_TEST_DETAILS.config.aws, ctx
+            )
+        except Exception as e:
+            # because it should still crash
+            # FIXME check assert here
+            print(e)
+
+        assert len(template_change_details.proposed_changes) > 0
+        assert len(template_change_details.exceptions_seen) > 0
+
+        account_role_mapping = await get_role_across_accounts(
+            IAMBIC_TEST_DETAILS.config.aws.accounts, self.role_name, False
+        )
+
+        # Check description was updated across all accounts the role is on
+        for account_id, role in account_role_mapping.items():
+            if role:
+                self.assertEqual(
+                    self.template.properties.description,
+                    role["Description"],
+                    f"{account_id} has invalid description for role {self.role_name}",
+                )
+
+        # Check tags was NOT updated across all accounts the role is on
+        for account_id, role in account_role_mapping.items():
+            if role:
+                self.assertNotIn(
+                    "Tags",
+                    role,
+                    f"{account_id} should not have tags for role {self.role_name}",
+                )
 
     async def test_update_description(self):
         self.template.properties.description = "Updated description"
