@@ -5,50 +5,23 @@ toc_max_heading_level: 5
 ---
 
 ## Downloading Git
-### Linux
 
-On Linux, you can use your distribution's package manager to install Git. For example, on Ubuntu or Debian-based distributions, you can run the following command:
-
-    sudo apt-get install git
-
-For RPM-based distribution, like RedHat or Centos, you can run the following command:
-
-    sudo yum install git
-
-For other Linux distributions, you can refer to their documentation or package manager for instructions on how to install Git.
-
-### Mac
-
-On Mac, you can download and install Git from the official website or by using a package manager such as Homebrew or MacPorts.
-
-To download and install Git from the official website:
-
-1. Go to the Git Downloads page on the official Git website.
-1. Download the appropriate version for your operating system.
-1. Run the downloaded file and follow the installation instructions.
-1. Alternatively, if you are using Homebrew, you can run the following command:
-
-    brew install git
-
-### Windows
-
-On Windows, you can download and install Git from the official website.
-
-To download and install Git from the official website:
-
-1. Go to the Git Downloads page on the official Git website.
-1. Download the appropriate version for your operating system.
-1. Run the downloaded file and follow the installation instructions.
-1. Checking Out a Repository from GitHub
-1. Once you have installed Git, you can use it to checkout a repository from GitHub. To do this, follow these steps:
+Follow the instructions on the [Git website](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) to download and install Git on your operating system.
 
 ## Checkout the IAMbic repository
 1. Go to the [IAMbic repository](https://github.com/noqdev/iambic) to check it out.
 1. Copy the URL of the repository. You can do this by clicking the "Clone or download" button and copying the URL that is displayed.
 1. Open a terminal or command prompt and navigate to the directory where you want to checkout the repository.
-1. Run the following command:
+1. Run one of the following commands to clone IAMbic locally:
 
+```bash
     git clone https://github.com/noqdev/iambic
+```
+
+```bash
+    git clone git@github.com:noqdev/iambic.git
+```
+
 
 This will create a new directory in the current directory with the same name as the repository and checkout the repository to that directory.
 
@@ -56,7 +29,7 @@ You can now make changes to the files in the repository and commit them using Gi
 
 ## Use IAMbic from the local repository
 
-Create a [virtual environment](https://virtualenv.pypa.io/en/latest/user_guide.html) or python environment into which you'd like to install IAMbic. You might reference [install via the wheel](.//technical_reference/installation/install_via_the_wheel) methods 1, 2 and 3 for more information on setting up your environment.
+Create a [virtual environment](https://virtualenv.pypa.io/en/latest/user_guide.html) or python environment into which you'd like to install IAMbic. You might reference [install via the wheel](/technical_reference/installation/install_via_the_wheel) methods 1, 2 and 3 for more information on setting up your environment.
 
 Install poetry: `pip install poetry`
 
