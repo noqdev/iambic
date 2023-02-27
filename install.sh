@@ -22,7 +22,7 @@ CWD=$(pwd)
 cd ${IAMBIC_GIT_REPO_PATH}
 $(which git) init .
 cd $CWD
-DOCKER_ALIAS="alias iambic='docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e AWS_PROFILE=${AWS_PROFILE} -v ${CWD}:/templates:Z ${ECR_PATH}'"
+DOCKER_ALIAS="alias iambic='docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e AWS_PROFILE=\${AWS_PROFILE} -v \${CWD}:/templates:Z ${ECR_PATH}'"
 
 if [ "$SHELL_NAME" = "bash" ]; then
     echo "${DOCKER_ALIAS}" >> ~/.bashrc
