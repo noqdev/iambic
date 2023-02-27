@@ -23,39 +23,36 @@ Please reference the [AWS documentation](https://docs.aws.amazon.com/cli/latest/
 
 The easiest way to get started with IAMbic is through Docker and alias `iambic` to the docker command. This will allow you to run IAMbic from anywhere on your system.
 
-Follow these instructions to set up the Alias depending on your shell. Be sure to replace `$LOCCAL_REPO_DIRECTORY` with the location of
-the git repository that you created earlier to store your templates.
+Follow these instructions to set up the Alias depending on your shell. Be sure to replace `$AWS_PROFILE` with the name of the AWS profile you want to use.
 
 Bash:
 
 ```bash
-echo "alias iambic='(docker run \
+echo -e "\nalias iambic='docker run \
   -it \
   -u $(id -u):$(id -g) \
   -v ${HOME}/.aws:/app/.aws \
   -e AWS_CONFIG_FILE=/app/.aws/config \
   -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials \
-  -e \"AWS_PROFILE=${AWS_PROFILE}\" \
-  -v $LOCCAL_REPO_DIRECTORY:/templates:Z \
-  public.ecr.aws/s2p9s3r8/iambic:latest \"\$@\"
-)'" >> ~/.bashrc
+  -e "AWS_PROFILE=${AWS_PROFILE}" \
+  -v .:/templates:Z \
+  public.ecr.aws/s2p9s3r8/iambic:latest \"\$@\"'\n" >> ~/.bashrc
 
 . ~/.bashrc
 ```
 
 ZSH:
 
-```bash
-echo "alias iambic='(docker run \
+```zsh
+echo -e "\nalias iambic='docker run \
   -it \
   -u $(id -u):$(id -g) \
   -v ${HOME}/.aws:/app/.aws \
   -e AWS_CONFIG_FILE=/app/.aws/config \
   -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials \
-  -e \"AWS_PROFILE=${AWS_PROFILE}\" \
-  -v $LOCCAL_REPO_DIRECTORY:/templates:Z \
-  public.ecr.aws/s2p9s3r8/iambic:latest \"\$@\"
-)'" >> ~/.zshrc
+  -e "AWS_PROFILE=${AWS_PROFILE}" \
+  -v .:/templates:Z \
+  public.ecr.aws/s2p9s3r8/iambic:latest \"\$@\"'\n" >> ~/.zshrc
 
 . ~/.zshrc
 ```

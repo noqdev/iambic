@@ -10,7 +10,8 @@ async def resolve_config_template_path(repo_dir: str) -> pathlib.Path:
     if len(config_template_file_path) == 0:
         raise RuntimeError(
             f"Unable to discover Iambic Configuration in {repo_dir}. "
-            "Please create a configuration with the `NOQ::Core::Config` template type."
+            "Please create a configuration with the `NOQ::Core::Config` template type. "
+            "You can run `iambic setup` to generate a configuration"
         )
     if len(config_template_file_path) > 1:
         # IAMbic supports 1 configuration per repo
