@@ -153,7 +153,17 @@ $ tree
 
 ### 2. Import AWS Resources
 
-Next run the IAMbic import command, which will read your configuiration, attempt to determine all AWS accounts in your environment, and attempt to import IAM resources from each account. In a production environment, automation provided by Iambic would ensure that Git is updated with the cloud resources in your production environment. This allows you to monitor the history of these groups via Git History.
+Next run the IAMbic import command, which will read your configuiration, attempt to determine all AWS accounts in your environment, and attempt to import IAM resources from each account.
+In a production environment, automation provided by Iambic would ensure that Git is updated with the cloud resources in your production environment. This allows you to monitor the history of these groups via Git History.
+
+Iambic will attempt to logically group similar resources into the same template. For example, a common pattern in naming cookie_cutter IAM roles (such as your `engineering` role) would be to prefix the role with the account name
+that the role resides on. If you had an engineering role on accounts named `prod`, `test`, and `staging` respectively, the engineering role might be named `prod_engineering`, `test_engineering`, and `staging_engineering`. This
+naming convention makes it easier to identify the correct role when looking at Cloudtrail logs without having to look up the account ID from the ARN. IAMbic will intelligently group these roles in the same template. IAMbic will
+correctly account for different permissions and access rules based on the account.
+
+<img src={"/img/aws/combine_aws_roles.png"} style={{width: 600, textAlign: 'center'}} />
+
+Run the following command to import resources from your AWS account(s):
 
 ```bash
 iambic import
