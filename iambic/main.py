@@ -134,6 +134,7 @@ def run_force_apply(
     asyncio.run(config.run_apply(templates))
 
 
+@cli.command()
 @click.option(
     "--repo-dir",
     "-d",
@@ -219,6 +220,7 @@ def run_apply(
         raise SystemExit(1)
 
 
+@cli.command()
 @click.option(
     "--plan-output",
     "-o",
