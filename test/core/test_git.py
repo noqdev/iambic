@@ -6,8 +6,13 @@ import tempfile
 
 import git
 import pytest
+
 from iambic.core import git as the_git_module
-from iambic.core.git import GitDiff, create_templates_for_modified_files
+from iambic.core.git import (
+    GitDiff,
+    create_templates_for_modified_files,
+    get_remote_default_branch,
+)
 from iambic.core.models import BaseModel, BaseTemplate
 
 TEST_TEMPLATE_YAML = """template_type: NOQ::Test
@@ -35,6 +40,59 @@ def template_class():
     the_git_module.TEMPLATES.set_templates(original_templates + [TestTemplate])
     yield the_git_module.TEMPLATES.template_map
     the_git_module.TEMPLATES.set_templates(original_templates)
+
+
+TEST_TRACKING_BRANCH = "XYZ"
+
+
+@pytest.fixture
+def repo_with_single_commit():
+
+    temp_templates_directory = tempfile.mkdtemp(
+        prefix="iambic_test_temp_templates_directory"
+    )
+
+    bare_directory = tempfile.mkdtemp(
+        prefix="iambic_test_temp_templates_directory_bare"
+    )
+
+    try:
+        bare_repo = git.Repo.init(
+            f"{bare_directory}", bare=True, initial_branch=TEST_TRACKING_BRANCH
+        )
+        repo = bare_repo.clone(temp_templates_directory)
+        repo_config_writer = repo.config_writer()
+        repo_config_writer.set_value(
+            "user", "name", "Iambic Github Functional Test for Github"
+        )
+        repo_config_writer.set_value(
+            "user", "email", "github-cicd-functional-test@iambic.org"
+        )
+        repo_config_writer.release()
+
+        with open(f"{temp_templates_directory}/README.md", "w") as f:
+            f.write("")
+
+        repo.git.add(A=True)
+        repo.git.commit(m="Add README.md")
+        repo.remotes.origin.push()
+
+        yield repo
+    finally:
+        try:
+            shutil.rmtree(temp_templates_directory)
+            shutil.rmtree(bare_directory)
+        except Exception as e:
+            print(e)
+
+
+def test_get_remote_default_branch(repo_with_single_commit):
+    assert TEST_TRACKING_BRANCH not in [
+        "main",
+        "master",
+    ]  # make sure we are testing interesting example
+    remote_branch_name = get_remote_default_branch(repo_with_single_commit)
+    assert remote_branch_name == TEST_TRACKING_BRANCH
 
 
 @pytest.fixture

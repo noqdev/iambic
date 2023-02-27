@@ -8,7 +8,7 @@ import xxhash
 from iambic.core import noq_json as json
 from iambic.core.context import ctx
 from iambic.core.logger import log
-from iambic.core.models import AccessModelMixin, BaseModel, ProviderChild
+from iambic.core.models import AccessModelMixin, BaseModel, BaseTemplate, ProviderChild
 from iambic.core.parser import load_templates
 from iambic.core.utils import (
     evaluate_on_provider,
@@ -467,6 +467,7 @@ def create_or_update_template(
                 error=str(err),
                 template_params=template_params,
             )
+            raise
     else:
         try:
             new_template.write()
@@ -477,6 +478,7 @@ def create_or_update_template(
                 error=str(err),
                 template_params=template_params,
             )
+            raise
 
 
 def get_resource_id_to_model_map(models: list[BaseModel]) -> dict[str, BaseModel]:
@@ -834,7 +836,9 @@ def merge_model(
         If the new value is a list while the existing value is not:
             Cast existing model to a list and have merge_access_model_list attempt to resolve the matching model
         """
+        existing_model = [existing_model]
         merged_model = [merged_model]
+
     elif isinstance(merged_model, list) and not isinstance(new_model, list):
         """
         If the existing value is a list while the new value is not:
@@ -884,3 +888,23 @@ def merge_model(
         elif key not in iambic_fields:
             setattr(merged_model, key, new_value)
     return merged_model
+
+
+def delete_orphaned_templates(
+    existing_templates: list[BaseTemplate], resource_ids: set[str]
+):
+    """
+    Delete templates that were not found in the latest import for a single template type
+
+    Args:
+    - existing_templates (list[BaseTemplate]): List of templates that were already in IAMbic
+    - resource_ids (set[str]): The set of resource ids that were found in the latest import
+    """
+    for existing_template in existing_templates:
+        if existing_template.resource_id not in resource_ids:
+            log.warning(
+                "Removing template that references deleted resource",
+                resource_type=existing_template.resource_type,
+                resource_id=existing_template.resource_id,
+            )
+            existing_template.delete()

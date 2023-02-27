@@ -4,28 +4,56 @@ import json
 import os
 import re
 import shutil
+import sys
+import tempfile
+import time
 from enum import Enum
 from typing import Any, Callable
 from urllib.parse import urlparse
 
-import yaml
-from github import Github
+import github
 from github.PullRequest import PullRequest
 
 from iambic.core.git import Repo, clone_git_repo
 from iambic.core.logger import log
+from iambic.core.utils import yaml
 from iambic.main import run_detect, run_expire, run_import
 
 iambic_app = __import__("iambic.lambda.app", globals(), locals(), [], 0)
 lambda_run_handler = getattr(iambic_app, "lambda").app.run_handler
-lambda_repo_path = getattr(iambic_app, "lambda").app.REPO_BASE_PATH
 
 
 MERGEABLE_STATE_CLEAN = "clean"
 MERGEABLE_STATE_BLOCKED = "blocked"
 
 
+COMMIT_MESSAGE_USER_NAME = "Iambic Automation"
+COMMIT_MESSAGE_USER_EMAIL = "iambic-automation@iambic.org"
+COMMIT_MESSAGE_FOR_DETECT = "Import changes from detect operation"
+COMMIT_MESSAGE_FOR_IMPORT = "Import changes from import operation"
+COMMIT_MESSAGE_FOR_EXPIRE = "Periodic Expiration"
+COMMIT_MESSAGE_FOR_GIT_APPLY_ABSOLUTE_TIME = "Replace relative time with absolute time"
 SHARED_CONTAINER_GITHUB_DIRECTORY = "/root/data"
+
+
+def init_shared_data_directory():
+    # Have to be careful when setting REPO_BASE_PATH because lambda execution
+    # environment can be very straight on only /tmp is writable
+    if os.environ.get("AWS_LAMBDA_FUNCTION_NAME", False):
+        temp_templates_directory = tempfile.mkdtemp(prefix="github")
+        SHARED_CONTAINER_GITHUB_DIRECTORY = f"{temp_templates_directory}/data/"
+    else:
+        SHARED_CONTAINER_GITHUB_DIRECTORY = "/root/data"
+    this_module = sys.modules[__name__]
+    setattr(
+        this_module,
+        "SHARED_CONTAINER_GITHUB_DIRECTORY",
+        SHARED_CONTAINER_GITHUB_DIRECTORY,
+    )
+
+
+def get_lambda_repo_path() -> str:
+    return getattr(iambic_app, "lambda").app.REPO_BASE_PATH
 
 
 class HandleIssueCommentReturnCode(Enum):
@@ -43,11 +71,15 @@ def run_handler(context: dict[str, Any]):
     event_name: str = context["event_name"]
     log_params = {"event_name": event_name}
     log.info("run_handler", **log_params)
-    github_client = Github(github_token)
+    github_client = github.Github(github_token)
+
+    getattr(iambic_app, "lambda").app.init_plan_output_path()
+    getattr(iambic_app, "lambda").app.init_repo_base_path()
+
     # TODO Support Github Enterprise with custom hostname
     # g = Github(base_url="https://{hostname}/api/v3", login_or_token="access_token")
 
-    f: Callable[[Github, dict[str, Any]]] = EVENT_DISPATCH_MAP.get(event_name)
+    f: Callable[[github.Github, dict[str, Any]]] = EVENT_DISPATCH_MAP.get(event_name)
     if f:
         f(github_client, context)
     else:
@@ -55,11 +87,13 @@ def run_handler(context: dict[str, Any]):
         raise Exception("no supported handler")
 
 
-def handle_iambic_command(github_client: Github, context: dict[str, Any]) -> None:
+def handle_iambic_command(
+    github_client: github.Github, context: dict[str, Any]
+) -> None:
     github_token: str = context["iambic"]["GH_OVERRIDE_TOKEN"]
     command: str = context["iambic"]["IAMBIC_CLOUD_IMPORT_CMD"]
-    github_client = Github(github_token)
-    f: Callable[[Github, dict[str, Any]]] = IAMBIC_CLOUD_IMPORT_DISPATCH_MAP.get(
+    github_client = github.Github(github_token)
+    f: Callable[[github.Github, dict[str, Any]]] = IAMBIC_CLOUD_IMPORT_DISPATCH_MAP.get(
         command
     )
     if f:
@@ -82,9 +116,26 @@ def prepare_local_repo_for_new_commits(
     if len(os.listdir(repo_path)) > 0:
         raise Exception(f"{repo_path} already exists. This is unexpected.")
     cloned_repo = clone_git_repo(repo_url, repo_path, None)
-    cloned_repo.git.checkout("-b", f"attempt/{purpose}")
+
+    repo_config_writer = cloned_repo.config_writer()
+    repo_config_writer.set_value("user", "name", COMMIT_MESSAGE_USER_NAME)
+    repo_config_writer.set_value("user", "email", COMMIT_MESSAGE_USER_EMAIL)
+    repo_config_writer.release()
+
+    cloned_repo.git.checkout("-b", f"attempt/{purpose}", "origin/main")
 
     return cloned_repo
+
+
+def is_last_commit_relative_to_absolute_change(
+    repo_url: str, pull_request_branch_name: str
+) -> Repo:
+    repo_path = tempfile.mkdtemp(prefix="github")
+
+    if len(os.listdir(repo_path)) > 0:
+        raise Exception(f"{repo_path} already exists. This is unexpected.")
+    cloned_repo = clone_git_repo(repo_url, repo_path, pull_request_branch_name)
+    return cloned_repo.head.commit.message == COMMIT_MESSAGE_FOR_GIT_APPLY_ABSOLUTE_TIME
 
 
 def prepare_local_repo(
@@ -95,27 +146,16 @@ def prepare_local_repo(
     cloned_repo = clone_git_repo(repo_url, repo_path, None)
     for remote in cloned_repo.remotes:
         remote.fetch()
-    cloned_repo.git.checkout("-b", "attempt/git-apply")
+    cloned_repo.git.checkout("-b", "attempt/git-apply", "origin/main")
 
     # Note, this is for local usage, we don't actually
     # forward this commit upstream
     repo_config_writer = cloned_repo.config_writer()
-    repo_config_writer.set_value("user", "name", "Iambic Merger")
-    repo_config_writer.set_value("user", "email", "iambic-merger@iambic.org")
+    repo_config_writer.set_value("user", "name", COMMIT_MESSAGE_USER_NAME)
+    repo_config_writer.set_value("user", "email", COMMIT_MESSAGE_USER_EMAIL)
     repo_config_writer.release()
 
     cloned_repo.git.merge(f"origin/{pull_request_branch_name}")
-    log_params = {"last_commit_message": cloned_repo.head.commit.message}
-    log.info(cloned_repo.head.commit.message, **log_params)
-    return cloned_repo
-
-
-def prepare_local_repo_from_remote_branch(
-    repo_url: str, repo_path: str, pull_request_branch_name: str
-) -> Repo:
-    if len(os.listdir(repo_path)) > 0:
-        raise Exception(f"{repo_path} already exists. This is unexpected.")
-    cloned_repo = clone_git_repo(repo_url, repo_path, pull_request_branch_name)
     log_params = {"last_commit_message": cloned_repo.head.commit.message}
     log.info(cloned_repo.head.commit.message, **log_params)
     return cloned_repo
@@ -155,22 +195,29 @@ def ensure_body_length_fits_github_spec(body: str) -> str:
 
 
 def post_result_as_pr_comment(
-    pull_request: PullRequest, context: dict[str, Any], iambic_op: str
+    pull_request: PullRequest,
+    context: dict[str, Any],
+    iambic_op: str,
+    proposed_changes_path: str,
 ) -> None:
-    run_url = (
-        context["server_url"]
-        + "/"
-        + context["repository"]
-        + "/actions/runs/"
-        + context["run_id"]
-        + "/attempts/"
-        + context["run_attempt"]
-    )
+    if context:
+        run_url = (
+            context["server_url"]
+            + "/"
+            + context["repository"]
+            + "/actions/runs/"
+            + context["run_id"]
+            + "/attempts/"
+            + context["run_attempt"]
+        )
+    else:
+        run_url = "lambda implementation not currently supported run_url"  # FIXME
     lines = []
-    cwd = os.getcwd()
-    filepath = f"{cwd}/proposed_changes.yaml"
-    if os.path.exists(filepath):
-        with open(filepath) as f:
+    if not proposed_changes_path:
+        cwd = os.getcwd()
+        proposed_changes_path = f"{cwd}/proposed_changes.yaml"
+    if os.path.exists(proposed_changes_path):
+        with open(proposed_changes_path) as f:
             lines = f.readlines()
     plan = "".join(lines) if lines else "no changes"
     body = GIT_APPLY_COMMENT_TEMPLATE.format(
@@ -219,7 +266,7 @@ def get_session_name(repo_name: str, pull_request_number: str) -> str:
 
 
 def handle_issue_comment(
-    github_client: Github, context: dict[str, Any]
+    github_client: github.Github, context: dict[str, Any]
 ) -> HandleIssueCommentReturnCode:
 
     comment_body = context["event"]["comment"]["body"]
@@ -246,6 +293,8 @@ def handle_issue_comment(
     comment_func: Callable = COMMENT_DISPATCH_MAP[comment_body]
     return comment_func(
         context,
+        github_client,
+        templates_repo,
         pull_request,
         repo_name,
         pull_number,
@@ -256,11 +305,14 @@ def handle_issue_comment(
 
 def handle_iambic_git_apply(
     context: dict[str, Any],
+    github_client: github.Github,
+    templates_repo: github.Repo,
     pull_request: PullRequest,
     repo_name: str,
     pull_number: str,
     pull_request_branch_name: str,
     repo_url: str,
+    proposed_changes_path: str = None,
 ):
     if pull_request.mergeable_state != MERGEABLE_STATE_CLEAN:
         # TODO log error and also make a comment to PR
@@ -273,12 +325,50 @@ def handle_iambic_git_apply(
     os.environ["IAMBIC_SESSION_NAME"] = session_name
 
     try:
-        prepare_local_repo(repo_url, lambda_repo_path, pull_request_branch_name)
+        repo = prepare_local_repo(
+            repo_url, get_lambda_repo_path(), pull_request_branch_name
+        )
+
+        if proposed_changes_path:
+            # code smell to have to change a module variable
+            # to control the destination of proposed_changes.yaml
+            # It's questionable if we still need to depend on the lambda interface
+            # because lambda interface was created to dynamic populate template config
+            # but templates config is now already stored in the templates repo itself.
+            getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH = proposed_changes_path
+
         lambda_run_handler(None, {"command": "git_apply"})
-        post_result_as_pr_comment(pull_request, context, "git-apply")
+
+        # In the event git_apply changes relative time to absolute time
+        repo.git.add(".")
+        diff_list = repo.head.commit.diff()
+        if len(diff_list) > 0:
+            repo.git.commit("-m", COMMIT_MESSAGE_FOR_GIT_APPLY_ABSOLUTE_TIME)
+            repo.remotes.origin.push(
+                refspec=f"HEAD:{pull_request_branch_name}"
+            ).raise_if_error()
+            log_params = {"sha": repo.head.commit.hexsha}
+            log.info("git-apply new sha is", **log_params)
+        else:
+            log.debug("git_apply did not introduce additional changes")
+
+        post_result_as_pr_comment(
+            pull_request, context, "git-apply", proposed_changes_path
+        )
         copy_data_to_data_directory()
-        pull_request.merge()
+
+        for i in range(5):
+            pull_request = templates_repo.get_pull(pull_number)
+            if pull_request.mergeable_state != MERGEABLE_STATE_CLEAN:
+                log.info("PR not merge-able yet, sleep for 5 seconds")
+                time.sleep(5)
+
+        pull_request = templates_repo.get_pull(pull_number)
+        pull_request.merge(
+            sha=repo.head.commit.hexsha
+        )  # Concern, whether we need the exact sha on the remote
         return HandleIssueCommentReturnCode.MERGED
+
     except Exception as e:
         log.error("fault", exception=str(e))
         pull_request.create_issue_comment(
@@ -291,19 +381,33 @@ def handle_iambic_git_apply(
 
 def handle_iambic_git_plan(
     context: dict[str, Any],
+    github_client: github.Github,
+    templates_repo: github.Repo,
     pull_request: PullRequest,
     repo_name: str,
     pull_number: str,
     pull_request_branch_name: str,
     repo_url: str,
+    proposed_changes_path: str = None,
 ):
     session_name = get_session_name(repo_name, pull_number)
     os.environ["IAMBIC_SESSION_NAME"] = session_name
 
     try:
-        prepare_local_repo(repo_url, lambda_repo_path, pull_request_branch_name)
+        prepare_local_repo(repo_url, get_lambda_repo_path(), pull_request_branch_name)
+
+        if proposed_changes_path:
+            # code smell to have to change a module variable
+            # to control the destination of proposed_changes.yaml
+            # It's questionable if we still need to depend on the lambda interface
+            # because lambda interface was created to dynamic populate template config
+            # but templates config is now already stored in the templates repo itself.
+            getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH = proposed_changes_path
+
         lambda_run_handler(None, {"command": "git_plan"})
-        post_result_as_pr_comment(pull_request, context, "git-plan")
+        post_result_as_pr_comment(
+            pull_request, context, "git-plan", proposed_changes_path
+        )
         copy_data_to_data_directory()
         return HandleIssueCommentReturnCode.PLANNED
     except Exception as e:
@@ -316,11 +420,11 @@ def handle_iambic_git_plan(
         raise e
 
 
-def handle_pull_request(github_client: Github, context: dict[str, Any]) -> None:
+def handle_pull_request(github_client: github.Github, context: dict[str, Any]) -> None:
     # replace with a different github client because we need a different
     # identity to leave the "iambic git-plan". Otherwise, it won't be able
     # to trigger the correct react-to-comment workflow.
-    github_client = Github(context["iambic"]["GH_OVERRIDE_TOKEN"])
+    github_client = github.Github(context["iambic"]["GH_OVERRIDE_TOKEN"])
     # repo_name is already in the format {repo_owner}/{repo_short_name}
     repo_name = context["repository"]
     pull_number = context["event"]["pull_request"]["number"]
@@ -341,46 +445,38 @@ def handle_pull_request(github_client: Github, context: dict[str, Any]) -> None:
 
 
 def handle_detect_changes_from_eventbridge(
-    github_client: Github, context: dict[str, Any]
+    github_client: github.Github, context: dict[str, Any]
 ) -> None:
 
     # we need a different github token because we will need to push to main without PR
     github_token = context["iambic"]["GH_OVERRIDE_TOKEN"]
-
-    # repo_name is already in the format {repo_owner}/{repo_short_name}
     repository_url = context["event"]["repository"]["clone_url"]
     repo_url = format_github_url(repository_url, github_token)
-    # repository_url_token
-    # log_params = {"pull_request_branch_name": pull_request_branch_name}
-    # log.info("PR remote branch name", **log_params)
+
+    _handle_detect_changes_from_eventbridge(repo_url, "main")
+
+
+def _handle_detect_changes_from_eventbridge(repo_url: str, default_branch: str) -> None:
 
     try:
-        repo = prepare_local_repo_for_new_commits(repo_url, lambda_repo_path, "detect")
-
-        repo_config_writer = repo.config_writer()
-        repo_config_writer.set_value(
-            "user", "name", context["iambic"]["IAMBIC_COMMIT_USERNAME"]
+        repo = prepare_local_repo_for_new_commits(
+            repo_url, get_lambda_repo_path(), "detect"
         )
-        repo_config_writer.set_value(
-            "user", "email", context["iambic"]["IAMBIC_COMMIT_EMAIL"]
-        )
-        repo_config_writer.release()
 
-        # TODO customize config.yaml filename
-        run_detect(lambda_repo_path)
+        run_detect(get_lambda_repo_path())
         repo.git.add(".")
         diff_list = repo.head.commit.diff()
         if len(diff_list) > 0:
-            repo.git.commit("-m", github_context["iambic"]["IAMBIC_COMMIT_MESSAGE"])
-            repo.remotes.origin.push(refspec="HEAD:main")
+            repo.git.commit("-m", COMMIT_MESSAGE_FOR_DETECT)
+            repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()
         else:
-            log.info("handle_import no changes")
+            log.info("handle_detect no changes")
     except Exception as e:
         log.error("fault", exception=str(e))
         raise e
 
 
-def handle_import(github_client: Github, context: dict[str, Any]) -> None:
+def handle_import(github_client: github.Github, context: dict[str, Any]) -> None:
 
     # we need a different github token because we will need to push to main without PR
     github_token = context["iambic"]["GH_OVERRIDE_TOKEN"]
@@ -388,39 +484,29 @@ def handle_import(github_client: Github, context: dict[str, Any]) -> None:
     # repo_name is already in the format {repo_owner}/{repo_short_name}
     repository_url = context["event"]["repository"]["clone_url"]
     repo_url = format_github_url(repository_url, github_token)
-    # repository_url_token
-    # log_params = {"pull_request_branch_name": pull_request_branch_name}
-    # log.info("PR remote branch name", **log_params)
+    _handle_import(repo_url, "main")
 
+
+def _handle_import(repo_url: str, default_branch: str) -> None:
     try:
-        repo = prepare_local_repo_for_new_commits(repo_url, lambda_repo_path, "import")
-
-        repo_config_writer = repo.config_writer()
-        repo_config_writer.set_value(
-            "user", "name", context["iambic"]["IAMBIC_COMMIT_USERNAME"]
+        repo = prepare_local_repo_for_new_commits(
+            repo_url, get_lambda_repo_path(), "import"
         )
-        repo_config_writer.set_value(
-            "user", "email", context["iambic"]["IAMBIC_COMMIT_EMAIL"]
-        )
-        repo_config_writer.release()
 
-        # TODO customize config.yaml filename
-        config_file = context["iambic"]["IAMBIC_CONFIG_FILE"]
-        config_path = f"{lambda_repo_path}/config/{config_file}"
-        run_import(lambda_repo_path, config_path)
+        run_import(get_lambda_repo_path())
         repo.git.add(".")
         diff_list = repo.head.commit.diff()
         if len(diff_list) > 0:
-            repo.git.commit("-m", github_context["iambic"]["IAMBIC_COMMIT_MESSAGE"])
-            repo.remotes.origin.push(refspec="HEAD:main")
+            repo.git.commit("-m", COMMIT_MESSAGE_FOR_IMPORT)
+            repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()
         else:
-            log.info("handle_import no changes")
+            log.info("_handle_import no changes")
     except Exception as e:
         log.error("fault", exception=str(e))
         raise e
 
 
-def handle_expire(github_client: Github, context: dict[str, Any]) -> None:
+def handle_expire(github_client: github.Github, context: dict[str, Any]) -> None:
 
     # we need a different github token because we will need to push to main without PR
     github_token = context["iambic"]["GH_OVERRIDE_TOKEN"]
@@ -428,42 +514,35 @@ def handle_expire(github_client: Github, context: dict[str, Any]) -> None:
     # repo_name is already in the format {repo_owner}/{repo_short_name}
     repository_url = context["event"]["repository"]["clone_url"]
     repo_url = format_github_url(repository_url, github_token)
-    # repository_url_token
-    # log_params = {"pull_request_branch_name": pull_request_branch_name}
-    # log.info("PR remote branch name", **log_params)
+    _handle_expire(repo_url, "main")
+
+
+def _handle_expire(repo_url: str, default_branch: str) -> None:
 
     try:
-        repo = prepare_local_repo_for_new_commits(repo_url, lambda_repo_path, "expire")
-
-        repo_config_writer = repo.config_writer()
-        repo_config_writer.set_value(
-            "user", "name", context["iambic"]["IAMBIC_COMMIT_USERNAME"]
+        repo = prepare_local_repo_for_new_commits(
+            repo_url, get_lambda_repo_path(), "expire"
         )
-        repo_config_writer.set_value(
-            "user", "email", context["iambic"]["IAMBIC_COMMIT_EMAIL"]
-        )
-        repo_config_writer.release()
 
-        # TODO customize config.yaml filename
-        run_expire(None, lambda_repo_path)
+        run_expire(None, get_lambda_repo_path())
         repo.git.add(".")
         diff_list = repo.head.commit.diff()
         if len(diff_list) > 0:
-            repo.git.commit("-m", github_context["iambic"]["IAMBIC_COMMIT_MESSAGE"])
+            repo.git.commit("-m", "expire")  # FIXME
+
             lambda_run_handler(None, {"command": "git_apply"})
 
             # if it's in a PR, it's more natural to upload the proposed_changes.yaml to somewhere
             # current implementation, it's just logging to standard out
             lines = []
-            cwd = os.getcwd()
-            filepath = f"{cwd}/proposed_changes.yaml"
+            filepath = getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH
             if os.path.exists(filepath):
                 with open(filepath) as f:
                     lines = f.readlines()
             log_params = {"proposed_changes": lines}
             log.info("handle_expire ran", **log_params)
 
-            repo.remotes.origin.push(refspec="HEAD:main")
+            repo.remotes.origin.push(refspec="HEAD:main").raise_if_error()  # FIXME
         else:
             log.info("handle_expire no changes")
     except Exception as e:

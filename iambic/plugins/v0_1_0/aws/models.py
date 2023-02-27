@@ -7,10 +7,6 @@ from typing import TYPE_CHECKING, List, Optional, Union
 
 import boto3
 import botocore
-from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, constr, validator
-from ruamel.yaml import YAML, yaml_object
-
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -38,6 +34,9 @@ from iambic.plugins.v0_1_0.aws.utils import (
     legacy_paginated_search,
     set_org_account_variables,
 )
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Field, constr, validator
+from ruamel.yaml import YAML, yaml_object
 
 yaml = YAML()
 
@@ -296,6 +295,9 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
             self.boto3_session_map = {}
         elif boto3_session := self.boto3_session_map.get(region_name):
             return boto3_session
+
+        if not self.hub_session_info:
+            await self.set_hub_session_info()
 
         boto3_session = await create_assume_role_session(
             self.hub_session_info["boto3_session"],
@@ -709,20 +711,29 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
                 log.info(log_str, account=str(account), **log_params)
                 tasks.append(self._apply_to_account(account, context))
 
-        account_changes = await asyncio.gather(*tasks)
+        account_changes: list[AccountChangeDetails] = await asyncio.gather(*tasks)
         template_changes.proposed_changes = [
             account_change
             for account_change in account_changes
             if any(account_change.proposed_changes)
         ]
-        if account_changes and context.execute:
+        # aggregate exceptions
+        template_changes.exceptions_seen = [
+            account_change
+            for account_change in account_changes
+            if any(account_change.exceptions_seen)
+        ]
+
+        proposed_changes = [x for x in account_changes if x.proposed_changes]
+
+        if proposed_changes and context.execute:
             log.info(
-                "Successfully applied resource changes to all aws_accounts.",
+                "Successfully applied all or some resource changes to all aws_accounts. Any unapplied resources will have an accompanying error message.",
                 **log_params,
             )
-        elif account_changes and not context.execute:
+        elif proposed_changes and not context.execute:
             log.info(
-                "Successfully detected required resource changes on all aws_accounts.",
+                "Successfully detected all or some required resource changes on all aws_accounts. Any unapplied resources will have an accompanying error message.",
                 **log_params,
             )
         else:
@@ -731,8 +742,12 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
         return template_changes
 
     @property
+    def resource_id(self):
+        return self.properties.resource_id
+
+    @property
     def resource_type(self):
-        return self.identifier
+        return self.properties.resource_type
 
 
 class Description(AccessModel):

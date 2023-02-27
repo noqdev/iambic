@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+from itertools import chain
 from typing import Union
 
 from deepdiff import DeepDiff
-
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
-from iambic.core.utils import aio_wrapper
+from iambic.core.utils import aio_wrapper, plugin_apply_wrapper
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, paginated_search
 
@@ -148,45 +148,55 @@ async def apply_user_tags(
         tag["Key"] for tag in existing_tags if not template_tag_map.get(tag["Key"])
     ]:
         log_str = "Stale tags discovered."
-        response.append(
+
+        proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.DETACH,
                 attribute="tags",
                 change_summary={"TagKeys": tags_to_remove},
             )
-        )
+        ]
+
+        response.extend(proposed_changes)
+
         if context.execute:
             log_str = f"{log_str} Removing tags..."
-            tasks.append(
-                boto_crud_call(
-                    iam_client.untag_user, UserName=user_name, TagKeys=tags_to_remove
-                )
+
+            apply_awaitable = boto_crud_call(
+                iam_client.untag_user,
+                UserName=user_name,
+                TagKeys=tags_to_remove,
             )
+            tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
+
         log.info(log_str, tags=tags_to_remove, **log_params)
 
     if tags_to_apply:
         log_str = "New tags discovered in AWS."
-        for tag in tags_to_apply:
-            response.append(
-                ProposedChange(
-                    change_type=ProposedChangeType.ATTACH,
-                    attribute="tags",
-                    new_value=tag,
-                )
+
+        proposed_changes = [
+            ProposedChange(
+                change_type=ProposedChangeType.ATTACH,
+                attribute="tags",
+                new_value=tag,
             )
+            for tag in tags_to_apply
+        ]
+        response.extend(proposed_changes)
         if context.execute:
             log_str = f"{log_str} Adding tags..."
-            tasks.append(
-                boto_crud_call(
-                    iam_client.tag_user, UserName=user_name, Tags=tags_to_apply
-                )
+            apply_awaitable = boto_crud_call(
+                iam_client.tag_user, UserName=user_name, Tags=tags_to_apply
             )
+            tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
+
         log.info(log_str, tags=tags_to_apply, **log_params)
 
     if tasks:
-        await asyncio.gather(*tasks)
-
-    return response
+        results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+        return list(chain.from_iterable(results))
+    else:
+        return response
 
 
 async def apply_user_managed_policies(
@@ -210,24 +220,38 @@ async def apply_user_managed_policies(
     ]
     if new_managed_policies:
         log_str = "New managed policies discovered."
-        for policy_arn in new_managed_policies:
-            response.append(
-                ProposedChange(
-                    change_type=ProposedChangeType.ATTACH,
-                    resource_id=policy_arn,
-                    attribute="managed_policies",
-                )
+
+        proposed_changes = [
+            ProposedChange(
+                change_type=ProposedChangeType.ATTACH,
+                resource_id=policy_arn,
+                attribute="managed_policies",
             )
+            for policy_arn in new_managed_policies
+        ]
+        response.extend(proposed_changes)
+
         if context.execute:
             log_str = f"{log_str} Attaching managed policies..."
+
             tasks = [
-                boto_crud_call(
-                    iam_client.attach_user_policy,
-                    UserName=user_name,
-                    PolicyArn=policy_arn,
+                plugin_apply_wrapper(
+                    boto_crud_call(
+                        iam_client.attach_user_policy,
+                        UserName=user_name,
+                        PolicyArn=policy_arn,
+                    ),
+                    [
+                        ProposedChange(
+                            change_type=ProposedChangeType.ATTACH,
+                            resource_id=policy_arn,
+                            attribute="managed_policies",
+                        )
+                    ],
                 )
                 for policy_arn in new_managed_policies
             ]
+
         log.info(log_str, managed_policies=new_managed_policies, **log_params)
 
     # Delete existing managed policies not in template
@@ -238,32 +262,47 @@ async def apply_user_managed_policies(
     ]
     if existing_managed_policies:
         log_str = "Stale managed policies discovered."
-        for policy_arn in existing_managed_policies:
-            response.append(
-                ProposedChange(
-                    change_type=ProposedChangeType.DETACH,
-                    resource_id=policy_arn,
-                    attribute="managed_policies",
-                )
+
+        proposed_changes = [
+            ProposedChange(
+                change_type=ProposedChangeType.DETACH,
+                resource_id=policy_arn,
+                attribute="managed_policies",
             )
+            for policy_arn in existing_managed_policies
+        ]
+        response.extend(proposed_changes)
+
         if context.execute:
             log_str = f"{log_str} Detaching managed policies..."
+
             tasks.extend(
                 [
-                    boto_crud_call(
-                        iam_client.detach_user_policy,
-                        UserName=user_name,
-                        PolicyArn=policy_arn,
+                    plugin_apply_wrapper(
+                        boto_crud_call(
+                            iam_client.detach_user_policy,
+                            UserName=user_name,
+                            PolicyArn=policy_arn,
+                        ),
+                        [
+                            ProposedChange(
+                                change_type=ProposedChangeType.DETACH,
+                                resource_id=policy_arn,
+                                attribute="managed_policies",
+                            )
+                        ],
                     )
                     for policy_arn in existing_managed_policies
                 ]
             )
+
         log.info(log_str, managed_policies=existing_managed_policies, **log_params)
 
     if tasks:
-        await asyncio.gather(*tasks)
-
-    return response
+        results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+        return list(chain.from_iterable(results))
+    else:
+        return response
 
 
 async def apply_user_inline_policies(
@@ -288,23 +327,26 @@ async def apply_user_inline_policies(
     for policy_name in existing_policy_map.keys():
         if not template_policy_map.get(policy_name):
             log_str = "Stale inline policies discovered."
-            response.append(
+
+            proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DELETE,
                     resource_id=policy_name,
                     attribute="inline_policies",
                 )
-            )
+            ]
+            response.extend(proposed_changes)
+
             if context.execute:
                 log_str = f"{log_str} Removing inline policy..."
 
-                tasks.append(
-                    boto_crud_call(
-                        iam_client.delete_user_policy,
-                        UserName=user_name,
-                        PolicyName=policy_name,
-                    )
+                apply_awaitable = boto_crud_call(
+                    iam_client.delete_user_policy,
+                    UserName=user_name,
+                    PolicyName=policy_name,
                 )
+                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
+
             log.info(log_str, policy_name=policy_name, **log_params)
 
     for policy_name, policy_document in template_policy_map.items():
@@ -329,7 +371,7 @@ async def apply_user_inline_policies(
                 log_params["policy_drift"] = policy_drift
                 boto_action = "Updating"
                 resource_existence = "Stale"
-                response.append(
+                proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.UPDATE,
                         resource_id=policy_name,
@@ -338,37 +380,39 @@ async def apply_user_inline_policies(
                         current_value=existing_policy_doc,
                         new_value=policy_document,
                     )
-                )
+                ]
             else:
                 boto_action = "Creating"
                 resource_existence = "New"
-                response.append(
+                proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.CREATE,
                         resource_id=policy_name,
                         attribute="inline_policies",
                         new_value=policy_document,
                     )
-                )
+                ]
+            response.extend(proposed_changes)
 
             log_str = f"{resource_existence} inline policies discovered."
             if context.execute and policy_document:
                 log_str = f"{log_str} {boto_action} inline policy..."
-                tasks.append(
-                    boto_crud_call(
-                        iam_client.put_user_policy,
-                        UserName=user_name,
-                        PolicyName=policy_name,
-                        PolicyDocument=json.dumps(policy_document),
-                    )
+
+                apply_awaitable = boto_crud_call(
+                    iam_client.put_user_policy,
+                    UserName=user_name,
+                    PolicyName=policy_name,
+                    PolicyDocument=json.dumps(policy_document),
                 )
+                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
 
             log.info(log_str, policy_name=policy_name, **log_params)
 
     if tasks:
-        await asyncio.gather(*tasks)
-
-    return response
+        results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+        return list(chain.from_iterable(results))
+    else:
+        return response
 
 
 async def apply_user_groups(
@@ -378,7 +422,7 @@ async def apply_user_groups(
     existing_groups: list[dict],
     log_params: dict,
     context: ExecutionContext,
-):
+) -> list[ProposedChange]:
     tasks = []
     response = []
     template_groups = [group["GroupName"] for group in template_groups]
@@ -388,50 +432,54 @@ async def apply_user_groups(
     for group in template_groups:
         if group not in existing_groups:
             log_str = "New groups discovered."
-            response.append(
+            proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
                     resource_id=group,
                     attribute="groups",
                 )
-            )
+            ]
+            response.extend(proposed_changes)
             if context.execute:
                 log_str = f"{log_str} Adding user to group..."
-                tasks.append(
-                    boto_crud_call(
-                        iam_client.add_user_to_group,
-                        GroupName=group,
-                        UserName=user_name,
-                    )
+                apply_awaitable = boto_crud_call(
+                    iam_client.add_user_to_group,
+                    GroupName=group,
+                    UserName=user_name,
                 )
+                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
+
             log.info(log_str, group_name=group, **log_params)
 
     # Remove stale groups
     for group in existing_groups:
         if group not in template_groups:
             log_str = "Stale groups discovered."
-            response.append(
+
+            proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DELETE,
                     resource_id=group,
                     attribute="groups",
                 )
-            )
+            ]
+            response.extend(proposed_changes)
             if context.execute:
                 log_str = f"{log_str} Removing user from group..."
-                tasks.append(
-                    boto_crud_call(
-                        iam_client.remove_user_from_group,
-                        GroupName=group,
-                        UserName=user_name,
-                    )
+                apply_awaitable = boto_crud_call(
+                    iam_client.remove_user_from_group,
+                    GroupName=group,
+                    UserName=user_name,
                 )
+                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
+
             log.info(log_str, group_name=group, **log_params)
 
     if tasks:
-        await asyncio.gather(*tasks)
-
-    return response
+        results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+        return list(chain.from_iterable(results))
+    else:
+        return response
 
 
 async def delete_iam_user(user_name: str, iam_client, log_params: dict):

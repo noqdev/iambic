@@ -11,14 +11,17 @@ from pathlib import Path
 from typing import List, Optional, Union
 from uuid import uuid4
 
+import ujson as json
+from pydantic import BaseModel, Field
+from pydantic import create_model as create_pydantic_model
+
+import iambic.plugins.v0_1_0.github
 from iambic.core.context import ctx
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, TemplateChangeDetails
 from iambic.core.utils import sort_dict, yaml
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, google, okta
-from pydantic import BaseModel, Field
-from pydantic import create_model as create_pydantic_model
 
 CURRENT_IAMBIC_VERSION = "1"
 
@@ -106,6 +109,11 @@ class Config(BaseTemplate):
             PluginDefinition(
                 type=PluginType.DIRECTORY_PATH,
                 location=okta.__path__[0],
+                version=PLUGIN_VERSION,
+            ),
+            PluginDefinition(
+                type=PluginType.DIRECTORY_PATH,
+                location=iambic.plugins.v0_1_0.github.__path__[0],
                 version=PLUGIN_VERSION,
             ),
         ],
@@ -259,6 +267,7 @@ class Config(BaseTemplate):
             return "\n".join(change_str_list)
 
     async def run_discover_upstream_config_changes(self, repo_dir: str):
+        log.info("Scanning for upstream changes to config attributes.")
         await asyncio.gather(
             *[
                 plugin.async_discover_upstream_config_changes_callable(
@@ -268,6 +277,7 @@ class Config(BaseTemplate):
                 if plugin.async_discover_upstream_config_changes_callable
             ]
         )
+        log.info("Finished scanning for upstream changes to config attributes.")
         self.write()
 
     async def configure_plugins(self, sparse: bool = False):
@@ -291,10 +301,12 @@ class Config(BaseTemplate):
                         setattr(
                             self,
                             plugin.config_name,
-                            plugin.provider_config(**provider_config_dict),
+                            plugin.provider_config(
+                                **json.loads(json.dumps(provider_config_dict))
+                            ),
                         )
                         await plugin.async_load_callable(
-                            self.get_config_plugin(plugin), sparse
+                            self.get_config_plugin(plugin), sparse=sparse
                         )
                     except Exception as err:
                         log.critical(
@@ -363,7 +375,9 @@ class Config(BaseTemplate):
         log.info("Config successfully written", config_location=file_path)
 
 
-async def load_config(config_path: str, sparse: bool = False) -> Config:
+async def load_config(
+    config_path: str, configure_plugins: bool = True, sparse: bool = False
+) -> Config:
     """
     Load the configuration from the specified file path.
 
@@ -386,6 +400,7 @@ async def load_config(config_path: str, sparse: bool = False) -> Config:
     """
     from iambic.config.templates import TEMPLATES
 
+    log.info("Loading config...")
     config_path = str(
         config_path
     )  # Ensure it's a string in case it's a Path for pydantic
@@ -402,7 +417,11 @@ async def load_config(config_path: str, sparse: bool = False) -> Config:
     config = dynamic_config(
         plugin_instances=all_plugins, file_path=config_path, **config_dict
     )
-    await config.configure_plugins(sparse=sparse)
+
+    if configure_plugins:
+        log.info("Setting config metadata...")
+        await config.configure_plugins(sparse=sparse)
+        log.info("Config loaded successfully...")
 
     TEMPLATES.set_templates(
         list(
