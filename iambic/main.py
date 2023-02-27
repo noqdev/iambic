@@ -4,11 +4,10 @@ import asyncio
 import os
 import pathlib
 import warnings
-from typing import Optional
 
 import click
 
-from iambic.config.dynamic_config import init_plugins, load_config
+from iambic.config.dynamic_config import Config, init_plugins, load_config
 from iambic.config.utils import resolve_config_template_path
 from iambic.config.wizard import ConfigurationWizard
 from iambic.core.context import ctx
@@ -121,7 +120,7 @@ def run_clone_repos(repo_dir: str = str(pathlib.Path.cwd())):
 
 
 def run_force_apply(
-    config_path: str,
+    config: Config,
     templates: list[str],
     repo_dir: str = str(pathlib.Path.cwd()),
 ):
@@ -129,9 +128,6 @@ def run_force_apply(
 
     if not templates:
         templates = asyncio.run(gather_templates(repo_dir))
-    if not config_path:
-        config_path = asyncio.run(resolve_config_template_path(repo_dir))
-    config = asyncio.run(load_config(config_path))
 
     templates = load_templates(templates)
     asyncio.run(flag_expired_resources([template.file_path for template in templates]))
@@ -281,14 +277,7 @@ def config_discovery(repo_dir: str):
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
 def import_(repo_dir: str):
-    run_import(repo_dir=repo_dir)
-
-
-def run_import(
-    repo_dir: str = str(pathlib.Path.cwd()), config_path: Optional[str] = None
-):
-    if not config_path:
-        config_path = asyncio.run(resolve_config_template_path(repo_dir))
+    config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
     asyncio.run(config.run_import(repo_dir))
 

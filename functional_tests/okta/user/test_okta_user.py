@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import os
 import time
+import random
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.iambic_enum import IambicManaged
@@ -11,18 +12,17 @@ from iambic.main import run_force_apply
 
 
 def test_okta_user():
-    temp_config_filename = IAMBIC_TEST_DETAILS.config_path
     temp_templates_directory = IAMBIC_TEST_DETAILS.template_dir_path
-
-    iambic_functional_test_user_yaml = """template_type: NOQ::Okta::User
+    username = f"iambic_functional_test_user_{random.randint(0, 1000000)}"
+    iambic_functional_test_user_yaml = f"""template_type: NOQ::Okta::User
 properties:
-  username: iambic_functional_test_user
+  username: {username}
   idp_name: development
   profile:
     firstName: iambic
     lastName: functional_test_user
-    email: iambic_functional_test_user@example.com
-    login: iambic_functional_test_user@example.com
+    email: {username}@example.com
+    login: {username}@example.com
   status: active
 """
     test_user_fp = os.path.join(
@@ -35,7 +35,7 @@ properties:
 
     # Create user
     run_force_apply(
-        temp_config_filename,
+        IAMBIC_TEST_DETAILS.config,
         [test_user_fp],
         temp_templates_directory,
     )
@@ -50,7 +50,7 @@ properties:
     # Sleep to give profile time to propagate
     time.sleep(30)
     run_force_apply(
-        temp_config_filename,
+        IAMBIC_TEST_DETAILS.config,
         [test_user_fp],
         temp_templates_directory,
     )
@@ -70,7 +70,7 @@ properties:
     user_template.properties.profile["firstName"] = "shouldNotWork"
     user_template.write()
     run_force_apply(
-        temp_config_filename,
+        IAMBIC_TEST_DETAILS.config,
         [test_user_fp],
         temp_templates_directory,
     )
@@ -84,7 +84,7 @@ properties:
     user_template.write()
 
     run_force_apply(
-        temp_config_filename,
+        IAMBIC_TEST_DETAILS.config,
         [test_user_fp],
         temp_templates_directory,
     )
@@ -96,7 +96,7 @@ properties:
     ) - datetime.timedelta(days=1)
     user_template.write()
     run_force_apply(
-        temp_config_filename,
+        IAMBIC_TEST_DETAILS.config,
         [test_user_fp],
         temp_templates_directory,
     )
@@ -106,7 +106,7 @@ properties:
     user_template.force_delete = True
     user_template.write()
     run_force_apply(
-        temp_config_filename,
+        IAMBIC_TEST_DETAILS.config,
         [test_user_fp],
         temp_templates_directory,
     )

@@ -10,7 +10,6 @@ from iambic.main import run_force_apply
 
 
 def test_okta_group():
-    temp_config_filename = IAMBIC_TEST_DETAILS.config_path
     temp_templates_directory = IAMBIC_TEST_DETAILS.template_dir_path
 
     iambic_functional_test_group_yaml = """template_type: NOQ::Okta::Group
@@ -33,7 +32,7 @@ properties:
 
     # Create group
     run_force_apply(
-        temp_config_filename,
+        IAMBIC_TEST_DETAILS.config,
         [test_group_fp],
         temp_templates_directory,
     )
@@ -53,7 +52,7 @@ properties:
     # Write new template, apply, and confirm access removed
     group_template.write()
     run_force_apply(
-        temp_config_filename,
+        IAMBIC_TEST_DETAILS.config,
         [test_group_fp],
         temp_templates_directory,
     )
@@ -75,7 +74,7 @@ properties:
     ].username = "this_user_should_not_exist@example.com"
     group_template.write()
     run_force_apply(
-        temp_config_filename,
+        IAMBIC_TEST_DETAILS.config,
         [test_group_fp],
         temp_templates_directory,
     )
@@ -92,7 +91,7 @@ properties:
     group_template.expires_at = "yesterday"
     group_template.write()
     run_force_apply(
-        temp_config_filename,
+        IAMBIC_TEST_DETAILS.config,
         [test_group_fp],
         temp_templates_directory,
     )

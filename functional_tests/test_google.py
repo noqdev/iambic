@@ -31,7 +31,7 @@ properties:
 
     # Create group
     run_force_apply(
-        IAMBIC_TEST_DETAILS.config_path,
+        IAMBIC_TEST_DETAILS.config,
         [test_group_fp],
         IAMBIC_TEST_DETAILS.template_dir_path,
     )
@@ -51,7 +51,7 @@ properties:
     # Write new template, apply, and confirm access removed
     group_template.write()
     run_force_apply(
-        IAMBIC_TEST_DETAILS.config_path,
+        IAMBIC_TEST_DETAILS.config,
         [test_group_fp],
         IAMBIC_TEST_DETAILS.template_dir_path,
     )
@@ -61,7 +61,7 @@ properties:
     group_template.expires_at = datetime.datetime.now() - datetime.timedelta(days=1)
     group_template.write()
     run_force_apply(
-        IAMBIC_TEST_DETAILS.config_path,
+        IAMBIC_TEST_DETAILS.config,
         [test_group_fp],
         IAMBIC_TEST_DETAILS.template_dir_path,
     )
