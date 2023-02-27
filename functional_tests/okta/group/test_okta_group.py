@@ -6,7 +6,7 @@ import os
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.parser import load_templates
-from iambic.main import run_force_apply
+from iambic.main import run_apply
 
 
 def test_okta_group():
@@ -31,11 +31,7 @@ properties:
         temp_file.write(iambic_functional_test_group_yaml)
 
     # Create group
-    run_force_apply(
-        IAMBIC_TEST_DETAILS.config,
-        [test_group_fp],
-        temp_templates_directory,
-    )
+    run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
 
     # Test Reading Template
     group_template = load_templates([test_group_fp])[0]
@@ -51,11 +47,7 @@ properties:
     ) + datetime.timedelta(days=1)
     # Write new template, apply, and confirm access removed
     group_template.write()
-    run_force_apply(
-        IAMBIC_TEST_DETAILS.config,
-        [test_group_fp],
-        temp_templates_directory,
-    )
+    run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
     group_template = load_templates([test_group_fp])[0]
     assert len(group_template.properties.members) == 2
 
@@ -73,11 +65,7 @@ properties:
         0
     ].username = "this_user_should_not_exist@example.com"
     group_template.write()
-    run_force_apply(
-        IAMBIC_TEST_DETAILS.config,
-        [test_group_fp],
-        temp_templates_directory,
-    )
+    run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
     if os.path.isfile(proposed_changes_yaml_path):
         assert os.path.getsize(proposed_changes_yaml_path) == 0
     else:
@@ -90,11 +78,7 @@ properties:
     # Set expiry for the entire group
     group_template.expires_at = "yesterday"
     group_template.write()
-    run_force_apply(
-        IAMBIC_TEST_DETAILS.config,
-        [test_group_fp],
-        temp_templates_directory,
-    )
+    run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
 
     group_template = load_templates([test_group_fp])[0]
     assert group_template.deleted is True
