@@ -82,6 +82,16 @@ def run_handler(event=None, context=None):
             return run_import(REPO_BASE_PATH, config_path)
         case LambdaCommand.run_detect.value:
             return run_detect(REPO_BASE_PATH)
+        case LambdaCommand.run_apply.value:
+            return run_apply(
+                False,
+                FROM_SHA,
+                TO_SHA,
+                repo_dir=REPO_BASE_PATH,
+                output_path=PLAN_OUTPUT_PATH,
+            )
+        case LambdaCommand.run_plan.value:
+            return run_plan(PLAN_OUTPUT_PATH, repo_dir=REPO_BASE_PATH)
         case LambdaCommand.run_git_apply.value:
             return run_apply(
                 False,
