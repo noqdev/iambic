@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import pathlib
+import resource
 
+from iambic.core.logger import log
 from iambic.core.utils import gather_templates
+
+DEFAULT_USER_RESOURCE_LIMIT = 4096
 
 
 async def resolve_config_template_path(repo_dir: str) -> pathlib.Path:
@@ -20,3 +24,14 @@ async def resolve_config_template_path(repo_dir: str) -> pathlib.Path:
         )
 
     return pathlib.Path(config_template_file_path[0])
+
+
+def check_and_update_resource_limit():
+    soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+    if soft_limit < DEFAULT_USER_RESOURCE_LIMIT:
+        try:
+            resource.setrlimit(resource.RLIMIT_NOFILE, (DEFAULT_USER_RESOURCE_LIMIT, hard_limit))
+        except PermissionError:
+            log.warning("Cannot increase resource limit: the process does not have permission.")
+        except Exception:
+            log.warning("Unable to increase resource limit: please manually update the soft limit to atleast 4096.")
