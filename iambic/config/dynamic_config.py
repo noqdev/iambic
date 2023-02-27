@@ -26,6 +26,10 @@ from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, google, okta
 CURRENT_IAMBIC_VERSION = "1"
 
 
+class CoreConfig:
+    minimum_ulimit: int = 4096
+
+
 class PluginType(Enum):
     DIRECTORY_PATH = "DIRECTORY_PATH"
     # GIT = "GIT"
