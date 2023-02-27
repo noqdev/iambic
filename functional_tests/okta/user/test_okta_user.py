@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import datetime
 import os
-import time
 import random
+import time
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.iambic_enum import IambicManaged
@@ -42,7 +42,7 @@ properties:
 
     # Test Reading Template
     user_template = load_templates([test_user_fp])[0]
-    assert user_template.properties.username == "iambic_functional_test_user"
+    assert user_template.properties.username == username
 
     # Test Updating Template
     user_template.properties.profile["firstName"] = "TestNameChange"
