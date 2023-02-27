@@ -17,6 +17,7 @@ import github
 import jwt
 from botocore.exceptions import ClientError
 
+from iambic.core.git import get_remote_default_branch
 import iambic.core.utils
 import iambic.plugins.v0_1_0.github.github
 from iambic.core.logger import log
@@ -278,7 +279,6 @@ def handle_workflow_run(
     repository_url = webhook_payload["repository"]["clone_url"]
     repo_url = format_github_url(repository_url, github_token)
 
-    default_branch = "main"
     repo_name = webhook_payload["repository"]["full_name"]
     templates_repo = github_client.get_repo(repo_name)
     default_branch = templates_repo.default_branch
