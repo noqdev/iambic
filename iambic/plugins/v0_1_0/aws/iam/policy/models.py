@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-from itertools import chain
 from typing import List, Optional, Union
 
 import botocore
@@ -22,9 +21,9 @@ from iambic.core.models import (
 from iambic.plugins.v0_1_0.aws.iam.models import Path
 from iambic.plugins.v0_1_0.aws.iam.policy.utils import (
     apply_managed_policy_tags,
+    apply_update_managed_policy,
     delete_managed_policy,
     get_managed_policy,
-    update_managed_policy,
 )
 from iambic.plugins.v0_1_0.aws.models import (
     ARN_RE,
@@ -311,6 +310,7 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
             resource_id=policy_name,
             new_value=dict(**account_policy),
             proposed_changes=[],
+            exceptions_seen=[],
         )
         log_params = dict(
             resource_type=self.resource_type,
@@ -348,8 +348,9 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
             return account_change_details
 
         if current_policy:
-            changes_made = await asyncio.gather(
-                update_managed_policy(
+
+            tasks = [
+                apply_update_managed_policy(
                     client,
                     policy_arn,
                     json.loads(account_policy["PolicyDocument"]),
@@ -367,11 +368,25 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
                     log_params,
                     context,
                 ),
-            )
+            ]
+
+            results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+
+            # separate out the success versus failure calls
+            exceptions: list[ProposedChange] = []
+            changes_made: list[ProposedChange] = []
+            for result in results:
+                for r in result:
+                    if isinstance(r, ProposedChange):
+                        if len(r.exceptions_seen) == 0:
+                            changes_made.append(r)
+                        else:
+                            exceptions.append(r)
+
             if any(changes_made):
-                account_change_details.proposed_changes.extend(
-                    list(chain.from_iterable(changes_made))
-                )
+                account_change_details.proposed_changes.extend(changes_made)
+            if any(exceptions):
+                account_change_details.exceptions_seen.extend(exceptions)
         else:
             account_change_details.proposed_changes.append(
                 ProposedChange(
