@@ -1,0 +1,39 @@
+---
+title: Install via the Python Wheel
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+> Note: the recommended way to run IAMbic is via the [Docker container](./install_via_docker.mdx)
+
+## Install Python if you have not already
+
+To download IAMbic from PyPI, you will need to ensure that Python is installed on your machine. Here are two methods for installing Python:
+
+### Method 1: Download from python.org
+
+1. Go to the [Python Downloads page]( https://www.python.org/downloads) on the official Python website.
+1. Scroll to the "Download Python X.Y.Z" section (where "X.Y.Z" is the latest version number). Note: Noq recommends Python version 3.10+
+1. Select the appropriate download for your operating system.
+1. Run the downloaded file and follow the installation instructions.
+1. Once the installation is complete, you can use Python in your terminal or command prompt by typing `python` and pressing enter.
+
+### Method 2: Use pyenv (recommended for managing multiple versions of Python)
+
+1. Install pyenv by following the instructions on [their GitHub page](https://github.com/pyenv/pyenv).
+1. Install the desired version of Python using pyenv. For example, to install Python 3.10, you would run the following command: `pyenv install 3.10`.
+1. Once the installation is complete, you can set the Python version globally or locally. Replace `3.10` in these comands with your version of python.
+* to set it globally, run the command `pyenv global 3.10`
+* if you want to isolate the version of python to a specific folder you can `cd` into that folder and run `pyenv local 3.10`.
+
+### Method 3: Use a virtual environment to install IAMbic from Pypi
+1. Create a virtual environment for the open source project by running the command `pyenv virtualenv <version\> <name\>`, where <version\> is the desired version of Python (e.g. "3.10") and <name\> is a name for the virtual environment (e.g. "myenv").
+1. Activate the virtual environment by running `pyenv activate <name\>`. You should see the name of the virtual environment in your terminal prompt.
+1. Install the open source project using pip by running `pip install <package-name\>`.
+1. Once the installation is complete, you can use the package in your Python projects within the virtual environment.
+
+Note: Some open source projects may have additional requirements or dependencies that must be installed in order to use them. Be sure to read the project documentation or README file for any additional installation instructions.
+
+## Install IAMbic from Pypi
+
+To install IAMbic from Pypi, with your Python environment setup, run: `pip install iambic`

@@ -1,0 +1,163 @@
+---
+title: Contribute to IAMbic
+---
+
+## Interested in contributing?
+
+This guide assumes that you already have a local Git repository that contains your IAMbic templates.
+If you have not yet set this up, head on over to [setup the local git repository](/technical_reference/installation/local_git_repo) first.
+
+### Setting up your local environment
+
+This section of the tutorial has the greatest potential for complications, as it pertains to the setup of IAMbic.
+If you encounter any issues, do not hesitate to reach out for assistance in our [Slack Community](https://communityinviter.com/apps/noqcommunity/noq).
+Our team would be delighted to assist you.
+
+## Before You Start
+
+Before proceeding you will need to have the following configured, and know the basics of using them:
+
+- Python 3.10+ (see [Python’s download page](https://www.python.org/downloads/)) <!-- #TODO is python required if we use the docker install below? -->
+- Git (see [GitHub’s set up Git guide](https://help.github.com/en/github/getting-started-with-github/set-up-git))
+- GitHub
+- One or more of the following configured:
+  - [AWS Credentials](/getting_started/aws)
+  - [Okta Credentials](/getting_started/okta)
+  - [Google Credentials](/getting_started/google)
+
+Once these requisites are complete, you can select from a Python or Docker based install, and configure Git.
+<!-- #TODO: is that true? -->
+
+### Install Python
+
+Use one of the following methods to install Python on your system:
+
+#### Linux
+
+```bash
+# Debian-based:
+sudo apt install wget git python3 python3-venv
+``
+
+```bash
+# Red Hat-based:
+sudo dnf install wget git python3
+```
+
+```bash
+# Arch-based:
+sudo pacman -S wget git python3
+```
+
+#### Mac
+
+Install from [Python's download page](https://www.python.org/downloads/), or
+via [Brew](https://brew.sh/):
+
+```bash
+brew install python@3.10
+```
+
+### Install Docker and Docker Compose
+
+
+You may also use Docker to run Iambic, as this provides the most accurate environment for its
+intended operation and helps to prevent issues caused by variations between different systems.
+If you plan to make changes to IAMbic, we suggest installing IAMbic locally instead.
+Guidance can be found in our Local Development guide below.
+
+
+- Install Docker (see [Docker's Quick Start Guide)](https://docs.docker.com/desktop/get-started/)
+
+- Confirm Docker is installed properly:
+`docker run --rm busybox true`
+
+### Install VSCode
+
+We recommend using [VSCode](https://code.visualstudio.com/) as your IDE for developing IAMbic. VSCode
+ships with Run and Debug configurations that make it easier to get started with IAMbic development.
+
+### Install and configure your Python environment
+
+```bash
+# Create a virtual environment
+python3 -m venv venv
+# Activate the virtual environment
+source venv/bin/activate
+# Install IAMbic from your local IAMbic repository
+pip install -e . # Alternatively, you can use poetry
+```
+
+
+### Install and configure pre-commit
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+### Create a `.env` file
+
+IAMbic uses a `.env` file to store environment variables. When running VSCode run configurations, your .env file
+can be used to define environment-specific run configuration for IAMbic.
+
+
+```text
+# Replace value the name of a valid profile from your ~/.aws/config or ~/.aws/credentials file
+AWS_PROFILE=A_VALID_AWS_PROFILE
+# Replace value with the name of a valid IAMBic template
+IAMBIC_TEMPLATE_PATH=../iambic-templates/resources/aws/roles/specific_template.yaml
+
+# Replace value with the location of your IAMbic templates directory
+IAMBIC_REPO_DIR=../iambic-templates
+
+# The following options are only required if you are testing IAMbic Lambda functionality locally
+IAMBIC_FROM_SHA=1234dca837c0b3fa50d9d2aa926b386b1344501b
+IAMBIC_TO_SHA=aa41e4dac35e4bf9eae22fe47d638fc134fd1f11
+IAMBIC_LAMBDA_CONFIG="arn:aws:secretsmanager:us-west-2:123456789012:secret:iambic-secrets"
+IAMBIC_LAMBDA_CONFIG_ASSUME_ROLE="arn:aws:iam::123456789012:role/IambicSpokeRole"
+```
+
+### Run IAMbic import through VSCode
+
+Run `IAMbic import` through VSCode to ensure that IAMbic is installed and configured properly.
+
+<details>
+  <summary>Screenshot</summary>
+
+![Run `IAMbic import`](/img/contributing/vscode-import.png)
+
+</details>
+
+### Fork the repository and create a pull request
+
+Visit https://github.com/noqdev/iambic and click the "Fork" button in the top right corner of the page.
+
+Clone your fork locally, and add the upstream repository as a remote:
+
+```bash
+git remote add upstream https://github.com/noqdev/iambic.git
+```
+
+Make changes to your forked repository and commit the changes.
+
+```bash
+# Check out a new branch
+git checkout -b my-new-feature
+# Hack hack hack.. (Make changes)
+# Commit change to a branch on your repository
+git commit -am "Add some feature"
+# Push your branch to your forked repository
+git push origin my-new-feature
+```
+
+After pushing your changes to your branch, submit a Pull Request to IAMbic:
+
+1. Go to your forked repository on GitHub.
+2. Click the "Compare & pull request" button on the top right corner of the repository page.
+3. Verify that the changes you made are selected for the pull request.
+4. Write a descriptive message for the pull request explaining your changes.
+5. Click the "Create pull request" button.
+6. Wait for the team to review and merge your pull request.
+
+That's it! You have successfully forked IAMbic in GitHub and submitted a pull request to the original repository.
