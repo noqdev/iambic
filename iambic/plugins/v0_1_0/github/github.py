@@ -17,7 +17,7 @@ from github.PullRequest import PullRequest
 
 from iambic.config.dynamic_config import load_config
 from iambic.config.utils import resolve_config_template_path
-from iambic.core.git import Repo, clone_git_repo
+from iambic.core.git import Repo, clone_git_repo, get_remote_default_branch
 from iambic.core.logger import log
 from iambic.core.utils import yaml
 from iambic.main import run_detect, run_expire
@@ -125,7 +125,8 @@ def prepare_local_repo_for_new_commits(
     repo_config_writer.set_value("user", "email", COMMIT_MESSAGE_USER_EMAIL)
     repo_config_writer.release()
 
-    cloned_repo.git.checkout("-b", f"attempt/{purpose}", "origin/main")
+    default_branch = get_remote_default_branch(cloned_repo)
+    cloned_repo.git.checkout("-b", f"attempt/{purpose}", default_branch)
 
     return cloned_repo
 
@@ -149,7 +150,8 @@ def prepare_local_repo(
     cloned_repo = clone_git_repo(repo_url, repo_path, None)
     for remote in cloned_repo.remotes:
         remote.fetch()
-    cloned_repo.git.checkout("-b", "attempt/git-apply", "origin/main")
+    default_branch = get_remote_default_branch(cloned_repo)
+    cloned_repo.git.checkout("-b", "attempt/git-apply", default_branch)
 
     # Note, this is for local usage, we don't actually
     # forward this commit upstream
@@ -456,7 +458,10 @@ def handle_detect_changes_from_eventbridge(
     repository_url = context["event"]["repository"]["clone_url"]
     repo_url = format_github_url(repository_url, github_token)
 
-    _handle_detect_changes_from_eventbridge(repo_url, "main")
+    repo_name = context["repository"]
+    templates_repo = github_client.get_repo(repo_name)
+    default_branch = get_remote_default_branch(templates_repo)
+    _handle_detect_changes_from_eventbridge(repo_url, default_branch)
 
 
 def _handle_detect_changes_from_eventbridge(repo_url: str, default_branch: str) -> None:
@@ -487,7 +492,10 @@ def handle_import(github_client: github.Github, context: dict[str, Any]) -> None
     # repo_name is already in the format {repo_owner}/{repo_short_name}
     repository_url = context["event"]["repository"]["clone_url"]
     repo_url = format_github_url(repository_url, github_token)
-    _handle_import(repo_url, "main")
+    repo_name = context["repository"]
+    templates_repo = github_client.get_repo(repo_name)
+    default_branch = get_remote_default_branch(templates_repo)
+    _handle_import(repo_url, default_branch)
 
 
 def _handle_import(repo_url: str, default_branch: str) -> None:
@@ -517,7 +525,10 @@ def handle_expire(github_client: github.Github, context: dict[str, Any]) -> None
     # repo_name is already in the format {repo_owner}/{repo_short_name}
     repository_url = context["event"]["repository"]["clone_url"]
     repo_url = format_github_url(repository_url, github_token)
-    _handle_expire(repo_url, "main")
+    repo_name = context["repository"]
+    templates_repo = github_client.get_repo(repo_name)
+    default_branch = get_remote_default_branch(templates_repo)
+    _handle_expire(repo_url, default_branch)
 
 
 def _handle_expire(repo_url: str, default_branch: str) -> None:
@@ -545,7 +556,8 @@ def _handle_expire(repo_url: str, default_branch: str) -> None:
             log_params = {"proposed_changes": lines}
             log.info("handle_expire ran", **log_params)
 
-            repo.remotes.origin.push(refspec="HEAD:main").raise_if_error()  # FIXME
+            default_branch = get_remote_default_branch(repo)
+            repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()  # FIXME
         else:
             log.info("handle_expire no changes")
     except Exception as e:

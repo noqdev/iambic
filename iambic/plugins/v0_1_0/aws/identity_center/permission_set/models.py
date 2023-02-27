@@ -726,14 +726,17 @@ class AWSIdentityCenterPermissionSetTemplate(
             for account_change in account_changes
             if any(account_change.proposed_changes)
         ]
-        if account_changes and context.execute:
+
+        proposed_changes = [x for x in account_changes if x.proposed_changes]
+
+        if proposed_changes and context.execute:
             log.info(
-                "Successfully applied resource changes to all AWS accounts.",
+                "Successfully applied all or some resource changes to all AWS accounts. Any unapplied resources will have an accompanying error message.",
                 **log_params,
             )
-        elif account_changes and not context.execute:
+        elif proposed_changes and not context.execute:
             log.info(
-                "Successfully detected required resource changes on all AWS accounts.",
+                "Successfully detected all or some required resource changes on all AWS accounts. Any unapplied resources will have an accompanying error message.",
                 **log_params,
             )
         else:
