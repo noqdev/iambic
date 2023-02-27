@@ -1,16 +1,21 @@
-
+---
+title: Deploy on Github
+---
 
 ## Overview
-IAMbic's Github integration is designed to facilitate team collaboration on IAMbic templates. This page will walk you thorugh the steps to configure IAMbic, Github, and AWS to work together.
+IAMbic's Github integration is designed to facilitate team collaboration on IAMbic templates.
+This page will walk you through the steps of configuring IAMbic, Github, and AWS to work together.
 
 ### The typical workflow for using IAMbic with Github
 
-1. Developer Alice wants to create an application role, and submits a pull request with her changes to the IAMbic templates.
-2. Once the PR is created, the IAMbic Github action will run `iambic git-plan` to calculate the changes required due to the PR, and submit the proposed_changes.yaml back into the PR as a comment.
+![IAMbic Git Flow](/img/git/iambic_git_flow.png)
+
+1. Developer Alice wants to create an application role. She creates a different branch, makes your changes, and submits a pull request with her changes to the IAMbic templates repository.
+2. Once the PR is created, the IAMbic Github action will run `iambic git-plan` to calculate the changes required due to the PR, and submits the proposed changes back into the PR as a comment.
 3. Reviewer Bob will review the template changes along with the proposed_changes. Bob may request additional changes.
-4. Optional: Developer Alice updates the PR. The IAMbic Github action will run `iambic git-plan` again to calculate the new changes required.
+4. Developer Alice updates the PR. The IAMbic Github action will run `iambic git-plan` again to calculate the new changes required.
 5. Reviewer Bob approves the PR.
-6. Developer Alice submits an `iambic git-apply` comment in the PR.
+6. Developer Alice comments with `iambic git-apply` in the PR.
 7. The IAMbic Github action will apply the changes in the PR.
 8. Once git-apply is successful, the Github action will close the pull request.
 
@@ -19,11 +24,11 @@ IAMbic's Github integration is designed to facilitate team collaboration on IAMb
 ### Prerequisites
 Before you begin, you will need to do the following:
 
-1. Complete the IAMbic tutorial <!-- #TODO insert link to the tutorial --> to import your own environment <!-- #TODO which environment? is it totally obvious from context? --> into a local repository.
+1. Complete the [IAMbic Getting Started guide](/getting_started/) to create your Git repository and import your existing entitlements from your cloud provider(s).
 2. Set up a Github repository for your IAMbic templates.
 3. Make sure you have admin access for the IAMbic Github repository that can perform the following tasks:
 	1. Configure the repository to require approvals before merging pull requests.
-	2. Create a fine-grained access token to allow automatic import.
+	2. Create a fine-grained access token to allow automatic import of new entitlements.
 4. Have an AWS admin configure federated login <!-- #TODO link to how to configure federated login --> for IAMbic Github actions.
 
 ### Configuring Github to work with IAMbic
@@ -160,7 +165,7 @@ Add the following statement into the Allow statement block
 1. Copy the following .github/workflows folder into your template directory. <!-- #TODO should this be a code block? -->
 2. mkdir -p ~/github
 3. git clone https://github.com/noqdev/iambic-templates-example/ iambic-templates-example
-4. git clone <YOUR OWN IAMBIC repo> iambic-templates
+4. git clone \<YOUR OWN IAMBIC repo\> iambic-templates
 5. cd iambic-templates
 6. git checkout -b task/install_gh_actions origin/main
 7. cp -R ../iambic-templates-example/.github .
