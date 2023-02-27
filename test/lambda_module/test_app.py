@@ -21,7 +21,7 @@ def test_init_repo_base_path_outside_of_lambda():
 def mock_aws_lambda_function_name():
     old_value = os.environ.get("AWS_LAMBDA_FUNCTION_NAME", None)
     os.environ["AWS_LAMBDA_FUNCTION_NAME"] = "fake_function_name"
-    yield os.environ["AWS_LAMBDA_FUNCTION_NAME"]
+    yield os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
     if old_value is None:
         del os.environ["AWS_LAMBDA_FUNCTION_NAME"]
     else:
