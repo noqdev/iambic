@@ -97,14 +97,17 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
             for account_change in account_changes
             if any(account_change.proposed_changes)
         ]
-        if account_changes and context.execute:
+
+        proposed_changes = [x for x in account_changes if x.proposed_changes]
+
+        if proposed_changes and context.execute:
             log.info(
-                "Successfully applied resource changes to all Okta organizations.",
+                "Successfully applied all or some resource changes to all Okta organizations. Any unapplied resources will have an accompanying error message.",
                 **log_params,
             )
-        elif account_changes:
+        elif proposed_changes:
             log.info(
-                "Successfully detected required resource changes on all Okta organizations.",
+                "Successfully detected all or some required resource changes on all Okta organizations. Any unapplied resources will have an accompanying error message.",
                 **log_params,
             )
         else:
