@@ -87,6 +87,44 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
                     f"{group['ManagedPolicies']} attached to it for group {self.group_name}",
                 )
 
+    async def test_bad_input(self):
+        self.template.included_accounts = ["*"]
+        self.template.excluded_accounts = []
+
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+
+        account_group_mapping = await get_group_across_accounts(
+            IAMBIC_TEST_DETAILS.config.aws.accounts, self.group_name, False
+        )
+        group_account_ids = [
+            account_id for account_id, group in account_group_mapping.items() if group
+        ]
+
+        self.template.properties.inline_policies.append(
+            PolicyDocument(
+                included_accounts=[group_account_ids[0], group_account_ids[1]],
+                expires_at="tomorrow",
+                policy_name="test_policy",
+                statement=[
+                    {
+                        "action": ["s3:NotARealAction"],
+                        "effect": "BAD_INPUT",
+                        "resource": ["*"],
+                        "expires_at": "tomorrow",
+                        "included_accounts": [group_account_ids[0]],
+                    },
+                    {
+                        "action": ["s3:AlsoNotARealAction"],
+                        "effect": "BAD_INPUT",
+                        "resource": ["*"],
+                        "expires_at": "tomorrow",
+                    },
+                ],
+            )
+        )
+        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        self.assertEqual(len(r.exceptions_seen), 2)
+
     async def test_create_update_group_all_accounts(self):
         self.template.included_accounts = ["*"]
         self.template.excluded_accounts = []
