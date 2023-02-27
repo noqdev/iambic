@@ -7,6 +7,7 @@ import warnings
 from typing import Optional
 
 import click
+
 from iambic.config.dynamic_config import init_plugins, load_config
 from iambic.config.utils import resolve_config_template_path, check_and_update_resource_limit
 from iambic.config.wizard import ConfigurationWizard
@@ -301,6 +302,15 @@ def run_git_apply(
         )
     )
     output_proposed_changes(template_changes, output_path=output_path)
+    exceptions = [
+        change.exceptions_seen for change in template_changes if change.exceptions_seen
+    ]
+    # figure out a way to log the useful information
+    if exceptions:
+        log.error(
+            "exceptions encountered. some operations failed. read proposed_changes for details."
+        )
+        raise SystemExit(1)
 
 
 @cli.command()

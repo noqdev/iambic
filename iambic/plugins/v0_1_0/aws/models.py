@@ -7,10 +7,6 @@ from typing import TYPE_CHECKING, List, Optional, Union
 
 import boto3
 import botocore
-from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, constr, validator
-from ruamel.yaml import YAML, yaml_object
-
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -38,6 +34,9 @@ from iambic.plugins.v0_1_0.aws.utils import (
     legacy_paginated_search,
     set_org_account_variables,
 )
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Field, constr, validator
+from ruamel.yaml import YAML, yaml_object
 
 yaml = YAML()
 
@@ -712,12 +711,19 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
                 log.info(log_str, account=str(account), **log_params)
                 tasks.append(self._apply_to_account(account, context))
 
-        account_changes = await asyncio.gather(*tasks)
+        account_changes: list[AccountChangeDetails] = await asyncio.gather(*tasks)
         template_changes.proposed_changes = [
             account_change
             for account_change in account_changes
             if any(account_change.proposed_changes)
         ]
+        # aggregate exceptions
+        template_changes.exceptions_seen = [
+            account_change
+            for account_change in account_changes
+            if any(account_change.exceptions_seen)
+        ]
+
         if account_changes and context.execute:
             log.info(
                 "Successfully applied resource changes to all aws_accounts.",
