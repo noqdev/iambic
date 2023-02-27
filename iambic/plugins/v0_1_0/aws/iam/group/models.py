@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-from itertools import chain
 from typing import Callable, Optional, Union
 
 import botocore
+from pydantic import Field, constr, validator
+
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -15,6 +16,7 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
+from iambic.core.utils import plugin_apply_wrapper
 from iambic.plugins.v0_1_0.aws.iam.group.utils import (
     apply_group_inline_policies,
     apply_group_managed_policies,
@@ -30,7 +32,6 @@ from iambic.plugins.v0_1_0.aws.models import (
     AWSTemplate,
 )
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
-from pydantic import Field, constr, validator
 
 AWS_IAM_GROUP_TEMPLATE_TYPE = "NOQ::AWS::IAM::Group"
 
@@ -121,6 +122,7 @@ class GroupTemplate(AWSTemplate, AccessModel):
             resource_id=group_name,
             new_value=dict(**account_group),
             proposed_changes=[],
+            exceptions_seen=[],
         )
         log_params = dict(
             resource_type=self.resource_type,
@@ -169,7 +171,7 @@ class GroupTemplate(AWSTemplate, AccessModel):
             if group_exists:
                 tasks.extend([])
 
-                supported_update_keys = ["Description", "MaxSessionDuration"]
+                supported_update_keys = ["Path", "GroupName"]
                 update_resource_log_params = {**log_params}
                 update_group_params = {}
                 for k in supported_update_keys:
@@ -180,34 +182,33 @@ class GroupTemplate(AWSTemplate, AccessModel):
                             old_value=current_group.get(k),
                             new_value=account_group.get(k),
                         )
-                        update_group_params[k] = current_group.get(k)
+                        update_group_params[f"New{k}"] = account_group.get(k)
 
                 if update_group_params:
                     log_str = "Out of date resource found."
+                    proposed_changes = [
+                        ProposedChange(
+                            change_type=ProposedChangeType.UPDATE,
+                            resource_id=group_name,
+                            resource_type=self.resource_type,
+                        )
+                    ]
                     if context.execute:
                         log.info(
                             f"{log_str} Updating resource...",
                             **update_resource_log_params,
                         )
+                        apply_awaitable = boto_crud_call(
+                            client.update_group,
+                            RoleName=group_name,
+                            **update_group_params,
+                        )
                         tasks.append(
-                            boto_crud_call(
-                                client.update_group,
-                                RoleName=group_name,
-                                **{
-                                    k: account_group.get(k)
-                                    for k in supported_update_keys
-                                },
-                            )
+                            plugin_apply_wrapper(apply_awaitable, proposed_changes)
                         )
                     else:
                         log.info(log_str, **update_resource_log_params)
-                        account_change_details.proposed_changes.append(
-                            ProposedChange(
-                                change_type=ProposedChangeType.UPDATE,
-                                resource_id=group_name,
-                                resource_type=self.resource_type,
-                            )
-                        )
+                        account_change_details.proposed_changes.extend(proposed_changes)
             else:
                 account_change_details.proposed_changes.append(
                     ProposedChange(
@@ -250,14 +251,28 @@ class GroupTemplate(AWSTemplate, AccessModel):
             ]
         )
         try:
-            changes_made = await asyncio.gather(*tasks)
+            results: list[list[ProposedChange]] = await asyncio.gather(
+                *tasks, return_exceptions=True
+            )
+
+            # separate out the success versus failure calls
+            exceptions: list[ProposedChange] = []
+            changes_made: list[ProposedChange] = []
+            for result in results:
+                for r in result:
+                    if isinstance(r, ProposedChange):
+                        if len(r.exceptions_seen) == 0:
+                            changes_made.append(r)
+                        else:
+                            exceptions.append(r)
+
         except Exception as e:
             log.exception("Unable to apply changes to resource", error=e, **log_params)
             return account_change_details
         if any(changes_made):
-            account_change_details.proposed_changes.extend(
-                list(chain.from_iterable(changes_made))
-            )
+            account_change_details.proposed_changes.extend(changes_made)
+        if any(exceptions):
+            account_change_details.exceptions_seen.extend(exceptions)
 
         if context.execute:
             if self.deleted:

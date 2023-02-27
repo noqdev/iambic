@@ -140,3 +140,64 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
         )
         r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
         self.assertEqual(len(r.proposed_changes), 1)
+
+
+class UpdateGroupBadInputTestCase(IsolatedAsyncioTestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.template = asyncio.run(
+            generate_group_template_from_base(IAMBIC_TEST_DETAILS.template_dir_path)
+        )
+        cls.group_name = cls.template.properties.group_name
+        cls.all_account_ids = [
+            account.account_id for account in IAMBIC_TEST_DETAILS.config.aws.accounts
+        ]
+        # Only include the template in half the accounts
+        # Make the accounts explicit so it's easier to validate account scoped tests
+        cls.template.included_accounts = cls.all_account_ids[
+            : len(cls.all_account_ids) // 2
+        ]
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.template.deleted = True
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+
+    async def test_bad_input(self):
+        self.template.included_accounts = ["*"]
+        self.template.excluded_accounts = []
+
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+
+        account_group_mapping = await get_group_across_accounts(
+            IAMBIC_TEST_DETAILS.config.aws.accounts, self.group_name, False
+        )
+        group_account_ids = [
+            account_id for account_id, group in account_group_mapping.items() if group
+        ]
+
+        self.template.properties.inline_policies.append(
+            PolicyDocument(
+                included_accounts=[group_account_ids[0], group_account_ids[1]],
+                expires_at="tomorrow",
+                policy_name="test_policy",
+                statement=[
+                    {
+                        "action": ["s3:NotARealAction"],
+                        "effect": "BAD_INPUT",
+                        "resource": ["*"],
+                        "expires_at": "tomorrow",
+                        "included_accounts": [group_account_ids[0]],
+                    },
+                    {
+                        "action": ["s3:AlsoNotARealAction"],
+                        "effect": "BAD_INPUT",
+                        "resource": ["*"],
+                        "expires_at": "tomorrow",
+                    },
+                ],
+            )
+        )
+        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        self.assertEqual(len(r.exceptions_seen), 2)
