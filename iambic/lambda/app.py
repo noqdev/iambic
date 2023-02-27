@@ -10,7 +10,7 @@ from enum import Enum
 from iambic.config.dynamic_config import load_config
 from iambic.config.utils import resolve_config_template_path
 from iambic.core.models import BaseModel
-from iambic.main import run_apply, run_clone_repos, run_detect, run_import, run_plan
+from iambic.main import run_apply, run_clone_repos, run_detect, run_plan
 
 REPO_BASE_PATH = os.path.expanduser("~/.iambic/repos/")
 PLAN_OUTPUT_PATH = os.environ.get("PLAN_OUTPUT_PATH", None)
@@ -78,8 +78,8 @@ def run_handler(event=None, context=None):
     match lambda_context.command:
         case LambdaCommand.run_import.value:
             config_path = asyncio.run(resolve_config_template_path(REPO_BASE_PATH))
-            asyncio.run(load_config(config_path))
-            return run_import(REPO_BASE_PATH, config_path)
+            config = asyncio.run(load_config(config_path))
+            return asyncio.run(config.run_import(REPO_BASE_PATH))
         case LambdaCommand.run_detect.value:
             return run_detect(REPO_BASE_PATH)
         case LambdaCommand.run_apply.value:

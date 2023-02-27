@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import re
@@ -14,10 +15,12 @@ from urllib.parse import urlparse
 import github
 from github.PullRequest import PullRequest
 
+from iambic.config.dynamic_config import load_config
+from iambic.config.utils import resolve_config_template_path
 from iambic.core.git import Repo, clone_git_repo
 from iambic.core.logger import log
 from iambic.core.utils import yaml
-from iambic.main import run_detect, run_expire, run_import
+from iambic.main import run_detect, run_expire
 
 iambic_app = __import__("iambic.lambda.app", globals(), locals(), [], 0)
 lambda_run_handler = getattr(iambic_app, "lambda").app.run_handler
@@ -489,11 +492,11 @@ def handle_import(github_client: github.Github, context: dict[str, Any]) -> None
 
 def _handle_import(repo_url: str, default_branch: str) -> None:
     try:
-        repo = prepare_local_repo_for_new_commits(
-            repo_url, get_lambda_repo_path(), "import"
-        )
-
-        run_import(get_lambda_repo_path())
+        repo_dir = get_lambda_repo_path()
+        repo = prepare_local_repo_for_new_commits(repo_url, repo_dir, "import")
+        config_path = asyncio.run(resolve_config_template_path(repo_dir))
+        config = asyncio.run(load_config(config_path))
+        asyncio.run(config.run_import(repo_dir))
         repo.git.add(".")
         diff_list = repo.head.commit.diff()
         if len(diff_list) > 0:

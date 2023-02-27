@@ -10,7 +10,6 @@ import pytest
 from iambic.config.dynamic_config import Config, load_config
 from iambic.core.context import ctx
 from iambic.core.logger import log
-from iambic.main import run_import
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
 if not os.environ.get("GITHUB_ACTIONS", None):
@@ -104,17 +103,16 @@ def generate_templates_fixture(request):
     with open(IAMBIC_TEST_DETAILS.config_path, "w") as temp_file:
         temp_file.write(all_config)
 
-    if not FUNCTIONAL_TEST_TEMPLATE_DIR:
-        run_import(
-            IAMBIC_TEST_DETAILS.template_dir_path,
-            IAMBIC_TEST_DETAILS.config_path,
-        )
-        log.info("Finished generating templates for testing")
-
     log.info("Setting up config for testing")
     IAMBIC_TEST_DETAILS.config = asyncio.run(
         load_config(IAMBIC_TEST_DETAILS.config_path)
     )
+
+    if not FUNCTIONAL_TEST_TEMPLATE_DIR:
+        asyncio.run(
+            IAMBIC_TEST_DETAILS.config.run_import(IAMBIC_TEST_DETAILS.template_dir_path)
+        )
+        log.info("Finished generating templates for testing")
 
     for aws_account in IAMBIC_TEST_DETAILS.config.aws.accounts:
         if aws_account.identity_center_details:
