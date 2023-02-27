@@ -65,8 +65,8 @@ def get_app_bearer_token(private_key, app_id) -> str:
 
 def get_app_private_key_as_lambda_context():
     # assuming we are already in an lambda execution context
-    secret_name = os.environ["GITHUB_APP_SECRET_KEY_SECRET_ID"]
-    region_name = os.environ["AWS_REGION"]
+    secret_name = os.environ.get("GITHUB_APP_SECRET_KEY_SECRET_ID")
+    region_name = os.environ.get("AWS_REGION")
 
     # Create a Secrets Manager client
     session = boto3.session.Session()
@@ -85,8 +85,8 @@ def get_app_private_key_as_lambda_context():
 
 def get_app_webhook_secret_as_lambda_context():
     # assuming we are already in an lambda execution context
-    secret_name = os.environ["GITHUB_APP_WEBHOOK_SECRET_SECRET_ID"]
-    region_name = os.environ["AWS_REGION"]
+    secret_name = os.environ.get("GITHUB_APP_WEBHOOK_SECRET_SECRET_ID")
+    region_name = os.environ.get("AWS_REGION")
 
     # Create a Secrets Manager client
     session = boto3.session.Session()
