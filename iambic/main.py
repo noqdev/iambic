@@ -79,7 +79,7 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
 
     asyncio.run(flag_expired_resources(templates))
     ctx.eval_only = True
-    output_proposed_changes(asyncio.run(config.run_apply(templates)))
+    output_proposed_changes(asyncio.run(config.run_apply(load_templates(templates))))
 
 
 @cli.command()
@@ -206,6 +206,7 @@ def run_apply(
     ctx.eval_only = not force
 
     templates = load_templates(templates)
+    asyncio.run(flag_expired_resources([template.file_path for template in templates]))
     template_changes = asyncio.run(config.run_apply(templates))
     output_proposed_changes(template_changes)
 
@@ -253,10 +254,29 @@ def run_apply(
     type=str,
     help="The to_sha to calculate diff",
 )
+@click.option(
+    "--plan-output",
+    "-o",
+    "plan_output",
+    type=click.Path(exists=True),
+    help="The location to output the plan Example: ./proposed_changes.yaml",
+)
 def git_apply(
-    config_path: str, repo_dir: str, allow_dirty: bool, from_sha: str, to_sha: str
+    config_path: str,
+    repo_dir: str,
+    allow_dirty: bool,
+    from_sha: str,
+    to_sha: str,
+    plan_output: str,
 ):
-    run_git_apply(config_path, allow_dirty, from_sha, to_sha, repo_dir=repo_dir)
+    run_git_apply(
+        config_path,
+        allow_dirty,
+        from_sha,
+        to_sha,
+        repo_dir=repo_dir,
+        output_path=plan_output,
+    )
 
 
 def run_git_apply(
@@ -265,6 +285,7 @@ def run_git_apply(
     from_sha: str,
     to_sha: str,
     repo_dir: str = str(pathlib.Path.cwd()),
+    output_path: str = None,
 ):
 
     ctx.eval_only = False
@@ -280,7 +301,16 @@ def run_git_apply(
             to_sha=to_sha,
         )
     )
-    output_proposed_changes(template_changes)
+    output_proposed_changes(template_changes, output_path=output_path)
+    exceptions = [
+        change.exceptions_seen for change in template_changes if change.exceptions_seen
+    ]
+    # figure out a way to log the useful information
+    if exceptions:
+        log.error(
+            "exceptions encountered. some operations failed. read proposed_changes for details."
+        )
+        raise SystemExit(1)
 
 
 @cli.command()
@@ -296,7 +326,7 @@ def run_git_apply(
     "-o",
     "plan_output",
     type=click.Path(exists=True),
-    help="The location to output the plan Example: ./proposed_changes.json",
+    help="The location to output the plan Example: ./proposed_changes.yaml",
 )
 @click.option(
     "--repo-dir",
@@ -360,6 +390,39 @@ def run_import(
         config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
     asyncio.run(config.run_import(repo_dir))
+
+
+@cli.command()
+@click.option(
+    "--template",
+    "-t",
+    "templates",
+    required=False,
+    multiple=True,
+    type=click.Path(exists=True),
+    help="The template file path(s) to expire. Example: ./aws/roles/engineering.yaml",
+)
+@click.option(
+    "--repo-dir",
+    "-d",
+    "repo_dir",
+    required=False,
+    type=click.Path(exists=True),
+    default=os.getenv("IAMBIC_REPO_DIR"),
+    help="The repo directory containing the templates. Example: ~/iambic-templates",
+)
+def lint(templates: list[str], repo_dir: str):
+    ctx.eval_only = True
+    config_path = asyncio.run(resolve_config_template_path(repo_dir))
+    asyncio.run(load_config(config_path, configure_plugins=False))
+
+    if not templates:
+        templates = asyncio.run(gather_templates(repo_dir))
+
+    templates = load_templates(templates, False)
+    log.info("Formatting templates.")
+    for template in templates:
+        template.write()
 
 
 @cli.command(name="init")

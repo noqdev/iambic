@@ -8,11 +8,10 @@ from typing import TYPE_CHECKING, Optional
 from deepdiff import DeepDiff
 from git import Repo
 from git.exc import GitCommandError
-from pydantic import BaseModel as PydanticBaseModel
-
 from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
 from iambic.core.utils import NOQ_TEMPLATE_REGEX, file_regex_search, yaml
+from pydantic import BaseModel as PydanticBaseModel
 
 if TYPE_CHECKING:
     from iambic.config.dynamic_config import Config
@@ -60,6 +59,21 @@ def clone_git_repo(repo_url: str, repo_path: str, remote_branch_name: str):
     return repo
 
 
+def get_remote_default_branch(repo: Repo, remote_name: str = "origin"):
+    # This is relying on `git remote show origin`
+    # includes information  HEAD branch: THE_ACTUAL_BRANCH_NAME
+    #
+    remote_info_lines = repo.git.remote("show", remote_name).split("\n")
+    default_branch = ""
+    for line in remote_info_lines:
+        if "HEAD branch" in line:
+            default_branch = line.split(":")[1].strip()
+            break
+    if default_branch == "":
+        default_branch = "main"
+    return default_branch
+
+
 async def retrieve_git_changes(
     repo_dir: str,
     allow_dirty: bool = False,
@@ -81,8 +95,10 @@ async def retrieve_git_changes(
         # Fetch latest
         for remote in repo.remotes:
             remote.fetch()
-        # Comparing against main
-        commit_origin_main = repo.commit("origin/main")
+        # Comparing against default_branch
+        remote_name = "origin"
+        default_branch = get_remote_default_branch(repo, remote_name)
+        commit_origin_main = repo.commit(f"{remote_name}/{default_branch}")
         # TODO: We should consider if the default branch is named other than `main`
         from_sha_obj = commit_origin_main
     else:

@@ -14,11 +14,12 @@ from iambic.core.logger import log
 from iambic.core.template_generation import (
     base_group_str_attribute,
     create_or_update_template,
+    delete_orphaned_templates,
     get_existing_template_map,
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, get_writable_directory, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import PermissionSetMessageDetails
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
@@ -36,10 +37,12 @@ from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 
+
 # The dir to write the boto response to a file to prevent keeping too much in memory
-IDENTITY_CENTER_PERMISSION_SET_RESPONSE_DIR = pathlib.Path.home().joinpath(
-    ".iambic", "resources", "aws", "identity_center", "permission_sets"
-)
+def get_identity_center_permission_set_response_dir() -> pathlib.Path:
+    return get_writable_directory().joinpath(
+        ".iambic", "resources", "aws", "identity_center", "permission_sets"
+    )
 
 
 # TODO: Update all grouping functions to support org grouping once multiple orgs with IdentityCenter is functional
@@ -70,7 +73,7 @@ def get_templated_permission_set_file_path(
 
 def get_account_permission_set_resource_dir(account_id: str) -> str:
     account_resource_dir = os.path.join(
-        IDENTITY_CENTER_PERMISSION_SET_RESPONSE_DIR, account_id
+        get_identity_center_permission_set_response_dir(), account_id
     )
     os.makedirs(account_resource_dir, exist_ok=True)
     return account_resource_dir
@@ -395,24 +398,19 @@ async def generate_aws_permission_set_templates(
     )
 
     messages = []
-
-    # Remove templates not in any AWS account
-    permission_sets_in_aws = set(
-        list(
-            itertools.chain.from_iterable(
-                [
-                    aws_account.identity_center_details.permission_set_map.keys()
-                    for aws_account in identity_center_accounts
-                ]
-            )
-        )
-    )
-    for resource_id, resource_template in existing_template_map.items():
-        if resource_id not in permission_sets_in_aws:
-            resource_template.delete()
-
     permission_set_names = []
     if permission_set_messages:
+        permission_sets_in_aws = set(
+            list(
+                itertools.chain.from_iterable(
+                    [
+                        aws_account.identity_center_details.permission_set_map.keys()
+                        for aws_account in identity_center_accounts
+                    ]
+                )
+            )
+        )
+
         permission_set_names = await gather_permission_set_names(
             identity_center_accounts,
             permission_set_messages,
@@ -508,13 +506,21 @@ async def generate_aws_permission_set_templates(
         "Writing templated AWS Identity Center Permission Set.",
         unique_identities=len(grouped_permission_set_map),
     )
+    all_resource_ids = set()
     for name, refs in grouped_permission_set_map.items():
-        await create_templated_permission_set(
+        resource_template = await create_templated_permission_set(
             aws_account_map,
             name,
             refs,
             resource_dir,
             existing_template_map,
+        )
+        all_resource_ids.add(resource_template.resource_id)
+
+    if not permission_set_messages:
+        # NEVER call this if messages are passed in because all_resource_ids will only contain those resources
+        delete_orphaned_templates(
+            list(existing_template_map.values()), all_resource_ids
         )
 
     log.info("Finished templated AWS Identity Center Permission Set generation")

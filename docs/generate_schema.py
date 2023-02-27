@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 
 import jsonschema2md2
+
 from iambic.config.dynamic_config import Config, ExtendsConfig
 from iambic.core.models import Variable
 from iambic.core.utils import camel_to_snake

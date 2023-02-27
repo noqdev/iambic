@@ -4,6 +4,8 @@ import asyncio
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Optional
 
+from pydantic import Field
+
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -25,7 +27,6 @@ from iambic.plugins.v0_1_0.okta.user.utils import (
     update_user_profile,
     update_user_status,
 )
-from pydantic import Field
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
@@ -54,7 +55,7 @@ class OktaUserTemplateProperties(BaseModel):
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
-        return {"extra"}
+        return {"extra", "metadata_commented_dict"}
 
     @property
     def resource_type(self) -> str:
@@ -109,14 +110,17 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
             for account_change in account_changes
             if any(account_change.proposed_changes)
         ]
-        if account_changes and context.execute:
+
+        proposed_changes = [x for x in account_changes if x.proposed_changes]
+
+        if proposed_changes and context.execute:
             log.info(
-                "Successfully applied resource changes to all Okta organizations.",
+                "Successfully applied all or some resource changes to all Okta organizations. Any unapplied resources will have an accompanying error message.",
                 **log_params,
             )
-        elif account_changes:
+        elif proposed_changes:
             log.info(
-                "Successfully detected required resource changes on all Okta organizations.",
+                "Successfully detected all or some required resource changes on all Okta organizations. Any unapplied resources will have an accompanying error message.",
                 **log_params,
             )
         else:

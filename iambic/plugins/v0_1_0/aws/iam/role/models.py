@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-from itertools import chain
 from typing import Callable, Optional, Union
 
 import botocore
@@ -215,6 +214,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
             resource_id=role_name,
             new_value=dict(**account_role),
             proposed_changes=[],
+            exceptions_seen=[],
         )
         log_params = dict(
             resource_type=self.resource_type,
@@ -299,16 +299,30 @@ class RoleTemplate(AWSTemplate, AccessModel):
                             f"{log_str} Updating resource...",
                             **update_resource_log_params,
                         )
-                        tasks.append(
-                            boto_crud_call(
-                                client.update_role,
-                                RoleName=role_name,
-                                **{
-                                    k: account_role.get(k)
-                                    for k in supported_update_keys
-                                },
-                            )
-                        )
+
+                        async def update_role():
+                            exceptions = []
+                            try:
+                                await boto_crud_call(
+                                    client.update_role,
+                                    RoleName=role_name,
+                                    **{
+                                        k: account_role.get(k)
+                                        for k in supported_update_keys
+                                    },
+                                )
+                            except Exception as e:
+                                exceptions.append(str(e))
+                            return [
+                                ProposedChange(
+                                    change_type=ProposedChangeType.UPDATE,
+                                    resource_id=role_name,
+                                    resource_type=self.resource_type,
+                                    exceptions_seen=exceptions,
+                                )
+                            ]
+
+                        tasks.append(update_role())
                     else:
                         log.info(log_str, **update_resource_log_params)
                         account_change_details.proposed_changes.append(
@@ -368,14 +382,28 @@ class RoleTemplate(AWSTemplate, AccessModel):
             ]
         )
         try:
-            changes_made = await asyncio.gather(*tasks)
+            results: list[list[ProposedChange]] = await asyncio.gather(
+                *tasks, return_exceptions=True
+            )
+
+            # separate out the success versus failure calls
+            exceptions: list[ProposedChange] = []
+            changes_made: list[ProposedChange] = []
+            for result in results:
+                for r in result:
+                    if isinstance(r, ProposedChange):
+                        if len(r.exceptions_seen) == 0:
+                            changes_made.append(r)
+                        else:
+                            exceptions.append(r)
+
         except Exception as e:
             log.exception("Unable to apply changes to resource", error=e, **log_params)
             return account_change_details
         if any(changes_made):
-            account_change_details.proposed_changes.extend(
-                list(chain.from_iterable(changes_made))
-            )
+            account_change_details.proposed_changes.extend(changes_made)
+        if any(exceptions):
+            account_change_details.exceptions_seen.extend(exceptions)
 
         if context.execute:
             if self.deleted:
@@ -394,10 +422,6 @@ class RoleTemplate(AWSTemplate, AccessModel):
             )
 
         return account_change_details
-
-    @property
-    def resource_id(self):
-        return self.properties.role_name
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:

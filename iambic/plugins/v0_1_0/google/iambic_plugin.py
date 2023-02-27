@@ -5,7 +5,7 @@ from typing import Optional
 
 import googleapiclient.discovery
 from google.oauth2 import service_account
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.iambic_plugin import ProviderPlugin
@@ -27,7 +27,7 @@ class GoogleProject(BaseModel):
     subjects: list[GoogleSubjects]
     type: str
     private_key_id: str
-    private_key: str
+    private_key: SecretStr
     client_email: str
     client_id: str
     auth_uri: str
@@ -62,22 +62,23 @@ class GoogleProject(BaseModel):
         if not os.environ.get("TESTING"):
             if service_conn := self._service_connection_map.get(key):
                 return service_conn
-
+        credentials = self.dict(
+            include={
+                "type",
+                "project_id",
+                "private_key_id",
+                "private_key",
+                "client_email",
+                "client_id",
+                "auth_uri",
+                "token_uri",
+                "auth_provider_x509_cert_url",
+                "client_x509_cert_url",
+            }
+        )
+        credentials["private_key"] = credentials["private_key"].get_secret_value()
         admin_credentials = service_account.Credentials.from_service_account_info(
-            self.dict(
-                include={
-                    "type",
-                    "project_id",
-                    "private_key_id",
-                    "private_key",
-                    "client_email",
-                    "client_id",
-                    "auth_uri",
-                    "token_uri",
-                    "auth_provider_x509_cert_url",
-                    "client_x509_cert_url",
-                }
-            ),
+            credentials,
             scopes=[
                 "https://www.googleapis.com/auth/admin.directory.user.security",
                 "https://www.googleapis.com/auth/admin.reports.audit.readonly",

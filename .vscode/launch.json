@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Iambic Plan",
+            "name": "Iambic: Plan",
             "type": "python",
             "request": "launch",
             "module": "iambic.main",
@@ -17,7 +17,7 @@
             "justMyCode": false
         },
         {
-            "name": "Iambic Apply All Templates",
+            "name": "Iambic: Apply All Templates",
             "type": "python",
             "request": "launch",
             "module": "iambic.main",
@@ -29,7 +29,7 @@
             "justMyCode": true
         },
         {
-            "name": "Iambic - Apply Specific Template",
+            "name": "Iambic: Apply Specific Template",
             "type": "python",
             "request": "launch",
             "module": "iambic.main",
@@ -44,7 +44,7 @@
             "justMyCode": true
         },
         {
-            "name": "Iambic - Git-Apply",
+            "name": "Iambic: Git-Apply",
             "type": "python",
             "request": "launch",
             "module": "iambic.main",
@@ -56,7 +56,7 @@
             "justMyCode": true
         },
         {
-            "name": "Iambic Git-Apply from sha to sha",
+            "name": "Iambic: Git-Apply from sha to sha",
             "type": "python",
             "request": "launch",
             "module": "iambic.main",
@@ -73,7 +73,7 @@
             "justMyCode": true
         },
         {
-            "name": "Iambic Git-Plan",
+            "name": "Iambic: Git-Plan",
             "type": "python",
             "request": "launch",
             "module": "iambic.main",
@@ -85,19 +85,19 @@
             "justMyCode": true
         },
         {
-            "name": "Iambic Import",
+            "name": "Iambic: Import",
             "type": "python",
             "request": "launch",
             "module": "iambic.main",
             "console": "integratedTerminal",
             "envFile": "${workspaceFolder}/.env",
             "args": [
-                "import",
+                "import"
             ],
             "justMyCode": true
         },
         {
-            "name": "Iambic Config Discovery",
+            "name": "Iambic: Config Discovery",
             "type": "python",
             "request": "launch",
             "module": "iambic.main",
@@ -109,7 +109,7 @@
             "justMyCode": true
         },
         {
-            "name": "Iambic Detect",
+            "name": "Iambic: Detect",
             "type": "python",
             "request": "launch",
             "module": "iambic.main",
@@ -117,6 +117,18 @@
             "envFile": "${workspaceFolder}/.env",
             "args": [
                 "detect",
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "Iambic: Setup Wizard",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
+            "args": [
+                "setup",
             ],
             "justMyCode": true
         },

@@ -6,10 +6,12 @@ import glob
 import os
 import pathlib
 import re
+import sys
+import tempfile
 import typing
 from datetime import datetime
 from io import StringIO
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Coroutine, Optional, Union
 from urllib.parse import unquote_plus
 
 import aiofiles
@@ -22,8 +24,29 @@ from iambic.core.exceptions import RateLimitException
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 
+if TYPE_CHECKING:
+    from iambic.core.models import ProposedChange
+
+
 NOQ_TEMPLATE_REGEX = r".*template_type:\n?.*NOQ::"
 RATE_LIMIT_STORAGE: dict[str, int] = {}
+
+__WRITABLE_DIRECTORY__ = pathlib.Path.home()
+
+
+def init_writable_directory() -> None:
+    if os.environ.get("AWS_LAMBDA_FUNCTION_NAME", False):
+        temp_writable_directory = tempfile.mkdtemp(prefix="lambda")
+        __WRITABLE_DIRECTORY__ = pathlib.Path(temp_writable_directory)
+    else:
+        __WRITABLE_DIRECTORY__ = pathlib.Path.home()
+
+    this_module = sys.modules[__name__]
+    setattr(this_module, "__WRITABLE_DIRECTORY__", __WRITABLE_DIRECTORY__)
+
+
+def get_writable_directory() -> pathlib.Path:
+    return __WRITABLE_DIRECTORY__
 
 
 def camel_to_snake(str_obj: str) -> str:
@@ -43,6 +66,19 @@ def snake_to_camelcap(str_obj: str) -> str:
         str_obj
     ).title()  # normalize string and add required case convention
     return str_obj.replace("_", "")  # Remove underscores
+
+
+async def plugin_apply_wrapper(
+    apply_awaitable: Coroutine, proposed_changes: list[ProposedChange]
+) -> list[ProposedChange]:
+    exceptions = []
+    try:
+        await apply_awaitable
+    except Exception as e:
+        exceptions.append(str(e))
+    for change in proposed_changes:
+        change.exceptions_seen = exceptions
+    return proposed_changes
 
 
 async def resource_file_upsert(
