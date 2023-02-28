@@ -5,13 +5,28 @@ then
     exit
 fi
 
+if ps aux | grep -q "[d]ockerd"; then
+    echo "Detected Docker is running, continuing..."
+else
+    echo "Docker is not running. Please start Docker before running this script. For example on most modern Linux systems you can start docker by running the following command: sudo systemctl start docker"
+    exit
+fi
+
+if id -nG "$USER" | grep -qw "docker"; then
+    echo "Detected user is in the docker group, continuing..."
+else
+    echo "User is not in the docker group. Please add the user to the docker group before running this script. For example on most modern Linux systems you can add the user to the docker group by running the following command: sudo usermod -aG docker $USER"
+    exit
+fi
+
 if ! command -v git &> /dev/null
 then
     echo "Git is not installed on this system. Please install Git before running this script. Refer to your operating system's package manager for installation instructions."
 fi
 
-SHELL_NAME=$(ps -p $$ | tail -1 | awk '{print $NF}')
-echo "Detected shell: ${SHELL_NAME}"
+echo
+echo
+
 IAMBIC_GIT_REPO_PATH="${IAMBIC_GIT_REPO_PATH:-${HOME}/iambic-templates}"
 ECR_PATH="public.ecr.aws/o4z3c2v2/iambic:latest"
 
@@ -24,40 +39,51 @@ $(which git) init .
 cd $CWD
 DOCKER_ALIAS="alias iambic='docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e AWS_PROFILE=\${AWS_PROFILE} -v \${CWD}:/templates:Z ${ECR_PATH}'"
 
-if [ "$SHELL_NAME" = "bash" ]; then
-    echo "${DOCKER_ALIAS}" >> ~/.bashrc
-    echo "Wrote alias to ~/.bashrc"
-    source ~/.bashrc
-elif [ "$SHELL_NAME" = "sh" ]; then
-    echo "${DOCKER_ALIAS}" >> ~/.profile
-    echo "Wrote alias to ~/.profile"
-    source ~/.profile
-elif [ "$SHELL_NAME" = "zsh" ]; then
+echo
+echo
+
+if [[ -e "${HOME}/.zshrc" ]]; then
     echo "${DOCKER_ALIAS}" >> ~/.zshrc
-    echo "Wrote alias to ~/.zshrc"
-    source ~/.zshrc
-elif [ "$SHELL_NAME" = "ksh" ]; then
-    echo "${DOCKER_ALIAS}" >> ~/.kshrc
-    echo "Wrote alias to ~/.kshrc"
-    source ~/.kshrc
-elif [ "$SHELL_NAME" = "dash" ]; then
-    echo "${DOCKER_ALIAS}" >> ~/.profile
-    echo "Wrote alias to ~/.profile"
-    source ~/.profile
-elif [ "$SHELL_NAME" = "tcsh" ]; then
-    echo "${DOCKER_ALIAS}" >> ~/.tcshrc
-    echo "Wrote alias to ~/.tcshrc"
-    source ~/.tcshrc
-elif [ "$SHELL_NAME" = "csh" ]; then
-    echo "${DOCKER_ALIAS}" >> ~/.cshrc
-    echo "Wrote alias to ~/.cshrc"
-    source ~/.cshrc
-else
-    echo "${DOCKER_ALIAS}" >> ~/.profile
-    echo "Wrote alias to ~/.profile"
-    source ~/.profile
+    echo "Wrote alias to ~/.zshrc; to start using IAMbic please run 'source ~/.zshrc' if you are using zsh"
 fi
 
-echo "Caching the latest iambic docker container"
+if [[ -e "${HOME}/.bashrc" ]]; then
+    echo "${DOCKER_ALIAS}" >> ~/.bashrc
+    echo "Wrote alias to ~/.bashrc; to start using IAMbic please run 'source ~/.bashrc' if you are using bash"
+fi
+
+if [[ -e "${HOME}/.profile" ]]; then
+    echo "${DOCKER_ALIAS}" >> ~/.profile
+    echo "Wrote alias to ~/.profile; to start using IAMbic please run 'source ~/.profile' if you are using sh"
+fi
+
+if [[ -e "${HOME}/.kshrc" ]]; then
+    echo "${DOCKER_ALIAS}" >> ~/.kshrc
+    echo "Wrote alias to ~/.kshrc; to start using IAMbic please run 'source ~/.kshrc' if you are using ksh"
+fi
+
+if [[ -e "${HOME}/.tcshrc" ]]; then
+    echo "${DOCKER_ALIAS}" >> ~/.tcshrc
+    echo "Wrote alias to ~/.tcshrc; to start using IAMbic please run 'source ~/.tcshrc' if you are using tcsh"
+fi
+
+if [[ -e "${HOME}/.cshrc" ]]; then
+    echo "${DOCKER_ALIAS}" >> ~/.cshrc
+    echo "Wrote alias to ~/.cshrc; to start using IAMbic please run 'source ~/.cshrc' if you are using csh"
+fi
+
+echo
+echo
+
+echo "Caching the latest iambic docker container, this might take a minute"
 $( which docker ) pull ${ECR_PATH}
-echo "IAMbic installed successfully. You can now use the 'iambic --help' command to get started with IAMbic."
+
+echo
+
+echo "IAMbic installed successfully. After running the source command for your shell environment, mentioned above, you will be able to use the 'iambic --help' command to get started with IAMbic."
+
+echo
+echo
+
+echo "Note: if you did not get a source command for your shell environment, please add the following line to your shell environment file: ${DOCKER_ALIAS}"
+echo "You'll know if it's working by testing with the following command: iambic --help"
