@@ -30,12 +30,7 @@ properties:
         temp_file.write(iambic_functional_test_group_yaml)
 
     # Create group
-    run_apply(
-        True,
-        IAMBIC_TEST_DETAILS.config_path,
-        [test_group_fp],
-        IAMBIC_TEST_DETAILS.template_dir_path,
-    )
+    run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
 
     # Test Reading Template
     group_template = load_templates([test_group_fp])[0]
@@ -51,23 +46,13 @@ properties:
     ) + datetime.timedelta(days=1)
     # Write new template, apply, and confirm access removed
     group_template.write()
-    run_apply(
-        True,
-        IAMBIC_TEST_DETAILS.config_path,
-        [test_group_fp],
-        IAMBIC_TEST_DETAILS.template_dir_path,
-    )
+    run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
     group_template = load_templates([test_group_fp])[0]
     assert len(group_template.properties.members) == 2
     # Set expiry for the entire group
     group_template.expires_at = datetime.datetime.now() - datetime.timedelta(days=1)
     group_template.write()
-    run_apply(
-        True,
-        IAMBIC_TEST_DETAILS.config_path,
-        [test_group_fp],
-        IAMBIC_TEST_DETAILS.template_dir_path,
-    )
+    run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
 
     group_template = load_templates([test_group_fp])[0]
     assert group_template.deleted is True

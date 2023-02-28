@@ -3,6 +3,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
+
 from iambic.core.template_generation import merge_model
 from iambic.plugins.v0_1_0.google.group.models import (
     GroupTemplateProperties,

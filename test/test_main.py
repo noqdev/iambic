@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import shutil
 import tempfile
 
 import iambic.plugins.v0_1_0.example
 import pytest
+from iambic.config.dynamic_config import load_config
+from iambic.core.utils import gather_templates
 from iambic.main import run_apply
 
 TEST_TEMPLATE_YAML = """template_type: NOQ::Example::LocalFile
@@ -65,7 +68,10 @@ def test_run_apply(example_test_filesystem):
     with open(f"{repo_dir}/{TEST_TEMPLATE_PATH}", "r") as f:
         before_template_content = "\n".join(f.readlines())
     assert "tomorrow" in before_template_content
-    run_apply(False, config_path, None, repo_dir)
+
+    config = asyncio.run(load_config(config_path))
+    templates = asyncio.run(gather_templates(repo_dir))
+    run_apply(config, templates)
     with open(f"{repo_dir}/{TEST_TEMPLATE_PATH}", "r") as f:
         after_template_content = "\n".join(f.readlines())
     assert "tomorrow" not in after_template_content
