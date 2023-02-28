@@ -12,6 +12,7 @@ from pydantic import BaseModel as PydanticBaseModel
 
 from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
+from iambic.core.parser import load_templates
 from iambic.core.utils import NOQ_TEMPLATE_REGEX, file_regex_search, yaml
 
 if TYPE_CHECKING:
@@ -232,8 +233,9 @@ def create_templates_for_modified_files(
 
         main_template = template_cls(file_path=git_diff.path, **main_template_dict)
 
-        template_dict = yaml.load(open(git_diff.path))
-        template = template_cls(file_path=git_diff.path, **template_dict)
+        # template_dict = yaml.load(open(git_diff.path))
+        # template = template_cls(file_path=git_diff.path, **template_dict)
+        template = load_templates([git_diff.path])[0]
 
         # EN-1634 dealing with providers that have no concept of multi-accounts
         # a hack to just ignore template that does not have included_accounts attribute
