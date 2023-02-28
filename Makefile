@@ -7,7 +7,7 @@ prepare_for_dist:
 
 .PHONY: auth_to_ecr
 auth_to_ecr:
-	bash -c "AWS_PROFILE=development/iambic_image_builder aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/s2p9s3r"
+	bash -c "AWS_PROFILE=iambic_open_source/iambic_image_builder aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/o4z3c2v2"
 
 docker_buildx := docker buildx build \
 	--platform=linux/amd64 \
