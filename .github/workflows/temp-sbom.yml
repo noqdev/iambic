@@ -8,7 +8,8 @@ jobs:
     name: Run sbom
     permissions:
       id-token: write
-      contents: read
+      contents: write
+      security-events: write
     steps:
       - uses: actions/checkout@v3
       - name: bootstrap
