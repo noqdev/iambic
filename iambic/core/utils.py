@@ -568,7 +568,7 @@ class GlobalRetryController:
 
 def sanitize_string(unsanitized_str, valid_characters_re):
     """
-    This function sanitizes the session name typically passed in an assume_role call, to verify that it's
+    This function sanitizes the session name typically passed as a parameter name, to ensure it is valid.
     """
 
     sanitized_str = ""
