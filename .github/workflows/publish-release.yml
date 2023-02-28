@@ -1,0 +1,30 @@
+name: Publish Release
+on:
+  push:
+    tags:
+      - 'v*'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      security-events: write
+      statuses: write
+      discussions: write
+    steps:
+    - name: bootstrap
+      run: |
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.37.3
+    - uses: actions/checkout@v3
+    - name: scan container
+      id: scan-container
+      run: |
+        docker logout ghcr.io
+        make trivy_scan
+        make trivy_sbom
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: iambic.sbom.sarif
