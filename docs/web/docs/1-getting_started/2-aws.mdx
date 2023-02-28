@@ -378,8 +378,9 @@ Once it has run, you'll notice the changes reflected in the cloud immediately, a
 
 ### 3.3 Create temporary access rules ![Enterprise Feature](/img/mark.svg)
 
+<!-- #TODO Nothing about this pertains to temporary access. -->
 Noq Enterprise is capable of brokering temporary AWS IAM role credentials for end-users and applications. Noq integrates tightly with your single-sign-on provider of choice (almost anything that speaks SAML or OpenID Connect), tightly integrating to provide credentials to your existing groups and users. These credentials can be IP-restricted (either to a static list of IP addresses, such as a list of VPN NAT addresses, or to the requester's IP address). Lastly, the Noq-CLI utility provides a number of developer-friendly methods for managing temporary IAM credentials.
-<!-- #TODO other than this last line, nothing about this pertains to temporary access. -->
+<!-- #TODO Nothing about this pertains to temporary access. -->
 
 To provide temporary access for a user, add an `access_rules` section to your YAML. <!-- #TODO where, exactly? Does it matter? --> The following is an example access rules stanza that provides access to the user `user@example.com`, and group `group_name`. The access rules are applied to the role across all accounts, unless `included_accounts` or `excluded_accounts` are specified.
 
@@ -405,7 +406,7 @@ access_rules:
       - ACCOUNT_A
 ```
 
-In order to provide temporary access to a role (for Breakglass use cases or otherwise), we will add an `expires_at` flag to the access rules. This will cause the access rules to expire after the specified time. The following example will expire the access rules in 3 days.
+In order to provide temporary access to a role (for breakglass use cases or otherwise), we will add an `expires_at` flag to the access rules. This will cause the access rules to expire after the specified time. The following example will expire the access rules in 3 days.
 
 ```yaml
 access_rules:
@@ -527,7 +528,7 @@ iambic apply -t resources/aws/identity_center/permission_sets/iambic_test_permis
 
 #### 4.2 Provide temporary access to a permission set
 
-To grant temporary access to a permission set, you can add an "access_rules" section to the YAML template.
+To grant temporary access to a permission set, you can add an `access_rules` section to the YAML template.
 
 This section specifies which users and groups can access the permission set, on which accounts they have access to, and for how long the access is valid. If the `included_accounts` field is not specified, the access rule will apply to all accounts configured in AWS Identity Center.
 
@@ -547,7 +548,7 @@ access_rules:
       - o-12345678
 ```
 
-The following is an example of the entire Permission Set template. Revise the users, groups, and
+The following is an example of the entire permission set template. Revise the users, groups, and
 account references to match your environment:
 
 ```yaml

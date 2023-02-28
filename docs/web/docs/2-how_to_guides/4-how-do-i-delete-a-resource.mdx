@@ -5,7 +5,7 @@ title: Delete a resource
 ## The deleted tag
 To delete a resource under IAMbic's control, we can use the `deleted` attribute and set it to true.
 
-Take, for example, the below examplar resource:
+Consider this example resource bedfore the `deleted: true` tag is set:
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
@@ -63,4 +63,6 @@ properties:
       value: ''
 ```
 
-In order to apply, we run `iambic apply` - note that we can specify this template in particular to only apply the changes in this template file: `iambic apply -t resouces/aws/demo-1/demo1usertobedeleted.yaml` - you would need to change the path to the template after the `-t` flag to reflect your environemnt.
+In order to apply, we run `iambic apply` 
+Note that you can request applying only the changes in this template file by specifying it by name: `iambic apply -t resouces/aws/demo-1/demo1usertobedeleted.yaml` 
+You need to change the path to the template after the `-t` flag to reflect your environemnt.

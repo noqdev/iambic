@@ -1,5 +1,5 @@
 ---
-title: Deploy on Github
+title: Deploy on GitHub
 ---
 
 ## Overview
@@ -46,7 +46,7 @@ These steps will ensure GitHub is confgured properly to work with IAMbic.
 	1. Leave the default value for "Required number of approvals".
 	1. Enable "Require status checks to pass before merging". <!-- #TODO Is there a reason the prior 3 settings were on one line and this was on it's own line?  -->
 
-#### Configure an Access Token for Github Actions to Update Repository Periodically
+#### Configure an Access Token for GitGitHubhub Actions to Update Repository Periodically
 
 1. Go to https://github.com/settings/apps.
 2. Click on "Personal access tokens". <!-- #TODO Can we link directly to personal or fine-grain tokens? -->
@@ -54,8 +54,8 @@ These steps will ensure GitHub is confgured properly to work with IAMbic.
 4. Generate a new token.
 5. For the token name, input `iambic-templates-import`.
 	1. For "Expiration", select custom and choose a date that is one year from now. (Tip: use your organization's preferred token validity length.)
-	1. For "Resource owner", select the GitHub organization that the Github repository belongs to.
-	1. For "Repository Access", select "Only select repositories" and click on "Select Repositories". For this configuration, select "noqdev/iambic-templates-example". Use the repository name for your own Github organization.
+	1. For "Resource owner", select the GitHub organization that the GitHub repository belongs to.
+	1. For "Repository Access", select "Only select repositories" and click on "Select Repositories". For this configuration, select "noqdev/iambic-templates-example". Use the repository name for your own GitHub organization.
 	1. For "Repository permissions", give "Access: Read and Write" for "Contents". (Tip: this allows the GitHub action for import to push to the repository without approval. The intention is that human changes require an approval flow and the auto-import flow that inventories the cloud resources does not require an approval flow.)
 	1. Automatically select "Access: Read" for "Metadata".
 	1. Generate the token.
@@ -71,18 +71,18 @@ These steps will ensure GitHub is confgured properly to work with IAMbic.
 15. Name the secret `AUTO_IMPORT_GH_TOKEN`.
 16. Paste the token generated in step 5.vi as the secret.
 
-#### Configure an Access token for Github Actions to automatically comment on new/edited pull request for IAMbic planning and application
+#### Configure an Access token for GitHub Actions to automatically comment on new/edited pull request for IAMbic planning and application
 
 1. Visit https://github.com/settings/apps.
 2. Select "Personal access tokens".
 3. Select "Fine-grain tokens".
 4. Select "Generate new token".
 5. For token name, input `iambic-templates-comment`
-	1. For "Expiration", select custom, select a date that is one year from now. (Tip: use your organization preferred token valid length).
-	1. For "Resource owner", select the GitHub organization that Github repository belongs to.
+	1. For "Expiration", select custom, select a date that is one year from now. (Tip: use your organization preferred token valid length.)
+	1. For "Resource owner", select the GitHub organization that GitHub repository belongs to.
 	1. For "Repository Access", select "Only select repositories", then click on "Select Repositories". In this tutorial, we select "noqdev/iambic-templates-example". You should use the repository name that you create for your GitHub organization.
 	1. Click on "Repository permissions", Give "Pull Request: Read and Write" for "Contents". (Tip: this allows the github action for comment on pull requests. The intend is the main branch can watch for any pull request comment to automatically plan the changes.)
-	1. No action is needed, but you will notice previous action will automatically select "Access: Read" for "Metadata"
+	1. No action is needed, but you will notice previous action will automatically select "Access: Read" for "Metadata".
 	1. Click "Generate Token". You will need this token at least twice in this process.
 6. If your organization has a password vault, you can optionally store it in your organization password vault. Otherwise, move to next step to allow the repository to use the newly generated token.
 7. Open a new tab and visit https://github.com/noqdev/iambic-templates-example/settings/secrets/actions. (Tip: you should modify the link to go your own repository)
@@ -90,7 +90,7 @@ These steps will ensure GitHub is confgured properly to work with IAMbic.
 9. For Name, input `AUTO_IMPORT_GH_TOKEN`.
 10. For Secret, paste in the token generated in step 5.vi.
 
-#### To set up an access token for Github Action to automatically comment on new/edited pull requests for iambic planning and application
+#### To set up an access token for GitHub Action to automatically comment on new/edited pull requests for iambic planning and application
  #TODO This section looks a lot like the previous section. If this is a duplicate, delete this one and use the prior one. 
 
 1. Go to https://github.com/settings/apps
@@ -99,7 +99,7 @@ These steps will ensure GitHub is confgured properly to work with IAMbic.
 4. Generate a new token
 5. Give the token the name `iambic-templates-comment`.
 	1. Set an expiration date for the token, a year from now for example.
-	1. Choose the Github organization that the Github repository belongs to as the Resource owner.
+	1. Choose the GitHub organization that the GitHub repository belongs to as the Resource owner.
 	1. For "Repository Access", select "Only select repositories" and select the repository "noqdev/iambic-templates-example".
 	1. Under "Repository permissions", give "Pull Request: Read and Write" for "Contents".
 	1. The previous action will also automatically give "Access: Read" for "Metadata".
@@ -177,11 +177,11 @@ Add the following statement into the Allow statement block
 #### Open a pull request on your iambic-template repo
 
 1. `git checkout -b task/change_description origin/main`
-2. Edit one of your templates change_description <!-- #TODO edit to what?? -->
+2. Edit one of your templates change_description. <!-- #TODO edit to what?? -->
 3. `git push origin HEAD`
 4. Create a pull request.
 5. The installed pull request action will comment with `iambic git-plan` to place the changes. <!-- #TODO place them as a comment in the PR? --> Any time you want iambic github action to re-plan the changes, you can comment `iambic git-plan`.
-6. The plan will be a comment in line (as long as it is less than 65kilobytes. Be very careful with big plans because those are difficult for reviewers to review.)
+6. The plan will be a comment in line, as long as it is less than 65kb.(Be very careful with big plans because those are difficult for reviewers to review.) <!-- #TODO So then what? What's the alternative? -->
 7. Add reviewers to review your PR and plan that is in the PR comments.
 8. Once your reviewer approves your changes, add comment `iambic git-apply` to have iambic apply the changes. If the changes can be successfully applied, the PR will be automatically merged into main as well.
 
@@ -204,33 +204,33 @@ Add the following statement into the Allow statement block
 
 # GitHub App integration
 
-By installing Iambic GitHub App, the app can integrate with the pull-request and merge flow in your iambic templates repository.
+By installing IAMbic GitHub App, the app can integrate the pull-request and merge flow in your iambic templates repository.
 
 ### Create a GitHub App in your organization
 
-1. Visit your organization Github App settings. (https://github.com/organizations/ExampleOrg/settings/apps)
-2. Click "New GitHub App"
-3. Input `Iambic Integrations` for "GitHub App name"
-4. Input `https://iambic.org/` for "Homepage URL"
-5. Uncheck "Active" for "Webhook"
-6. Select "Read and Write" for "Content" Under "Permissions"
-7. Select "Read and Write" for "Pull requests" Under "Permissions"
-7. Select "Read and Write" for "Issues" Under "Permissions"
-8. Leave default "Only on this account" for "Where can this Github App bed installed?"
-9. Click "Create GitHub App"
-10. Scroll down to "Private Keys"
-11. Click "Generate a private key"
-12. A file named "iambic-integrations.2023-02-17.private-key.pem" should be downloaded by your browser. (the exact filename may be different due to timestamp)
+1. Visit your organization GitHub App settings. (https://github.com/organizations/ExampleOrg/settings/apps)
+2. Click "New GitHub App".
+3. Input `Iambic Integrations` for "GitHub App name".
+4. Input `https://iambic.org/` for "Homepage URL".
+5. Uncheck "Active" for "Webhook".
+6. Select "Read and Write" for "Content" Under "Permissions".
+7. Select "Read and Write" for "Pull requests" Under "Permissions".
+7. Select "Read and Write" for "Issues" Under "Permissions".
+8. Leave default "Only on this account" for "Where can this GitHub App bed installed?".
+9. Click "Create GitHub App".
+10. Scroll down to "Private Keys".
+11. Click "Generate a private key".
+12. A file named "iambic-integrations.2023-02-17.private-key.pem" should be downloaded by your browser. (The exact filename will be different due to timestamp.)
 
-### Store the following secrets in AWS SecretManager in the same AWS account running Github App lambda function.
+### Store the following secrets in AWS SecretManager in the same AWS account running GitHub App lambda function.
 
-1. Store the earlier downloaded private key contents (not the filename) to SecretManager and name it `dev/test-github-app-private-key` (This is the default name in the later terraform. If you use another name, be sure to update it in the terraform procedure later)
+1. Store the earlier downloaded private key contents (not the filename) to SecretManager and name it `dev/test-github-app-private-key`. (This is the default name in the later terraform. If you use another name, be sure to update it in the terraform procedure later.)
 
-2. Generate a webhook secret. (e.g., by taking the output of ruby -rsecurerandom -e 'puts SecureRandom.hex(20)' at the terminal). Store the webhook secret in SecretManager and name it `dev/test-github-app-webhook-secret`
+2. Generate a webhook secret. (e.g., by taking the output of ruby -rsecurerandom -e 'puts SecureRandom.hex(20)' at the terminal). Store the webhook secret in SecretManager and name it `dev/test-github-app-webhook-secret`.
 
 ### You have created the GitHub App. A GitHub App has to be a hosted application. Now deploy the GitHub App as a lambda function.
 
-1. Checkout iambic repository <!-- #TODO does this need a code example? Even if they should already know it? --> 
+1. Checkout iambic repository. <!-- #TODO does this need a code example? Even if they should already know it? --> 
 2. `cd deployment/github_app`
 3. `terraform init`
 4. `terraform apply` (Examine the plan, it is the resources it will create). Enter `yes` if you accept the plan to continue.
@@ -253,7 +253,7 @@ By installing Iambic GitHub App, the app can integrate with the pull-request and
 13. Go to your organization settings (https://github.com/organizations/ExampleOrg/settings/profile).
 14. Select "GitHub Apps" under "Third-party Access" in the left navigation bar.
 15. Click "Configure" on "Iambic Integrations".
-16. Select your IAMbic templates repository under "Repository access" section..
+16. Select your IAMbic templates repository under "Repository access" section.
 17. Click Save.
 
 ### Enable iambic-integrations to bypass review rules for "main" branch
