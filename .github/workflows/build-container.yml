@@ -67,9 +67,9 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: trivy-sbom
-          path: iambic.sbom.sarif
+          path: iambic.sbom.json
       # Uncomment after OSS (Requires for GH Advanced Security):
       # - name: Upload Trivy scan results to GitHub Security tab
       #   uses: github/codeql-action/upload-sarif@v2
       #   with:
-      #     sarif_file: 'iambic.sbom.sarif'
+      #     sarif_file: 'iambic.sbom.json'

@@ -34,7 +34,7 @@ trivy_scan:
 
 .PHONY: trivy_sbom
 trivy_sbom:
-	trivy image --severity HIGH,CRITICAL --format sarif --output iambic.sbom.sarif public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
+	trivy image --format spdx-json --output iambic.sbom.json public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
 
 .PHONY: create_manifest
 create_manifest:
