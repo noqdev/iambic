@@ -20,6 +20,7 @@ jobs:
         id: build-container
         run: |
           . build-env/bin/activate && make build_docker
+          docker logout ghcr.io
           make trivy_scan
           make trivy_sbom
       - name: Upload Trivy scan results to GitHub Security tab
