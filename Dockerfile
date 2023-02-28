@@ -5,7 +5,7 @@ FROM public.ecr.aws/o4z3c2v2/iambic_container_base:1.0 as runtime-layer
 ######## ############################### ########################
 # Install Requirements
 # Install the function's dependencies
-RUN pip3 install poetry awslambdaric argh watchdog
+RUN pip3 install poetry awslambdaric argh watchdog setuptools pip --upgrade
 WORKDIR ${FUNCTION_DIR}
 COPY pyproject.toml ${FUNCTION_DIR}
 # Do not create virtualenv

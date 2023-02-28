@@ -28,6 +28,14 @@ upload_docker:
 	@echo "--> Uploading Iambic Docker image"
 	$(docker_buildx) --push .
 
+.PHONY: trivy_scan
+trivy_scan:
+	trivy image --exit-code 1 --secret-config trivy-secret.yaml --severity HIGH,CRITICAL public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
+
+.PHONY: trivy_sbom
+trivy_sbom:
+	trivy image --severity HIGH,CRITICAL --format sarif --output iambic.sbom.sarif public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
+
 .PHONY: create_manifest
 create_manifest:
 	docker manifest create public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
