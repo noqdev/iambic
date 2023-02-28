@@ -15,6 +15,7 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
+from iambic.core.utils import sanitize_string
 from iambic.plugins.v0_1_0.aws.iam.models import Path
 from iambic.plugins.v0_1_0.aws.iam.policy.utils import (
     apply_managed_policy_tags,
@@ -232,6 +233,8 @@ class ManagedPolicyDocument(AccessModel):
         variables["account_name"] = aws_account.account_name
 
         rtemplate = Environment(loader=BaseLoader()).from_string(json.dumps(response))
+        valid_characters_re = r"[\w_+=,.@-]"
+        variables = [sanitize_string(v, valid_characters_re) for v in variables]
         data = rtemplate.render(**variables)
         return json.loads(data)
 
