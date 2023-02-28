@@ -5,9 +5,6 @@ import json
 from typing import List, Optional, Union
 
 import botocore
-from jinja2 import BaseLoader, Environment
-from pydantic import Field, constr, validator
-
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -18,6 +15,7 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
+from iambic.core.utils import sanitize_string
 from iambic.plugins.v0_1_0.aws.iam.models import Path
 from iambic.plugins.v0_1_0.aws.iam.policy.utils import (
     apply_managed_policy_tags,
@@ -34,6 +32,8 @@ from iambic.plugins.v0_1_0.aws.models import (
     Tag,
 )
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call
+from jinja2 import BaseLoader, Environment
+from pydantic import Field, constr, validator
 
 AWS_MANAGED_POLICY_TEMPLATE_TYPE = "NOQ::IAM::ManagedPolicy"
 
@@ -233,6 +233,8 @@ class ManagedPolicyDocument(AccessModel):
         variables["account_name"] = aws_account.account_name
 
         rtemplate = Environment(loader=BaseLoader()).from_string(json.dumps(response))
+        valid_characters_re = r"[\w_+=,.@-]"
+        variables = [sanitize_string(v, valid_characters_re) for v in variables]
         data = rtemplate.render(**variables)
         return json.loads(data)
 

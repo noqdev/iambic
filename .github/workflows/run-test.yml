@@ -36,11 +36,12 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::442632209887:role/iambic_image_builder
           aws-region: us-east-1
-      - name: build-itest-image
-        id: build-itest-image
-        run: |
-          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/l1s5s8m2
-          . env/bin/activate && make -f Makefile.itest build_docker_itest upload_docker_itest
+      # Disable image builder for now since we are not using it
+      #- name: build-itest-image
+      #  id: build-itest-image
+      #  run: |
+      #    aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/l1s5s8m2
+      #    . env/bin/activate && make -f Makefile.itest build_docker_itest upload_docker_itest
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
