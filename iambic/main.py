@@ -280,8 +280,13 @@ def run_git_apply(
     default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
-def plan(templates: list, plan_output: str, repo_dir: str):
-    if plan_output:
+@click.option(
+    "--git-aware",
+    is_flag=True,
+    hidden=True,
+)
+def plan(templates: list, plan_output: str, repo_dir: str, git_aware: bool):
+    if git_aware:
         run_git_plan(plan_output, repo_dir=repo_dir)
     else:
         if not templates:
