@@ -10,7 +10,15 @@ You'll need to create a dedicated Git repository. If you're just trying out IAMb
 When you're ready to deploy IAMbic, create a [Github repository](https://docs.github.com/en/get-started/quickstart/create-a-repo).
 GitHub is preferable because Noq provides [Github workflows](/getting_started/github) that keep IAM entitlements updated within your repository.
 
-Now you are ready to use IAMbic - follow the instructions in the next step "Using IAMbic".
+```bash
+mkdir iambic-templates
+cd iambic-templates
+git init
+cat <<EOF > .gitignore
+**/secrets.yaml
+proposed_changes.yaml
+EOF
+```
 
 ### Using IAMbic
 
@@ -19,67 +27,26 @@ Now you are ready to use IAMbic - follow the instructions in the next step "Usin
 Configure AWS credentials before running IAMbic. You can accomplish this by either setting environment variables with your credentials, setting an AWS_PROFILE, or another supported method.
 Please reference the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html) for more details.
 
-#### One Liner Installation script
+#### Install IAMbic
 
-If you want to use our install script to install iambic, you can use this command: `curl https://github.com/noqdev/iambic/install.sh | ${SHELL}`.
-
-If you are getting an error with the curl command, you may find that this command: `curl https://github.com/noqdev/iambic/install.sh | bash` might be more reliable.
-
-Note: this automatically creates the IAMbic templates git repository on your system under `~/iambic_templates`, if you'd like to setup IAMbic's 
-template git repo elsewhere, use the `IAMBIC_GIT_REPO_PATH` env var when calling our install script:
+If you want to use our install script to install iambic, you can use this command:
 
 ```bash
-export IAMBIC_GIT_REPO_PATH="~/path/to/your/templates/repo" # this directory will get created and initialized if it does not yet exist.
-curl https://github.com/noqdev/iambic/install.sh | ${SHELL}
+curl https://iambic.org/scripts/install.sh | sh
 ```
 
-#### Docker
+Note: this automatically creates the IAMbic templates git repository on your system under `~/iambic-templates`, if you'd like to setup IAMbic's
+template git repo elsewhere, use the `IAMBIC_GIT_REPO_PATH` env var when calling our install script. For example, run `export IAMBIC_GIT_REPO_PATH="~/path/to/iambic-templates"`
+before running `curl https://iambic.org/scripts/install.sh | sh`.
 
-The easiest way to get started with IAMbic is through Docker and alias `iambic` to the docker command. This will allow you to run IAMbic from anywhere on your system.
-
-Follow these instructions to set up the Alias depending on your shell. Be sure to replace `$AWS_PROFILE` with the name of the AWS profile you want to use.
-
-Bash:
-
-```bash
-echo -e "\nalias iambic='docker run \
-  -it \
-  -u $(id -u):$(id -g) \
-  -v ${HOME}/.aws:/app/.aws \
-  -e AWS_CONFIG_FILE=/app/.aws/config \
-  -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials \
-  -e "AWS_PROFILE=${AWS_PROFILE}" \
-  -v .:/templates:Z \
-  public.ecr.aws/s2p9s3r8/iambic:latest \"\$@\"'\n" >> ~/.bashrc
-
-. ~/.bashrc
-```
-
-ZSH:
-
-```zsh
-echo -e "\nalias iambic='docker run \
-  -it \
-  -u $(id -u):$(id -g) \
-  -v ${HOME}/.aws:/app/.aws \
-  -e AWS_CONFIG_FILE=/app/.aws/config \
-  -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials \
-  -e "AWS_PROFILE=${AWS_PROFILE}" \
-  -v .:/templates:Z \
-  public.ecr.aws/s2p9s3r8/iambic:latest \"\$@\"'\n" >> ~/.zshrc
-
-. ~/.zshrc
-```
-
-Please reference the [IAMbic and Docker](/technical_reference/installation/install_via_docker) section for more details on using the IAMbic Docker container.
+For detailed Docker setup instructions, please visit the [Install via Docker](/technical_reference/installation/install_via_docker) guide.
 
 You can also [install the wheel](/technical_reference/installation/install_via_the_wheel), or [install IAMbic locally](/technical_reference/installation/download_the_repo).
 
-Test whether you can run IAMbic: `iambic --help`
-
 ### Configuring IAMbic
 
-Run `iambic setup` command to launch the [Configuration Wizard](/how_to_guides/configure_iambic_with_wizard). Alternatively, you can [create the configuration by hand](/how_to_guides/manually_create_the_configuration).
+Run `iambic setup` command to launch the [Configuration Wizard](/how_to_guides/configure_iambic_with_wizard).
+Alternatively, you can [create the configuration by hand](/how_to_guides/manually_create_the_configuration).
 
 
 ### Next Steps
