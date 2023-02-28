@@ -4,12 +4,12 @@ title: Rename a resource
 
 ## Copy resource to Rename
 
-To rename a resource, the recommended approach is to duplicate (copy) the resource file you'd like to rename, rename it with its new name, then set the `deleted: true` on the original resource template. See [How to delete a resource](./4-how-do-i-delete-a-resource).
+To rename a resource, the recommended approach is to duplicate (copy) the resource file you'd like to rename, rename it with its new name, then set the `deleted: true` on the original resource template. See [How to delete a resource](/how_to_guides/how-do-i-delete-a-resource).
 
 For instance if you have a demo-1 role that is defined in the `demo-1.yaml` file and you'd like to rename the demo-1 role to `demo-1-renamed`, you would first copy the demo-1.yaml file:
 
-`cp demo-1.yaml demo-1-renamed.yaml` and change the `identifier` attribute in the demo-1-renamed.yaml file to reflect the new name.
+`cp demo-1.yaml demo-1-renamed.yaml`, change the `identifier` and `role_name` attributes in the demo-1-renamed.yaml file to reflect the new name.
 
-In the demo-1.yaml file you should add the `deleted: true` attribute underneath the `template_type` attribute, see [How to delete a resource](./4-how-do-i-delete-a-resource).
+In the demo-1.yaml file you should add the `deleted: true` attribute underneath the `template_type` attribute, see [How to delete a resource](/how_to_guides/how-do-i-delete-a-resource).
 
-Lastly, run `iambic apply` to comlete the rename process.
+Lastly, run `iambic apply` to complete the rename process.
