@@ -20,6 +20,7 @@ jobs:
     - name: scan container
       id: scan-container
       run: |
+        docker logout ghcr.io
         make trivy_scan
         make trivy_sbom
     - name: Release
