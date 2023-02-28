@@ -8,6 +8,7 @@ import shutil
 import sys
 import tempfile
 import time
+import traceback
 from enum import Enum
 from typing import Any, Callable
 from urllib.parse import urlparse
@@ -377,10 +378,11 @@ def handle_iambic_git_apply(
         return HandleIssueCommentReturnCode.MERGED
 
     except Exception as e:
-        log.error("fault", exception=str(e))
+        captured_traceback = traceback.format_exc()
+        log.error("fault", exception=captured_traceback)
         pull_request.create_issue_comment(
-            "exception during git-apply is {0} \n {1}".format(
-                pull_request.mergeable_state, e
+            "exception during apply is {0} \n ```{1}```".format(
+                pull_request.mergeable_state, captured_traceback
             )
         )
         raise e
@@ -418,10 +420,11 @@ def handle_iambic_git_plan(
         copy_data_to_data_directory()
         return HandleIssueCommentReturnCode.PLANNED
     except Exception as e:
-        log.error("fault", exception=str(e))
+        captured_traceback = traceback.format_exc()
+        log.error("fault", exception=captured_traceback)
         pull_request.create_issue_comment(
-            "exception during git-plan is {0} \n {1}".format(
-                pull_request.mergeable_state, e
+            "exception during plan is {0} \n ```{1}```".format(
+                pull_request.mergeable_state, captured_traceback
             )
         )
         raise e
@@ -442,10 +445,11 @@ def handle_pull_request(github_client: github.Github, context: dict[str, Any]) -
     try:
         pull_request.create_issue_comment("iambic git-plan")
     except Exception as e:
-        log.error("fault", exception=str(e))
+        captured_traceback = traceback.format_exc()
+        log.error("fault", exception=captured_traceback)
         pull_request.create_issue_comment(
-            "exception during pull-request is {0} \n {1}".format(
-                pull_request.mergeable_state, e
+            "exception during pull-request is {0} \n ```{1}```".format(
+                pull_request.mergeable_state, captured_traceback
             )
         )
         raise e
