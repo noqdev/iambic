@@ -376,7 +376,10 @@ class Config(BaseTemplate):
 
 
 async def load_config(
-    config_path: str, configure_plugins: bool = True, sparse: bool = False
+    config_path: str,
+    configure_plugins: bool = True,
+    approved_plugins_only: bool = False,
+    sparse: bool = False,
 ) -> Config:
     """
     Load the configuration from the specified file path.
@@ -406,6 +409,16 @@ async def load_config(
     )  # Ensure it's a string in case it's a Path for pydantic
     config_dict = yaml.load(open(config_path))
     base_config = Config(file_path=config_path, **config_dict)
+    if approved_plugins_only:
+        default_plugins = [
+            plugin.location for plugin in Config.__fields__["plugins"].default
+        ]
+        base_config.plugins = [
+            plugin
+            for plugin in base_config.plugins
+            if plugin.location in default_plugins
+        ]
+
     all_plugins = load_plugins(base_config.plugins)
     config_fields = {}
     for plugin in all_plugins:

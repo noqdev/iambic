@@ -35,7 +35,7 @@ jobs:
           docker run -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN -e AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION -e AWS_REGION=$AWS_REGION -v $(pwd)/github_context/:/root/github_context/ -v $(pwd)/data/:/root/data/ --entrypoint /bin/bash ${IMAGE} -c "python -m iambic.cicd.github"
         env:
           GITHUB_CONTEXT: ${{ toJSON(github) }}
-          IMAGE: "public.ecr.aws/s2p9s3r8/iambic:latest"
+          IMAGE: "public.ecr.aws/o4z3c2v2/iambic:latest"
       - name: Archive proosed_changes.yaml artifacts
         uses: actions/upload-artifact@v3
         with:
