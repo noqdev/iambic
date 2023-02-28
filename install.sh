@@ -37,13 +37,13 @@ CWD=$(pwd)
 cd ${IAMBIC_GIT_REPO_PATH}
 $(which git) init .
 cd $CWD
-DOCKER_ALIAS="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e AWS_PROFILE=\${AWS_PROFILE} -v \${CWD}:/templates:Z ${ECR_PATH}"
+DOCKER_CMD="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e AWS_PROFILE=\${AWS_PROFILE} -v \${CWD}:/templates:Z ${ECR_PATH}"
 
 echo
 echo
 
 echo "#!/bin/bash" > ~/.local/bin/iambic
-echo "${DOCKER_ALIAS}" >> ~/.local/bin/iambic
+echo "${DOCKER_CMD}" >> ~/.local/bin/iambic
 chmod +x ~/.local/bin/iambic
 
 echo "Caching the latest iambic docker container, this might take a minute"
@@ -56,5 +56,5 @@ echo "IAMbic installed successfully. After running the source command for your s
 echo
 echo
 
-echo "Note: if you did not get a source command for your shell environment, please add the following line to your shell environment file: ${DOCKER_ALIAS}"
+echo "Note: if you did not get a source command for your shell environment, please add the following line to your shell environment file: ${DOCKER_CMD}"
 echo "You'll know if it's working by testing with the following command: iambic --help"
