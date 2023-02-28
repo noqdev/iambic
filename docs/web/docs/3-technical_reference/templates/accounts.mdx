@@ -2,7 +2,7 @@
 title: AWS Account Template Examples
 ---
 
-An example AWS account specification that is tied to an organization via it's id, has a distinct spoke role arn assigned to it and role access definitions:
+An example AWS account specification that is tied to an organization via its id, has a distinct spoke role arn assigned to it, and role access definitions:
 ```yaml
   - default_region: us-east-1
     spoke_role_arn: arn:aws:iam::123456789012:role/IambicSpokeRole
@@ -12,7 +12,7 @@ An example AWS account specification that is tied to an organization via it's id
     role_access_tag: noq-authorized
 ```
 
-An example AWS account specification that is not tied to an organization and has not specific role access definitions.
+An example AWS account specification that is not tied to an organization and does not have specific role access definitions.
 ```yaml
   - default_region: us-east-1
     spoke_role_arn: arn:aws:iam::456789012345:role/IambicSpokeRole
