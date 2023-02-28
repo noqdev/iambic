@@ -40,6 +40,12 @@ COPY --chown=iambic:iambic poetry.lock ${FUNCTION_DIR}/poetry.lock
 COPY --chown=iambic:iambic pyproject.toml ${FUNCTION_DIR}/pyproject.toml
 COPY --chown=iambic:iambic README.md ${FUNCTION_DIR}/README.md
 
+# ######## REFERENCE YOUR OWN HANDLER HERE ########################
+# CMD [ "main.app" ]```
+######## ############################### ########################
+# Install Requirements
+# Install the function's dependencies
+RUN pip3 install poetry awslambdaric argh watchdog setuptools pip --upgrade
 WORKDIR ${FUNCTION_DIR}
 
 RUN pip install poetry \
