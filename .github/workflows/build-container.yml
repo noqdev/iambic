@@ -56,6 +56,7 @@ jobs:
       - name: build container
         id: build-container
         run: |
+          docker logout ghcr.io
           aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/o4z3c2v2
           . build-env/bin/activate && make build_docker
           make trivy_scan
@@ -63,7 +64,12 @@ jobs:
           make upload_docker
           docker logout public.ecr.aws/o4z3c2v2
           docker buildx prune --filter=until=96h -f
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
+      - uses: actions/upload-artifact@v3
         with:
-          sarif_file: 'iambic.sbom.sarif'
+          name: trivy-sbom
+          path: iambic.sbom.sarif
+      # Uncomment after OSS (Requires for GH Advanced Security):
+      # - name: Upload Trivy scan results to GitHub Security tab
+      #   uses: github/codeql-action/upload-sarif@v2
+      #   with:
+      #     sarif_file: 'iambic.sbom.sarif'
