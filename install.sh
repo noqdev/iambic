@@ -42,6 +42,9 @@ DOCKER_ALIAS="alias iambic='docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:
 echo
 echo
 
+echo "${DOCKER_ALIAS}" > ~/.local/bin/iambic
+chmod +x ~/.local/bin/iambic
+
 if [[ -e "${HOME}/.zshrc" ]]; then
     echo "${DOCKER_ALIAS}" >> ~/.zshrc
     echo "Wrote alias to ~/.zshrc; to start using IAMbic please run 'source ~/.zshrc' if you are using zsh"
