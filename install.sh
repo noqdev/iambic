@@ -45,39 +45,6 @@ echo
 echo "${DOCKER_ALIAS}" > ~/.local/bin/iambic
 chmod +x ~/.local/bin/iambic
 
-if [[ -e "${HOME}/.zshrc" ]]; then
-    echo "${DOCKER_ALIAS}" >> ~/.zshrc
-    echo "Wrote alias to ~/.zshrc; to start using IAMbic please run 'source ~/.zshrc' if you are using zsh"
-fi
-
-if [[ -e "${HOME}/.bashrc" ]]; then
-    echo "${DOCKER_ALIAS}" >> ~/.bashrc
-    echo "Wrote alias to ~/.bashrc; to start using IAMbic please run 'source ~/.bashrc' if you are using bash"
-fi
-
-if [[ -e "${HOME}/.profile" ]]; then
-    echo "${DOCKER_ALIAS}" >> ~/.profile
-    echo "Wrote alias to ~/.profile; to start using IAMbic please run 'source ~/.profile' if you are using sh"
-fi
-
-if [[ -e "${HOME}/.kshrc" ]]; then
-    echo "${DOCKER_ALIAS}" >> ~/.kshrc
-    echo "Wrote alias to ~/.kshrc; to start using IAMbic please run 'source ~/.kshrc' if you are using ksh"
-fi
-
-if [[ -e "${HOME}/.tcshrc" ]]; then
-    echo "${DOCKER_ALIAS}" >> ~/.tcshrc
-    echo "Wrote alias to ~/.tcshrc; to start using IAMbic please run 'source ~/.tcshrc' if you are using tcsh"
-fi
-
-if [[ -e "${HOME}/.cshrc" ]]; then
-    echo "${DOCKER_ALIAS}" >> ~/.cshrc
-    echo "Wrote alias to ~/.cshrc; to start using IAMbic please run 'source ~/.cshrc' if you are using csh"
-fi
-
-echo
-echo
-
 echo "Caching the latest iambic docker container, this might take a minute"
 $( which docker ) pull ${ECR_PATH}
 
