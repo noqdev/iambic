@@ -11,7 +11,6 @@ import boto3
 import botocore
 import questionary
 from botocore.exceptions import ClientError, NoCredentialsError
-
 from iambic.config.dynamic_config import (
     CURRENT_IAMBIC_VERSION,
     Config,

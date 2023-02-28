@@ -4,9 +4,10 @@ import asyncio
 import json
 
 import okta.models as models
+from okta.errors.okta_api_error import OktaAPIError
+
 from iambic.core.exceptions import RateLimitException
 from iambic.plugins.v0_1_0.okta.exceptions import UserProfileNotUpdatableYet
-from okta.errors.okta_api_error import OktaAPIError
 
 
 async def generate_user_profile(user: models.User):

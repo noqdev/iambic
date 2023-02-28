@@ -4,6 +4,7 @@ import json
 from unittest.mock import patch
 
 import pytest
+
 from iambic.plugins.v0_1_0.github.github_app import (
     _get_installation_token,
     calculate_signature,
