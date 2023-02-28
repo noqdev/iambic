@@ -1,0 +1,28 @@
+name: SBOM
+# This builds the container upon a push event in noqdev/iambic repository
+on:
+  pull_request:
+jobs:
+  sbom-temp:
+    runs-on: self-hosted
+    name: Run sbom
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - name: bootstrap
+        run: |
+          python3.10 -m venv build-env
+          . build-env/bin/activate && pip install poetry setuptools pip --upgrade
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.37.3
+      - name: build container
+        id: build-container
+        run: |
+          . build-env/bin/activate && make build_docker
+          make trivy_scan
+          make trivy_sbom
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'iambic.sbom.sarif'
