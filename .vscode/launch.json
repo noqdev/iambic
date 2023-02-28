@@ -36,9 +36,8 @@
             "console": "integratedTerminal",
             "args": [
                 "apply",
-
                 "--template",
-                "${env:IAMBIC_TEMPLATE_PATH}"
+                "../noq-templates/resources/aws/roles/all_accounts/readonly.yaml"
             ],
             "envFile": "${workspaceFolder}/.env",
             "justMyCode": true
