@@ -8,10 +8,11 @@ from typing import TYPE_CHECKING, Optional
 from deepdiff import DeepDiff
 from git import Repo
 from git.exc import GitCommandError
+from pydantic import BaseModel as PydanticBaseModel
+
 from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
 from iambic.core.utils import NOQ_TEMPLATE_REGEX, file_regex_search, yaml
-from pydantic import BaseModel as PydanticBaseModel
 
 if TYPE_CHECKING:
     from iambic.config.dynamic_config import Config
@@ -266,7 +267,9 @@ def create_templates_for_modified_files(
                     account_regex = (
                         rf"({aws_account.account_id}|{aws_account.account_name})"
                     )
-                    if re.search(account_regex, deleted_exclude_accounts_str):
+                    if re.search(
+                        re.escape(account_regex), deleted_exclude_accounts_str
+                    ):
                         log.debug(
                             "Resource on account not marked deletion.",
                             account=account_regex,
@@ -297,7 +300,7 @@ def create_templates_for_modified_files(
                 This means marking prod for deletion as it has been implicitly deleted.
                 """
                 for account in main_template.included_accounts:
-                    if re.search(account, deleted_exclude_accounts_str):
+                    if re.search(re.escape(account), deleted_exclude_accounts_str):
                         log.debug(
                             "Resource on account not marked deletion.",
                             account=account,
@@ -335,7 +338,7 @@ def create_templates_for_modified_files(
         """
         for account in template.excluded_accounts:
             if main_template_excluded_accounts_str and re.search(
-                account, main_template_excluded_accounts_str
+                re.escape(account), main_template_excluded_accounts_str
             ):
                 # The account was already excluded so add it to the template_excluded_accounts
                 log.debug(
@@ -345,7 +348,7 @@ def create_templates_for_modified_files(
                 )
                 template_excluded_accounts.append(account)
             elif (
-                re.search(account, main_template_included_accounts_str)
+                re.search(re.escape(account), main_template_included_accounts_str)
                 or "*" in main_template.included_accounts
             ):
                 # The account was previously included so mark it for deletion
