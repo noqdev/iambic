@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import os
 import pathlib
-from tempfile import TemporaryDirectory
 import unittest
+from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
 
 import pytest
@@ -84,14 +84,19 @@ def config(repo_path):
     )
     return test_config
 
-class TestConfigUtils(unittest.TestCase):
 
-    @patch('resource.setrlimit')
-    @patch('resource.getrlimit')
-    @patch('resource.RLIMIT_NOFILE')
-    def test_check_and_update_resource_limit(self, mock_rlimit, mock_getrlimit, mock_setrlimit):
+class TestConfigUtils(unittest.TestCase):
+    @patch("resource.setrlimit")
+    @patch("resource.getrlimit")
+    @patch("resource.RLIMIT_NOFILE")
+    def test_check_and_update_resource_limit(
+        self, mock_rlimit, mock_getrlimit, mock_setrlimit
+    ):
         mock_rlimit.value = 7
         mock_getrlimit.return_value = (1024, 4096)
         mock_setrlimit.return_value = None
+        # TODO: Need to pass in a config
         check_and_update_resource_limit()
-        mock_setrlimit.assert_called_once_with(mock_rlimit, (CoreConfig.minimum_ulimit, 4096))
+        mock_setrlimit.assert_called_once_with(
+            mock_rlimit, (CoreConfig.minimum_ulimit, 4096)
+        )

@@ -9,7 +9,10 @@ from typing import Optional
 import click
 
 from iambic.config.dynamic_config import init_plugins, load_config
-from iambic.config.utils import resolve_config_template_path, check_and_update_resource_limit
+from iambic.config.utils import (
+    check_and_update_resource_limit,
+    resolve_config_template_path,
+)
 from iambic.config.wizard import ConfigurationWizard
 from iambic.core.context import ctx
 from iambic.core.git import clone_git_repos
@@ -20,7 +23,6 @@ from iambic.core.utils import gather_templates, yaml
 from iambic.request_handler.expire_resources import flag_expired_resources
 from iambic.request_handler.git_apply import apply_git_changes
 from iambic.request_handler.git_plan import plan_git_changes
-
 
 warnings.filterwarnings("ignore", category=FutureWarning, module="botocore.client")
 
@@ -41,6 +43,7 @@ def output_proposed_changes(
                     [template_change.dict() for template_change in template_changes],
                 )
             )
+
 
 @click.group()
 def cli():
@@ -348,7 +351,8 @@ def run_git_plan(
 ):
     ctx.eval_only = True
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
-    asyncio.run(load_config(config_path))
+    config = asyncio.run(load_config(config_path))
+    check_and_update_resource_limit(config)
     template_changes = asyncio.run(plan_git_changes(config_path, repo_dir))
     output_proposed_changes(template_changes, output_path=output_path)
 
@@ -389,6 +393,7 @@ def run_import(
     if not config_path:
         config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
+    check_and_update_resource_limit(config)
     asyncio.run(config.run_import(repo_dir))
 
 
@@ -450,11 +455,9 @@ def init_plugins_cmd(repo_dir: str):
     default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory. Example: ~/iambic-templates",
 )
-
 def setup(repo_dir: str):
     ConfigurationWizard(repo_dir).run()
 
 
 if __name__ == "__main__":
-    check_and_update_resource_limit()
     cli()

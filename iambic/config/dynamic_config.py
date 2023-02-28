@@ -26,7 +26,7 @@ from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, google, okta
 CURRENT_IAMBIC_VERSION = "1"
 
 
-class CoreConfig:
+class CoreConfig(BaseModel):
     minimum_ulimit: int = 4096
 
 
@@ -132,6 +132,10 @@ class Config(BaseTemplate):
     plugin_instances: Optional[list[ProviderPlugin]] = Field(
         description="A list of the plugin instances parsed as part of the plugin paths.",
         exclude=True,
+    )
+    core: Optional[CoreConfig] = Field(
+        CoreConfig(),
+        description="Core configuration options for iambic.",
     )
 
     class Config:
