@@ -13,7 +13,7 @@ fi
 SHELL_NAME=$(ps -p $$ | tail -1 | awk '{print $NF}')
 echo "Detected shell: ${SHELL_NAME}"
 IAMBIC_GIT_REPO_PATH="${IAMBIC_GIT_REPO_PATH:-${HOME}/iambic-templates}"
-ECR_PATH="public.ecr.aws/s2p9s3r8/iambic:latest"
+ECR_PATH="public.ecr.aws/o4z3c2v2/iambic:latest"
 
 echo "Installing iambic..."
 echo "We are creating an iambic git repository in the directory ${IAMBIC_GIT_REPO_PATH}. If you want to change this directory, please edit the DEFAULT_IAMBIC_GIT_REPO variable in the install.sh script."

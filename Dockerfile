@@ -1,4 +1,4 @@
-FROM public.ecr.aws/s2p9s3r8/iambic_container_base:1.0 as runtime-layer
+FROM public.ecr.aws/o4z3c2v2/iambic_container_base:1.0 as runtime-layer
 
 # ######## REFERENCE YOUR OWN HANDLER HERE ########################
 # CMD [ "main.app" ]```
