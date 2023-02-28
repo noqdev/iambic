@@ -564,3 +564,18 @@ class GlobalRetryController:
                 log.warning(
                     f"Rate limit hit for {endpoint}. Retrying in {self.wait_time} seconds."
                 )
+
+
+def sanitize_string(unsanitized_str, valid_characters_re):
+    """
+    This function sanitizes the session name typically passed in an assume_role call, to verify that it's
+    """
+
+    sanitized_str = ""
+    max_length = 64  # Session names have a length limit of 64 characters
+    for char in unsanitized_str:
+        if len(sanitized_str) == max_length:
+            break
+        if re.match(valid_characters_re, char):
+            sanitized_str += char
+    return sanitized_str
