@@ -10,6 +10,7 @@ jobs:
       id-token: write
       contents: write
       security-events: write
+      statuses: write
     steps:
       - uses: actions/checkout@v3
       - name: bootstrap
@@ -24,7 +25,12 @@ jobs:
           docker logout ghcr.io
           make trivy_scan
           make trivy_sbom
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
+      - uses: actions/upload-artifact@v3
         with:
-          sarif_file: 'iambic.sbom.sarif'
+          name: trivy-sbom
+          path: iambic.sbom.sarif
+      # Uncomment after OSS (Requires for GH Advanced Security):
+      # - name: Upload Trivy scan results to GitHub Security tab
+      #   uses: github/codeql-action/upload-sarif@v2
+      #   with:
+      #     sarif_file: 'iambic.sbom.sarif'
