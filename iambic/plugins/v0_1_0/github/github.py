@@ -322,7 +322,9 @@ def handle_iambic_git_apply(
     if pull_request.mergeable_state != MERGEABLE_STATE_CLEAN:
         # TODO log error and also make a comment to PR
         pull_request.create_issue_comment(
-            "mergeable_state is {0}".format(pull_request.mergeable_state)
+            "Mergable state is {0}. This probably means that the necessary approvals have not been granted for the request.".format(
+                pull_request.mergeable_state
+            )
         )
         return HandleIssueCommentReturnCode.MERGEABLE_STATE_NOT_CLEAN
 
@@ -557,7 +559,9 @@ def _handle_expire(repo_url: str, default_branch: str) -> None:
             log.info("handle_expire ran", **log_params)
 
             default_branch = get_remote_default_branch(repo)
-            repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()  # FIXME
+            repo.remotes.origin.push(
+                refspec=f"HEAD:{default_branch}"
+            ).raise_if_error()  # FIXME
         else:
             log.info("handle_expire no changes")
     except Exception as e:
@@ -582,6 +586,8 @@ IAMBIC_CLOUD_IMPORT_DISPATCH_MAP: dict[str, Callable] = {
 COMMENT_DISPATCH_MAP: dict[str, Callable] = {
     "iambic git-apply": handle_iambic_git_apply,
     "iambic git-plan": handle_iambic_git_plan,
+    "iambic apply": handle_iambic_git_apply,
+    "iambic plan": handle_iambic_git_plan,
 }
 
 if __name__ == "__main__":
