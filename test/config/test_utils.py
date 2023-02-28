@@ -5,7 +5,6 @@ import pathlib
 from tempfile import TemporaryDirectory
 
 import pytest
-
 from iambic.config.dynamic_config import Config
 from iambic.core.iambic_enum import IambicManaged
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
