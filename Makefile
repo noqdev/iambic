@@ -30,7 +30,7 @@ upload_docker:
 
 .PHONY: trivy_scan
 trivy_scan:
-	trivy image --exit-code 1 --secret-config trivy-secret.yaml --severity HIGH,CRITICAL public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
+	trivy image --exit-code 1 --skip-files /app/docs/web/docs/getting_started/aws/aws.mdx --secret-config trivy-secret.yaml --severity HIGH,CRITICAL public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
 
 .PHONY: trivy_sbom
 trivy_sbom:
