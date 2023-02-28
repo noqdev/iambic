@@ -50,10 +50,12 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: arn:aws:iam::759357822767:role/iambic_image_builder
+          role-to-assume: arn:aws:iam::242345320040:role/iambic_image_builder
           aws-region: us-east-1
       - name: build container
         id: build-container
         run: |
-          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/l1s5s8m2
+          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/o4z3c2v2
           . build-env/bin/activate && make build_docker upload_docker
+          docker logout public.ecr.aws/o4z3c2v2
+          docker buildx prune --filter=until=96h -f

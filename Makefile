@@ -1,5 +1,5 @@
 BUILD_VERSION := $(shell python build_utils/tag_and_build_container.py print-current-version)
-IAMBIC_PUBLIC_ECR_ALIAS := "s2p9s3r8"
+IAMBIC_PUBLIC_ECR_ALIAS := "o4z3c2v2"
 
 .PHONY: prepare_for_dist
 prepare_for_dist:
@@ -7,7 +7,7 @@ prepare_for_dist:
 
 .PHONY: auth_to_ecr
 auth_to_ecr:
-	bash -c "AWS_PROFILE=development/iambic_image_builder aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/s2p9s3r"
+	bash -c "AWS_PROFILE=iambic_open_source/iambic_image_builder aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/o4z3c2v2"
 
 docker_buildx := docker buildx build \
 	--platform=linux/amd64 \
