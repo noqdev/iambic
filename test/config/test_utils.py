@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import os
 import pathlib
-import unittest
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
 
 import pytest
 
-from iambic.config.dynamic_config import Config, CoreConfig
+from iambic.config.dynamic_config import Config
 from iambic.config.utils import check_and_update_resource_limit
 from iambic.core.iambic_enum import IambicManaged
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
