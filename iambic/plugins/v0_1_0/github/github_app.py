@@ -278,7 +278,6 @@ def handle_workflow_run(
     repository_url = webhook_payload["repository"]["clone_url"]
     repo_url = format_github_url(repository_url, github_token)
 
-    default_branch = "main"
     repo_name = webhook_payload["repository"]["full_name"]
     templates_repo = github_client.get_repo(repo_name)
     default_branch = templates_repo.default_branch
@@ -297,6 +296,8 @@ EVENT_DISPATCH_MAP: dict[str, Callable] = {
 COMMENT_DISPATCH_MAP: dict[str, Callable] = {
     "iambic git-apply": handle_iambic_git_apply,
     "iambic git-plan": handle_iambic_git_plan,
+    "iambic apply": handle_iambic_git_apply,
+    "iambic plan": handle_iambic_git_plan,
 }
 
 WORKFLOW_DISPATCH_MAP: dict[str, Callable] = {

@@ -1,0 +1,33 @@
+---
+title: AWS Organization Template Examples
+---
+
+The configuration below describes a sample organization within AWS.
+
+- org_id: specifies the organization id as provided by AWS.
+- hub_role_arn: specifies the hub role with access to the account under which the organization is defined.
+- org_name: a human-friendly name for the organization. In the example below the name is staging to reflect that the account under which the organization entity was created is the `staging` account.
+- org_account_id: the identifier for the account under which the organization was created.
+- identity_center_account: formerly AWS SSO, provide the account and region where your identity center account is located.
+- account_rules: sets a filter for IAMbic access to accounts, using wildcards and specific modifiers to enable or disable account inclusion.  See (Account Management)[../core_concepts/account_management.mdx] for more information on managing accounts.
+- default_rule: indicates the default engagement of IAMbic; it's required to specify the iambic_managed attribute. The IAMbic managed attribute can have these string values assigned:
+  - read_and_write: allow IAMbic
+
+```yaml
+  - org_id: 'o-yfdp0r70sq'
+    hub_role_arn: 'arn:aws:iam::392149037201:role/IambicHubRole'
+    org_name: 'staging'
+    org_account_id: '392149037201'
+    identity_center_account:
+      account_id: '392149037201'
+      region: 'us-east-1'
+    account_rules:
+      - included_accounts:
+        - '*'
+        enabled: true
+      - included_accounts:
+        - '969947703986'
+        enabled: false
+    default_rule:
+      iambic_managed: true
+```

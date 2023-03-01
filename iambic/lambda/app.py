@@ -10,15 +10,7 @@ from enum import Enum
 from iambic.config.dynamic_config import load_config
 from iambic.config.utils import resolve_config_template_path
 from iambic.core.models import BaseModel
-from iambic.main import (
-    run_apply,
-    run_clone_repos,
-    run_detect,
-    run_git_apply,
-    run_git_plan,
-    run_import,
-    run_plan,
-)
+from iambic.main import run_clone_repos, run_detect, run_git_apply, run_git_plan
 
 REPO_BASE_PATH = os.path.expanduser("~/.iambic/repos/")
 PLAN_OUTPUT_PATH = os.environ.get("PLAN_OUTPUT_PATH", None)
@@ -83,21 +75,25 @@ def run_handler(event=None, context=None):
         context = {"command": "import"}
     lambda_context = LambdaContext(**context)
 
-    config_path = asyncio.run(resolve_config_template_path(REPO_BASE_PATH))
-    asyncio.run(load_config(config_path))
-
     match lambda_context.command:
         case LambdaCommand.run_import.value:
-            return run_import(REPO_BASE_PATH, config_path)
-        case LambdaCommand.run_plan.value:
-            return run_plan([], REPO_BASE_PATH)
-        case LambdaCommand.run_apply.value:
-            return run_apply(True, config_path, [], REPO_BASE_PATH)
+            config_path = asyncio.run(resolve_config_template_path(REPO_BASE_PATH))
+            config = asyncio.run(load_config(config_path))
+            return asyncio.run(config.run_import(REPO_BASE_PATH))
         case LambdaCommand.run_detect.value:
             return run_detect(REPO_BASE_PATH)
+        case LambdaCommand.run_apply.value:
+            return run_git_apply(
+                False,
+                FROM_SHA,
+                TO_SHA,
+                repo_dir=REPO_BASE_PATH,
+                output_path=PLAN_OUTPUT_PATH,
+            )
+        case LambdaCommand.run_plan.value:
+            return run_git_plan(PLAN_OUTPUT_PATH, repo_dir=REPO_BASE_PATH)
         case LambdaCommand.run_git_apply.value:
             return run_git_apply(
-                config_path,
                 False,
                 FROM_SHA,
                 TO_SHA,
@@ -105,7 +101,7 @@ def run_handler(event=None, context=None):
                 output_path=PLAN_OUTPUT_PATH,
             )
         case LambdaCommand.run_git_plan.value:
-            return run_git_plan(config_path, PLAN_OUTPUT_PATH, repo_dir=REPO_BASE_PATH)
+            return run_git_plan(PLAN_OUTPUT_PATH, repo_dir=REPO_BASE_PATH)
         case LambdaCommand.run_clone_git_repos.value:
             return run_clone_repos(REPO_BASE_PATH)
         case _:

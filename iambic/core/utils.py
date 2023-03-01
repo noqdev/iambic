@@ -16,13 +16,12 @@ from urllib.parse import unquote_plus
 
 import aiofiles
 from asgiref.sync import sync_to_async
-from ruamel.yaml import YAML
-
 from iambic.core import noq_json as json
 from iambic.core.context import ExecutionContext
 from iambic.core.exceptions import RateLimitException
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
+from ruamel.yaml import YAML
 
 if TYPE_CHECKING:
     from iambic.core.models import ProposedChange
@@ -40,9 +39,15 @@ def init_writable_directory() -> None:
         __WRITABLE_DIRECTORY__ = pathlib.Path(temp_writable_directory)
     else:
         __WRITABLE_DIRECTORY__ = pathlib.Path.home()
+    if os.environ.get("IAMBIC_DOCKER_CONTAINER", False):
+        log.info("IAMBIC_DOCKER_CONTAINER is set, using /app as writable directory")
+        __WRITABLE_DIRECTORY__ = pathlib.Path("/app")
 
     this_module = sys.modules[__name__]
     setattr(this_module, "__WRITABLE_DIRECTORY__", __WRITABLE_DIRECTORY__)
+
+
+init_writable_directory()
 
 
 def get_writable_directory() -> pathlib.Path:
@@ -564,3 +569,18 @@ class GlobalRetryController:
                 log.warning(
                     f"Rate limit hit for {endpoint}. Retrying in {self.wait_time} seconds."
                 )
+
+
+def sanitize_string(unsanitized_str, valid_characters_re):
+    """
+    This function sanitizes the session name typically passed as a parameter name, to ensure it is valid.
+    """
+
+    sanitized_str = ""
+    max_length = 64  # Session names have a length limit of 64 characters
+    for char in unsanitized_str:
+        if len(sanitized_str) == max_length:
+            break
+        if re.match(valid_characters_re, char):
+            sanitized_str += char
+    return sanitized_str
