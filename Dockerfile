@@ -21,13 +21,13 @@ RUN pip install poetry setuptools pip --upgrade \
 RUN pip install ${FUNCTION_DIR}/dist/*.whl \
  && rm -rf ${FUNCTION_DIR}/dist
 
+RUN yum install xdg-utils -y
+
 COPY --chown=iambic:iambic docs/ ${FUNCTION_DIR}/docs
 
 RUN mkdir -p ${FUNCTION_DIR}/iambic \
  && curl -sL https://dl.yarnpkg.com/rpm/yarn.repo -o /etc/yum.repos.d/yarn.repo \
  && yum install nodejs npm yarn -y
-
-
 
 ENV IAMBIC_REPO_DIR /templates
 
