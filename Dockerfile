@@ -21,8 +21,6 @@ RUN pip install poetry setuptools pip --upgrade \
 RUN pip install ${FUNCTION_DIR}/dist/*.whl \
  && rm -rf ${FUNCTION_DIR}/dist
 
-RUN yum install xdg-utils -y
-
 COPY --chown=iambic:iambic docs/ ${FUNCTION_DIR}/docs
 
 RUN mkdir -p ${FUNCTION_DIR}/iambic \
