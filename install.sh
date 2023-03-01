@@ -1,7 +1,7 @@
 # Check if docker is installed
-echo "This script requires root privileges to install iambic in /usr/local/bin/; it also requires docker to be installed and running."
 
-if [[ id -u != 0 ]]; then
+if [[ `id -u` > 0 ]]; then
+    echo "This script requires root privileges to install iambic in /usr/local/bin/; it also requires docker to be installed and running."
     echo "Please run this script as root or with sudo. For example: curl https://iambic.org/install.sh | sudo bash"
     exit
 fi
@@ -43,7 +43,7 @@ IAMBIC_VERSION="${IAMBIC_VERSION:-latest}"
 ECR_PATH="public.ecr.aws/o4z3c2v2/iambic:latest"
 
 echo "Installing iambic..."
-DOCKER_CMD="docker run -it -u \$(id -u):\$(id -g) -v \${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e AWS_PROFILE=\${AWS_PROFILE} --mount \"type=bind,src=\$(pwd),dst=/templates\"  ${ECR_PATH} \"\$@\""
+DOCKER_CMD="docker run -it -u \$(id -u):\$(id -g) -v \${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e AWS_PROFILE=\${AWS_PROFILE} -e AWS_ACCESS_KEY_ID=\${AWS_ACCESS_KEY_ID} -e AWS_SECRET_ACCESS_KEY=\${AWS_SECRET_ACCESS_KEY} -e AWS_SESSION_TOKEN=\${AWS_SESSION_TOKEN} --mount \"type=bind,src=\$(pwd),dst=/templates\"  ${ECR_PATH} \"\$@\""
 
 echo
 
