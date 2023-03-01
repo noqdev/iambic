@@ -24,7 +24,7 @@ else
     mkdir -p ~/.local/bin
 fi
 
-if echo $PATH | grep ".local/bin" &> /dev/null; then
+if echo $PATH | grep "\${HOME}/.local/bin" &> /dev/null; then
     echo "Detected .local/bin is in the PATH, continuing..."
 else
     echo "Please add the following line to your shell environment file: export PATH=\$PATH:\$HOME/.local/bin"
