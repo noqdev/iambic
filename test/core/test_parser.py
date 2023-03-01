@@ -14,6 +14,10 @@ from iambic.core.parser import load_templates
 
 MISSING_REQUIRED_FIELDS_TEMPLATE_YAML = """template_type: NOQ::Example::LocalDatabase
 expires_at: tomorrow
+name:
+  - foo
+properties:
+  foo: bar
 """
 
 MALFORMED_YAML = """template_type: NOQ::Example::LocalDatabase
