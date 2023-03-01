@@ -5,7 +5,7 @@ then
     exit
 fi
 
-if ps aux | grep -q "[d]ockerd"; then
+if pgrep -f docker; then
     echo "Detected Docker is running, continuing..."
 else
     echo "Docker is not running. Please start Docker before running this script. For example on most modern Linux systems you can start docker by running the following command: sudo systemctl start docker"
@@ -24,7 +24,19 @@ then
     echo "Git is not installed on this system. Please install Git before running this script. Refer to your operating system's package manager for installation instructions."
 fi
 
-echo
+if [[ -d ~/.local/bin ]]; then
+    echo "Detected ~/.local/bin directory, continuing..."
+else
+    echo "Creating ~/.local/bin directory..."
+    mkdir -p ~/.local/bin
+fi
+
+if echo $PATH | grep ".local/bin" &> /dev/null; then
+    echo "Detected .local/bin is in the PATH, continuing..."
+else
+    echo "Please add the following line to your shell environment file: export PATH=\$PATH:\$HOME/.local/bin"
+fi
+
 echo
 
 IAMBIC_GIT_REPO_PATH="${IAMBIC_GIT_REPO_PATH:-${HOME}/iambic-templates}"
@@ -40,8 +52,8 @@ cd $CWD
 DOCKER_CMD="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e AWS_PROFILE=\${AWS_PROFILE} -v \${CWD}:/templates:Z ${ECR_PATH}"
 
 echo
-echo
 
+echo "Setting up ~/.local/bin/iambic to launch the IAMbic docker container"
 echo "#!/bin/bash" > ~/.local/bin/iambic
 echo "${DOCKER_CMD}" >> ~/.local/bin/iambic
 chmod +x ~/.local/bin/iambic
@@ -52,9 +64,3 @@ $( which docker ) pull ${ECR_PATH}
 echo
 
 echo "IAMbic installed successfully. After running the source command for your shell environment, mentioned above, you will be able to use the 'iambic --help' command to get started with IAMbic."
-
-echo
-echo
-
-echo "Note: if you did not get a source command for your shell environment, please add the following line to your shell environment file: ${DOCKER_CMD}"
-echo "You'll know if it's working by testing with the following command: iambic --help"
