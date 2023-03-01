@@ -12,13 +12,6 @@ else
     exit
 fi
 
-if id -nG "$USER" | grep -qw "docker"; then
-    echo "Detected user is in the docker group, continuing..."
-else
-    echo "User is not in the docker group. Please add the user to the docker group before running this script. For example on most modern Linux systems you can add the user to the docker group by running the following command: sudo usermod -aG docker $USER"
-    exit
-fi
-
 if ! command -v git &> /dev/null
 then
     echo "Git is not installed on this system. Please install Git before running this script. Refer to your operating system's package manager for installation instructions."
