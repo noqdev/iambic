@@ -35,12 +35,10 @@ Please reference the [AWS documentation](https://docs.aws.amazon.com/cli/latest/
 If you want to use our install script to install iambic, you can use this command:
 
 ```bash
-curl https://iambic.org/scripts/install.sh | sh
+curl https://iambic.org/scripts/install.sh | sudo bash
 ```
 
-Note: this automatically creates the IAMbic templates git repository on your system under `~/iambic-templates`, if you'd like to setup IAMbic's
-template git repo elsewhere, use the `IAMBIC_GIT_REPO_PATH` env var when calling our install script. For example, run `export IAMBIC_GIT_REPO_PATH="~/path/to/iambic-templates"`
-before running `curl https://iambic.org/scripts/install.sh | sh`.
+Note: we require sudo because we are installing the script `iambic` into `/usr/local/bin/` of your file system to ensure it is in your path.
 
 For detailed Docker setup instructions, please visit the [Install via Docker](/technical_reference/installation/install_via_docker) guide.
 
