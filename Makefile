@@ -1,5 +1,5 @@
 BUILD_VERSION := $(shell python build_utils/tag_and_build_container.py print-current-version)
-IAMBIC_PUBLIC_ECR_ALIAS := "o4z3c2v2"
+IAMBIC_PUBLIC_ECR_ALIAS := o4z3c2v2
 
 .PHONY: prepare_for_dist
 prepare_for_dist:
@@ -28,6 +28,14 @@ upload_docker:
 	@echo "--> Uploading Iambic Docker image"
 	$(docker_buildx) --push .
 
+.PHONY: trivy_scan
+trivy_scan:
+	trivy image --output iambic.trivy.scan.txt --skip-files /app/docs/web/docs/getting_started/aws/aws.mdx --secret-config trivy-secret.yaml --severity HIGH,CRITICAL public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
+
+.PHONY: trivy_sbom
+trivy_sbom:
+	trivy image --format spdx-json --output iambic.sbom.json public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
+
 .PHONY: create_manifest
 create_manifest:
 	docker manifest create public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
@@ -38,7 +46,7 @@ push_manifest:
 
 .PHONY: test
 test:
-	python3.10 -m pytest test
+	python3.10 -m pytest --cov iambic --cov-report html test
 
 .PHONY: functional_test
 functional_test:

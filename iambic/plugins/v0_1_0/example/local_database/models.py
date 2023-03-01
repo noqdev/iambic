@@ -12,34 +12,34 @@ from iambic.core.models import (
     TemplateChangeDetails,
 )
 
-EXAMPLE_LOCAL_FILE_TEMPLATE_TYPE = "NOQ::Example::LocalFile"
+EXAMPLE_LOCAL_DATABASE_TEMPLATE_TYPE = "NOQ::Example::LocalDatabase"
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.example.iambic_plugin import ExampleConfig
 
 
-class ExampleLocalFileTemplateProperties(BaseModel):
-    name: str = Field(..., description="name of local file")
+class ExampleLocalDatabaseTemplateProperties(BaseModel):
+    name: str = Field(..., description="name of Local Database")
 
     @property
     def resource_type(self) -> str:
-        return "example:local_file:properties"
+        return "example:local_database:properties"
 
     @property
     def resource_id(self) -> str:
         return self.name
 
 
-class ExampleLocalFileTemplate(BaseTemplate, ExpiryModel):
-    template_type = EXAMPLE_LOCAL_FILE_TEMPLATE_TYPE
-    properties: ExampleLocalFileTemplateProperties = Field(
-        ..., description="Properties for Example Local File Template"
+class ExampleLocalDatabaseTemplate(BaseTemplate, ExpiryModel):
+    template_type = EXAMPLE_LOCAL_DATABASE_TEMPLATE_TYPE
+    properties: ExampleLocalDatabaseTemplateProperties = Field(
+        ..., description="Properties for Example Local Database Template"
     )
-    name: str = Field(..., description="name of local file")
+    name: str = Field(..., description="name of Local Database")
 
     @property
     def resource_type(self) -> str:
-        return "example:local_file"
+        return "example:local_database"
 
     @property
     def resource_id(self) -> str:

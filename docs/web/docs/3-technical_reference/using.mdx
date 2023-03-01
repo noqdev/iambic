@@ -1,0 +1,31 @@
+---
+title: Using IAMbic
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+## Using IAMbic
+
+To use IAMbic, first install IAMbic by following any of these methods:
+
+* [Install via Docker](/technical_reference/installation/install_via_docker) (preferred method)
+* [Install via the Wheel](/technical_reference/installation/install_via_the_wheel)
+* [Download the Repo](/technical_reference/installation/download_the_repo)
+
+Once IAMbic is installed on your system, you can use it. There are three core IAMbic tasks:
+
+1. import: reads and stores your current environment settings on disk in IAMbic configuration files. Generally you start here to download a record of all of your current roles and their permissions.
+1. plan: an operation to dry-run a particular permission set without applying it. This will show you how IAMbic would mutate your environment before applying the changes.
+1. apply: applies the permission set changes by mutating your environment. This operation requires *read/write* rights to your cloud environment.
+
+Run IAMbic by executing: `iambic <command>`
+
+Where <command\> is one of:
+* apply: generates and executes an execution plan for the specified iambic templates. This command will apply the changes as specified in the templates. To preview without applying, run the `plan` command below.
+* config-discovery: pull in provider configuration-related changes, such as a new AWS account being added to an org.
+* git-apply: similar to `apply`, but only considers changes from the currently checked out branch compared to origin/main.
+* git-plan: similar to `plan`, but only considers changes from the currently checked out branch compared to origin/main.
+* import: updates your repo with the current state of all providers defined in your config. This includes adding, updating, and removing templates.
+* plan: similar to `apply`, but shows the execution plan for the specified iambic templates without executing. Use this command to get an idea of what changes would be made to the system if you ran `apply`.
+* setup: launch the configuration wizard.
+* doc-serve: starts the documentation server on port 3000; you can then view the documentation by opening [http://localhost:3000](http://localhost:3000).
