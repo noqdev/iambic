@@ -18,7 +18,10 @@ from iambic.config.dynamic_config import (
     ExtendsConfigKey,
     load_config,
 )
-from iambic.config.utils import resolve_config_template_path
+from iambic.config.utils import (
+    check_and_update_resource_limit,
+    resolve_config_template_path,
+)
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -571,6 +574,7 @@ class ConfigurationWizard:
             for account in self.config.aws.accounts:
                 if account.identity_center_details:
                     asyncio.run(account.set_identity_center_details())
+            check_and_update_resource_limit(self.config)
             asyncio.run(
                 generate_aws_role_templates(
                     self.config.aws,

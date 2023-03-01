@@ -9,7 +9,7 @@ import warnings
 import click
 
 from iambic.config.dynamic_config import Config, init_plugins, load_config
-from iambic.config.utils import resolve_config_template_path
+from iambic.config.utils import resolve_config_template_path, check_and_update_resource_limit
 from iambic.config.wizard import ConfigurationWizard
 from iambic.core.context import ctx
 from iambic.core.git import clone_git_repos
@@ -301,7 +301,8 @@ def run_git_plan(
 ):
     ctx.eval_only = True
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
-    asyncio.run(load_config(config_path))
+    config = asyncio.run(load_config(config_path))
+    check_and_update_resource_limit(config)
     template_changes = asyncio.run(plan_git_changes(config_path, repo_dir))
     output_proposed_changes(template_changes, output_path=output_path)
 
@@ -347,6 +348,7 @@ def config_discovery(repo_dir: str):
 def import_(repo_dir: str):
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
+    check_and_update_resource_limit(config)
     asyncio.run(config.run_import(repo_dir))
 
 
