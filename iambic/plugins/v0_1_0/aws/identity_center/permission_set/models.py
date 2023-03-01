@@ -5,8 +5,6 @@ import re
 from itertools import chain
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
-from pydantic import Field, validator
-
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -18,7 +16,7 @@ from iambic.core.models import (
     ProposedChangeType,
     TemplateChangeDetails,
 )
-from iambic.core.utils import aio_wrapper, evaluate_on_provider
+from iambic.core.utils import aio_wrapper, evaluate_on_provider, plugin_apply_wrapper
 from iambic.plugins.v0_1_0.aws.iam.policy.models import PolicyStatement
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
     apply_account_assignments,
@@ -40,6 +38,7 @@ from iambic.plugins.v0_1_0.aws.models import (
     Tag,
 )
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
+from pydantic import Field, validator
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -414,6 +413,7 @@ class AWSIdentityCenterPermissionSetTemplate(
                 **template_permission_set,
             ),
             proposed_changes=[],
+            exceptions_seen=[],
         )
         log_params = dict(
             resource_type=self.resource_type,
@@ -521,28 +521,30 @@ class AWSIdentityCenterPermissionSetTemplate(
 
                 if update_resource_params:
                     log_str = "Out of date resource found."
+                    proposed_changes = [
+                        ProposedChange(
+                            change_type=ProposedChangeType.UPDATE,
+                            resource_id=name,
+                            resource_type=self.resource_type,
+                        )
+                    ]
                     if context.execute:
                         log.info(
                             f"{log_str} Updating resource...",
                             **update_resource_log_params,
                         )
+                        apply_awaitable = boto_crud_call(
+                            identity_center_client.update_permission_set,
+                            InstanceArn=instance_arn,
+                            PermissionSetArn=permission_set_arn,
+                            **update_resource_params,
+                        )
                         tasks.append(
-                            boto_crud_call(
-                                identity_center_client.update_permission_set,
-                                InstanceArn=instance_arn,
-                                PermissionSetArn=permission_set_arn,
-                                **update_resource_params,
-                            )
+                            plugin_apply_wrapper(apply_awaitable, proposed_changes)
                         )
                     else:
                         log.info(log_str, **update_resource_log_params)
-                        account_change_details.proposed_changes.append(
-                            ProposedChange(
-                                change_type=ProposedChangeType.UPDATE,
-                                resource_id=name,
-                                resource_type=self.resource_type,
-                            )
-                        )
+                        account_change_details.proposed_changes.extend(proposed_changes)
             else:
                 account_change_details.proposed_changes.append(
                     ProposedChange(
@@ -628,10 +630,11 @@ class AWSIdentityCenterPermissionSetTemplate(
             ]
         )
         try:
-            changes_made = await asyncio.gather(*tasks)
+            results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+
             # apply_account_assignments is a dedicated call due to the request limit on CreateAccountAssignment
             #   per https://docs.aws.amazon.com/singlesignon/latest/userguide/limits.html
-            changes_made.append(
+            results.append(
                 await apply_account_assignments(
                     identity_center_client,
                     instance_arn,
@@ -645,6 +648,22 @@ class AWSIdentityCenterPermissionSetTemplate(
         except Exception as e:
             log.error("Unable to apply changes to resource", error=e, **log_params)
             return account_change_details
+
+        # separate out the success versus failure calls
+        exceptions: list[ProposedChange] = []
+        changes_made: list[ProposedChange] = []
+        for result in results:
+            for r in result:
+                if isinstance(r, ProposedChange):
+                    if len(r.exceptions_seen) == 0:
+                        changes_made.append(r)
+                    else:
+                        exceptions.append(r)
+
+        if any(changes_made):
+            account_change_details.proposed_changes.extend(changes_made)
+        if any(exceptions):
+            account_change_details.exceptions_seen.extend(exceptions)
 
         if any(changes_made):
             account_change_details.proposed_changes.extend(
