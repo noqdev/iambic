@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import glob
 import inspect
+import itertools
 import json
 import os
 import typing
 from enum import Enum
+from hashlib import md5
 from types import GenericAlias
 from typing import (
     TYPE_CHECKING,
@@ -20,6 +23,7 @@ from typing import (
     get_origin,
 )
 
+import aiofiles
 import dateparser
 from deepdiff.model import PrettyOrderedSet
 from git import Repo
@@ -29,12 +33,11 @@ from pydantic import Field, validate_model, validator
 from pydantic.fields import ModelField
 
 from iambic.core.context import ExecutionContext
-from iambic.core.iambic_enum import IambicManaged
+from iambic.core.iambic_enum import Command, IambicManaged, ExecutionStatus
 from iambic.core.logger import log
 from iambic.core.utils import (
     apply_to_provider,
     create_commented_map,
-    sanitize_string,
     snake_to_camelcap,
     sort_dict,
     transform_comments,
@@ -193,9 +196,7 @@ class BaseModel(IambicPydanticBaseModel):
                 for k in properties.__dict__.keys()
                 if k not in exclude_keys
             }
-            resource_dict = {
-                k: v for k, v in resource_dict.items() if v is not None
-            }  # using bool(v) will make it impossible to handle empty string tag value
+            resource_dict = {k: v for k, v in resource_dict.items() if bool(v)}
         else:
             resource_dict = properties.dict(
                 exclude=exclude_keys, exclude_none=True, exclude_unset=False
@@ -214,10 +215,6 @@ class BaseModel(IambicPydanticBaseModel):
             variables["owner"] = owner
 
         rtemplate = Environment(loader=BaseLoader()).from_string(json.dumps(response))
-        valid_characters_re = r"[\w_+=,.@-]"
-        variables = {
-            k: sanitize_string(v, valid_characters_re) for k, v in variables.items()
-        }
         data = rtemplate.render(**variables)
         return json.loads(data)
 
@@ -292,9 +289,6 @@ class ProposedChange(PydanticBaseModel):
     current_value: Optional[Union[list, dict, str, int]]
     new_value: Optional[Union[list, dict, str, int]]
     change_summary: Optional[dict]
-    exceptions_seen: list[str] = Field(
-        default=[]
-    )  # FIXME, can we do better than string?
 
 
 class AccountChangeDetails(PydanticBaseModel):
@@ -304,7 +298,6 @@ class AccountChangeDetails(PydanticBaseModel):
     current_value: Optional[dict]
     new_value: Optional[dict]
     proposed_changes: list[ProposedChange] = Field(default=[])
-    exceptions_seen: list[ProposedChange] = Field(default=[])
 
 
 class TemplateChangeDetails(PydanticBaseModel):
@@ -313,9 +306,6 @@ class TemplateChangeDetails(PydanticBaseModel):
     template_path: str
     # Supports multi-account providers and single-account providers
     proposed_changes: list[Union[AccountChangeDetails, ProposedChange]] = []
-    exceptions_seen: list[Union[AccountChangeDetails, ProposedChange]] = Field(
-        default=[]
-    )
 
     class Config:
         json_encoders = {PrettyOrderedSet: list}
@@ -558,3 +548,72 @@ class ExpiryModel(IambicPydanticBaseModel):
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
         return {"expires_at", "deleted"}
+
+
+class ExecutionMessage(PydanticBaseModel):
+    execution_id: str
+    command: Command
+    provider_type: Optional[str]
+    provider_id: Optional[str]
+    metadata: Optional[Dict[str, Any]] = None
+    templates: Optional[List[str]] = None
+    requested_at: datetime.datetime = datetime.datetime.now(datetime.timezone.utc)
+
+    def get_execution_dir(self, as_regex: bool = False) -> str:
+        if as_regex:
+            as_regex = "**"
+
+        path_params = [self.execution_id]
+        if path_param := self.provider_type or as_regex:
+            path_params.append(path_param)
+        if path_param := self.provider_id or as_regex:
+            path_params.append(path_param)
+        if path_param := self.metadata or as_regex:
+            if path_param != as_regex:
+                path_param = md5(json.dumps(path_param, sort_keys=True)).hexdigest()
+            path_params.append(path_param)
+
+        file_path = os.path.join(os.path.expanduser("~/.iambic"), *path_params)
+        if not as_regex:
+            os.makedirs(file_path, exist_ok=True)
+
+        return file_path
+
+    def get_file_path(self, resource_type: str, file_name_and_extension: str) -> str:
+        file_path = os.path.join(self.get_execution_dir(), resource_type)
+        os.makedirs(file_path, exist_ok=True)
+        return os.path.join(file_path, file_name_and_extension)
+
+    async def get_sub_exe_files(
+        self,
+        resource_type: str,
+        file_name_and_extension: str,
+        flatten_results: bool = False,
+    ) -> List[dict]:
+        async def _get_file_contents(file_path: str) -> dict:
+            async with aiofiles.open(file_path, mode="r") as f:
+                return json.loads(await f.read())
+
+        matching_files = glob.glob(
+            os.path.join(
+                self.get_execution_dir(True),
+                resource_type or "**",
+                file_name_and_extension or "**",
+            ),
+            recursive=True,
+        )
+        response = list(
+            await asyncio.gather(
+                *[_get_file_contents(file_path) for file_path in set(matching_files)]
+            )
+        )
+        if flatten_results:
+            return list(itertools.chain.from_iterable(response))
+
+        return response
+
+
+class ExecutionResponse(ExecutionMessage):
+    status: ExecutionStatus
+    errors: Optional[list[str]]
+

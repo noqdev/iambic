@@ -10,6 +10,7 @@ import aiofiles
 
 from iambic.core import noq_json as json
 from iambic.core.logger import log
+from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import (
     base_group_str_attribute,
     create_or_update_template,
@@ -34,7 +35,10 @@ from iambic.plugins.v0_1_0.aws.iam.role.utils import (
     list_roles,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
-from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3_resp
+from iambic.plugins.v0_1_0.aws.utils import (
+    get_aws_account_map,
+    normalize_boto3_resp,
+)
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -388,16 +392,22 @@ async def create_templated_role(  # noqa: C901
     )
 
 
-async def generate_aws_role_templates(
+async def collect_aws_roles(
     config: AWSConfig,
     base_output_dir: str,
-    role_messages: list[RoleMessageDetails] = None,
+    exe_message: ExecutionMessage,
+    detect_messages: list[RoleMessageDetails] = None,
 ):
     aws_account_map = await get_aws_account_map(config)
+
+    if exe_message.provider_id:
+        aws_account_map = {
+            exe_message.provider_id: aws_account_map[exe_message.provider_id]
+        }
+
     existing_template_map = await get_existing_template_map(
         base_output_dir, AWS_IAM_ROLE_TEMPLATE_TYPE
     )
-    role_dir = get_role_dir(base_output_dir)
     set_role_resource_inline_policies_semaphore = NoqSemaphore(
         set_role_resource_inline_policies, 20
     )
@@ -411,19 +421,19 @@ async def generate_aws_role_templates(
         "Beginning to retrieve AWS IAM Roles.", accounts=list(aws_account_map.keys())
     )
 
-    if role_messages:
+    if detect_messages:
         aws_accounts = list(aws_account_map.values())
         generate_role_resource_file_for_all_accounts_semaphore = NoqSemaphore(
             generate_role_resource_file_for_all_accounts, 45
         )
         tasks = [
             {"aws_accounts": aws_accounts, "role_name": role.role_name}
-            for role in role_messages
+            for role in detect_messages
             if not role.delete
         ]
 
         # Remove deleted or mark templates for update
-        deleted_roles = [role for role in role_messages if role.delete]
+        deleted_roles = [role for role in detect_messages if role.delete]
         if deleted_roles:
             for role in deleted_roles:
                 role_account = aws_account_map.get(role.account_id)
@@ -456,6 +466,9 @@ async def generate_aws_role_templates(
             dict(account_id=account_id, roles=roles)
             for account_id, roles in account_role_map.items()
         ]
+    elif exe_message.provider_id:
+        aws_account = aws_account_map[exe_message.provider_id]
+        account_roles = [(await generate_account_role_resource_files(aws_account))]
     else:
         generate_account_role_resource_files_semaphore = NoqSemaphore(
             generate_account_role_resource_files, 5
@@ -484,12 +497,28 @@ async def generate_aws_role_templates(
     await set_role_resource_tags_semaphore.process(messages)
     log.info("Finished retrieving role details")
 
-    # Use these for testing `create_templated_role`
-    # account_role_output = json.dumps(account_roles)
-    # with open("account_role_output.json", "w") as f:
-    #     f.write(account_role_output)
-    # with open("account_role_output.json") as f:
-    #     account_roles = json.loads(f.read())
+    account_role_output = json.dumps(account_roles)
+    with open(exe_message.get_file_path("role", "output.json"), "w") as f:
+        f.write(account_role_output)
+
+
+async def generate_aws_role_templates(
+    config: AWSConfig,
+    base_output_dir: str,
+    exe_message: ExecutionMessage,
+    detect_messages: list[RoleMessageDetails] = None,
+):
+    role_dir = get_role_dir(base_output_dir)
+    aws_account_map = await get_aws_account_map(config)
+    existing_template_map = await get_existing_template_map(
+        base_output_dir, AWS_IAM_ROLE_TEMPLATE_TYPE
+    )
+
+    account_roles = await exe_message.get_sub_exe_files("role", "output.json", True)
+    # if ctx.use_remote and len(aws_account_map) > 1:
+    #     account_roles = list(itertools.chain.from_iterable(account_roles))
+    # else:
+    #     account_roles = account_roles[0]
 
     log.info("Grouping roles")
     # Move everything to required structure
@@ -519,7 +548,7 @@ async def generate_aws_role_templates(
         )
         all_resource_ids.add(resource_template.resource_id)
 
-    if not role_messages:
+    if not detect_messages:
         # NEVER call this if messages are passed in because all_resource_ids will only contain those resources
         delete_orphaned_templates(
             list(existing_template_map.values()), all_resource_ids

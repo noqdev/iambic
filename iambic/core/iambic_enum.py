@@ -21,3 +21,14 @@ class IambicManaged(Enum):
     @classmethod
     def from_yaml(cls, constructor, node):
         return cls(node.value)
+
+
+class Command(Enum):
+    IMPORT = "import"
+    APPLY = "apply"
+    CONFIG_DISCOVERY = "config_discovery"
+
+
+class ExecutionStatus(Enum):
+    SUCCESS = "success"
+    FAILURE = "failure"
