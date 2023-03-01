@@ -11,23 +11,21 @@ ARG PYTHON_VERSION
 # install python
 RUN yum update -y \
  && yum groupinstall "Development Tools" -y \
- && yum install libffi-devel bzip2-devel wget openssl openssl-devel sqlite-devel coreutils -y \
- && yum install git shadow-utils -y
+ && yum install libffi-devel bzip2-devel wget openssl openssl-devel sqlite-devel coreutils -y
 
 # breaking up this line to test building python using all the cores
 RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz \
  && tar -xf Python-${PYTHON_VERSION}.tgz \
  && cd Python-${PYTHON_VERSION}/  \
- && ./configure --enable-optimizations --enable-loadable-sqlite-extensions --enable-shared \
- && make -j${NPROC} python \
- && make install
-
-RUN ln -s /Python-${PYTHON_VERSION}/python /usr/bin/python \
+ && ./configure --enable-optimizations --enable-loadable-sqlite-extensions \
+ && make install && ln -s /Python-${PYTHON_VERSION}/python /usr/bin/python \
  && python -m ensurepip --upgrade \
  && python -m pip install --upgrade pip
 
 
 FROM ${ARCH}amazonlinux:${AWS_LINUX_VERSION} as build-layer
+
+RUN yum install git shadow-utils -y
 
 # copy python to the necessary locations
 ARG PYTHON_VERSION
