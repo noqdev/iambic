@@ -1,5 +1,5 @@
 BUILD_VERSION := $(shell python build_utils/tag_and_build_container.py print-current-version)
-IAMBIC_PUBLIC_ECR_ALIAS := "o4z3c2v2"
+IAMBIC_PUBLIC_ECR_ALIAS := o4z3c2v2
 
 .PHONY: prepare_for_dist
 prepare_for_dist:
