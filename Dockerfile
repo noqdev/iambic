@@ -1,4 +1,7 @@
-FROM public.ecr.aws/o4z3c2v2/iambic_container_base:1.0 as runtime-layer
+FROM public.ecr.aws/o4z3c2v2/iambic_container_base:1.0
+
+ARG FUNCTION_DIR="/app"
+WORKDIR ${FUNCTION_DIR}
 
 COPY --chown=iambic:iambic iambic/ ${FUNCTION_DIR}/iambic
 COPY --chown=iambic:iambic poetry.lock ${FUNCTION_DIR}/poetry.lock
@@ -10,13 +13,10 @@ RUN adduser --system --user-group --home ${FUNCTION_DIR} iambic \
  && chmod -R 755 ${FUNCTION_DIR} \
  && chmod -R 777 ${FUNCTION_DIR}
 
-
 RUN pip install poetry setuptools pip --upgrade \
  && poetry install \
  && poetry build \
  && pip install awslambdaric
-
-COPY --from=runtime-layer ${FUNCTION_DIR}/dist ${FUNCTION_DIR}/dist
 
 RUN pip install ${FUNCTION_DIR}/dist/*.whl \
  && rm -rf ${FUNCTION_DIR}/dist
