@@ -15,7 +15,7 @@ from iambic.core.models import (
 EXAMPLE_LOCAL_FILE_TEMPLATE_TYPE = "NOQ::Example::LocalFile"
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.okta.iambic_plugin import ExampleConfig
+    from iambic.plugins.v0_1_0.example.iambic_plugin import ExampleConfig
 
 
 class ExampleLocalFileTemplateProperties(BaseModel):

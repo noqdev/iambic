@@ -14,7 +14,7 @@ jobs:
         with:
           repository: __TEMPLATE_IAMBIC_REPO
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          path: './iambic_templates'
+          path: './iambic-templates'
       - uses: actions/checkout@v3
         with:
           repository: noqdev/iambic
@@ -38,7 +38,7 @@ jobs:
           COMMIT_USERNAME: "Iambic Automation"
           COMMIT_MESSAGE: "Automatic import"
         run: |
-          cd ./iambic_templates && git fetch origin && git checkout -b task/auto-baseline-${GITHUB_RUN_ID} origin/main && cd ../
-          docker-compose -f ./iambic/docker-compose-cicd.yaml run -v ~/.ssh/:/root/.ssh/ -v $(pwd)/iambic_templates/:/root/.iambic/repos/ iambic-cicd /bin/bash -c "python -m iambic.lambda.app import --repo-dir /root/.iambic/repos && cat proposed_changes.json > /root/.iambic/repos/proposed_changes.json " 2>&1 | tee plan-output.txt
-          cd ./iambic_templates && git config user.email "${COMMIT_EMAIL}" && git config user.name "${COMMIT_USERNAME}" && git add . && git commit -m "${COMMIT_MESSAGE}" && git push origin HEAD:main
+          cd ./iambic-templates && git fetch origin && git checkout -b task/auto-baseline-${GITHUB_RUN_ID} origin/main && cd ../
+          docker-compose -f ./iambic/docker-compose-cicd.yaml run -v ~/.ssh/:/root/.ssh/ -v $(pwd)/iambic-templates/:/root/.iambic/repos/ iambic-cicd /bin/bash -c "python -m iambic.lambda.app import --repo-dir /root/.iambic/repos && cat proposed_changes.json > /root/.iambic/repos/proposed_changes.json " 2>&1 | tee plan-output.txt
+          cd ./iambic-templates && git config user.email "${COMMIT_EMAIL}" && git config user.name "${COMMIT_USERNAME}" && git add . && git commit -m "${COMMIT_MESSAGE}" && git push origin HEAD:main
         continue-on-error: true

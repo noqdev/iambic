@@ -31,7 +31,8 @@ jobs:
       - name: bootstrap
         run: |
           python3.10 -m venv build-env
-          . build-env/bin/activate && pip install poetry
+          . build-env/bin/activate && pip install poetry setuptools pip --upgrade
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.37.3
       - name: set git identity
         run: |
           git config user.name "Version Auto Bump"
@@ -50,10 +51,25 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: arn:aws:iam::759357822767:role/iambic_image_builder
+          role-to-assume: arn:aws:iam::242345320040:role/iambic_image_builder
           aws-region: us-east-1
       - name: build container
         id: build-container
         run: |
-          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/l1s5s8m2
-          . build-env/bin/activate && make build_docker upload_docker
+          docker logout ghcr.io
+          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/o4z3c2v2
+          . build-env/bin/activate && make build_docker
+          make trivy_scan
+          make trivy_sbom
+          make upload_docker
+          docker logout public.ecr.aws/o4z3c2v2
+          docker buildx prune --filter=until=96h -f
+      - uses: actions/upload-artifact@v3
+        with:
+          name: trivy-sbom
+          path: iambic.sbom.json
+      # Uncomment after OSS (Requires for GH Advanced Security):
+      # - name: Upload Trivy scan results to GitHub Security tab
+      #   uses: github/codeql-action/upload-sarif@v2
+      #   with:
+      #     sarif_file: 'iambic.sbom.json'

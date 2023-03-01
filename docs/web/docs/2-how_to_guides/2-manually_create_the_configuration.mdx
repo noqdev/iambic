@@ -1,0 +1,52 @@
+---
+title: Manually Create IAMbic Configuration
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+## Configuration File Reference
+
+The configuration file is written in YAML and needs to be created before IAMbic can be used the first time.
+It stores all the information about your environment and provides credentials to cloud services and GitHub.
+You can use the [wizard](configure_iambic_with_wizard) to quickly start creating your configuration file.
+
+This document provides an overview of the YAML configuration for NOQ::Core::Config.
+This configuration is used to specify AWS accounts and organizations that IAMbic has access to, via [Hub and Spoke roles](/technical_reference/aws_hub_and_spoke_roles).
+
+
+The following is an example configuration for AWS Organizations:
+
+```yaml
+template_type: NOQ::Core::Config
+version: '1'
+
+aws:
+  organizations:
+    - default_rule:
+        iambic_managed: read_and_write
+      hub_role_arn: arn:aws:iam::123456789012:role/IambicHubRole
+      identity_center:
+        region: us-east-1
+      org_account_id: '123456789012'
+      org_id: o-yabc0a10zs
+```
+
+### Template Type
+The template_type field specifies the type of template, which is NOQ::Core::Config.
+
+### Extends
+The extends field describes the parent class or template that NOQ::Core::Config extends.
+
+### Version
+The version field specifies the version number of the YAML configuration.
+
+### AWS
+The aws field is used to specify AWS accounts and organizations that IAMbic has access to. This field contains two nested lists: organizations and accounts.
+
+### Organizations
+The organizations list is used to specify one or more organization entities within AWS. IAMbic can inspect organization entities to parse all attached accounts.
+
+### Accounts
+The accounts list is used to specify one or more AWS accounts that IAMbic should synchronize.
+
+For more information about hub and spoke roles, see the [Hub and Spoke roles](/technical_reference/aws_hub_and_spoke_roles) documentation.

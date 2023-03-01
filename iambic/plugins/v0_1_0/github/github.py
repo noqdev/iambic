@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import re
@@ -7,6 +8,7 @@ import shutil
 import sys
 import tempfile
 import time
+import traceback
 from enum import Enum
 from typing import Any, Callable
 from urllib.parse import urlparse
@@ -14,10 +16,12 @@ from urllib.parse import urlparse
 import github
 from github.PullRequest import PullRequest
 
-from iambic.core.git import Repo, clone_git_repo
+from iambic.config.dynamic_config import load_config
+from iambic.config.utils import resolve_config_template_path
+from iambic.core.git import Repo, clone_git_repo, get_remote_default_branch
 from iambic.core.logger import log
 from iambic.core.utils import yaml
-from iambic.main import run_detect, run_expire, run_import
+from iambic.main import run_detect, run_expire
 
 iambic_app = __import__("iambic.lambda.app", globals(), locals(), [], 0)
 lambda_run_handler = getattr(iambic_app, "lambda").app.run_handler
@@ -122,7 +126,8 @@ def prepare_local_repo_for_new_commits(
     repo_config_writer.set_value("user", "email", COMMIT_MESSAGE_USER_EMAIL)
     repo_config_writer.release()
 
-    cloned_repo.git.checkout("-b", f"attempt/{purpose}", "origin/main")
+    default_branch = get_remote_default_branch(cloned_repo)
+    cloned_repo.git.checkout("-b", f"attempt/{purpose}", default_branch)
 
     return cloned_repo
 
@@ -146,7 +151,8 @@ def prepare_local_repo(
     cloned_repo = clone_git_repo(repo_url, repo_path, None)
     for remote in cloned_repo.remotes:
         remote.fetch()
-    cloned_repo.git.checkout("-b", "attempt/git-apply", "origin/main")
+    default_branch = get_remote_default_branch(cloned_repo)
+    cloned_repo.git.checkout("-b", "attempt/git-apply", default_branch)
 
     # Note, this is for local usage, we don't actually
     # forward this commit upstream
@@ -317,7 +323,9 @@ def handle_iambic_git_apply(
     if pull_request.mergeable_state != MERGEABLE_STATE_CLEAN:
         # TODO log error and also make a comment to PR
         pull_request.create_issue_comment(
-            "mergeable_state is {0}".format(pull_request.mergeable_state)
+            "Mergable state is {0}. This probably means that the necessary approvals have not been granted for the request.".format(
+                pull_request.mergeable_state
+            )
         )
         return HandleIssueCommentReturnCode.MERGEABLE_STATE_NOT_CLEAN
 
@@ -370,10 +378,11 @@ def handle_iambic_git_apply(
         return HandleIssueCommentReturnCode.MERGED
 
     except Exception as e:
-        log.error("fault", exception=str(e))
+        captured_traceback = traceback.format_exc()
+        log.error("fault", exception=captured_traceback)
         pull_request.create_issue_comment(
-            "exception during git-apply is {0} \n {1}".format(
-                pull_request.mergeable_state, e
+            "exception during apply is {0} \n ```{1}```".format(
+                pull_request.mergeable_state, captured_traceback
             )
         )
         raise e
@@ -411,10 +420,11 @@ def handle_iambic_git_plan(
         copy_data_to_data_directory()
         return HandleIssueCommentReturnCode.PLANNED
     except Exception as e:
-        log.error("fault", exception=str(e))
+        captured_traceback = traceback.format_exc()
+        log.error("fault", exception=captured_traceback)
         pull_request.create_issue_comment(
-            "exception during git-plan is {0} \n {1}".format(
-                pull_request.mergeable_state, e
+            "exception during plan is {0} \n ```{1}```".format(
+                pull_request.mergeable_state, captured_traceback
             )
         )
         raise e
@@ -435,10 +445,11 @@ def handle_pull_request(github_client: github.Github, context: dict[str, Any]) -
     try:
         pull_request.create_issue_comment("iambic git-plan")
     except Exception as e:
-        log.error("fault", exception=str(e))
+        captured_traceback = traceback.format_exc()
+        log.error("fault", exception=captured_traceback)
         pull_request.create_issue_comment(
-            "exception during pull-request is {0} \n {1}".format(
-                pull_request.mergeable_state, e
+            "exception during pull-request is {0} \n ```{1}```".format(
+                pull_request.mergeable_state, captured_traceback
             )
         )
         raise e
@@ -453,7 +464,10 @@ def handle_detect_changes_from_eventbridge(
     repository_url = context["event"]["repository"]["clone_url"]
     repo_url = format_github_url(repository_url, github_token)
 
-    _handle_detect_changes_from_eventbridge(repo_url, "main")
+    repo_name = context["repository"]
+    templates_repo = github_client.get_repo(repo_name)
+    default_branch = get_remote_default_branch(templates_repo)
+    _handle_detect_changes_from_eventbridge(repo_url, default_branch)
 
 
 def _handle_detect_changes_from_eventbridge(repo_url: str, default_branch: str) -> None:
@@ -484,16 +498,19 @@ def handle_import(github_client: github.Github, context: dict[str, Any]) -> None
     # repo_name is already in the format {repo_owner}/{repo_short_name}
     repository_url = context["event"]["repository"]["clone_url"]
     repo_url = format_github_url(repository_url, github_token)
-    _handle_import(repo_url, "main")
+    repo_name = context["repository"]
+    templates_repo = github_client.get_repo(repo_name)
+    default_branch = get_remote_default_branch(templates_repo)
+    _handle_import(repo_url, default_branch)
 
 
 def _handle_import(repo_url: str, default_branch: str) -> None:
     try:
-        repo = prepare_local_repo_for_new_commits(
-            repo_url, get_lambda_repo_path(), "import"
-        )
-
-        run_import(get_lambda_repo_path())
+        repo_dir = get_lambda_repo_path()
+        repo = prepare_local_repo_for_new_commits(repo_url, repo_dir, "import")
+        config_path = asyncio.run(resolve_config_template_path(repo_dir))
+        config = asyncio.run(load_config(config_path))
+        asyncio.run(config.run_import(repo_dir))
         repo.git.add(".")
         diff_list = repo.head.commit.diff()
         if len(diff_list) > 0:
@@ -514,7 +531,10 @@ def handle_expire(github_client: github.Github, context: dict[str, Any]) -> None
     # repo_name is already in the format {repo_owner}/{repo_short_name}
     repository_url = context["event"]["repository"]["clone_url"]
     repo_url = format_github_url(repository_url, github_token)
-    _handle_expire(repo_url, "main")
+    repo_name = context["repository"]
+    templates_repo = github_client.get_repo(repo_name)
+    default_branch = get_remote_default_branch(templates_repo)
+    _handle_expire(repo_url, default_branch)
 
 
 def _handle_expire(repo_url: str, default_branch: str) -> None:
@@ -542,7 +562,10 @@ def _handle_expire(repo_url: str, default_branch: str) -> None:
             log_params = {"proposed_changes": lines}
             log.info("handle_expire ran", **log_params)
 
-            repo.remotes.origin.push(refspec="HEAD:main").raise_if_error()  # FIXME
+            default_branch = get_remote_default_branch(repo)
+            repo.remotes.origin.push(
+                refspec=f"HEAD:{default_branch}"
+            ).raise_if_error()  # FIXME
         else:
             log.info("handle_expire no changes")
     except Exception as e:
@@ -567,6 +590,8 @@ IAMBIC_CLOUD_IMPORT_DISPATCH_MAP: dict[str, Callable] = {
 COMMENT_DISPATCH_MAP: dict[str, Callable] = {
     "iambic git-apply": handle_iambic_git_apply,
     "iambic git-plan": handle_iambic_git_plan,
+    "iambic apply": handle_iambic_git_apply,
+    "iambic plan": handle_iambic_git_plan,
 }
 
 if __name__ == "__main__":
