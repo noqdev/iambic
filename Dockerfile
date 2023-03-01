@@ -42,7 +42,7 @@ COPY --chown=iambic:iambic README.md ${FUNCTION_DIR}/README.md
 
 WORKDIR ${FUNCTION_DIR}
 
-RUN pip install poetry \
+RUN pip install poetry setuptools pip --upgrade \
  && poetry install \
  && poetry build
 

@@ -53,7 +53,7 @@ FROM base-layer as build-layer
 ######## ########################### ########################
 
 # install lambda runtime interface client for python
-RUN pip3 install awslambdaric --target "${FUNCTION_DIR}"
+RUN pip3 install awslambdaric setuptools pip --target "${FUNCTION_DIR}" --upgrade
 
 
 FROM base-layer as runtime-layer
