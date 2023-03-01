@@ -2,11 +2,9 @@
 title: Local Git Repository
 ---
 
-IAMbic can use any folder as a database-on-disk. We strongly suggest using a version control system, such as Git, as this will allow IAMbic to keep a historical record of changes to your cloud IAM over time. For the purposes of these IAMbic tutorials, we will use a Git repository that only exists on your system. 
+IAMbic can use any folder as a database-on-disk. We strongly suggest using a version control system, such as Git, as this will allow IAMbic to keep a historical record of changes to your cloud IAM over time. For the purposes of these IAMbic tutorials, we will use a Git repository that only exists on your system.
 
 To configure IAMbic in production, we recommend configuring a repository in GitHub, as IAMbic ships with GitHub actions and workflows that automate the IAMbic processes as much as possible, and keep your local repo syncronized with your cloud environment.
-
-(#TODO: Link to a production setup flow and reference this doc: Guidance on how to create a repository can be found in [Github&#39;s guide for creating a repo](https://docs.github.com/en/get-started/quickstart/create-a-repo).)
 
 Create a private GitHub repository called `iambic-templates`.
 
@@ -19,3 +17,5 @@ cat <<EOF > .gitignore
 proposed_changes.yaml
 EOF
 ```
+
+Additional guidance on how to create a repository can be found in [Github&#39;s guide for creating a repo](https://docs.github.com/en/get-started/quickstart/create-a-repo).
