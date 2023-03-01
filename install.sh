@@ -2,7 +2,7 @@
 
 if [[ `id -u` > 0 ]]; then
     echo "This script requires root privileges to install iambic in /usr/local/bin/; it also requires docker to be installed and running."
-    echo "Please run this script as root or with sudo. For example: curl https://iambic.org/install.sh | sudo bash"
+    echo "Please run this script as root or with sudo. For example: curl https://iambic.org/scripts/install.sh | sudo bash"
     exit
 fi
 
@@ -24,13 +24,6 @@ then
     echo "Git is not installed on this system. Please install Git before running this script. Refer to your operating system's package manager for installation instructions."
 fi
 
-if [[ -d /usr/local/bin ]]; then
-    echo "Detected /usr/local/bin directory, continuing..."
-else
-    echo "Creating /usr/local/bin directory..."
-    mkdir -p /usr/local/bin
-fi
-
 if echo $PATH | grep "/usr/local/bin" &> /dev/null; then
     echo "Detected /usr/local/bin is in the PATH, continuing..."
 else
@@ -39,7 +32,6 @@ fi
 
 echo
 
-IAMBIC_VERSION="${IAMBIC_VERSION:-latest}"
 ECR_PATH="public.ecr.aws/o4z3c2v2/iambic:latest"
 
 echo "Installing iambic..."
@@ -52,7 +44,7 @@ echo "#!/bin/bash" > /usr/local/bin/iambic
 echo "${DOCKER_CMD}" >> /usr/local/bin/iambic
 chmod +x /usr/local/bin/iambic
 
-echo "Caching the latest iambic docker container, this might take a minute"
+echo "Caching the iambic docker container, this might take a minute"
 $( which docker ) pull ${ECR_PATH}
 
 echo
