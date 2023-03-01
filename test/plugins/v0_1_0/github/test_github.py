@@ -146,6 +146,30 @@ def test_issue_comment_with_clean_mergeable_state_and_lambda_handler_crashed(
     with pytest.raises(Exception):
         handle_issue_comment(mock_github_client, issue_comment_git_apply_context)
     assert mock_lambda_run_handler.called
+    assert mock_pull_request.create_issue_comment.called
+    assert "Traceback" in mock_pull_request.create_issue_comment.call_args[0][0]
+    assert not mock_pull_request.merge.called
+
+
+# invariant: PR is only merged if and only if git-apply is successful
+def test_plan_issue_comment_with_clean_mergeable_state_and_lambda_handler_crashed(
+    mock_github_client,
+    issue_comment_git_plan_context,
+    mock_lambda_run_handler,
+    mock_repository,
+):
+    mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
+    mock_pull_request.mergeable_state = MERGEABLE_STATE_CLEAN
+    mock_pull_request.head.sha = issue_comment_git_plan_context["sha"]
+    mock_repository.clone_from.return_value.head.commit.hexsha = (
+        issue_comment_git_plan_context["sha"]
+    )
+    mock_lambda_run_handler.side_effect = Exception("unexpected failure")
+    with pytest.raises(Exception):
+        handle_issue_comment(mock_github_client, issue_comment_git_plan_context)
+    assert mock_lambda_run_handler.called
+    assert mock_pull_request.create_issue_comment.called
+    assert "Traceback" in mock_pull_request.create_issue_comment.call_args[0][0]
     assert not mock_pull_request.merge.called
 
 
