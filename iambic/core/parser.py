@@ -50,14 +50,14 @@ def format_validation_error(err, ruamel_dict):
                 if line_num is not None:
                     missing_key = str.lower(error["loc"][-1])
                     lines.append(
-                        f"Missing Field: {missing_key} around closest to line {line_num+1}"
+                        f"Missing Field: `{missing_key}` around line {line_num+1}"
                     )
                 else:
-                    lines.append(f"Missing Field: {canonical_key}")
+                    lines.append(f"Missing Field: `{canonical_key}`")
             if error["type"].startswith("type_error"):
                 line_num = resolve_location(error["loc"], ruamel_dict)
                 canonical_key = str.lower(".".join(error["loc"]))
-                lines.append(f"line {line_num+1}: {canonical_key} has type issue")
+                lines.append(f"line {line_num+1}: `{canonical_key}` has type issue")
         return "\n".join(lines)
     except Exception:
         # need to still return something to avoid to downstream formatting
