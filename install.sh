@@ -33,6 +33,7 @@ fi
 echo
 
 IAMBIC_GIT_REPO_PATH="${IAMBIC_GIT_REPO_PATH:-${HOME}/iambic-templates}"
+IAMBIC_VERSION="${IAMBIC_VERSION:-latest}"
 ECR_PATH="public.ecr.aws/o4z3c2v2/iambic:latest"
 
 echo "Installing iambic..."
@@ -42,7 +43,7 @@ CWD=$(pwd)
 cd ${IAMBIC_GIT_REPO_PATH}
 $(which git) init .
 cd $CWD
-DOCKER_CMD="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e AWS_PROFILE=\${AWS_PROFILE} -v \${CWD}:/templates:Z ${ECR_PATH}"
+DOCKER_CMD="docker run -it -u \$(id -u):\$(id -g) -v \${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e AWS_PROFILE=\${AWS_PROFILE} -v \${CWD}:/templates:Z ${ECR_PATH}"
 
 echo
 
