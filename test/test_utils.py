@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import traceback
 
 import pytest
 
@@ -22,6 +23,17 @@ async def test_async_gather_behavior():
     assert len(results) == 2
     assert results[0] == "success"
     assert isinstance(results[1], Exception)
+
+
+def test_exception_traceback_behavior():
+    def raise_exception():
+        raise Exception("hello")
+
+    try:
+        raise_exception()
+    except Exception:
+        captured_message = traceback.format_exc()
+        assert "raise_exception" in captured_message
 
 
 def test_valid_characters():
