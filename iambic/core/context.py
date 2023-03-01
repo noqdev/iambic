@@ -3,6 +3,7 @@ from __future__ import annotations
 
 class ExecutionContext:
     eval_only: bool = False
+    use_remote: bool = False
 
     @property
     def execute(self):

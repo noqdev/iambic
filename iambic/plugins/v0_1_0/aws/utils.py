@@ -14,7 +14,9 @@ from iambic.core.logger import log
 from iambic.core.utils import aio_wrapper, camel_to_snake
 
 if TYPE_CHECKING:
+    from iambic.core.models import ExecutionMessage
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
 
 async def boto_crud_call(boto_fnc, **kwargs) -> Union[list, dict]:
@@ -308,3 +310,41 @@ def boto3_retry(f):
                     raise
 
     return wrapper
+
+
+async def distribute_execution(aws_config: AWSConfig, exe_message: ExecutionMessage):
+    tasks = []
+
+    for account in aws_config.accounts:
+        if account.identity_center_details:
+            new_exe_message = exe_message.copy()
+            new_exe_message.provider_id = account.account_id
+            new_exe_message.metadata = {
+                "service": "IdentityCenter",
+                "region": account.identity_center_details.region,
+            }
+            tasks.append(new_exe_message)
+
+        new_exe_message = exe_message.copy()
+        new_exe_message.provider_id = account.account_id
+        new_exe_message.metadata = {
+            "service": "IAM",
+            "region": RegionName.us_east_1.value,
+        }
+        tasks.append(new_exe_message)
+
+    # execute tasks and check status
+    # Aggregate results...or something?
+
+
+async def account_execution(
+    aws_accounts: list[AWSAccount], exe_message: ExecutionMessage
+):
+    tasks = []
+    for account in aws_accounts:
+        new_exe_message = exe_message.copy()
+        new_exe_message.provider_id = account.account_id
+        tasks.append(new_exe_message)
+
+    # execute tasks and check status
+    # Aggregate results...or something?
