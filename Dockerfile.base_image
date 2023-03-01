@@ -1,0 +1,43 @@
+ARG FUNCTION_DIR="/app"
+ARG AWS_LINUX_VERSION="2022"
+ARG PYTHON_VERSION="3.11.1"
+ARG NPROC=8
+
+ARG ARCH=
+FROM ${ARCH}amazonlinux:${AWS_LINUX_VERSION} as python-layer
+
+ARG PYTHON_VERSION
+
+# install python
+RUN yum update -y \
+ && yum groupinstall "Development Tools" -y \
+ && yum install libffi-devel bzip2-devel wget openssl openssl-devel sqlite-devel coreutils -y \
+ && yum install git shadow-utils -y
+
+# breaking up this line to test building python using all the cores
+RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz \
+ && tar -xf Python-${PYTHON_VERSION}.tgz \
+ && cd Python-${PYTHON_VERSION}/  \
+ && ./configure --enable-optimizations --enable-loadable-sqlite-extensions --enable-shared \
+ && make -j${NPROC} python \
+ && make install
+
+RUN ln -s /Python-${PYTHON_VERSION}/python /usr/bin/python \
+ && python -m ensurepip --upgrade \
+ && python -m pip install --upgrade pip
+
+
+FROM ${ARCH}amazonlinux:${AWS_LINUX_VERSION} as build-layer
+
+# copy python to the necessary locations
+ARG PYTHON_VERSION
+ARG FUNCTION_DIR="/app"
+COPY --from=python-layer /Python-${PYTHON_VERSION} /Python-${PYTHON_VERSION}
+COPY --from=python-layer /usr/local/bin /usr/local/bin
+COPY --from=python-layer /usr/local/lib /usr/local/lib
+RUN ln -s /Python-${PYTHON_VERSION}/python /usr/bin/python
+RUN ln -s /Python-${PYTHON_VERSION}/pip3 /usr/bin/pip3
+
+WORKDIR ${FUNCTION_DIR}
+
+ENTRYPOINT [ "/bin/bash"]
