@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from pydantic import ValidationError
+from ruamel.yaml.scanner import ScannerError
+
 from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate
 from iambic.core.utils import transform_comments, yaml
-from pydantic import ValidationError
 
 
 def load_templates(
@@ -13,10 +15,10 @@ def load_templates(
     templates = []
 
     for template_path in template_paths:
-        template_dict = transform_comments(yaml.load(open(template_path)))
-        if template_dict["template_type"] in ["NOQ::Core::Config"]:
-            continue
         try:
+            template_dict = transform_comments(yaml.load(open(template_path)))
+            if template_dict["template_type"] in ["NOQ::Core::Config"]:
+                continue
             template_cls = TEMPLATES.template_map[template_dict["template_type"]]
             template_cls.update_forward_refs()
             templates.append(template_cls(file_path=template_path, **template_dict))
@@ -28,11 +30,13 @@ def load_templates(
             )
             # We should allow to continue to allow unknown template type; otherwise,
             # we cannot support forward or backward compatibility during version changes.
-        except ValidationError as err:
+        except (ValidationError, ScannerError) as err:
             log.critical(
                 "Invalid template structure", file_path=template_path, error=repr(err)
             )
             if raise_validation_err:
-                raise
+                raise ValueError(
+                    f"{template_path} template has validation error"
+                ) from err
 
     return templates
