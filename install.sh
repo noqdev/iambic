@@ -5,7 +5,7 @@ then
     exit
 fi
 
-if pgrep -f docker; then
+if docker ps -q; then
     echo "Detected Docker is running, continuing..."
 else
     echo "Docker is not running. Please start Docker before running this script. For example on most modern Linux systems you can start docker by running the following command: sudo systemctl start docker"
