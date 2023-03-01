@@ -197,20 +197,19 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
                 )
             except Exception as err:
                 log.warning(err)
-
-        if self.hub_role_arn and self.hub_role_arn != get_current_role_arn(
-            session.client("sts")
-        ):
-            boto3_session = await create_assume_role_session(
-                session,
-                self.hub_role_arn,
-                region_name,
-                external_id=self.external_id,
-                session_name=os.environ.get("IAMBIC_SESSION_NAME", None),
-            )
-            if boto3_session:
-                self.boto3_session_map[region_name] = boto3_session
-                return boto3_session
+    
+            sts_client = session.client("sts")
+            if self.hub_role_arn and self.hub_role_arn != get_current_role_arn(sts_client):
+                boto3_session = await create_assume_role_session(
+                    session,
+                    self.hub_role_arn,
+                    region_name,
+                    external_id=self.external_id,
+                    session_name=os.environ.get("IAMBIC_SESSION_NAME", None),
+                )
+                if boto3_session:
+                    self.boto3_session_map[region_name] = boto3_session
+                    return boto3_session
 
         self.boto3_session_map[region_name] = session
         return self.boto3_session_map[region_name]
