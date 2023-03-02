@@ -7,7 +7,7 @@ on:
 
 jobs:
   iambic-expire:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     environment: production
     if: github.ref == 'refs/heads/main'
     name: Check expire resources

@@ -5,7 +5,7 @@ on:
     - cron:  '0 */4 * * *' # import at minute 0 past every 4th hour
 jobs:
   iambic-import:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     environment: production
     name: Import Cloud and Google Environment
     timeout-minutes: 60 # Setting this to 60 min for now. If this takes longer, it needs better performance improvement
