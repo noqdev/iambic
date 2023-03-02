@@ -196,8 +196,10 @@ class ConfigurationWizard:
         self.default_region = "us-east-1"
         try:
             self.boto3_session = boto3.Session(region_name=self.default_region)
-        except Exception:
-            self.boto3_session = None
+        except Exception as exc:
+            log.error(f"Unable to access your AWS account: {exc}")
+            sys.exit(1)
+            
         self.autodetected_org_settings = {}
         self.existing_role_template_map = {}
         self.aws_account_map = {}
@@ -215,17 +217,13 @@ class ConfigurationWizard:
         else:
             self.hub_account_id = None
 
-        if self.boto3_session:
-            try:
-                default_caller_identity = self.boto3_session.client(
-                    "sts"
-                ).get_caller_identity()
-                caller_arn = get_identity_arn(default_caller_identity)
-                default_hub_account_id = caller_arn.split(":")[4]
-            except (AttributeError, IndexError, NoCredentialsError, ClientError):
-                default_hub_account_id = None
-                default_caller_identity = {}
-        else:
+        try:
+            default_caller_identity = self.boto3_session.client(
+                "sts"
+            ).get_caller_identity()
+            caller_arn = get_identity_arn(default_caller_identity)
+            default_hub_account_id = caller_arn.split(":")[4]
+        except (AttributeError, IndexError, NoCredentialsError, ClientError):
             default_hub_account_id = None
             default_caller_identity = {}
 
