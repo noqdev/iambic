@@ -153,6 +153,8 @@ async def import_service_resources(
                 and task_message.provider_id != account.account_id
             ):
                 continue
+            elif account.iambic_managed == IambicManaged.DISABLED:
+                continue
             elif not task_message.provider_id:
                 task_message.provider_id = account.account_id
 
