@@ -6,8 +6,9 @@ import os
 import shutil
 import tempfile
 
-import iambic.plugins.v0_1_0.github.github
 import pytest
+
+import iambic.plugins.v0_1_0.github.github
 from iambic.config.dynamic_config import load_config
 
 TEST_CONFIG_DIR = "config/"
