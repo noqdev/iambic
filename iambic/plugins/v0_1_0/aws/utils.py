@@ -7,7 +7,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Optional, Union
 
 import boto3
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, NoCredentialsError
 
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -39,6 +39,9 @@ async def boto_crud_call(boto_fnc, **kwargs) -> Union[list, dict]:
                 raise
             else:
                 raise
+        except NoCredentialsError as exc:
+            log.error(f"Unable to create an AWS session, you may need to run `aws configure` or export your AWS_PROFILE; err={exc}")
+            raise RuntimeError(f"Unable to create an AWS session, you may need to run `aws configure` or export your AWS_PROFILE; err={exc}")
 
 
 async def paginated_search(

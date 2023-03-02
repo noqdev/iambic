@@ -337,6 +337,9 @@ def handle_iambic_git_apply(
             repo_url, get_lambda_repo_path(), pull_request_branch_name
         )
 
+        # merge_sha is used when we trigger a merge
+        merge_sha = pull_request.merge_commit_sha
+
         if proposed_changes_path:
             # code smell to have to change a module variable
             # to control the destination of proposed_changes.yaml
@@ -357,6 +360,8 @@ def handle_iambic_git_apply(
             ).raise_if_error()
             log_params = {"sha": repo.head.commit.hexsha}
             log.info("git-apply new sha is", **log_params)
+            # update merge sha because we add new commits to pull request
+            merge_sha = repo.head.commit.hexsha
         else:
             log.debug("git_apply did not introduce additional changes")
 
@@ -372,9 +377,7 @@ def handle_iambic_git_apply(
                 time.sleep(5)
 
         pull_request = templates_repo.get_pull(pull_number)
-        pull_request.merge(
-            sha=repo.head.commit.hexsha
-        )  # Concern, whether we need the exact sha on the remote
+        pull_request.merge(sha=merge_sha)
         return HandleIssueCommentReturnCode.MERGED
 
     except Exception as e:
