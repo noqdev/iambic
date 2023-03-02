@@ -30,7 +30,7 @@ You will then practice using IAMbic to to create, manipulate, and expire a test 
 * Administrative-level access to AWS in order to create and manage IAM identities. This level of access is required to create an IAM identity for the use of IAMbic and also to manage policies associated with it.
 
 * These credentials should be configured in the terminal you are using to configure IAMbic.
-<!-- #TODO which credentials? For our admin-level access? We should say that explicitly to tie together the concepts: "these administrative credentials..." -->
+
 * You should also be aware of [how AWS credentials are sourced locally](https://docs.aws.amazon.com/sdkref/latest/guide/standardized-credentials.html#credentialProviderChain) by the Amazon SDKs. This will help debug different scenarios, such as credential prioritization and expiration.
 
 
@@ -38,43 +38,9 @@ You will then practice using IAMbic to to create, manipulate, and expire a test 
 
 ### 1. Configure IAMbic for AWS
 
-<!-- ### 1.1 Obtain AWS Credentials
+Configure IAMbic by creating a local git repository and running `iambic setup`. For more specific guidance, please read our [Install and Configure](/getting_started/install_and_configure) guide.
 
-You need AWS credentials to perform subsquent steps.
-
-First, create a Hub Role for IAMbic. The Hub Role is the role that IAMbic uses directly
-
-#### Hub Role Policy
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": [
-        "sts:assumerole",
-        "sts:tagsession"
-      ],
-      "Effect": "Allow",
-      "Resource": [
-        "arn:aws:iam::*:role/IambicSpokeRole"
-      ]
-    }
-  ]
-}
-```
-
-#TODO: Define Hub and Spoke Role Permissions
-
-You need AWS credentials with an appropriate level of permissions before proceeding. IAMbic works on a Hub-and-Spoke model across multiple AWS accounts. It is assumed that you are running IAMbic with direct access with the equivalent of Hub role permissions. We recommend using an IAM role or an AWS SSO permission set as the credentials of these identities are temporary. The use of IAM user should be avoided, if possible. -->
-
-<!-- 1.1.1 Option A: Create an AWS IAM Role
-
-https://docs.aws.amazon.com/IAM/latest/UserGuide/id\_roles\_create.html
-
-1.1.2 Option B: Create an AWS SSO Permission Set
-
-https://docs.aws.amazon.com/singlesignon/latest/userguide/howtocreatepermissionset.html  -->
+If you'd prefer to manually write a configuration, please follow the steps below.
 
 #### Write a configuration
 
@@ -113,7 +79,6 @@ aws:
 
 Write the finished config file to `config/config/yaml` in your `iambic-templates` repository. Once this is written to disk, your repository should resemble this folder structure:
 
-<!-- #TODO config/config/yaml or config/config.yaml? Also below. Is there conflict if  -->
 
 ```bash
 $ tree
@@ -137,7 +102,7 @@ aws:
   accounts:
     - account_name: "main"
       account_id: "123456789012"
-      # aws_profile: 'profile_name' # Optional. If not provided, the default profile will be used
+      # aws_profile: 'profile_name' # Optional. If not provided, the default profile will be used. if the AWS_PROFILE environment variable is specified, it will be used.
       # assume_role_arn: 'arn:aws:iam::123456:role/IambicSpokeRole' # Optional. The role assumed using credentials provided by `aws_profile`
 ```
 

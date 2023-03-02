@@ -11,6 +11,7 @@ import boto3
 import botocore
 import questionary
 from botocore.exceptions import ClientError, NoCredentialsError
+
 from iambic.config.dynamic_config import (
     CURRENT_IAMBIC_VERSION,
     Config,
@@ -245,9 +246,9 @@ class ConfigurationWizard:
             identity_arn = get_identity_arn(default_caller_identity)
             if questionary.confirm(
                 f"IAMbic detected you are using {identity_arn} for AWS access.\n"
-                f"This role will require the ability to create"
+                f"This identity will require the ability to create"
                 f"CloudFormation stacks, stack sets, and stack set instances.\n"
-                f"Would you like to use this role?"
+                f"Would you like to use this identity?"
             ).ask():
                 self.caller_identity = default_caller_identity
             else:
@@ -347,7 +348,7 @@ class ConfigurationWizard:
                 f"Unable to detect default AWS credentials or "
                 f"they are not for the Hub Account ({self.hub_account_id}).\n"
                 f"Please specify the profile to use with access to the Hub Account.\n"
-                f"This role will require the ability to create "
+                f"This identity will require the ability to create "
                 f"CloudFormation stacks, stack sets, and stack set instances."
             )
 
