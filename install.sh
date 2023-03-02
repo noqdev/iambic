@@ -43,8 +43,8 @@ echo
 
 echo "Setting up /usr/local/bin/iambic to launch the IAMbic docker container"
 ask_sudo
-sudo echo "#!/bin/bash" > /usr/local/bin/iambic
-sudo echo "${DOCKER_CMD}" >> /usr/local/bin/iambic
+echo "#!/bin/bash" | sudo tee /usr/local/bin/iambic &>/dev/null
+echo "${DOCKER_CMD}" | sudo tee /usr/local/bin/iambic &>/dev/null
 sudo chmod +x /usr/local/bin/iambic
 
 echo "Caching the iambic docker container, this might take a minute"
