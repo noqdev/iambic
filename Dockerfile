@@ -36,7 +36,7 @@ WORKDIR ${FUNCTION_DIR}/docs/web
 RUN yarn \
  && yarn install --frozen-lockfile
 
-WORKDIR ${IAMBIC_REPO_DIR}
+WORKDIR ${FUNCTION_DIR}
 
 ENV PYTHONPATH=${PYTHONPATH}:${FUNCTION_DIR}/.local/lib/python3.11/site-packages
 ENV IAMBIC_WEB_APP_DIR=${FUNCTION_DIR}/docs/web
