@@ -23,7 +23,7 @@ EOF
 
 ### Using IAMbic
 
-Firs you'll need to configure the AWS credentials, then you can select your preferred method of installation: shell script or Docker, 
+Firs you'll need to configure the AWS credentials, then you can select your preferred method of installation: shell script or Docker,
 
 #### Configure IAM credentials
 
@@ -49,13 +49,18 @@ You can also [install the wheel](/technical_reference/installation/install_via_t
 
 ### Configuring IAMbic
 
+We recommend using an AWS IAM identity (user or role) with administrative privileges
+to use the Iambic Setup Wizard. Alternatively, you'll need the permissions specified [here](/technical_reference/aws_permissions_for_setup_wizard)
+in order to proceed..
+
 Run `iambic setup` command to launch the [Configuration Wizard](/how_to_guides/configure_iambic_with_wizard).
+
 Alternatively, you can [create the configuration by hand](/how_to_guides/manually_create_the_configuration).
 
 
 ### Next Steps
 
-Now that you have IAMbic installed and configured, you're ready to move on to the next steps. At this point, your experience will vary depending on the goals you want to achieve. You may configure any number of these identitiy providers to work with IAMbic. 
+Now that you have IAMbic installed and configured, you're ready to move on to the next steps. At this point, your experience will vary depending on the goals you want to achieve. You may configure any number of these identitiy providers to work with IAMbic.
 
 - [Continue with AWS IAM](./aws)
 - [Continue with Okta Organizations](./okta)
