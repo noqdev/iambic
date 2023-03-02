@@ -23,7 +23,7 @@ EOF
 
 ### Using IAMbic
 
-Firs you'll need to configure the AWS credentials, then you can select your preferred method of installation: shell script or Docker, 
+Firs you'll need to configure the AWS credentials, then you can select your preferred method of installation: shell script or Docker,
 
 #### Configure IAM credentials
 
@@ -38,7 +38,7 @@ If you want to use our install script to install iambic, you can use this comman
 * [Setup your AWS profile](./install_and_configure#configure-iam-credentials)
 * Download and install iambic:
 ```bash
-curl https://iambic.org/scripts/install.sh | sudo bash
+curl https://iambic.org/scripts/install.sh | bash
 ```
 
 Note: we require sudo because we are installing the script `iambic` into `/usr/local/bin/` of your file system to ensure it is in your path.
@@ -55,7 +55,7 @@ Alternatively, you can [create the configuration by hand](/how_to_guides/manuall
 
 ### Next Steps
 
-Now that you have IAMbic installed and configured, you're ready to move on to the next steps. At this point, your experience will vary depending on the goals you want to achieve. You may configure any number of these identitiy providers to work with IAMbic. 
+Now that you have IAMbic installed and configured, you're ready to move on to the next steps. At this point, your experience will vary depending on the goals you want to achieve. You may configure any number of these identitiy providers to work with IAMbic.
 
 - [Continue with AWS IAM](./aws)
 - [Continue with Okta Organizations](./okta)

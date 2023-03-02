@@ -1,10 +1,12 @@
 # Check if docker is installed
 
-if [[ `id -u` > 0 ]]; then
-    echo "This script requires root privileges to install iambic in /usr/local/bin/; it also requires docker to be installed and running."
-    echo "Please run this script as root or with sudo. For example: curl https://iambic.org/scripts/install.sh | sudo bash"
-    exit
-fi
+
+function ask_sudo() {
+  if ! sudo -n true 2>/dev/null; then
+    echo -e "Please enter your sudo password to create /usr/local/bin/iambic.\n"
+    sudo -v
+  fi
+}
 
 if ! command -v docker &> /dev/null
 then
@@ -40,9 +42,10 @@ DOCKER_CMD="docker run -w /templates -it -u \$(id -u):\$(id -g) -v \${HOME}/.aws
 echo
 
 echo "Setting up /usr/local/bin/iambic to launch the IAMbic docker container"
-echo "#!/bin/bash" > /usr/local/bin/iambic
-echo "${DOCKER_CMD}" >> /usr/local/bin/iambic
-chmod +x /usr/local/bin/iambic
+ask_sudo
+sudo echo "#!/bin/bash" > /usr/local/bin/iambic
+sudo echo "${DOCKER_CMD}" >> /usr/local/bin/iambic
+sudo chmod +x /usr/local/bin/iambic
 
 echo "Caching the iambic docker container, this might take a minute"
 $( which docker ) pull ${ECR_PATH}
