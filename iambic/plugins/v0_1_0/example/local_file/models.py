@@ -9,6 +9,8 @@ from iambic.core.models import (
     BaseModel,
     BaseTemplate,
     ExpiryModel,
+    ProposedChange,
+    ProposedChangeType,
     TemplateChangeDetails,
 )
 
@@ -53,5 +55,10 @@ class ExampleLocalFileTemplate(BaseTemplate, ExpiryModel):
             resource_type=self.template_type,
             template_path=self.file_path,
         )
-        template_changes.proposed_changes = []
+        if self.delete:
+            template_changes.proposed_changes = [
+                ProposedChange(change_type=ProposedChangeType.DELETE)
+            ]
+        else:
+            template_changes.proposed_changes = []
         return template_changes
