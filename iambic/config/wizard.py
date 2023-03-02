@@ -198,7 +198,8 @@ class ConfigurationWizard:
             self.boto3_session = boto3.Session(region_name=self.default_region)
         except Exception as exc:
             log.error(f"Unable to access your AWS account: {exc}")
-            self.boto3_session = None
+            sys.exit(1)
+            
         self.autodetected_org_settings = {}
         self.existing_role_template_map = {}
         self.aws_account_map = {}
@@ -216,17 +217,13 @@ class ConfigurationWizard:
         else:
             self.hub_account_id = None
 
-        if self.boto3_session:
-            try:
-                default_caller_identity = self.boto3_session.client(
-                    "sts"
-                ).get_caller_identity()
-                caller_arn = get_identity_arn(default_caller_identity)
-                default_hub_account_id = caller_arn.split(":")[4]
-            except (AttributeError, IndexError, NoCredentialsError, ClientError):
-                default_hub_account_id = None
-                default_caller_identity = {}
-        else:
+        try:
+            default_caller_identity = self.boto3_session.client(
+                "sts"
+            ).get_caller_identity()
+            caller_arn = get_identity_arn(default_caller_identity)
+            default_hub_account_id = caller_arn.split(":")[4]
+        except (AttributeError, IndexError, NoCredentialsError, ClientError):
             default_hub_account_id = None
             default_caller_identity = {}
 
@@ -332,18 +329,15 @@ class ConfigurationWizard:
                 os.remove(self.config_path)
                 sys.exit(1)
 
-        if self.boto3_session:
-            with contextlib.suppress(ClientError, NoCredentialsError):
-                self.autodetected_org_settings = self.boto3_session.client(
-                    "organizations"
-                ).describe_organization()["Organization"]
+        with contextlib.suppress(ClientError, NoCredentialsError):
+            self.autodetected_org_settings = self.boto3_session.client(
+                "organizations"
+            ).describe_organization()["Organization"]
 
     def set_aws_profile_name(
         self, question_text: str = None, allow_none: bool = False
     ) -> Union[str, None]:
-        available_profiles = []
-        if self.boto3_session:
-            available_profiles = self.boto3_session.available_profiles
+        available_profiles = self.boto3_session.available_profiles
         if allow_none:
             available_profiles.insert(0, "None")
 
@@ -408,11 +402,10 @@ class ConfigurationWizard:
             self.set_boto3_session()
 
         self.profile_name = profile_name
-        if self.boto3_session:
-            with contextlib.suppress(ClientError, NoCredentialsError):
-                self.autodetected_org_settings = self.boto3_session.client(
-                    "organizations"
-                ).describe_organization()["Organization"]
+        with contextlib.suppress(ClientError, NoCredentialsError):
+            self.autodetected_org_settings = self.boto3_session.client(
+                "organizations"
+            ).describe_organization()["Organization"]
 
     def get_boto3_session_for_account(self, account_id: str):
         if account_id == self.hub_account_id:
@@ -424,10 +417,7 @@ class ConfigurationWizard:
                         "Please specify the profile to use to access to the AWS Account.",
                         allow_none=False,
                     )
-            if self.boto3_session:
-                return self.boto3_session, self.profile_name
-            else:
-                return None, self.profile_name
+            return self.boto3_session, self.profile_name
         else:
             profile_name = self.set_aws_profile_name(
                 "Please specify the profile to use to access to the AWS Account.\n"
