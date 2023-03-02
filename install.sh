@@ -41,10 +41,17 @@ DOCKER_CMD="#!/bin/bash
 
 ENV_VAR_ARGS=\"\"
 for var in \$(env | grep ^AWS_ | cut -d= -f1); do
-  if [ -n \"\${!var}\" ]; then
+  if [[ \$var == \"AWS_SHARED_CREDENTIALS_FILE\" ]]; then
+    continue
+  elif [[ \$var == \"AWS_CONFIG_FILE\" ]]; then
+    continue
+  elif [ -n \"\${!var}\" ]; then
     ENV_VAR_ARGS=\"\$ENV_VAR_ARGS -e \$var=\${!var}\"
   fi
 done
+
+ENV_VAR_ARGS=\"\$ENV_VAR_ARGS -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials\"
+ENV_VAR_ARGS=\"\$ENV_VAR_ARGS -e AWS_CONFIG_FILE=/app/.aws/config\"
 
 docker run -w /templates -it -u \$(id -u):\$(id -g) -v \${HOME}/.aws:/app/.aws \$ENV_VAR_ARGS --mount \"type=bind,src=\$(pwd),dst=/templates\"  public.ecr.aws/o4z3c2v2/iambic:latest \"\$@\""
 
