@@ -7,10 +7,6 @@ from typing import TYPE_CHECKING, List, Optional, Union
 
 import boto3
 import botocore
-from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, constr, validator
-from ruamel.yaml import YAML, yaml_object
-
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -38,6 +34,9 @@ from iambic.plugins.v0_1_0.aws.utils import (
     legacy_paginated_search,
     set_org_account_variables,
 )
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Field, constr, validator
+from ruamel.yaml import YAML, yaml_object
 
 yaml = YAML()
 
@@ -198,9 +197,8 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
             except Exception as err:
                 log.warning(err)
 
-        if self.hub_role_arn and self.hub_role_arn != get_current_role_arn(
-            session.client("sts")
-        ):
+        sts_client = session.client("sts")
+        if self.hub_role_arn and self.hub_role_arn != get_current_role_arn(sts_client):
             boto3_session = await create_assume_role_session(
                 session,
                 self.hub_role_arn,

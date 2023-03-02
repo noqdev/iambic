@@ -8,11 +8,14 @@ toc_max_heading_level: 5
 
 The configuration file is written in YAML and needs to be created before IAMbic can be used the first time.
 It stores all the information about your environment and provides credentials to cloud services and GitHub.
-You can use the [wizard](configure_iambic_with_wizard) to quickly start creating your configuration file.
+We recommend that you use the [Setup Wizard](configure_iambic_with_wizard) to quickly start
+creating your configuration file.
 
-This document provides an overview of the YAML configuration for NOQ::Core::Config.
-This configuration is used to specify AWS accounts and organizations that IAMbic has access to, via [Hub and Spoke roles](/technical_reference/aws_hub_and_spoke_roles).
-
+This document provides an overview of the YAML configuration for Noq's core configuration,
+which has `template_type: NOQ::Core::Config`
+.
+This configuration is used to specify AWS accounts and organizations that IAMbic has access to,
+via [Hub and Spoke roles](/technical_reference/aws_hub_and_spoke_roles).
 
 The following is an example configuration for AWS Organizations:
 
@@ -31,22 +34,32 @@ aws:
       org_id: o-yabc0a10zs
 ```
 
-### Template Type
-The template_type field specifies the type of template, which is NOQ::Core::Config.
+For information about the Iambic configuration model, please visit
+[this link](https://github.com/noqdev/iambic/blob/main/iambic/config/dynamic_config.py#L96).
 
-### Extends
-The extends field describes the parent class or template that NOQ::Core::Config extends.
+### template_type
+The template_type field specifies the type of template, which is `NOQ::Core::Config`.
 
-### Version
+### extends
+The extends field can be used to merge an additional configuration into the current configuration.
+This is useful if you want to merge secrets from a separate configuration file into the current configuration,
+or if you want to leverage AWS Secrets Manager to store secrets.
+
+### version
 The version field specifies the version number of the YAML configuration.
 
-### AWS
-The aws field is used to specify AWS accounts and organizations that IAMbic has access to. This field contains two nested lists: organizations and accounts.
+### aws
+The aws field is used to specify AWS accounts and organizations that IAMbic has access to.
+This field can contain two nested lists: `organizations` and/or `accounts`.
 
-### Organizations
-The organizations list is used to specify one or more organization entities within AWS. IAMbic can inspect organization entities to parse all attached accounts.
+### aws.organizations
+The organizations list is used to specify one or more organization entities within AWS.
+ IAMbic can inspect organization entities to parse all attached accounts.
 
-### Accounts
+### aws.accounts
 The accounts list is used to specify one or more AWS accounts that IAMbic should synchronize.
 
-For more information about hub and spoke roles, see the [Hub and Spoke roles](/technical_reference/aws_hub_and_spoke_roles) documentation.
+
+
+
+For more information about hub and spoke roles for AWS, see the [Hub and Spoke roles](/technical_reference/aws_hub_and_spoke_roles) documentation.

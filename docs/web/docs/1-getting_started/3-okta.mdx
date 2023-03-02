@@ -2,20 +2,21 @@
 title: Okta
 ---
 
-Configure Okta
+In this tutorial, you will configure IAMbic to manage an Okta Organization, and then
+practice using IAMbic to to create, manipulate, and expire a test group and test app assignment.
 
-In this tutorial, you will configure IAMbic to manage an Okta Organization, and then practice using IAMbic to to create, manipulate <!-- #TODO and expire? --> a test group. These are the steps you will complete.
-
-<!-- #TODO we can make the wordning nearly identical with the google setup page, if appropriate -->
 #### Setup
 1. Create a basic Okta configuration for Iambic
-2. Import existing Okta Groups into your IAMbic templates repository
+1. Import existing Okta Groups into your IAMbic templates repository
 
 #### Practice
-3. Create an Okta Group with one or more users
-4. Add a user to the group
-5. Provide temporary ("break-glass") access to an Okta Group
-6. <!-- #TODO do we want to expire the group also? And is the above actually a breakglass situation? -->
+1. Create an Okta Group with one or more users
+1. Add a user to the group
+1. Provide temporary ("break-glass") access to an Okta Group
+1. Expire a group membership
+1. Expire a group
+1. Create an application assignment
+1. Provide temporary ("break-glass") access to an application
 
 <!-- #TODO As with the google page, these headings should link to, and match, headings below -->
 
@@ -23,13 +24,14 @@ In this tutorial, you will configure IAMbic to manage an Okta Organization, and 
 
 Before you begin, you will need the following:
 
-* A local Git repository to store your IAMbic templates (See [Getting Started](/getting_started/index.html) for guidance on setting this up)
+* A local Git repository to store your IAMbic templates (See [Install and Configure](/getting_started/install_and_configure) for guidance on setting this up)
 * Administrative access to an existing Okta organization. If you do not have one, you can
 create a developer organization at [developer.okta.com](https://developer.okta.com/).
-* The following environment variables set in the terminal you will be using to run Iambic commands.
-  These are only needed for the duration of this tutorial. They are not required for the normal usage of Iambic:
-<!-- we probably want copy icons here  -->
 
+We'll start by setting environment variables to make it easier to run the commands in this tutorial.
+These environment variables will be used in the subsequent commands on this page, and aren't needed
+for regular IAMbic usage. In a production environment, we recommend storing these values
+in AWS Secrets Manager and extending the IAMbic configuration to load them during runtime.
 
 ```bash
 export EMAIL=<your_okta_email_address>
@@ -47,11 +49,11 @@ signing in to Okta.
 
 From within Okta
 1. Click on Security
-2. Click on API
-3. Click on Tokens
-4. Click on "Create Token"
-5. Create a token for Iambic. This token will be used to authenticate Iambic with Okta.
-6. Copy the value of the token.
+1. Click on API
+1. Click on Tokens
+1. Click on "Create Token"
+1. Create a token for Iambic. This token will be used to authenticate Iambic with Okta.
+1. Copy the value of the token.
 
 
 <details>

@@ -27,8 +27,6 @@ RUN mkdir -p ${FUNCTION_DIR}/iambic \
  && curl -sL https://dl.yarnpkg.com/rpm/yarn.repo -o /etc/yum.repos.d/yarn.repo \
  && yum install nodejs npm yarn -y
 
-
-
 ENV IAMBIC_REPO_DIR /templates
 
 VOLUME [ "/templates" ]
