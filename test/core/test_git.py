@@ -6,7 +6,6 @@ import tempfile
 
 import git
 import pytest
-
 from iambic.core import git as the_git_module
 from iambic.core.git import (
     GitDiff,

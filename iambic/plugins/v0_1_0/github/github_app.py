@@ -17,9 +17,10 @@ import github
 import jwt
 from botocore.exceptions import ClientError
 
-from iambic.core.git import get_remote_default_branch
 import iambic.core.utils
 import iambic.plugins.v0_1_0.github.github
+
+# from iambic.core.git import get_remote_default_branch
 from iambic.core.logger import log
 from iambic.plugins.v0_1_0.github.github import (
     HandleIssueCommentReturnCode,

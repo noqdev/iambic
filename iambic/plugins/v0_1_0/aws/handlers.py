@@ -6,12 +6,11 @@ import json
 from typing import TYPE_CHECKING, Union
 
 import boto3
-
 from iambic.config.dynamic_config import ExtendsConfig, ExtendsConfigKey
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
-from iambic.core.models import BaseTemplate, TemplateChangeDetails
+from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
 from iambic.core.parser import load_templates
 from iambic.core.utils import gather_templates, yaml
 from iambic.plugins.v0_1_0.aws.event_bridge.models import (
@@ -22,21 +21,26 @@ from iambic.plugins.v0_1_0.aws.event_bridge.models import (
     UserMessageDetails,
 )
 from iambic.plugins.v0_1_0.aws.iam.group.template_generation import (
+    collect_aws_groups,
     generate_aws_group_templates,
 )
 from iambic.plugins.v0_1_0.aws.iam.policy.template_generation import (
+    collect_aws_managed_policies,
     generate_aws_managed_policy_templates,
 )
 from iambic.plugins.v0_1_0.aws.iam.role.template_generation import (
+    collect_aws_roles,
     generate_aws_role_templates,
 )
 from iambic.plugins.v0_1_0.aws.iam.user.template_generation import (
+    collect_aws_users,
     generate_aws_user_templates,
 )
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetTemplate,
 )
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation import (
+    collect_aws_permission_sets,
     generate_aws_permission_set_templates,
 )
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
@@ -97,13 +101,14 @@ async def load(config: AWSConfig) -> AWSConfig:
 
 
 async def apply(
-    config: AWSConfig, templates: list[BaseTemplate]
+    config: AWSConfig, templates: list[BaseTemplate], remote_worker=None
 ) -> list[TemplateChangeDetails]:
     """
     The apply callable for the AWS IambicPlugin class.
 
     :param config: The config object.
     :param templates: The list of templates to apply.
+    :param remote_worker: The remote worker to use for applying templates.
     """
     if any(
         isinstance(template, AWSIdentityCenterPermissionSetTemplate)
@@ -122,18 +127,131 @@ async def apply(
     ]
 
 
-async def import_aws_resources(
-    config: AWSConfig, base_output_dir: str, messages: list = None
+async def import_service_resources(
+    exe_message: ExecutionMessage,
+    config: AWSConfig,
+    base_output_dir: str,
+    service_name: str,
+    async_collector_callables: list,
+    async_generator_callables: list,
+    messages: list = None,
+    remote_worker=None,
 ):
-    await config.set_identity_center_details()
+    base_runner = bool(not exe_message.metadata)
+    if not exe_message.metadata:
+        exe_message = exe_message.copy()
+        exe_message.metadata = dict(service=service_name)
 
-    await asyncio.gather(
-        generate_aws_permission_set_templates(config, base_output_dir, messages),
-        generate_aws_role_templates(config, base_output_dir, messages),
+    for async_collector_callable in async_collector_callables:
+        tasks = []
+
+        for account in config.accounts:
+            task_message = exe_message.copy()
+
+            if (
+                task_message.provider_id
+                and task_message.provider_id != account.account_id
+            ):
+                continue
+            elif not task_message.provider_id:
+                task_message.provider_id = account.account_id
+
+            tasks.append(
+                async_collector_callable(
+                    task_message, config, base_output_dir, messages
+                )
+            )
+
+        if tasks:
+            if ctx.use_remote and remote_worker and not messages:
+                # TODO: Update to use the remote_worker
+                await asyncio.gather(*tasks)
+                # TODO: Add a process to gather status messages from the remote worker
+            else:
+                if remote_worker:
+                    log.warning(
+                        "The remote worker definition must be defined in the config to run remote execution."
+                    )
+                await asyncio.gather(*tasks)
+
+    if base_runner:
+        await asyncio.gather(
+            *[
+                async_generator_callable(exe_message, config, base_output_dir, messages)
+                for async_generator_callable in async_generator_callables
+            ]
+        )
+
+
+async def import_identity_center_resources(
+    exe_message: ExecutionMessage,
+    config: AWSConfig,
+    base_output_dir: str,
+    messages: list = None,
+    remote_worker=None,
+):
+    identity_center_config = config.copy()
+    await identity_center_config.set_identity_center_details(exe_message.provider_id)
+    identity_center_config.accounts = [
+        account
+        for account in identity_center_config.accounts
+        if account.identity_center_details
+    ]
+    await import_service_resources(
+        exe_message,
+        identity_center_config,
+        base_output_dir,
+        "identity_center",
+        [collect_aws_permission_sets],
+        [generate_aws_permission_set_templates],
+        messages,
+        remote_worker,
     )
-    await generate_aws_user_templates(config, base_output_dir, messages)
-    await generate_aws_group_templates(config, base_output_dir, messages)
-    await generate_aws_managed_policy_templates(config, base_output_dir, messages)
+
+
+async def import_aws_resources(
+    exe_message: ExecutionMessage,
+    config: AWSConfig,
+    base_output_dir: str,
+    messages: list = None,
+    remote_worker=None,
+):
+    exe_message = exe_message.copy()
+    exe_message.provider_type = "aws"
+    tasks = []
+
+    if not exe_message.metadata or exe_message.metadata["service"] == "identity_center":
+        tasks.append(
+            import_identity_center_resources(
+                exe_message, config, base_output_dir, messages, remote_worker
+            )
+        )
+
+    if not exe_message.metadata or exe_message.metadata["service"] == "iam":
+        tasks.append(
+            import_service_resources(
+                exe_message,
+                config,
+                base_output_dir,
+                "iam",
+                [
+                    collect_aws_roles,
+                    collect_aws_groups,
+                    collect_aws_users,
+                    collect_aws_managed_policies,
+                ],
+                [
+                    generate_aws_role_templates,
+                    generate_aws_user_templates,
+                    generate_aws_group_templates,
+                    generate_aws_managed_policy_templates,
+                ],
+                messages,
+                remote_worker,
+            )
+        )
+
+    await asyncio.gather(*tasks)
 
 
 async def detect_changes(  # noqa: C901

@@ -27,22 +27,22 @@ import aiofiles
 import dateparser
 from deepdiff.model import PrettyOrderedSet
 from git import Repo
-from jinja2 import BaseLoader, Environment
-from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, validate_model, validator
-from pydantic.fields import ModelField
-
 from iambic.core.context import ExecutionContext
-from iambic.core.iambic_enum import Command, IambicManaged, ExecutionStatus
+from iambic.core.iambic_enum import Command, ExecutionStatus, IambicManaged
 from iambic.core.logger import log
 from iambic.core.utils import (
     apply_to_provider,
     create_commented_map,
+    get_writable_directory,
     snake_to_camelcap,
     sort_dict,
     transform_comments,
     yaml,
 )
+from jinja2 import BaseLoader, Environment
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Field, validate_model, validator
+from pydantic.fields import ModelField
 
 if TYPE_CHECKING:
     from iambic.config.dynamic_config import Config
@@ -570,24 +570,29 @@ class ExecutionMessage(PydanticBaseModel):
             path_params.append(path_param)
         if path_param := self.metadata or as_regex:
             if path_param != as_regex:
-                path_param = md5(json.dumps(path_param, sort_keys=True)).hexdigest()
+                path_param = md5(
+                    json.dumps(path_param, sort_keys=True).encode("utf-8")
+                ).hexdigest()
             path_params.append(path_param)
 
-        file_path = os.path.join(os.path.expanduser("~/.iambic"), *path_params)
+        file_path = os.path.join(get_writable_directory(), ".iambic", *path_params)
         if not as_regex:
             os.makedirs(file_path, exist_ok=True)
 
         return file_path
 
-    def get_file_path(self, resource_type: str, file_name_and_extension: str) -> str:
-        file_path = os.path.join(self.get_execution_dir(), resource_type)
-        os.makedirs(file_path, exist_ok=True)
-        return os.path.join(file_path, file_name_and_extension)
+    def get_directory(self, *path_dirs) -> str:
+        dir_path = os.path.join(self.get_execution_dir(), *path_dirs)
+        os.makedirs(dir_path, exist_ok=True)
+        return dir_path
+
+    def get_file_path(self, *path_dirs, file_name_and_extension: str) -> str:
+        return os.path.join(self.get_directory(*path_dirs), file_name_and_extension)
 
     async def get_sub_exe_files(
         self,
-        resource_type: str,
-        file_name_and_extension: str,
+        *path_dirs,
+        file_name_and_extension: str = None,
         flatten_results: bool = False,
     ) -> List[dict]:
         async def _get_file_contents(file_path: str) -> dict:
@@ -597,7 +602,7 @@ class ExecutionMessage(PydanticBaseModel):
         matching_files = glob.glob(
             os.path.join(
                 self.get_execution_dir(True),
-                resource_type or "**",
+                *path_dirs if path_dirs else "**",
                 file_name_and_extension or "**",
             ),
             recursive=True,
@@ -616,4 +621,3 @@ class ExecutionMessage(PydanticBaseModel):
 class ExecutionResponse(ExecutionMessage):
     status: ExecutionStatus
     errors: Optional[list[str]]
-

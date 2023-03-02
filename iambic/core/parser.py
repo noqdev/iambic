@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from pydantic import ValidationError
+
 from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate
 from iambic.core.utils import transform_comments, yaml
-from pydantic import ValidationError
 
 
 def load_templates(
