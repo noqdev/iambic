@@ -8,6 +8,8 @@ from unittest.mock import AsyncMock, patch
 
 import git
 import pytest
+from pydantic import BaseModel
+
 from iambic.config.dynamic_config import load_config
 from iambic.core import git as the_git_module
 from iambic.core.context import ExecutionContext
@@ -15,7 +17,6 @@ from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.models import BaseTemplate, ExpiryModel, TemplateChangeDetails
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.request_handler.git_apply import apply_git_changes
-from pydantic import BaseModel
 
 TEST_TEMPLATE_YAML = """template_type: NOQ::Test
 name: test_template

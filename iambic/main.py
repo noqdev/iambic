@@ -107,7 +107,7 @@ def run_detect(repo_dir: str):
     "repo_dir",
     required=True,
     type=click.Path(exists=True),
-    default=str(pathlib.Path.cwd()),
+    default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo base directory that should contain the templates. Example: ~/iambic/templates",
 )
 def clone_repos(repo_dir: str):

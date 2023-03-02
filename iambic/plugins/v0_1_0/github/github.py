@@ -557,7 +557,9 @@ def _handle_expire(repo_url: str, default_branch: str) -> None:
             log.info("handle_expire ran", **log_params)
 
             default_branch = get_remote_default_branch(repo)
-            repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()  # FIXME
+            repo.remotes.origin.push(
+                refspec=f"HEAD:{default_branch}"
+            ).raise_if_error()  # FIXME
         else:
             log.info("handle_expire no changes")
     except Exception as e:
