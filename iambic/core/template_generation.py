@@ -862,6 +862,12 @@ def merge_model(
                         If not found in the existing value, add the new model to the list
                         If not found in the new value, remove the existing model from the list
                     """
+
+                    # type conversion due to field allow mixed types
+                    if isinstance(new_value, str):
+                        _cls = type(inner_element)
+                        new_value = [_cls.new_instance_from_string(new_value)]
+
                     new_value = merge_access_model_list(
                         new_value, existing_value, all_provider_children
                     )
@@ -880,11 +886,24 @@ def merge_model(
             else:
                 setattr(merged_model, key, new_value)
         elif isinstance(existing_value, BaseModel):
-            setattr(
-                merged_model,
-                key,
-                merge_model(new_value, existing_value, all_provider_children),
-            )
+
+            if isinstance(new_value, BaseModel):
+                setattr(
+                    merged_model,
+                    key,
+                    merge_model(new_value, existing_value, all_provider_children),
+                )
+            elif isinstance(new_value, list):
+                # handling conversion from existing basemodel type to incoming list type
+                setattr(
+                    merged_model,
+                    key,
+                    merge_model_list(
+                        new_value, [existing_value], all_provider_children
+                    ),
+                )
+            else:
+                raise NotImplementedError
         elif key not in iambic_fields:
             setattr(merged_model, key, new_value)
     return merged_model
