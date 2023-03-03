@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import tempfile
-from unittest.mock import patch
+from unittest.mock import PropertyMock, patch
 
 import pytest
 
@@ -32,6 +32,7 @@ def issue_comment_git_apply_context():
         "run_attempt": "1",
         "token": "fake-token",
         "sha": "fake-sha",
+        "ref": "fake-branch",
         "repository": "example.com/iambic-templates",
         "event_name": "issue_comment",
         "event": {
@@ -56,6 +57,7 @@ def issue_comment_git_plan_context():
         "run_attempt": "1",
         "token": "fake-token",
         "sha": "fake-sha",
+        "ref": "fake-branch",
         "repository": "example.com/iambic-templates",
         "event_name": "issue_comment",
         "event": {
@@ -270,3 +272,40 @@ def test_issue_comment_with_git_plan(
     handle_issue_comment(mock_github_client, issue_comment_git_plan_context)
     assert mock_lambda_run_handler.called
     assert not mock_pull_request.merge.called
+
+
+# verify if there are changes during git_apply. those changes are push
+# back into the PR
+def test_issue_comment_with_clean_mergeable_state_with_additional_commits(
+    mock_github_client,
+    issue_comment_git_apply_context,
+    mock_lambda_run_handler,
+    mock_repository,
+):
+    mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
+    mock_pull_request.mergeable_state = MERGEABLE_STATE_CLEAN
+    mock_pull_request.head.sha = issue_comment_git_apply_context["sha"]
+    mock_pull_request.head.ref = issue_comment_git_apply_context["ref"]
+    pre_sha = "pre_sha"
+    post_sha = "post_sha"
+
+    # we are mocking how the sha has changed in the local checkout repo
+    type(mock_repository.clone_from.return_value.head.commit).hexsha = PropertyMock(
+        side_effect=[
+            pre_sha,
+            post_sha,
+        ]
+    )
+
+    handle_issue_comment(mock_github_client, issue_comment_git_apply_context)
+    assert mock_lambda_run_handler.called
+
+    # verify we did push back the changes to remote
+    pull_request_branch_name = mock_pull_request.head.ref
+    refspec = f"HEAD:{pull_request_branch_name}"
+    mock_repository.clone_from.return_value.remotes.origin.push.assert_called_with(
+        refspec=refspec
+    )
+
+    # verify we are merging with the latest local repo sha
+    mock_pull_request.merge.assert_called_with(sha=post_sha)
