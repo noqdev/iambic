@@ -894,7 +894,7 @@ def merge_model(
                     merge_model(new_value, existing_value, all_provider_children),
                 )
             elif isinstance(new_value, list):
-                # handling conversion from existing basemodel type to incoming list type
+                # handling conversion from existing BaseModel type to incoming list type
                 setattr(
                     merged_model,
                     key,
