@@ -15,6 +15,11 @@ jobs:
         run: |
           python3.10 -m venv env
           . env/bin/activate && pip install poetry && poetry install && make test
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./cov_unit_tests.xml
+          flags: unit_tests
   run-functional-test:
     # functional test requires various web services
     runs-on: self-hosted
@@ -51,3 +56,8 @@ jobs:
         id: run-functional-test
         run: |
           . env/bin/activate && make functional_test
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./cov_functional_tests.xml
+          flags: functional_tests
