@@ -491,7 +491,9 @@ class BaseTemplate(
         log.info("Deleting template file", file_path=self.file_path)
         try:
             repo = Repo(self.file_path, search_parent_directories=True)
-            repo.index.remove([self.file_path], working_tree=True)
+            # why force=True? Expire could have modified the local contents
+            # without force=True, git rm would not be able to remove the file
+            repo.index.remove([self.file_path], working_tree=True, force=True)
         except Exception as e:
             log.error(
                 "Unable to remove file from local Git repo. Deleting manually",
