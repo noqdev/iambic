@@ -334,7 +334,7 @@ def handle_iambic_git_apply(
 
     try:
         # merge_sha is used when we trigger a merge
-        merge_sha = pull_request.merge_commit_sha
+        merge_sha = pull_request.head.sha
 
         repo = prepare_local_repo(
             repo_url, get_lambda_repo_path(), pull_request_branch_name
