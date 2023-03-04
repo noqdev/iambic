@@ -404,14 +404,26 @@ async def load_config(
     Returns:
     - Config: The configuration object created from the specified file.
     """
-    from iambic.config.templates import TEMPLATES
-
     log.info("Loading config...")
     config_path = str(
         config_path
     )  # Ensure it's a string in case it's a Path for pydantic
     config_dict = yaml.load(open(config_path))
     base_config = Config(file_path=config_path, **config_dict)
+    return await process_config(
+        base_config, config_path, config_dict, configure_plugins, approved_plugins_only
+    )
+
+
+async def process_config(
+    base_config: Config,
+    config_path,
+    config_dict,
+    configure_plugins: bool = True,
+    approved_plugins_only: bool = False,
+) -> Config:
+    from iambic.config.templates import TEMPLATES
+
     if approved_plugins_only:
         default_plugins = [
             plugin.location for plugin in Config.__fields__["plugins"].default

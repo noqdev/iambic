@@ -18,6 +18,7 @@ from iambic.config.dynamic_config import (
     ExtendsConfig,
     ExtendsConfigKey,
     load_config,
+    process_config,
 )
 from iambic.config.utils import (
     check_and_update_resource_limit,
@@ -199,7 +200,7 @@ class ConfigurationWizard:
         except Exception as exc:
             log.error(f"Unable to access your AWS account: {exc}")
             sys.exit(1)
-            
+
         self.autodetected_org_settings = {}
         self.existing_role_template_map = {}
         self.aws_account_map = {}
@@ -314,20 +315,14 @@ class ConfigurationWizard:
                 sys.exit(1)
         else:
             # Create a stubbed out config file to use for the wizard
-            config: Config = Config(
+            self.config_path = f"{self.repo_dir}/iambic_config.yaml"
+            base_config: Config = Config(
                 file_path=self.config_path, version=CURRENT_IAMBIC_VERSION
             )
-            config.write()
-            try:
-                self.config = await load_config(self.config_path)
-            except Exception as err:
-                log.error(
-                    "Error creating the configuration file",
-                    config_path=self.config_path,
-                    error=repr(err),
-                )
-                os.remove(self.config_path)
-                sys.exit(1)
+
+            self.config = await process_config(
+                base_config, self.config_path, base_config.dict()
+            )
 
         with contextlib.suppress(ClientError, NoCredentialsError):
             self.autodetected_org_settings = self.boto3_session.client(
