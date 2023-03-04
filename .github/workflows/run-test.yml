@@ -18,8 +18,9 @@ jobs:
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
         with:
-          files: ./cov_unit_tests.xml
+          files: cov_unit_tests.xml
           flags: unit_tests
+          token: ${{secrets.CODECOV_TOKEN}}
   run-functional-test:
     # functional test requires various web services
     runs-on: self-hosted
@@ -59,5 +60,6 @@ jobs:
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
         with:
-          files: ./cov_functional_tests.xml
+          files: cov_functional_tests.xml
           flags: functional_tests
+          token: ${{secrets.CODECOV_TOKEN}}
