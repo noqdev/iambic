@@ -18,6 +18,7 @@ from iambic.config.dynamic_config import (
     ExtendsConfig,
     ExtendsConfigKey,
     load_config,
+    process_config,
 )
 from iambic.config.utils import (
     check_and_update_resource_limit,
@@ -199,7 +200,7 @@ class ConfigurationWizard:
         except Exception as exc:
             log.error(f"Unable to access your AWS account: {exc}")
             sys.exit(1)
-            
+
         self.autodetected_org_settings = {}
         self.existing_role_template_map = {}
         self.aws_account_map = {}
@@ -212,7 +213,7 @@ class ConfigurationWizard:
 
         asyncio.run(self.set_config_details())
 
-        if self.config.aws:
+        if getattr(self.config, "aws", None):
             self.hub_account_id = self.config.aws.hub_role_arn.split(":")[4]
         else:
             self.hub_account_id = None
@@ -314,20 +315,14 @@ class ConfigurationWizard:
                 sys.exit(1)
         else:
             # Create a stubbed out config file to use for the wizard
-            config: Config = Config(
+            self.config_path = f"{self.repo_dir}/iambic_config.yaml"
+            base_config: Config = Config(
                 file_path=self.config_path, version=CURRENT_IAMBIC_VERSION
             )
-            config.write()
-            try:
-                self.config = await load_config(self.config_path)
-            except Exception as err:
-                log.error(
-                    "Error creating the configuration file",
-                    config_path=self.config_path,
-                    error=repr(err),
-                )
-                os.remove(self.config_path)
-                sys.exit(1)
+
+            self.config = await process_config(
+                base_config, self.config_path, base_config.dict()
+            )
 
         with contextlib.suppress(ClientError, NoCredentialsError):
             self.autodetected_org_settings = self.boto3_session.client(
@@ -437,7 +432,7 @@ class ConfigurationWizard:
     async def attempt_aws_account_refresh(self):
         self.aws_account_map = {}
 
-        if not self.config.aws:
+        if not getattr(self.config, "aws", None):
             return
 
         try:
@@ -1227,10 +1222,7 @@ class ConfigurationWizard:
         asyncio.run(self.save_and_deploy_changes(role_template))
 
     def run(self):  # noqa: C901
-        if "aws" not in self.config.__fields__:
-            log.info("The config wizard requires the IAMbic AWS plugin.")
-            return
-        elif not self.config.aws:
+        if not getattr(self.config, "aws", None):
             self.config.aws = AWSConfig()
 
         while True:
