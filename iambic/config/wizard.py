@@ -432,7 +432,7 @@ class ConfigurationWizard:
     async def attempt_aws_account_refresh(self):
         self.aws_account_map = {}
 
-        if not getattr(self.config, "aws", None):
+        if not self.config.aws:
             return
 
         try:
@@ -1222,7 +1222,10 @@ class ConfigurationWizard:
         asyncio.run(self.save_and_deploy_changes(role_template))
 
     def run(self):  # noqa: C901
-        if not getattr(self.config, "aws", None):
+        if "aws" not in self.config.__fields__:
+            log.info("The config wizard requires the IAMbic AWS plugin.")
+            return
+        elif not self.config.aws:
             self.config.aws = AWSConfig()
 
         while True:
