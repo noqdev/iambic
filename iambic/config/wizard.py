@@ -213,7 +213,7 @@ class ConfigurationWizard:
 
         asyncio.run(self.set_config_details())
 
-        if getattr(self.config, "aws", None):
+        if self.config.aws:
             self.hub_account_id = self.config.aws.hub_role_arn.split(":")[4]
         else:
             self.hub_account_id = None
