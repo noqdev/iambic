@@ -31,7 +31,10 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
     get_permission_set_users_and_groups,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
-from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3_resp
+from iambic.plugins.v0_1_0.aws.utils import (
+    get_sanitized_aws_account_map,
+    normalize_boto3_resp,
+)
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -371,7 +374,7 @@ async def generate_aws_permission_set_templates(
     base_output_dir: str,
     permission_set_messages: list[PermissionSetMessageDetails] = None,
 ):
-    aws_account_map = await get_aws_account_map(config)
+    aws_account_map = await get_sanitized_aws_account_map(config)
     existing_template_map = await get_existing_template_map(
         base_output_dir, AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
     )

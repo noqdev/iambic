@@ -7,7 +7,6 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import aiofiles
-
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.template_generation import (
@@ -34,7 +33,10 @@ from iambic.plugins.v0_1_0.aws.iam.role.utils import (
     list_roles,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
-from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3_resp
+from iambic.plugins.v0_1_0.aws.utils import (
+    get_sanitized_aws_account_map,
+    normalize_boto3_resp,
+)
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -393,7 +395,8 @@ async def generate_aws_role_templates(
     base_output_dir: str,
     role_messages: list[RoleMessageDetails] = None,
 ):
-    aws_account_map = await get_aws_account_map(config)
+    aws_account_map = await get_sanitized_aws_account_map(config)
+
     existing_template_map = await get_existing_template_map(
         base_output_dir, AWS_IAM_ROLE_TEMPLATE_TYPE
     )

@@ -16,7 +16,12 @@ from iambic.core.models import (
     ProposedChangeType,
     TemplateChangeDetails,
 )
-from iambic.core.utils import aio_wrapper, evaluate_on_provider, plugin_apply_wrapper
+from iambic.core.utils import (
+    aio_wrapper,
+    evaluate_on_provider,
+    plugin_apply_wrapper,
+    sanitize_string,
+)
 from iambic.plugins.v0_1_0.aws.iam.policy.models import PolicyStatement
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
     apply_account_assignments,
@@ -727,10 +732,14 @@ class AWSIdentityCenterPermissionSetTemplate(
             resource_type=self.resource_type, resource_id=self.resource_id
         )
 
+        valid_characters_re = r"[\w_+=,.@-]"
+
         for account in config.accounts:
             if not account.identity_center_details:
                 continue
-
+            account.account_name = sanitize_string(
+                account.account_name, valid_characters_re
+            )
             if evaluate_on_provider(self, account, context):
                 if context.execute:
                     log_str = "Applying changes to resource."
