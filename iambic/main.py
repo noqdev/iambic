@@ -9,7 +9,10 @@ import warnings
 import click
 
 from iambic.config.dynamic_config import Config, init_plugins, load_config
-from iambic.config.utils import resolve_config_template_path, check_and_update_resource_limit
+from iambic.config.utils import (
+    check_and_update_resource_limit,
+    resolve_config_template_path,
+)
 from iambic.config.wizard import ConfigurationWizard
 from iambic.core.context import ctx
 from iambic.core.git import clone_git_repos

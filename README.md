@@ -23,7 +23,7 @@ Please follow our [quick-start guide](http://iambic.org/getting_started/) to get
 
 ### IAMbic Development
 
-IAMbic is written in Python. We provide VSCode run configurations to make it easy to get started. Here is a quick guide: 
+IAMbic is written in Python. We provide VSCode run configurations to make it easy to get started. Here is a quick guide:
 (#TODO Are these the same topic? Say more about this guide...)
 
 ```bash
