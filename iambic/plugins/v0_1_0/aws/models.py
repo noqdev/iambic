@@ -7,10 +7,6 @@ from typing import TYPE_CHECKING, List, Optional, Union
 
 import boto3
 import botocore
-from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, constr, validator
-from ruamel.yaml import YAML, yaml_object
-
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -28,6 +24,7 @@ from iambic.core.utils import (
     NoqSemaphore,
     evaluate_on_provider,
     get_provider_value,
+    sanitize_string,
     sort_dict,
 )
 from iambic.plugins.v0_1_0.aws.utils import (
@@ -38,6 +35,9 @@ from iambic.plugins.v0_1_0.aws.utils import (
     legacy_paginated_search,
     set_org_account_variables,
 )
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Field, constr, validator
+from ruamel.yaml import YAML, yaml_object
 
 yaml = YAML()
 
@@ -702,7 +702,11 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
         log_params = dict(
             resource_type=self.resource_type, resource_id=self.resource_id
         )
+        valid_characters_re = r"[\w_+=,.@-]"
         for account in config.accounts:
+            account.account_name = sanitize_string(
+                account.account_name, valid_characters_re
+            )
             if evaluate_on_provider(self, account, context):
                 if context.execute:
                     log_str = "Applying changes to resource."

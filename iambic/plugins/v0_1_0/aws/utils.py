@@ -8,10 +8,9 @@ from typing import TYPE_CHECKING, Optional, Union
 
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
-
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
-from iambic.core.utils import aio_wrapper, camel_to_snake
+from iambic.core.utils import aio_wrapper, camel_to_snake, sanitize_string
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -268,6 +267,16 @@ async def get_aws_account_map(config: AWSConfig) -> dict:
         aws_account_map[aws_account.account_id] = aws_account
 
     return aws_account_map
+
+
+async def get_sanitized_aws_account_map(config: AWSConfig) -> dict:
+    aws_account_map = await get_aws_account_map(config)
+    sanitized_aws_account_map = {}
+    valid_characters_re = r"[\w_+=,.@-]"
+    for k, v in aws_account_map.items():
+        v.account_name = sanitize_string(v.account_name, valid_characters_re)
+        sanitized_aws_account_map[k] = v
+    return sanitized_aws_account_map
 
 
 async def create_assume_role_session(
