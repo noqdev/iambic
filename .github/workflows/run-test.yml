@@ -1,6 +1,9 @@
 name: Run test
 on:
   pull_request:
+  push:
+    branches: [main]
+    tags: ["*"]
 jobs:
   run-unit-test:
     runs-on: self-hosted
@@ -16,6 +19,7 @@ jobs:
           python3.10 -m venv env
           . env/bin/activate && pip install poetry && poetry install && make test
       - name: Upload coverage reports to Codecov
+        if: ${{ github.repository == 'noqdev/iambic' }}
         uses: codecov/codecov-action@v3
         with:
           files: cov_unit_tests.xml
