@@ -30,11 +30,11 @@ upload_docker:
 
 .PHONY: trivy_scan
 trivy_scan:
-	trivy image --output iambic.trivy.scan.txt --skip-files /app/docs/web/docs/getting_started/aws/aws.mdx --secret-config trivy-secret.yaml --severity HIGH,CRITICAL public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
+	trivy image --output iambic.trivy.scan.txt --timeout 15m --skip-files /app/docs/web/docs/getting_started/aws/aws.mdx --secret-config trivy-secret.yaml --severity HIGH,CRITICAL public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
 
 .PHONY: trivy_sbom
 trivy_sbom:
-	trivy image --format spdx-json --output iambic.sbom.json public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
+	trivy image --format spdx-json --timeout 15m --output iambic.sbom.json public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
 
 .PHONY: create_manifest
 create_manifest:
