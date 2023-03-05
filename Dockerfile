@@ -36,6 +36,8 @@ WORKDIR ${FUNCTION_DIR}/docs/web
 RUN yarn \
  && yarn install --frozen-lockfile
 
+RUN yarn cache clean
+
 WORKDIR ${FUNCTION_DIR}
 
 ENV PYTHONPATH=${PYTHONPATH}:${FUNCTION_DIR}/.local/lib/python3.11/site-packages
