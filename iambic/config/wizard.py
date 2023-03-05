@@ -98,7 +98,7 @@ def clear_stdin_buffer():
 
 
 def monkeypatch_questionary():
-    """Monkeypatches the questionary functions to clear stdin buffer."""
+    """Monkeypatches the questionary functions in use to clear stdin buffer."""
     original_functions = {
         "prompt": questionary.prompt,
         "ask": questionary.Question.ask,
