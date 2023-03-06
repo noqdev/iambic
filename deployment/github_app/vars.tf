@@ -23,7 +23,7 @@ variable "iambic_public_repo_url" {
   type        = string
   description = "Iambic Public Repo URL"
 
-  default = "public.ecr.aws/o4z3c2v2"
+  default = "public.ecr.aws/iambic"
 }
 
 variable "iambic_image_name" {

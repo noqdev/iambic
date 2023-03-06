@@ -10,11 +10,7 @@ toc_max_heading_level: 5
 
 Before you begin, you'll need to have the following tools installed on your system:
 
-* Docker
-
-If you don't have these tools installed, follow the instructions below:
-
-* [Install Docker](https://docs.docker.com/get-docker/)
+* Docker ([Install Docker](https://docs.docker.com/get-docker/))
 
 ### Steps
 
@@ -24,38 +20,38 @@ To run the docker container locally, you can use the docker command:
 
 Basic run:
 
-    docker run public.ecr.aws/s2p9s3r8/iambic:latest <command>
+    docker run public.ecr.aws/iambic/iambic:latest <command>
 
 We recommend mounting a local volume for the templates that are imported:
 
-    docker run -it -v <local_dir>:/templates public.ecr.aws/s2p9s3r8/iambic:latest <command>
+    docker run -it -v <local_dir>:/templates public.ecr.aws/iambic/iambic:latest <command>
 
 If you want to run IAMbic from the current directory, you can use a BASH trick to get the current working directory:
 
-    docker run -it -v ${pwd}:/templates public.ecr.aws/s2p9s3r8/iambic:latest <command>
+    docker run -it -v ${pwd}:/templates public.ecr.aws/iambic/iambic:latest <command>
 
 It is best to run as the current user to make sure that templates written to disk are written in the user and group currently active on the host:
 
-    docker run -it -u $(id -u):$(id -g) -v ${pwd}:/templates public.ecr.aws/s2p9s3r8/iambic:latest <command>
+    docker run -it -u $(id -u):$(id -g) -v ${pwd}:/templates public.ecr.aws/iambic/iambic:latest <command>
 
 Optionally you can store the volume in your system's docker context - be forwarned that the docker context could be coerced to delete the volume without warning using a command like `docker system prune` - it is generally best to store templates on your hard drive in a place where the chances of accidental deletion are minimized:
 
-    docker run -it -u $(id -u):$(id -g) -v /templates public.ecr.aws/s2p9s3r8/iambic:latest <command>
+    docker run -it -u $(id -u):$(id -g) -v /templates public.ecr.aws/iambic/iambic:latest <command>
 
 Depending on where your cloud credentials are stored, you may have to mount the relevant directory inside the docker container as well:
 
-    docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e "AWS_PROFILE=${AWS_PROFILE}" -v ${pwd}:/templates:Z public.ecr.aws/s2p9s3r8/iambic:latest <command>
+    docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e "AWS_PROFILE=${AWS_PROFILE}" -v ${pwd}:/templates:Z public.ecr.aws/iambic/iambic:latest <command>
 
 ### Shortcut
 
 We recommend that you add the following to your ~/.bashrc or ~/.bash_profile:
 
 ```bash
-echo 'alias iambic="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e "AWS_PROFILE=${AWS_PROFILE}" -v <local_dir\>:/templates:Z public.ecr.aws/s2p9s3r8/iambic:latest <command>"' >> ~/.bashrc
+echo 'alias iambic="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e "AWS_PROFILE=${AWS_PROFILE}" -v <local_dir\>:/templates:Z public.ecr.aws/iambic/iambic:latest <command>"' >> ~/.bashrc
 ```
 
 ```zsh
-echo 'alias iambic="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e "AWS_PROFILE=${AWS_PROFILE}" -v <local_dir\>:/templates:Z public.ecr.aws/s2p9s3r8/iambic:latest <command>"' >> ~/.zshrc
+echo 'alias iambic="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e "AWS_PROFILE=${AWS_PROFILE}" -v <local_dir\>:/templates:Z public.ecr.aws/iambic/iambic:latest <command>"' >> ~/.zshrc
 ```
 
 That way you can just execute iambic seamlessly as an application within your system:
