@@ -84,3 +84,14 @@ class ProviderPlugin(PydanticBaseModel):
     templates: list = Field(
         description="The list of templates used for this provider.",
     )
+
+
+class SelfServiceProviderPlugin(PydanticBaseModel):
+    version: str = Field(description="The version of the plugin.")
+    config_name: str = Field(
+        description="The name of the provider configuration in the iambic config file."
+    )
+    provider_plugins: list[ProviderPlugin] = Field(
+        [],
+        description="The list of provider plugins that are available for this self service plugin.",
+    )

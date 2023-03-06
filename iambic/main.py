@@ -413,6 +413,23 @@ def init_plugins_cmd(repo_dir: str):
     default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory. Example: ~/iambic-templates",
 )
+def self_service():
+    ctx.eval_only = True
+    config_path = asyncio.run(resolve_config_template_path())
+    config = asyncio.run(load_config(config_path))
+    asyncio.run(config.run_self_service())
+
+
+@cli.command()
+@click.option(
+    "--repo-dir",
+    "-d",
+    "repo_dir",
+    required=False,
+    type=click.Path(exists=True),
+    default=os.getenv("IAMBIC_REPO_DIR"),
+    help="The repo directory. Example: ~/iambic-templates",
+)
 def setup(repo_dir: str):
     ConfigurationWizard(repo_dir).run()
 

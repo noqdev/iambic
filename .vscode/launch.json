@@ -97,6 +97,18 @@
             "justMyCode": true
         },
         {
+            "name": "Iambic: Self-Service",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
+            "args": [
+                "self_service"
+            ],
+            "justMyCode": true
+        },
+        {
             "name": "Iambic: Config Discovery",
             "type": "python",
             "request": "launch",

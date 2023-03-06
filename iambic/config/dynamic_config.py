@@ -17,11 +17,11 @@ from pydantic import create_model as create_pydantic_model
 
 import iambic.plugins.v0_1_0.github
 from iambic.core.context import ctx
-from iambic.core.iambic_plugin import ProviderPlugin
+from iambic.core.iambic_plugin import ProviderPlugin, SelfServiceProviderPlugin
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, TemplateChangeDetails
 from iambic.core.utils import sort_dict, yaml
-from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, google, okta
+from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, google, okta, slack
 
 CURRENT_IAMBIC_VERSION = "1"
 
@@ -123,6 +123,16 @@ class Config(BaseTemplate):
         ],
         description="The plugins used by your IAMbic template repo.",
     )
+    self_service_plugins: Optional[list[PluginDefinition]] = Field(
+        description="The self service plugins used by your IAMbic template repo.",
+        default=[
+            PluginDefinition(
+                type=PluginType.DIRECTORY_PATH,
+                location=slack.__path__[0],
+                version=slack.PLUGIN_VERSION,
+            ),
+        ],
+    )
     extends: List[ExtendsConfig] = []
     secrets: Optional[dict] = Field(
         description="Secrets should only be used in memory and never serialized out",
@@ -131,6 +141,10 @@ class Config(BaseTemplate):
     )
     plugin_instances: Optional[list[ProviderPlugin]] = Field(
         description="A list of the plugin instances parsed as part of the plugin paths.",
+        exclude=True,
+    )
+    self_service_plugin_instances: Optional[list[SelfServiceProviderPlugin]] = Field(
+        description="A list of the self service plugin instances parsed as part of the plugin paths.",
         exclude=True,
     )
     core: Optional[CoreConfig] = Field(
@@ -147,10 +161,26 @@ class Config(BaseTemplate):
     def set_config_plugin(self, plugin: ProviderPlugin, config: BaseModel):
         setattr(self, plugin.config_name, config)
 
+    def get_self_service_plugin(self, plugin: SelfServiceProviderPlugin):
+        return getattr(self, plugin.config_name)
+
+    def set_self_service_plugin(
+        self, plugin: SelfServiceProviderPlugin, config: BaseModel
+    ):
+        setattr(self, plugin.config_name, config)
+
     @property
     def configured_plugins(self):
         return [
             plugin for plugin in self.plugin_instances if self.get_config_plugin(plugin)
+        ]
+
+    @property
+    def configured_self_service_plugins(self):
+        return [
+            plugin
+            for plugin in self.self_service_plugin_instances
+            if self.get_config_plugin(plugin)
         ]
 
     async def set_config_secrets(self):
@@ -201,6 +231,17 @@ class Config(BaseTemplate):
                     self.get_config_plugin(plugin), output_dir, messages
                 )
                 for plugin in self.configured_plugins
+            ]
+        )
+
+    async def run_self_service(self, output_dir: str, messages: list = None):
+        # It's the responsibility of the provider to handle throttling.
+        await asyncio.gather(
+            *[
+                plugin.async_self_service_callable(
+                    self.get_config_plugin(plugin), output_dir, messages
+                )
+                for plugin in self.configured_self_service_plugins
             ]
         )
 
