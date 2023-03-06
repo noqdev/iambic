@@ -1,0 +1,196 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Metadata": {
+        "AWS::CloudFormation::Designer": {
+            "888f9cbe-40e2-455c-9b4a-a7fec8575e24": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 254,
+                    "y": 124
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "c851ff9f-6776-4c23-b24b-54e07442b18d": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 250,
+                    "y": 230
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "ae1e86aa-99c0-4e0e-8733-56e8298a821d": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 390,
+                    "y": 240
+                },
+                "z": 0,
+                "dependson": [
+                    "c851ff9f-6776-4c23-b24b-54e07442b18d"
+                ]
+            }
+        }
+    },
+    "Parameters": {
+        "LambdaExecutionRole": {
+            "Type": "String",
+            "Description": "lambda execution role"
+        },
+        "LambdaSubnetIds": {
+            "Type": "List<AWS::EC2::Subnet::Id>",
+            "Description": "subnets to place the lambda function"
+        },
+        "LambdaSecurityGroupIds": {
+            "Type": "List<AWS::EC2::SecurityGroup::Id>",
+            "Description": "security groups for the lambda function"
+        }
+    },
+    "Resources": {
+        "LambdaEfs": {
+            "Type": "AWS::EFS::FileSystem",
+            "Properties": {},
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "888f9cbe-40e2-455c-9b4a-a7fec8575e24"
+                }
+            }
+        },
+        "EFSAP5C5D8": {
+            "Type": "AWS::EFS::AccessPoint",
+            "Properties": {
+                "FileSystemId": {
+                    "Ref": "LambdaEfs"
+                },
+                "PosixUser": {
+                    "Uid": "1000",
+                    "Gid": "1000"
+                },
+                "RootDirectory": {
+                    "CreationInfo": {
+                        "OwnerGid": "1000",
+                        "OwnerUid": "1000",
+                        "Permissions": "0755"
+                    },
+                    "Path": "/lambda"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "c851ff9f-6776-4c23-b24b-54e07442b18d"
+                }
+            },
+            "DependsOn": [
+                "LambdaEfs"
+            ]
+        },
+        "MountTarget0": {
+            "Type": "AWS::EFS::MountTarget",
+            "Properties": {
+                "FileSystemId": { "Ref": "LambdaEfs" },
+                "SubnetId": { "Fn::Select": [ 0, {"Ref": "LambdaSubnetIds"} ]  },
+                "SecurityGroups": { "Ref": "LambdaSecurityGroupIds" }
+            }
+        },
+        "MountTarget1": {
+            "Type": "AWS::EFS::MountTarget",
+            "Properties": {
+                "FileSystemId": { "Ref": "LambdaEfs" },
+                "SubnetId": { "Fn::Select": [ 1, {"Ref": "LambdaSubnetIds"} ]  },
+                "SecurityGroups": { "Ref": "LambdaSecurityGroupIds" }
+            }
+        },
+        "MountTarget2": {
+            "Type": "AWS::EFS::MountTarget",
+            "Properties": {
+                "FileSystemId": { "Ref": "LambdaEfs" },
+                "SubnetId": { "Fn::Select": [ 2, {"Ref": "LambdaSubnetIds"} ]  },
+                "SecurityGroups": { "Ref": "LambdaSecurityGroupIds" }
+            }
+        },
+        "MountTarget3": {
+            "Type": "AWS::EFS::MountTarget",
+            "Properties": {
+                "FileSystemId": { "Ref": "LambdaEfs" },
+                "SubnetId": { "Fn::Select": [ 3, {"Ref": "LambdaSubnetIds"} ]  },
+                "SecurityGroups": { "Ref": "LambdaSecurityGroupIds" }
+            }
+        },
+        "MountTarget4": {
+            "Type": "AWS::EFS::MountTarget",
+            "Properties": {
+                "FileSystemId": { "Ref": "LambdaEfs" },
+                "SubnetId": { "Fn::Select": [ 4, {"Ref": "LambdaSubnetIds"} ]  },
+                "SecurityGroups": { "Ref": "LambdaSecurityGroupIds" }
+            }
+        },
+        "MountTarget5": {
+            "Type": "AWS::EFS::MountTarget",
+            "Properties": {
+                "FileSystemId": { "Ref": "LambdaEfs" },
+                "SubnetId": { "Fn::Select": [ 5, {"Ref": "LambdaSubnetIds"} ]  },
+                "SecurityGroups": { "Ref": "LambdaSecurityGroupIds" }
+            }
+        },
+        "LF1BYGX": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Role": {
+                    "Ref": "LambdaExecutionRole"
+                },
+                "MemorySize": 2048,
+                "PackageType": "Image",
+                "Code" : {
+                    "ImageUri": "580605962305.dkr.ecr.us-east-1.amazonaws.com/iambic_lambda:latest"
+                },
+                "ImageConfig": {
+                    "Command" : ["iambic.plugins.v0_1_0.aws_lambda_remote_execution_engine.lambda_handler.lambda_handler"],
+                    "EntryPoint" : ["python", "-m", "awslambdaric"],
+                    "WorkingDirectory" : "/app"
+                },
+                "Timeout": 900,
+                "TracingConfig": {
+                    "Mode": "Active"
+                },
+                "VpcConfig": {
+                    "SecurityGroupIds": {
+                        "Ref": "LambdaSecurityGroupIds"
+                    },
+                    "SubnetIds": {
+                        "Ref": "LambdaSubnetIds"
+                    }
+                },
+                "FileSystemConfigs": [
+                    {
+                        "Arn" : {"Fn::GetAtt" : [ "EFSAP5C5D8" , "Arn" ]},
+                        "LocalMountPath" : "/mnt/efs"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "ae1e86aa-99c0-4e0e-8733-56e8298a821d"
+                }
+            },
+            "DependsOn": [
+                "EFSAP5C5D8",
+                "MountTarget0",
+                "MountTarget1",
+                "MountTarget2",
+                "MountTarget3",
+                "MountTarget4",
+                "MountTarget5"
+            ]
+        }
+    }
+}
