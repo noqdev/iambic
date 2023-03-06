@@ -59,7 +59,9 @@
     "Resources": {
         "LambdaEfs": {
             "Type": "AWS::EFS::FileSystem",
-            "Properties": {},
+            "Properties": {
+                "Encrypted": true
+            },
             "Metadata": {
                 "AWS::CloudFormation::Designer": {
                     "id": "888f9cbe-40e2-455c-9b4a-a7fec8575e24"
