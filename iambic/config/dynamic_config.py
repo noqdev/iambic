@@ -15,6 +15,7 @@ import ujson as json
 from pydantic import BaseModel, Field
 from pydantic import create_model as create_pydantic_model
 
+import iambic.plugins.v0_1_0.aws_lambda_remote_execution_engine
 import iambic.plugins.v0_1_0.github
 from iambic.core.context import ctx
 from iambic.core.iambic_plugin import ProviderPlugin
@@ -118,6 +119,13 @@ class Config(BaseTemplate):
             PluginDefinition(
                 type=PluginType.DIRECTORY_PATH,
                 location=iambic.plugins.v0_1_0.github.__path__[0],
+                version=PLUGIN_VERSION,
+            ),
+            PluginDefinition(
+                type=PluginType.DIRECTORY_PATH,
+                location=iambic.plugins.v0_1_0.aws_lambda_remote_execution_engine.__path__[
+                    0
+                ],
                 version=PLUGIN_VERSION,
             ),
         ],
