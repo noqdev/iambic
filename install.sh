@@ -50,21 +50,6 @@ for var in \$(env | grep ^AWS_ | cut -d= -f1); do
   fi
 done
 
-if [ -f ~/.aws/config ]; then
-    # Search for credential_process in .aws/config file
-    if grep -q \"credential_process\" ~/.aws/config; then
-        # Extract the binary name from the config file
-        binaries=\$(awk -F\"=\" '/credential_process/ {print \$2}' ~/.aws/config | awk '{print \$1}' | tr -d \"'\")
-        # Print a comma-separated list of unique binary names
-        echo \"Credential process brokering is enabled using the following binaries in .aws/config file: \$(echo \"\$binaries\" | tr ' ' '\n' | sort -u | tr '\n' ', ' | sed 's/,$//')\"
-        echo \"Please make sure that this scenario is properly handled by referencing the documentation\"
-        echo \"for your credential process broker(s) on how to export the AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY\"
-        echo \"and AWS_SESSION_TOKEN environment variables.\"
-        echo
-        read -p \"Press Enter to acknowledge this warning... or CTRL+C to exit\"
-    fi
-fi
-
 ENV_VAR_ARGS=\"\$ENV_VAR_ARGS -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials\"
 ENV_VAR_ARGS=\"\$ENV_VAR_ARGS -e AWS_CONFIG_FILE=/app/.aws/config\"
 
