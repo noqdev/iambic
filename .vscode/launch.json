@@ -24,6 +24,8 @@
             "console": "integratedTerminal",
             "args": [
                 "apply",
+                "--template",
+                "${env:IAMBIC_TEMPLATE_PATH}"
             ],
             "envFile": "${workspaceFolder}/.env",
             "justMyCode": true

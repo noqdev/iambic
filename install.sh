@@ -34,7 +34,7 @@ fi
 
 echo
 
-ECR_PATH="public.ecr.aws/o4z3c2v2/iambic:latest"
+ECR_PATH="public.ecr.aws/iambic/iambic:latest"
 
 echo "Installing iambic..."
 DOCKER_CMD="#!/bin/bash
@@ -53,7 +53,7 @@ done
 ENV_VAR_ARGS=\"\$ENV_VAR_ARGS -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials\"
 ENV_VAR_ARGS=\"\$ENV_VAR_ARGS -e AWS_CONFIG_FILE=/app/.aws/config\"
 
-docker run -w /templates -it -u \$(id -u):\$(id -g) -v \${HOME}/.aws:/app/.aws \$ENV_VAR_ARGS --mount \"type=bind,src=\$(pwd),dst=/templates\"  public.ecr.aws/o4z3c2v2/iambic:latest \"\$@\""
+docker run -w /templates -it -u \$(id -u):\$(id -g) -v \${HOME}/.aws:/app/.aws \$ENV_VAR_ARGS --mount \"type=bind,src=\$(pwd),dst=/templates\"  public.ecr.aws/iambic/iambic:latest \"\$@\""
 
 echo
 
