@@ -37,7 +37,7 @@
             "args": [
                 "apply",
                 "--template",
-                "../noq-templates/resources/aws/roles/all_accounts/readonly.yaml"
+                "${env:IAMBIC_TEMPLATE_PATH}"
             ],
             "envFile": "${workspaceFolder}/.env",
             "justMyCode": true
