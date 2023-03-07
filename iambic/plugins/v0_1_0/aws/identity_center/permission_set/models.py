@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import re
-from itertools import chain
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 from iambic.core.context import ExecutionContext
@@ -137,7 +136,7 @@ class InlinePolicy(BaseModel, ExpiryModel):
 class AWSIdentityCenterPermissionSetProperties(BaseModel):
     name: str
     description: Optional[Union[str, list[Description]]] = Field(
-        "",
+        None,
         description="Description of the permission set",
     )
     relay_state: Optional[str] = None
@@ -164,6 +163,21 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
             return f"{getattr(obj, attribute_name)}!{obj.access_model_sort_weight()}"
 
         return _sort_func
+
+    @validator("description")
+    def validate_description(cls, v: Union[str, list[Description]]):
+        if isinstance(v, str) and not (1 <= len(v) <= 700):
+            raise ValueError(
+                f"description must be between 1 and 700 characters: given {v}"
+            )
+        if isinstance(v, list):
+            for description in v:
+                description: Description
+                if not (1 <= len(description.description) <= 700):
+                    raise ValueError(
+                        f"description must be between 1 and 700 characters: given {description.description}"
+                    )
+        return v
 
     @validator("managed_policies")
     def sort_managed_policy_refs(cls, v: list[ManagedPolicyArn]):
@@ -665,11 +679,6 @@ class AWSIdentityCenterPermissionSetTemplate(
         if any(exceptions):
             account_change_details.exceptions_seen.extend(exceptions)
 
-        if any(changes_made):
-            account_change_details.proposed_changes.extend(
-                list(chain.from_iterable(changes_made))
-            )
-
         if context.execute:
             if any(changes_made):
                 res = await boto_crud_call(
@@ -698,7 +707,7 @@ class AWSIdentityCenterPermissionSetTemplate(
                     continue
             if self.deleted:
                 self.delete()
-            self.write()
+            self.write()  # why are writing the template here?
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),
@@ -722,6 +731,7 @@ class AWSIdentityCenterPermissionSetTemplate(
             resource_id=self.resource_id,
             resource_type=self.resource_type,
             template_path=self.file_path,
+            exceptions_seen=[],
         )
         log_params = dict(
             resource_type=self.resource_type, resource_id=self.resource_id
@@ -744,6 +754,12 @@ class AWSIdentityCenterPermissionSetTemplate(
             account_change
             for account_change in account_changes
             if any(account_change.proposed_changes)
+        ]
+        # aggregate exceptions
+        template_changes.exceptions_seen = [
+            account_change
+            for account_change in account_changes
+            if any(account_change.exceptions_seen)
         ]
 
         proposed_changes = [x for x in account_changes if x.proposed_changes]
