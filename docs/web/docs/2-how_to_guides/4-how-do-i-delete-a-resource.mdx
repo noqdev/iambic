@@ -1,0 +1,68 @@
+---
+title: Delete a resource
+---
+
+## The deleted tag
+To delete a resource under IAMbic's control, we can use the `deleted` attribute and set it to true.
+
+Consider this example resource bedfore the `deleted: true` tag is set:
+
+```yaml
+template_type: NOQ::AWS::IAM::Role
+included_accounts:
+  - demo-1
+identifier: demoRole1
+properties:
+  description: Role created by curtis@noq.dev through ConsoleMe
+  assume_role_policy_document:
+    statement:
+      - action: sts:AssumeRole
+        effect: Allow
+        principal:
+          service: ec2.amazonaws.com
+    version: '2012-10-17'
+  managed_policies:
+    - policy_arn: arn:aws:iam::aws:policy/AWSHealthFullAccess
+  role_name: demoRole1
+  tags:
+    - key: noq-authorized
+      value: ''
+    - key: noq-authorized-demo
+      value: curtis@noq.dev:rohit@noq.dev
+    - key: noq-authorized-demo-cli
+      value: ''
+```
+In order to delete this role, you would add `deleted: true` underneath the `template_type`. Note that it doesn't matter where the `deleted: true` tag is set, as long as it is at the top-level of the YAML context, essentially the same level as the `template_type` attribute.
+
+Here is the example with the `deleted: true` tag set:
+
+```yaml
+template_type: NOQ::AWS::IAM::Role
+deleted: true
+included_accounts:
+  - demo-1
+identifier: demoRole1
+properties:
+  description: Role created by curtis@noq.dev through ConsoleMe
+  assume_role_policy_document:
+    statement:
+      - action: sts:AssumeRole
+        effect: Allow
+        principal:
+          service: ec2.amazonaws.com
+    version: '2012-10-17'
+  managed_policies:
+    - policy_arn: arn:aws:iam::aws:policy/AWSHealthFullAccess
+  role_name: demoRole1
+  tags:
+    - key: noq-authorized
+      value: ''
+    - key: noq-authorized-demo
+      value: curtis@noq.dev:rohit@noq.dev
+    - key: noq-authorized-demo-cli
+      value: ''
+```
+
+In order to apply, we run `iambic apply`
+Note that you can request applying only the changes in this template file by specifying it by name: `iambic apply -t resouces/aws/demo-1/demo1usertobedeleted.yaml`
+You need to change the path to the template after the `-t` flag to reflect your environemnt.
