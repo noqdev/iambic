@@ -7,6 +7,7 @@ import re
 import sys
 from typing import Union
 
+from aws_error_utils import errors
 import boto3
 import botocore
 import questionary
@@ -199,7 +200,7 @@ class ConfigurationWizard:
         except Exception as exc:
             log.error(f"Unable to access your AWS account: {exc}")
             sys.exit(1)
-            
+
         self.autodetected_org_settings = {}
         self.existing_role_template_map = {}
         self.aws_account_map = {}
@@ -223,7 +224,7 @@ class ConfigurationWizard:
             ).get_caller_identity()
             caller_arn = get_identity_arn(default_caller_identity)
             default_hub_account_id = caller_arn.split(":")[4]
-        except (AttributeError, IndexError, NoCredentialsError, ClientError):
+        except (AttributeError, IndexError, NoCredentialsError, ClientError, FileNotFoundError):
             default_hub_account_id = None
             default_caller_identity = {}
 
@@ -394,9 +395,17 @@ class ConfigurationWizard:
                     selected_account_id=selected_hub_account_id,
                 )
                 self.set_boto3_session()
-        except botocore.exceptions.ClientError as err:
-            log.info(
-                "Unable to create a session for the provided profile name. Please try again.",
+        except (errors.ClientError, errors.FileNotFoundError) as err:
+            log.error(
+                ("We are unable to authenticate to AWS because the provided profile name has a credential_process "
+                "rule setup in your AWS configuration file. Either remove the credential_process rule or use the "
+                "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables."),
+                error=str(err),
+            )
+            self.set_boto3_session()
+        except errors.catch_aws_error(errors.ALL_CODES) as err:
+            log.error(
+                "Unable to create a session for the provided profile name - check the error and please try again.",
                 error=str(err),
             )
             self.set_boto3_session()
