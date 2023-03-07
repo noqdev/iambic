@@ -549,10 +549,11 @@ class ExpiryModel(IambicPydanticBaseModel):
     def parse_expires_at(cls, value):
         if not value:
             return value
-        if isinstance(value, datetime.date):
-            dt = datetime.datetime.combine(
-                value, datetime.datetime.min.time()
-            ).astimezone(datetime.timezone.utc)
+        if isinstance(value, datetime.date) and not isinstance(
+            value, datetime.datetime
+        ):
+            dt = datetime.datetime.combine(value, datetime.datetime.min.time())
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
             return dt
         if isinstance(value, datetime.datetime):
             dt = value

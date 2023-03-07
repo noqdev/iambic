@@ -9,7 +9,7 @@ import re
 import sys
 import tempfile
 import typing
-from datetime import datetime
+from datetime import date, datetime
 from io import StringIO
 from typing import TYPE_CHECKING, Any, Coroutine, Optional, Union
 from urllib.parse import unquote_plus
@@ -587,13 +587,17 @@ def sanitize_string(unsanitized_str, valid_characters_re):
     return sanitized_str
 
 
-def simplify_dt(_dt: datetime) -> str:
+def simplify_dt(_dt: Union[datetime, date]) -> str:
     """
     Simplify a datetime object  by converting it into a string
     with minute granularity. Useful for handling
     `expires_at` without needing to expose microsecond granularity in our templates.
     """
+    if not isinstance(_dt, datetime) and not isinstance(_dt, date):
+        return _dt
     dt_str = f"{_dt:%Y-%m-%dT%H:%M:%S}"[:-3]
-    if _dt.tzinfo:
+    if isinstance(_dt, datetime) and _dt.tzinfo:
         dt_str += f" {_dt:%Z}"
+    else:
+        dt_str += " UTC"
     return dt_str
