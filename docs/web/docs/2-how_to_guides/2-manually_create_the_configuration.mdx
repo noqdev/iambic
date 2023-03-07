@@ -6,6 +6,10 @@ toc_max_heading_level: 5
 
 ## Configuration File Reference
 
+You can run `iambic setup` to bootstrap your configuration if desired, but you can also create
+your configuration manually. This guide will walk you through the process of creating a configuration
+for your use case.
+
 The configuration file is written in YAML and needs to be created before IAMbic can be used the first time.
 It stores all the information about your environment and provides credentials to cloud services and GitHub.
 We recommend that you use the [Setup Wizard](configure_iambic_with_wizard) to quickly start
@@ -37,26 +41,101 @@ aws:
 For information about the Iambic configuration model, please visit
 [this link](https://github.com/noqdev/iambic/blob/main/iambic/config/dynamic_config.py#L96).
 
-### template_type
+#### Write an AWS Connfiguration
+
+Tell IAMbic how to connect to your AWS account or AWS organization. IAMbic can connect to your AWS accounts or AWS organizations via a number of different methods, Including using a predefined AWS profile, performing assume role operations, or a combination of these. This guide will walk you through the basic configuration. For anything more advanced, please consult the Configuration Reference. <!-- #TODO: Link needed -->
+
+##### AWS Organizations
+
+The AWS Organizations configuration enables you to set up your organization(s) once, and instruct IAMbic to populate your current and new AWS accounts
+when it is run. If you choose not to configure your entire organization, you may configure accounts on an individual basis.
+In that case, skip to the AWS Accounts section below.
+
+Before starting, you need your AWS Organizations ID, Organizations name, and administrative-level credentials for your Organization management account.
+
+If you have credentials to your AWS Organizations management account, run `aws organizations describe-organization`. Your Organizations ID is the value of the `Id` parameter.
+
+Use these attributes to create a to create a YAML configuration tailored for your environment, such as the following.
+
+We recommend placing this in your Git repository under `config/config.yaml`
+
+An example configuration is included below:
+
+```yaml
+template_type: NOQ::Core::Config
+version: "1"
+aws:
+  organizations:
+    - org_id: "o-12345"
+      # aws_profile: 'profile_name' # Optional. If not provided, the default profile will be used
+      # assume_role_arn: 'arn:aws:iam::123456:role/IambicSpokeRole' # Optional. The role assumed using credentials provided by `aws_profile`
+      # `org_name` is a required friendly-name for the AWS organization
+      org_name: "main"
+      # identity_center_account:
+      #   account_id: '123456789012'
+      #   region: 'us-east-1'
+```
+
+Write the finished config file to `config/config/yaml` in your `iambic-templates` repository. Once this is written to disk, your repository should resemble this folder structure:
+
+
+```bash
+$ tree
+.
+├── config
+│   └── config.yaml
+```
+
+##### AWS Accounts
+
+Follow these steps if you want to onboard AWS accounts individually, instead of an entire AWS Organization. If you have configured your entire organization, you may skip this section, and continue with the next section, entitled Import AWS Resources. <!-- #TODO Make this a link to that section. Also, above when we're giving the option of skipping the org setup to do indiviual accounts, that should link here. -->
+
+Before starting, you will need your AWS Account ID, Account Name, and a method to access the account (either via using an AWS profile, or assuming a role from your current credentials).
+
+An example configuration is included below:
+
+```yaml
+template_type: NOQ::Core::Config
+version: "1"
+aws:
+  accounts:
+    - account_name: "main"
+      account_id: "123456789012"
+      # aws_profile: 'profile_name' # Optional. If not provided, the default profile will be used. if the AWS_PROFILE environment variable is specified, it will be used.
+      # assume_role_arn: 'arn:aws:iam::123456:role/IambicSpokeRole' # Optional. The role assumed using credentials provided by `aws_profile`
+```
+
+Write the finished config file to `config/config/yaml` in your `iambic-templates` repository. Once this is written to disk, your repository should resemble this folder structure:
+
+```bash
+$ tree
+.
+├── config
+│   └── config.yaml
+```
+
+### Configuration Reference Keys
+
+#### template_type
 The template_type field specifies the type of template, which is `NOQ::Core::Config`.
 
-### extends
+#### extends
 The extends field can be used to merge an additional configuration into the current configuration.
 This is useful if you want to merge secrets from a separate configuration file into the current configuration,
 or if you want to leverage AWS Secrets Manager to store secrets.
 
-### version
+#### version
 The version field specifies the version number of the YAML configuration.
 
-### aws
+#### aws
 The aws field is used to specify AWS accounts and organizations that IAMbic has access to.
 This field can contain two nested lists: `organizations` and/or `accounts`.
 
-### aws.organizations
+#### aws.organizations
 The organizations list is used to specify one or more organization entities within AWS.
  IAMbic can inspect organization entities to parse all attached accounts.
 
-### aws.accounts
+#### aws.accounts
 The accounts list is used to specify one or more AWS accounts that IAMbic should synchronize.
 
 

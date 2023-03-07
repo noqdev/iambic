@@ -16,12 +16,13 @@ from urllib.parse import unquote_plus
 
 import aiofiles
 from asgiref.sync import sync_to_async
+from ruamel.yaml import YAML
+
 from iambic.core import noq_json as json
 from iambic.core.context import ExecutionContext
 from iambic.core.exceptions import RateLimitException
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
-from ruamel.yaml import YAML
 
 if TYPE_CHECKING:
     from iambic.core.models import ProposedChange

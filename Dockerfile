@@ -1,4 +1,4 @@
-FROM public.ecr.aws/o4z3c2v2/iambic_container_base:1.0
+FROM public.ecr.aws/iambic/iambic_container_base:1.0
 
 ARG FUNCTION_DIR="/app"
 WORKDIR ${FUNCTION_DIR}
@@ -35,6 +35,8 @@ WORKDIR ${FUNCTION_DIR}/docs/web
 
 RUN yarn \
  && yarn install --frozen-lockfile
+
+RUN yarn cache clean
 
 WORKDIR ${FUNCTION_DIR}
 

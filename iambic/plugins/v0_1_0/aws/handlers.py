@@ -6,7 +6,6 @@ import json
 from typing import TYPE_CHECKING, Union
 
 import boto3
-
 from iambic.config.dynamic_config import ExtendsConfig, ExtendsConfigKey
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import IambicManaged
@@ -54,10 +53,11 @@ async def load(config: AWSConfig) -> AWSConfig:
     }
     if config.organizations:
         if any(account.hub_role_arn for account in config.accounts):
-            raise AttributeError(
-                "You cannot specify a hub_role_arn on an AWS Account if you are using an AWS Organization"
+            log.warning(
+                "You have a `hub_role_arn` defined on an `aws.account` specified in your IAMbic configuration that will be ignored. "
+                "IAMbic will prefer the `hub_role_arn` specified under your AWS Organization. To remove this message, "
+                "please remove the `hub_role_arn` specified in an `AWS Account`."
             )
-
         orgs_accounts = await asyncio.gather(
             *[org.get_accounts() for org in config.organizations]
         )

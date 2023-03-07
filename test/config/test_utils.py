@@ -3,9 +3,10 @@ from __future__ import annotations
 import os
 import pathlib
 from tempfile import TemporaryDirectory
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
+
 from iambic.config.dynamic_config import Config
 from iambic.config.utils import check_and_update_resource_limit
 from iambic.core.iambic_enum import IambicManaged
