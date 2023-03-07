@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import unittest
+from datetime import date, datetime, timezone
 from typing import List
 from unittest.mock import MagicMock, patch
 
@@ -11,6 +12,7 @@ from iambic.core.models import BaseModel
 from iambic.core.utils import (
     GlobalRetryController,
     create_commented_map,
+    simplify_dt,
     sort_dict,
     transform_comments,
     yaml,
@@ -166,3 +168,28 @@ class TestGlobalRetryController(unittest.TestCase):
             self.fn_identifier,
             mock_rate_limit_storage.__getitem__.return_value + self.wait_time,
         )
+
+
+class TestSimplifyDt(unittest.TestCase):
+    def test_utc_datetime(self):
+        dt = datetime(2022, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+        expected_result = "2022-12-31T23:59 UTC"
+        self.assertEqual(simplify_dt(dt), expected_result)
+
+    def test_naive_datetime(self):
+        dt = datetime(2022, 12, 31, 23, 59, 59)
+        expected_result = "2022-12-31T23:59 UTC"
+        self.assertEqual(simplify_dt(dt), expected_result)
+
+    def test_date(self):
+        d = date(2022, 12, 31)
+        expected_result = "2022-12-31T00:00 UTC"
+        self.assertEqual(simplify_dt(d), expected_result)
+
+    def test_none_datetime(self):
+        self.assertIsNone(simplify_dt(None))
+
+    def test_non_date_input(self):
+        input_value = "not a date"
+        expected_result = input_value
+        self.assertEqual(simplify_dt(input_value), expected_result)

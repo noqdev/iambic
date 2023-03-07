@@ -35,6 +35,7 @@ from iambic.core.utils import (
     apply_to_provider,
     create_commented_map,
     sanitize_string,
+    simplify_dt,
     snake_to_camelcap,
     sort_dict,
     transform_comments,
@@ -538,14 +539,21 @@ class ExpiryModel(IambicPydanticBaseModel):
         ),
     )
 
+    class Config:
+        json_encoders = {
+            datetime.datetime: simplify_dt,
+            datetime.date: simplify_dt,
+        }
+
     @validator("expires_at", pre=True)
     def parse_expires_at(cls, value):
         if not value:
             return value
-        if isinstance(value, datetime.date):
-            dt = datetime.datetime.combine(
-                value, datetime.datetime.min.time()
-            ).astimezone(datetime.timezone.utc)
+        if isinstance(value, datetime.date) and not isinstance(
+            value, datetime.datetime
+        ):
+            dt = datetime.datetime.combine(value, datetime.datetime.min.time())
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
             return dt
         if isinstance(value, datetime.datetime):
             dt = value
