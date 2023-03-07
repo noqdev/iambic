@@ -1,0 +1,30 @@
+---
+title: AWS Permissions Required for Setup Wizard
+---
+
+The following permissions are required on the AWS identity
+used when running the IAMbic setup wizard (`iambic setup`):
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "iam:*",
+                "organizations:DescribeOrganization",
+                "cloudformation:CreateStack",
+                "cloudformation:DescribeStacks"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "sts:AssumeRole",
+            "Resource": "arn:aws:iam::*:role/IambicHubRole"
+        }
+    ]
+}
+```
