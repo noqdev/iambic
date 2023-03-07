@@ -292,7 +292,7 @@ async def generate_aws_managed_policy_templates(
 ):
     aws_account_map = await get_aws_account_map(config)
     existing_template_map = await get_existing_template_map(
-        base_output_dir, "NOQ::IAM::ManagedPolicy"
+        base_output_dir, "NOQ::AWS::IAM::ManagedPolicy"
     )
     resource_dir = get_managed_policy_dir(base_output_dir)
     generate_account_managed_policy_resource_files_semaphore = NoqSemaphore(

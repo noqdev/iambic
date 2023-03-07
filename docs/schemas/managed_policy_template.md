@@ -16,7 +16,7 @@
     - *string*
     - *string*
 - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
-- **`template_type`** *(string)*: Default: `"NOQ::IAM::ManagedPolicy"`.
+- **`template_type`** *(string)*: Default: `"NOQ::AWS::IAM::ManagedPolicy"`.
 - **`file_path`** *(string)*
 - **`iambic_managed`**: Controls the directionality of Iambic changes. Default: `"undefined"`.
   - **All of**
