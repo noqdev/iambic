@@ -333,9 +333,15 @@ def handle_iambic_git_apply(
     os.environ["IAMBIC_SESSION_NAME"] = session_name
 
     try:
+        # merge_sha is used when we trigger a merge
+        merge_sha = pull_request.head.sha
+
         repo = prepare_local_repo(
             repo_url, get_lambda_repo_path(), pull_request_branch_name
         )
+        # local_sha_before_git_apply may not match the initial merge
+        # sha because we apply the PR to local checkout tracking branch
+        local_sha_before_git_apply = repo.head.commit.hexsha
 
         if proposed_changes_path:
             # code smell to have to change a module variable
@@ -352,13 +358,19 @@ def handle_iambic_git_apply(
         diff_list = repo.head.commit.diff()
         if len(diff_list) > 0:
             repo.git.commit("-m", COMMIT_MESSAGE_FOR_GIT_APPLY_ABSOLUTE_TIME)
+        else:
+            log.debug("git_apply did not introduce additional changes")
+
+        local_sha_after_git_apply = repo.head.commit.hexsha
+        if local_sha_before_git_apply != local_sha_after_git_apply:
+            # signal changes due to git-apply
             repo.remotes.origin.push(
                 refspec=f"HEAD:{pull_request_branch_name}"
             ).raise_if_error()
-            log_params = {"sha": repo.head.commit.hexsha}
+            log_params = {"sha": local_sha_after_git_apply}
             log.info("git-apply new sha is", **log_params)
-        else:
-            log.debug("git_apply did not introduce additional changes")
+            # update merge sha because we add new commits to pull request
+            merge_sha = local_sha_after_git_apply
 
         post_result_as_pr_comment(
             pull_request, context, "git-apply", proposed_changes_path
@@ -372,9 +384,7 @@ def handle_iambic_git_apply(
                 time.sleep(5)
 
         pull_request = templates_repo.get_pull(pull_number)
-        pull_request.merge(
-            sha=repo.head.commit.hexsha
-        )  # Concern, whether we need the exact sha on the remote
+        pull_request.merge(sha=merge_sha)
         return HandleIssueCommentReturnCode.MERGED
 
     except Exception as e:
