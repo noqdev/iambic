@@ -416,7 +416,12 @@ async def load_config(
     config_dict = yaml.load(open(config_path))
     base_config = Config(file_path=config_path, **config_dict)
     return await process_config(
-        base_config, config_path, config_dict, configure_plugins, approved_plugins_only
+        base_config,
+        config_path,
+        config_dict,
+        configure_plugins,
+        approved_plugins_only,
+        sparse=sparse,
     )
 
 
@@ -426,6 +431,7 @@ async def process_config(
     config_dict,
     configure_plugins: bool = True,
     approved_plugins_only: bool = False,
+    sparse: bool = False,
 ) -> Config:
     from iambic.config.templates import TEMPLATES
 
