@@ -13,14 +13,14 @@ TEST_PAYLOAD = {
         "eventVersion": "1.08",
         "userIdentity": {
             "type": "AssumedRole",
-            "principalId": "AROA111111111K7IYR4VJ:noq_principal_updater_user@example.com",
+            "principalId": "ASIA11111111111IOABCJ:noq_principal_updater_user@example.com",
             "arn": "arn:aws:sts::1234567890012:assumed-role/NoqSpoke/noq_principal_updater_user@example.com",
             "accountId": "1234567890012",
             "accessKeyId": "ASIAWODXPQXPSPZIOABC",
             "sessionContext": {
                 "sessionIssuer": {
                     "type": "Role",
-                    "principalId": "AROA111111111K7IYR4VJ",
+                    "principalId": "ASIA11111111111IOABCJ",
                     "arn": "arn:aws:iam::1234567890012:role/NoqSpoke",
                     "accountId": "1234567890012",
                     "userName": "NoqSpoke",
