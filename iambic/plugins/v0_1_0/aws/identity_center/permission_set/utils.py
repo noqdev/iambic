@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from itertools import chain
 
 from botocore.exceptions import ClientError
 from deepdiff import DeepDiff
@@ -8,7 +9,7 @@ from iambic.core import noq_json as json
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
-from iambic.core.utils import aio_wrapper, async_batch_processor
+from iambic.core.utils import aio_wrapper, async_batch_processor, plugin_apply_wrapper
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, legacy_paginated_search
 
@@ -214,24 +215,23 @@ async def apply_permission_set_aws_managed_policies(
     if new_managed_policies:
         log_str = "New AWS managed policies discovered."
         for policy_arn in new_managed_policies:
-            response.append(
+            proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.ATTACH,
                     resource_id=policy_arn,
                     attribute="managed_policies",
                 )
-            )
-        if context.execute:
-            log_str = f"{log_str} Attaching AWS managed policies..."
-            tasks = [
-                boto_crud_call(
+            ]
+            response.extend(proposed_changes)
+            if context.execute:
+                log_str = f"{log_str} Attaching AWS managed policies..."
+                apply_awaitable = boto_crud_call(
                     identity_center_client.attach_managed_policy_to_permission_set,
                     InstanceArn=instance_arn,
                     PermissionSetArn=permission_set_arn,
                     ManagedPolicyArn=policy_arn,
                 )
-                for policy_arn in new_managed_policies
-            ]
+                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
         log.info(log_str, managed_policies=new_managed_policies, **log_params)
 
     # Delete existing managed policies not in template
@@ -243,32 +243,30 @@ async def apply_permission_set_aws_managed_policies(
     if existing_managed_policies:
         log_str = "Stale AWS managed policies discovered."
         for policy_arn in existing_managed_policies:
-            response.append(
+            proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DETACH,
                     resource_id=policy_arn,
                     attribute="managed_policies",
                 )
-            )
-        if context.execute:
-            log_str = f"{log_str} Detaching AWS managed policies..."
-            tasks.extend(
-                [
-                    boto_crud_call(
-                        identity_center_client.detach_managed_policy_from_permission_set,
-                        InstanceArn=instance_arn,
-                        PermissionSetArn=permission_set_arn,
-                        ManagedPolicyArn=policy_arn,
-                    )
-                    for policy_arn in existing_managed_policies
-                ]
-            )
+            ]
+            response.extend(proposed_changes)
+            if context.execute:
+                log_str = f"{log_str} Detaching AWS managed policies..."
+                apply_awaitable = boto_crud_call(
+                    identity_center_client.detach_managed_policy_from_permission_set,
+                    InstanceArn=instance_arn,
+                    PermissionSetArn=permission_set_arn,
+                    ManagedPolicyArn=policy_arn,
+                )
+                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
         log.info(log_str, managed_policies=existing_managed_policies, **log_params)
 
     if tasks:
-        await asyncio.gather(*tasks)
-
-    return response
+        results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+        return list(chain.from_iterable(results))
+    else:
+        return response
 
 
 async def detach_customer_managed_policy_ref(
@@ -319,24 +317,23 @@ async def apply_permission_set_customer_managed_policies(
     if new_customer_managed_policy_references:
         log_str = "New customer managed policies discovered."
         for policy in new_customer_managed_policy_references:
-            response.append(
+            proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.ATTACH,
                     resource_id=f"{policy['Path']}{policy['Name']}",
                     attribute="customer_managed_policies",
                 )
-            )
-        if context.execute:
-            log_str = f"{log_str} Attaching customer managed policies..."
-            tasks = [
-                boto_crud_call(
+            ]
+            response.extend(proposed_changes)
+            if context.execute:
+                log_str = f"{log_str} Attaching customer managed policies..."
+                apply_awaitable = boto_crud_call(
                     identity_center_client.attach_customer_managed_policy_reference_to_permission_set,
                     InstanceArn=instance_arn,
                     PermissionSetArn=permission_set_arn,
                     CustomerManagedPolicyReference=policy,
                 )
-                for policy in new_customer_managed_policy_references
-            ]
+                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
         log.info(
             log_str,
             customer_managed_policy_refs=new_customer_managed_policy_references,
@@ -352,26 +349,23 @@ async def apply_permission_set_customer_managed_policies(
     if existing_customer_managed_policy_references:
         log_str = "Stale customer managed policies discovered."
         for policy in existing_customer_managed_policy_references:
-            response.append(
+            proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DETACH,
                     resource_id=f"{policy['Path']}{policy['Name']}",
                     attribute="customer_managed_policies",
                 )
-            )
-        if context.execute:
-            log_str = f"{log_str} Detaching customer managed policies..."
-            tasks.extend(
-                [
-                    detach_customer_managed_policy_ref(
-                        identity_center_client,
-                        instance_arn=instance_arn,
-                        permission_set_arn=permission_set_arn,
-                        policy=policy,
-                    )
-                    for policy in existing_customer_managed_policy_references
-                ]
-            )
+            ]
+            response.extend(proposed_changes)
+            if context.execute:
+                log_str = f"{log_str} Detaching customer managed policies..."
+                apply_awaitable = detach_customer_managed_policy_ref(
+                    identity_center_client,
+                    instance_arn=instance_arn,
+                    permission_set_arn=permission_set_arn,
+                    policy=policy,
+                )
+                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
         log.info(
             log_str,
             customer_managed_policy_refs=existing_customer_managed_policy_references,
@@ -379,9 +373,10 @@ async def apply_permission_set_customer_managed_policies(
         )
 
     if tasks:
-        await asyncio.gather(*tasks)
-
-    return response
+        results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+        return list(chain.from_iterable(results))
+    else:
+        return response
 
 
 async def create_account_assignment(
@@ -516,7 +511,7 @@ async def apply_account_assignments(
     for assignment_id, assignment in existing_assignment_map.items():
         if not template_assignment_map.get(assignment_id):
             log_str = "Stale assignments discovered."
-            response.append(
+            proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DELETE,
                     account=assignment["account_name"],
@@ -524,26 +519,26 @@ async def apply_account_assignments(
                     resource_type=assignment["resource_type"],
                     attribute="account_assignment",
                 )
-            )
+            ]
+            response.extend(proposed_changes)
             if context.execute:
                 log_str = f"{log_str} Removing account assignment..."
-                tasks.append(
-                    delete_account_assignment(
-                        identity_center_client,
-                        account_id=assignment["account_id"],
-                        instance_arn=instance_arn,
-                        permission_set_arn=permission_set_arn,
-                        resource_type=assignment["resource_type"],
-                        resource_id=assignment["resource_id"],
-                        resource_name=assignment["resource_name"],
-                        log_params=log_params,
-                    )
+                apply_awaitable = delete_account_assignment(
+                    identity_center_client,
+                    account_id=assignment["account_id"],
+                    instance_arn=instance_arn,
+                    permission_set_arn=permission_set_arn,
+                    resource_type=assignment["resource_type"],
+                    resource_id=assignment["resource_id"],
+                    resource_name=assignment["resource_name"],
+                    log_params=log_params,
                 )
+                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
             log.info(log_str, details=assignment, **log_params)
 
     for assignment_id, assignment in template_assignment_map.items():
         if not existing_assignment_map.get(assignment_id):
-            response.append(
+            proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
                     account=assignment["account_name"],
@@ -551,29 +546,30 @@ async def apply_account_assignments(
                     resource_type=assignment["resource_type"],
                     attribute="account_assignment",
                 )
-            )
+            ]
+            response.extend(proposed_changes)
 
             log_str = "New account assignments discovered."
             if context.execute:
                 log_str = f"{log_str} Creating account assignment..."
-                tasks.append(
-                    create_account_assignment(
-                        identity_center_client,
-                        account_id=assignment["account_id"],
-                        instance_arn=instance_arn,
-                        permission_set_arn=permission_set_arn,
-                        resource_type=assignment["resource_type"],
-                        resource_id=assignment["resource_id"],
-                        resource_name=assignment["resource_name"],
-                        log_params=log_params,
-                    )
+                apply_awaitable = create_account_assignment(
+                    identity_center_client,
+                    account_id=assignment["account_id"],
+                    instance_arn=instance_arn,
+                    permission_set_arn=permission_set_arn,
+                    resource_type=assignment["resource_type"],
+                    resource_id=assignment["resource_id"],
+                    resource_name=assignment["resource_name"],
+                    log_params=log_params,
                 )
+                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
             log.info(log_str, details=assignment, **log_params)
 
     if tasks:
-        await async_batch_processor(tasks, 10)
-
-    return response
+        results: list[list[ProposedChange]] = await async_batch_processor(tasks, 10)
+        return list(chain.from_iterable(results))
+    else:
+        return response
 
 
 async def apply_permission_set_inline_policy(
@@ -754,51 +750,53 @@ async def apply_permission_set_tags(
         tag["Key"] for tag in existing_tags if not template_tag_map.get(tag["Key"])
     ]:
         log_str = "Stale tags discovered."
-        response.append(
+        proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.DETACH,
                 attribute="tags",
                 change_summary={"TagKeys": tags_to_remove},
             )
-        )
+        ]
+        response.extend(proposed_changes)
         if context.execute:
             log_str = f"{log_str} Removing tags..."
-            tasks.append(
-                boto_crud_call(
-                    identity_center_client.untag_resource,
-                    InstanceArn=instance_arn,
-                    ResourceArn=permission_set_arn,
-                    TagKeys=tags_to_remove,
-                )
+            apply_awaitable = boto_crud_call(
+                identity_center_client.untag_resource,
+                InstanceArn=instance_arn,
+                ResourceArn=permission_set_arn,
+                TagKeys=tags_to_remove,
             )
+            tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
         log.info(log_str, tags=tags_to_remove, **log_params)
 
     if tags_to_apply:
         log_str = "New tags discovered in AWS."
-        for tag in tags_to_apply:
-            response.append(
-                ProposedChange(
-                    change_type=ProposedChangeType.ATTACH,
-                    attribute="tags",
-                    new_value=tag,
-                )
+        proposed_changes = [
+            ProposedChange(
+                change_type=ProposedChangeType.ATTACH,
+                attribute="tags",
+                new_value=tag,
             )
+            for tag in tags_to_apply
+        ]
+        response.extend(proposed_changes)
+
         if context.execute:
             log_str = f"{log_str} Adding tags..."
-            tasks.append(
-                boto_crud_call(
-                    identity_center_client.tag_resource,
-                    InstanceArn=instance_arn,
-                    ResourceArn=permission_set_arn,
-                    Tags=tags_to_apply,
-                )
+            apply_awaitable = boto_crud_call(
+                identity_center_client.tag_resource,
+                InstanceArn=instance_arn,
+                ResourceArn=permission_set_arn,
+                Tags=tags_to_apply,
             )
+            tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
         log.info(log_str, tags=tags_to_apply, **log_params)
 
     if tasks:
-        await asyncio.gather(*tasks)
-
-    return response
+        results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+        return list(chain.from_iterable(results))
+    else:
+        return response
 
 
 async def delete_permission_set(

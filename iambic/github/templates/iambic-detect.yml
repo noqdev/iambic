@@ -1,14 +1,14 @@
-name: Run Iambic Import
+name: Run Iambic Detect
 on:
   workflow_dispatch:
   schedule:
-    - cron:  '0 */4 * * *' # import at minute 0 past every 4th hour
+    - cron:  '*/15 * * * *'
 jobs:
   iambic-import:
     runs-on: ubuntu-latest
     environment: production
-    name: Import Cloud and Google Environment
-    timeout-minutes: 60 # Setting this to 60 min for now. If this takes longer, it needs better performance improvement
+    name: Detect Cloud and Google Environment changes
+    timeout-minutes: 13 # this job is scheduled for every 15 min, setting it to 13 to have some margin
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: false

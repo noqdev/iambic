@@ -198,9 +198,8 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
             except Exception as err:
                 log.warning(err)
 
-        if self.hub_role_arn and self.hub_role_arn != get_current_role_arn(
-            session.client("sts")
-        ):
+        sts_client = session.client("sts")
+        if self.hub_role_arn and self.hub_role_arn != get_current_role_arn(sts_client):
             boto3_session = await create_assume_role_session(
                 session,
                 self.hub_role_arn,
@@ -761,3 +760,7 @@ class Description(AccessModel):
     @property
     def resource_id(self) -> str:
         return self.description
+
+    @classmethod
+    def new_instance_from_string(cls, s: str) -> Description:
+        return Description(description=s)

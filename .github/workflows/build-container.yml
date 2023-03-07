@@ -57,12 +57,12 @@ jobs:
         id: build-container
         run: |
           docker logout ghcr.io
-          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/o4z3c2v2
+          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/iambic
           . build-env/bin/activate && make build_docker
           make trivy_scan
           make trivy_sbom
           make upload_docker
-          docker logout public.ecr.aws/o4z3c2v2
+          docker logout public.ecr.aws/iambic
           docker buildx prune --filter=until=96h -f
       - uses: actions/upload-artifact@v3
         with:

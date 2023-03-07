@@ -1,14 +1,17 @@
-name: Run Iambic Import
+name: Run Iambic Expire
 on:
   workflow_dispatch:
   schedule:
-    - cron:  '0 */4 * * *' # import at minute 0 past every 4th hour
+    - cron:  '5 * * * *' # every every hour at minute 5
+
+
 jobs:
-  iambic-import:
+  iambic-expire:
     runs-on: ubuntu-latest
     environment: production
-    name: Import Cloud and Google Environment
-    timeout-minutes: 60 # Setting this to 60 min for now. If this takes longer, it needs better performance improvement
+    if: github.ref == 'refs/heads/main'
+    name: Check expire resources
+    timeout-minutes: 30 # If periodic expires takes more than 30min to run, we probably have performance issue
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: false

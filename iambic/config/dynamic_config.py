@@ -26,6 +26,10 @@ from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, google, okta
 CURRENT_IAMBIC_VERSION = "1"
 
 
+class CoreConfig(BaseModel):
+    minimum_ulimit: int = 4096
+
+
 class PluginType(Enum):
     DIRECTORY_PATH = "DIRECTORY_PATH"
     # GIT = "GIT"
@@ -128,6 +132,10 @@ class Config(BaseTemplate):
     plugin_instances: Optional[list[ProviderPlugin]] = Field(
         description="A list of the plugin instances parsed as part of the plugin paths.",
         exclude=True,
+    )
+    core: Optional[CoreConfig] = Field(
+        CoreConfig(),
+        description="Core configuration options for iambic.",
     )
 
     class Config:
@@ -401,14 +409,26 @@ async def load_config(
     Returns:
     - Config: The configuration object created from the specified file.
     """
-    from iambic.config.templates import TEMPLATES
-
     log.info("Loading config...")
     config_path = str(
         config_path
     )  # Ensure it's a string in case it's a Path for pydantic
     config_dict = yaml.load(open(config_path))
     base_config = Config(file_path=config_path, **config_dict)
+    return await process_config(
+        base_config, config_path, config_dict, configure_plugins, approved_plugins_only
+    )
+
+
+async def process_config(
+    base_config: Config,
+    config_path,
+    config_dict,
+    configure_plugins: bool = True,
+    approved_plugins_only: bool = False,
+) -> Config:
+    from iambic.config.templates import TEMPLATES
+
     if approved_plugins_only:
         default_plugins = [
             plugin.location for plugin in Config.__fields__["plugins"].default

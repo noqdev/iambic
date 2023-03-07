@@ -4,20 +4,17 @@ import asyncio
 import os
 import shutil
 import tempfile
-from unittest.mock import AsyncMock, patch
 
 import git
 import pytest
-from iambic.config.dynamic_config import load_config
-from iambic.core import git as the_git_module
-from iambic.core.context import ExecutionContext
-from iambic.core.iambic_plugin import ProviderPlugin
-from iambic.core.models import BaseTemplate, ExpiryModel, TemplateChangeDetails
-from iambic.plugins.v0_1_0 import PLUGIN_VERSION
-from iambic.request_handler.git_apply import apply_git_changes
-from pydantic import BaseModel
+from git import Repo
 
-TEST_TEMPLATE_YAML = """template_type: NOQ::Test
+import iambic.plugins.v0_1_0.example
+from iambic.config.dynamic_config import load_config
+from iambic.core.parser import load_templates
+from iambic.request_handler.git_apply import apply_git_changes
+
+TEST_TEMPLATE_YAML = """template_type: NOQ::Example::LocalFile
 name: test_template
 expires_at: tomorrow
 properties:
@@ -32,75 +29,19 @@ TEST_CONFIG_PATH = "config/test_config.yaml"
 TEST_CONFIG_YAML = """template_type: NOQ::Core::Config
 version: '1'
 
-test:
-    random: 1
+plugins:
+  - type: DIRECTORY_PATH
+    location: {example_plugin_location}
+    version: v0_1_0
+example:
+  random: 1
 """
 
-
-class TestConfig(BaseModel):
-    test: str = "test"
-
-
-class TestTemplateProperties(BaseModel):
-    name: str
-
-
-class TestTemplate(BaseTemplate, ExpiryModel):
-    template_type = TEST_TEMPLATE_TYPE
-    properties: TestTemplateProperties
-
-    @property
-    def resource_type(self):
-        return "noq:test"
-
-    @property
-    def resource_id(self):
-        return "fake_id"
-
-    async def apply(
-        self, config: TestConfig, context: ExecutionContext
-    ) -> TemplateChangeDetails:
-        template_changes = TemplateChangeDetails(
-            resource_id="fake_id",
-            resource_type="noq:test",
-            template_path=self.file_path,
-        )
-        template_changes.proposed_changes = []
-        return template_changes
-
-
-def import_test_resources():
-    pass
-
-
-def load_test():
-    pass
-
-
-TEST_IAMBIC_PLUGIN = ProviderPlugin(
-    config_name="aws",  # FIXME i can't seem to patch config to an different config object
-    version=PLUGIN_VERSION,
-    provider_config=TestConfig,
-    requires_secret=True,
-    async_import_callable=import_test_resources,
-    async_load_callable=load_test,
-    templates=[
-        TestTemplate,
-    ],
-)
+EXAMPLE_PLUGIN_PATH = iambic.plugins.v0_1_0.example.__path__[0]
 
 
 @pytest.fixture
-def template_class():
-    original_templates = the_git_module.TEMPLATES.templates
-    the_git_module.TEMPLATES.set_templates(original_templates + [TestTemplate])
-    with patch("iambic.core.git.TEMPLATES", the_git_module.TEMPLATES):
-        yield the_git_module.TEMPLATES.template_map
-    the_git_module.TEMPLATES.set_templates(original_templates)
-
-
-@pytest.fixture
-def templates_repo(template_class):
+def templates_repo():
 
     temp_templates_directory = tempfile.mkdtemp(
         prefix="iambic_test_temp_templates_directory"
@@ -129,7 +70,9 @@ def templates_repo(template_class):
             f.write(TEST_TEMPLATE_YAML.format(name="before"))
 
         with open(f"{temp_templates_directory}/{TEST_CONFIG_PATH}", "w") as f:
-            f.write(TEST_CONFIG_YAML)
+            f.write(
+                TEST_CONFIG_YAML.format(example_plugin_location=EXAMPLE_PLUGIN_PATH)
+            )
 
         repo.git.add(A=True)
         repo.git.commit(m="before")
@@ -141,17 +84,8 @@ def templates_repo(template_class):
         repo.git.add(A=True)
         repo.git.commit(m="after")
 
-        config = asyncio.run(
-            load_config(f"{temp_templates_directory}/{TEST_CONFIG_PATH}")
-        )
-        config.plugin_instances = [TEST_IAMBIC_PLUGIN]
-        setattr(config, TEST_IAMBIC_PLUGIN.config_name, config)
-        the_git_module.TEMPLATES.set_templates([TestTemplate])
-        async_mock = AsyncMock(return_value=config)
-        with patch(
-            "iambic.request_handler.git_apply.load_config", side_effect=async_mock
-        ):
-            yield f"{temp_templates_directory}/{TEST_CONFIG_PATH}", temp_templates_directory
+        asyncio.run(load_config(f"{temp_templates_directory}/{TEST_CONFIG_PATH}"))
+        yield f"{temp_templates_directory}/{TEST_CONFIG_PATH}", temp_templates_directory
     finally:
         try:
             shutil.rmtree(temp_templates_directory)
@@ -170,3 +104,17 @@ async def test_apply_git_changes(templates_repo):
     with open(f"{repo_dir}/{TEST_TEMPLATE_PATH}", "r") as f:
         after_template_content = "\n".join(f.readlines())
     assert "tomorrow" not in after_template_content
+
+
+@pytest.mark.asyncio
+async def test_apply_git_changes_with_deleted_template(templates_repo):
+    config_path, repo_dir = templates_repo
+    repo = Repo(repo_dir)
+    sha_before_git_apply = repo.head.commit.hexsha
+    template = load_templates([f"{repo_dir}/{TEST_TEMPLATE_PATH}"])[0]
+    assert template.deleted is False
+    template.deleted = True
+    template.write()
+    await apply_git_changes(config_path, repo_dir)
+    sha_after_git_apply = repo.head.commit.hexsha
+    assert sha_before_git_apply != sha_after_git_apply

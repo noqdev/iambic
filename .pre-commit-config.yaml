@@ -10,7 +10,7 @@ repos:
     - id: check-case-conflict
     - id: debug-statements
     - id: check-yaml
-      args: [--allow-multiple-documents]
+      args: [--allow-multiple-documents, --unsafe]
 - repo: local
   hooks:
   - id: isort
