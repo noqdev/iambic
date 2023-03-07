@@ -587,9 +587,9 @@ def sanitize_string(unsanitized_str, valid_characters_re):
     return sanitized_str
 
 
-def simplify_dt(_dt):
+def simplify_dt(_dt: datetime) -> str:
     """
-    Simplfiy a datetime object to a string
+    Simplify a datetime object  by converting it into a string
     with minute granularity. Useful for handling
     `expires_at` without needing to expose microsecond granularity in our templates.
     """
