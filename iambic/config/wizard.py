@@ -10,8 +10,8 @@ import sys
 from textwrap import dedent
 from typing import Union
 
+from aws_error_utils.aws_error_utils import errors
 import boto3
-import botocore
 import questionary
 from botocore.exceptions import ClientError, NoCredentialsError
 
@@ -271,7 +271,7 @@ class ConfigurationWizard:
             ).get_caller_identity()
             caller_arn = get_identity_arn(default_caller_identity)
             default_hub_account_id = caller_arn.split(":")[4]
-        except (AttributeError, IndexError, NoCredentialsError, ClientError):
+        except (AttributeError, IndexError, NoCredentialsError, ClientError, FileNotFoundError):
             default_hub_account_id = None
             default_caller_identity = {}
 
@@ -370,7 +370,7 @@ class ConfigurationWizard:
                 base_config, self.config_path, base_config.dict()
             )
 
-        with contextlib.suppress(ClientError, NoCredentialsError):
+        with contextlib.suppress(ClientError, NoCredentialsError, FileNotFoundError):
             self.autodetected_org_settings = self.boto3_session.client(
                 "organizations"
             ).describe_organization()["Organization"]
@@ -437,14 +437,21 @@ class ConfigurationWizard:
                         selected_account_id=selected_hub_account_id,
                     )
                     continue
-            except botocore.exceptions.ClientError as err:
+            except errors.FileNotFoundError as err:
+                log.error(
+                    ("We are unable to authenticate to AWS because the provided profile name has a credential_process "
+                    "rule setup in your AWS configuration file. Either remove the credential_process rule or use the "
+                    "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables."),
+                    error=str(err),
+                )
+                continue
+            except errors.ClientError as err:
                 log.info(
                     "Unable to create a session for the provided profile name. Please try again.",
                     error=str(err),
                 )
                 continue
-
-            except botocore.exceptions.ProfileNotFound as err:
+            except errors.ProfileNotFound as err:
                 log.info(
                     "Selected profile doesn't exist. Please try again.",
                     error=str(err),
@@ -452,7 +459,7 @@ class ConfigurationWizard:
                 continue
 
             self.profile_name = profile_name
-            with contextlib.suppress(ClientError, NoCredentialsError):
+            with contextlib.suppress(ClientError, NoCredentialsError, FileNotFoundError):
                 self.autodetected_org_settings = self.boto3_session.client(
                     "organizations"
                 ).describe_organization()["Organization"]
