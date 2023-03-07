@@ -35,6 +35,7 @@ from iambic.core.utils import (
     apply_to_provider,
     create_commented_map,
     sanitize_string,
+    simplify_dt,
     snake_to_camelcap,
     sort_dict,
     transform_comments,
@@ -537,6 +538,12 @@ class ExpiryModel(IambicPydanticBaseModel):
             "Upon being set to true, the resource will be deleted the next time iambic is ran."
         ),
     )
+
+    class Config:
+        json_encoders = {
+            datetime.datetime: simplify_dt,
+            datetime.date: simplify_dt,
+        }
 
     @validator("expires_at", pre=True)
     def parse_expires_at(cls, value):

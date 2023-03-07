@@ -585,3 +585,15 @@ def sanitize_string(unsanitized_str, valid_characters_re):
         if re.match(valid_characters_re, char):
             sanitized_str += char
     return sanitized_str
+
+
+def simplify_dt(_dt):
+    """
+    Simplfiy a datetime object to a string
+    with minute granularity. Useful for handling
+    `expires_at` without needing to expose microsecond granularity in our templates.
+    """
+    dt_str = f"{_dt:%Y-%m-%dT%H:%M:%S}"[:-3]
+    if _dt.tzinfo:
+        dt_str += f" {_dt:%Z}"
+    return dt_str
