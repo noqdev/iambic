@@ -5,11 +5,13 @@ import os
 import sys
 import tempfile
 import time
+import uuid
 from enum import Enum
 
 from iambic.config.dynamic_config import load_config
 from iambic.config.utils import resolve_config_template_path
-from iambic.core.models import BaseModel
+from iambic.core.iambic_enum import Command
+from iambic.core.models import BaseModel, ExecutionMessage
 from iambic.main import run_clone_repos, run_detect, run_git_apply, run_git_plan
 
 REPO_BASE_PATH = os.path.expanduser("~/.iambic/repos/")
@@ -68,18 +70,23 @@ def handler(event, context):
 
 def run_handler(event=None, context=None):
     """
-    Default handler for AWS Lambda. It is split out from the actual
-    handler so we can also run via IDE run configurations
+    Default handler for AWS Lambda.
+    It is split out from the actual handler, so we can also run via IDE run configurations
     """
     if not context:
         context = {"command": "import"}
     lambda_context = LambdaContext(**context)
 
+    # TODO: Derive execution_id from context
+    exe_message = ExecutionMessage(
+        execution_id=str(uuid.uuid4()), command=Command.IMPORT
+    )
+
     match lambda_context.command:
         case LambdaCommand.run_import.value:
             config_path = asyncio.run(resolve_config_template_path(REPO_BASE_PATH))
             config = asyncio.run(load_config(config_path))
-            return asyncio.run(config.run_import(REPO_BASE_PATH))
+            return asyncio.run(config.run_import(exe_message, REPO_BASE_PATH))
         case LambdaCommand.run_detect.value:
             return run_detect(REPO_BASE_PATH)
         case LambdaCommand.run_apply.value:

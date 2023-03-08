@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import random
+import uuid
 
+from functional_tests.conftest import IAMBIC_TEST_DETAILS
+from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
+from iambic.core.models import ExecutionMessage
 from iambic.core.utils import gather_templates
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
@@ -10,7 +14,9 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     PermissionSetAccess,
 )
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation import (
-    get_permission_set_dir,
+    collect_aws_permission_sets,
+    generate_aws_permission_set_templates,
+    get_template_dir,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
@@ -57,7 +63,7 @@ async def generate_permission_set_template_from_base(
     permission_sets = await gather_templates(
         repo_dir, AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
     )
-    permission_set_dir = get_permission_set_dir(repo_dir)
+    permission_set_dir = get_template_dir(repo_dir)
     permission_set_template = AWSIdentityCenterPermissionSetTemplate.load(
         random.choice(permission_sets)
     )
@@ -78,3 +84,21 @@ async def generate_permission_set_template_from_base(
 
     permission_set_template.write()
     return permission_set_template
+
+
+async def permission_set_full_import(detect_messages: list = None):
+    exe_message = ExecutionMessage(
+        execution_id=str(uuid.uuid4()), command=Command.IMPORT, provider_type="aws"
+    )
+    await collect_aws_permission_sets(
+        exe_message,
+        IAMBIC_TEST_DETAILS.config.aws,
+        IAMBIC_TEST_DETAILS.template_dir_path,
+        detect_messages,
+    )
+    await generate_aws_permission_set_templates(
+        exe_message,
+        IAMBIC_TEST_DETAILS.config.aws,
+        IAMBIC_TEST_DETAILS.template_dir_path,
+        detect_messages,
+    )

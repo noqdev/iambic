@@ -3,9 +3,9 @@ requires = [ "poetry-core",]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "iambic-google"
+name = "iambic-google-workspace"
 version = "0.1.0"
-description = "The IAMbic Google plugin."
+description = "The IAMbic Google Workspace plugin."
 authors = ["Noq Software <hello@noq.dev>"]
 readme = "README.md"
 exclude = ["build_util/*"]

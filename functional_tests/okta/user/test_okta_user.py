@@ -27,7 +27,7 @@ properties:
 """
     test_user_fp = os.path.join(
         temp_templates_directory,
-        f"resources/okta/development/users/{username}.yaml",
+        f"resources/okta/users/development/{username}.yaml",
     )
 
     with open(test_user_fp, "w") as temp_file:

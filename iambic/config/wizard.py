@@ -7,11 +7,12 @@ import os
 import re
 import select
 import sys
+import uuid
 from textwrap import dedent
 from typing import Union
 
+from aws_error_utils.aws_error_utils import errors
 import boto3
-import botocore
 import questionary
 from botocore.exceptions import ClientError, NoCredentialsError
 
@@ -28,8 +29,9 @@ from iambic.config.utils import (
     resolve_config_template_path,
 )
 from iambic.core.context import ctx
-from iambic.core.iambic_enum import IambicManaged
+from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
+from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import get_existing_template_map
 from iambic.core.utils import yaml
 from iambic.github.utils import create_workflow_files
@@ -63,7 +65,10 @@ from iambic.plugins.v0_1_0.aws.utils import (
     get_identity_arn,
     is_valid_account_id,
 )
-from iambic.plugins.v0_1_0.google.iambic_plugin import GoogleConfig, GoogleProject
+from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import (
+    GoogleProject,
+    GoogleWorkspaceConfig,
+)
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
 
 CUSTOM_AUTO_COMPLETE_STYLE = questionary.Style(
@@ -271,7 +276,7 @@ class ConfigurationWizard:
             ).get_caller_identity()
             caller_arn = get_identity_arn(default_caller_identity)
             default_hub_account_id = caller_arn.split(":")[4]
-        except (AttributeError, IndexError, NoCredentialsError, ClientError):
+        except (AttributeError, IndexError, NoCredentialsError, ClientError, FileNotFoundError):
             default_hub_account_id = None
             default_caller_identity = {}
 
@@ -370,7 +375,7 @@ class ConfigurationWizard:
                 base_config, self.config_path, base_config.dict()
             )
 
-        with contextlib.suppress(ClientError, NoCredentialsError):
+        with contextlib.suppress(ClientError, NoCredentialsError, FileNotFoundError):
             self.autodetected_org_settings = self.boto3_session.client(
                 "organizations"
             ).describe_organization()["Organization"]
@@ -437,14 +442,21 @@ class ConfigurationWizard:
                         selected_account_id=selected_hub_account_id,
                     )
                     continue
-            except botocore.exceptions.ClientError as err:
+            except errors.FileNotFoundError as err:
+                log.error(
+                    ("We are unable to authenticate to AWS because the provided profile name has a credential_process "
+                    "rule setup in your AWS configuration file. Either remove the credential_process rule or use the "
+                    "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables."),
+                    error=str(err),
+                )
+                continue
+            except errors.ClientError as err:
                 log.info(
                     "Unable to create a session for the provided profile name. Please try again.",
                     error=str(err),
                 )
                 continue
-
-            except botocore.exceptions.ProfileNotFound as err:
+            except errors.ProfileNotFound as err:
                 log.info(
                     "Selected profile doesn't exist. Please try again.",
                     error=str(err),
@@ -452,7 +464,7 @@ class ConfigurationWizard:
                 continue
 
             self.profile_name = profile_name
-            with contextlib.suppress(ClientError, NoCredentialsError):
+            with contextlib.suppress(ClientError, NoCredentialsError, FileNotFoundError):
                 self.autodetected_org_settings = self.boto3_session.client(
                     "organizations"
                 ).describe_organization()["Organization"]
@@ -492,7 +504,13 @@ class ConfigurationWizard:
             return
 
         try:
-            await self.config.run_discover_upstream_config_changes(self.repo_dir)
+            exe_message = ExecutionMessage(
+                execution_id=str(uuid.uuid4()),
+                command=Command.CONFIG_DISCOVERY,
+            )
+            await self.config.run_discover_upstream_config_changes(
+                exe_message, self.repo_dir
+            )
             await self.config.aws.set_identity_center_details()
         except Exception as err:
             log.info("Failed to refresh AWS accounts", error=err)
@@ -946,7 +964,7 @@ class ConfigurationWizard:
                         "client_x509_cert_url",
                     }
                 )
-                for project in self.config.google.projects
+                for project in self.config.google.workspaces
             ]
 
         secret_details = self.config.extends[0]
@@ -983,17 +1001,19 @@ class ConfigurationWizard:
             self.config.secrets.setdefault("google", {}).setdefault(
                 "projects", []
             ).append(google_obj)
-            self.config.google = GoogleConfig(projects=[GoogleProject(**google_obj)])
+            self.config.google = GoogleWorkspaceConfig(
+                projects=[GoogleProject(**google_obj)]
+            )
             self.update_secret()
         else:
             self.config.secrets = {"google": {"projects": [google_obj]}}
             self.create_secret()
 
     def configuration_wizard_google_project_edit(self):
-        project_ids = [project.project_id for project in self.config.google.projects]
+        project_ids = [project.project_id for project in self.config.google.workspaces]
         project_id_to_config_elem_map = {
             project.project_id: elem
-            for elem, project in enumerate(self.config.google.projects)
+            for elem, project in enumerate(self.config.google.workspaces)
         }
         if len(project_ids) > 1:
             action = questionary.select(
@@ -1005,7 +1025,7 @@ class ConfigurationWizard:
             project_to_edit = next(
                 (
                     project
-                    for project in self.config.google.projects
+                    for project in self.config.google.workspaces
                     if project.project_id == action
                 ),
                 None,
@@ -1014,7 +1034,7 @@ class ConfigurationWizard:
                 log.debug("Could not find AWS Organization to edit", org_id=action)
                 return
         else:
-            project_to_edit = self.config.google.projects[0]
+            project_to_edit = self.config.google.workspaces[0]
 
         project_id = project_to_edit.project_id
         choices = [
@@ -1081,7 +1101,7 @@ class ConfigurationWizard:
                     project_to_edit.client_x509_cert_url
                 )
 
-            self.config.google.projects[
+            self.config.google.workspaces[
                 project_id_to_config_elem_map[project_id]
             ] = project_to_edit
             self.update_secret()

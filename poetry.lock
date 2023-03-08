@@ -211,6 +211,21 @@ tests = ["attrs[tests-no-zope]", "zope.interface"]
 tests-no-zope = ["cloudpickle", "cloudpickle", "hypothesis", "hypothesis", "mypy (>=0.971,<0.990)", "mypy (>=0.971,<0.990)", "pympler", "pympler", "pytest (>=4.3.0)", "pytest (>=4.3.0)", "pytest-mypy-plugins", "pytest-mypy-plugins", "pytest-xdist[psutil]", "pytest-xdist[psutil]"]
 
 [[package]]
+name = "aws-error-utils"
+version = "2.7.0"
+description = "Error-handling functions for boto3/botocore"
+category = "main"
+optional = false
+python-versions = ">=3.7,<4"
+files = [
+    {file = "aws_error_utils-2.7.0-py3-none-any.whl", hash = "sha256:fc6e556340a14af58e19bc60faf635d3eea9abbacb7f06e54a908e8234c60a50"},
+    {file = "aws_error_utils-2.7.0.tar.gz", hash = "sha256:07107af2a2c26706cd9525b7ffbed43f2d07b50d27e39f9e9156c11b2e993c97"},
+]
+
+[package.dependencies]
+botocore = "*"
+
+[[package]]
 name = "black"
 version = "22.12.0"
 description = "The uncompromising code formatter."
@@ -2814,4 +2829,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "d80b31a78380f7d1dee3e6cd085b02273f1bb87052e7272f5500178201cd37bb"
+content-hash = "deb659c1b2da7ae747dc94df7877786d0d1745e935991aafbb44a6257090fad8"

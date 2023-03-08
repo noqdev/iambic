@@ -6,6 +6,7 @@ from unittest import IsolatedAsyncioTestCase
 import dateparser
 from functional_tests.aws.user.utils import generate_user_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+from iambic.core import noq_json as json
 from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.user.utils import get_user_across_accounts
@@ -42,8 +43,16 @@ class UpdateUserTestCase(IsolatedAsyncioTestCase):
             IAMBIC_TEST_DETAILS.config.aws, ctx
         )
 
-        assert len(template_change_details.proposed_changes) > 0
-        assert len(template_change_details.exceptions_seen) > 0
+        self.assertGreater(
+            len(template_change_details.proposed_changes),
+            0,
+            f"No proposed changes: {json.dumps(template_change_details.dict())}",
+        )
+        self.assertGreater(
+            len(template_change_details.exceptions_seen),
+            0,
+            f"No exceptions seen: {json.dumps(template_change_details.dict())}",
+        )
 
     async def test_update_managed_policies(self):
         if self.template.properties.managed_policies:

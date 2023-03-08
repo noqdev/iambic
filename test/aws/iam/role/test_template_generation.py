@@ -3,6 +3,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
 from iambic.core.iambic_enum import IambicManaged
 from iambic.plugins.v0_1_0.aws.iam.role.models import RoleTemplate
 from iambic.plugins.v0_1_0.aws.iam.role.template_generation import create_templated_role

@@ -12,8 +12,11 @@ from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.models import Variable
 from iambic.core.utils import aio_wrapper
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
-from iambic.plugins.v0_1_0.google.group.models import GroupTemplate
-from iambic.plugins.v0_1_0.google.handlers import import_google_resources, load
+from iambic.plugins.v0_1_0.google_workspace.group.models import GroupTemplate
+from iambic.plugins.v0_1_0.google_workspace.handlers import (
+    import_google_resources,
+    load,
+)
 
 
 class GoogleSubjects(BaseModel):
@@ -110,14 +113,20 @@ class GoogleProject(BaseModel):
         return self._service_connection_map[key]
 
 
-class GoogleConfig(BaseModel):
-    projects: list[GoogleProject] = Field(description="A list of Google Projects.")
+class GoogleWorkspaceConfig(BaseModel):
+    workspaces: list[GoogleProject]
+
+    def get_workspace(self, project_id: str) -> GoogleProject:
+        for w in self.workspaces:
+            if w.project_id == project_id:
+                return w
+        raise Exception(f"Could not find workspace for project_id {project_id}")
 
 
 IAMBIC_PLUGIN = ProviderPlugin(
-    config_name="google",
+    config_name="google_workspace",
     version=PLUGIN_VERSION,
-    provider_config=GoogleConfig,
+    provider_config=GoogleWorkspaceConfig,
     requires_secret=True,
     async_import_callable=import_google_resources,
     async_load_callable=load,
