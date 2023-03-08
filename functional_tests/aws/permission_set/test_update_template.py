@@ -77,4 +77,4 @@ class UpdatePermissionSetTestCaseWithBadInput(IsolatedAsyncioTestCase):
         template_change_details = await self.template.apply(
             IAMBIC_TEST_DETAILS.config.aws, ctx
         )
-        self.assertEqual(len(template_change_details.exceptions_seen), 1)
+        self.assertEqual(len(template_change_details.exceptions_seen), 1, str(template_change_details.dict()))

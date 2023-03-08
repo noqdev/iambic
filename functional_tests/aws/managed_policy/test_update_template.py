@@ -41,4 +41,4 @@ class ManagedPolicyUpdateTestCase(IsolatedAsyncioTestCase):
             IAMBIC_TEST_DETAILS.config.aws, ctx
         )
 
-        assert len(template_change_details.exceptions_seen) > 0
+        self.assertEqual(len(template_change_details.exceptions_seen), 1, str(template_change_details.dict()))
