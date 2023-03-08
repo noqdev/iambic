@@ -8,6 +8,7 @@ import uuid
 import warnings
 
 import click
+
 from iambic.config.dynamic_config import Config, init_plugins, load_config
 from iambic.config.utils import (
     check_and_update_resource_limit,
@@ -360,7 +361,10 @@ def import_(repo_dir: str):
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
     check_and_update_resource_limit(config)
-    asyncio.run(config.run_import(repo_dir))
+    execution_message = ExecutionMessage(
+        execution_id=str(uuid.uuid4()), command=Command.IMPORT
+    )
+    asyncio.run(config.run_import(execution_message, repo_dir))
 
 
 @cli.command()
