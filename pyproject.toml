@@ -9,6 +9,7 @@ description = "The python package used to generate, parse, and execute noqform y
 authors = ["Noq Software <hello@noq.dev>"]
 readme = "README.md"
 exclude = ["build_util/*"]
+include = ["iambic/output/templates/*"]
 
 [tool.isort]
 profile = "black"
