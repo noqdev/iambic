@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
+
 from iambic.config.dynamic_config import Config
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import (
@@ -9,7 +11,6 @@ from iambic.plugins.v0_1_0.aws.models import (
     AWSOrganization,
     BaseAWSOrgRule,
 )
-from pydantic import ValidationError
 
 
 @pytest.fixture

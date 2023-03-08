@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from okta.client import Client as OktaClient
+from pydantic import BaseModel, Field, SecretStr
+
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
@@ -9,9 +12,6 @@ from iambic.plugins.v0_1_0.okta.app.models import OktaAppTemplate
 from iambic.plugins.v0_1_0.okta.group.models import OktaGroupTemplate
 from iambic.plugins.v0_1_0.okta.handlers import import_okta_resources, load
 from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate
-from pydantic import BaseModel, Field, SecretStr
-
-from okta.client import Client as OktaClient
 
 
 class OktaOrganization(BaseModel):

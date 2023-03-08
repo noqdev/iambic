@@ -6,6 +6,7 @@ from typing import List
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from iambic.core.models import BaseModel
 from iambic.core.utils import (
     GlobalRetryController,

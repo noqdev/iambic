@@ -303,7 +303,7 @@ async def collect_aws_managed_policies(
             return
 
     existing_template_map = await get_existing_template_map(
-        base_output_dir, "NOQ::IAM::ManagedPolicy"
+        base_output_dir, "NOQ::AWS::IAM::ManagedPolicy"
     )
 
     log.info("Generating AWS managed policy templates.")

@@ -5,6 +5,9 @@ import json
 from typing import List, Optional, Union
 
 import botocore
+from jinja2 import BaseLoader, Environment
+from pydantic import Field, constr, validator
+
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -32,10 +35,8 @@ from iambic.plugins.v0_1_0.aws.models import (
     Tag,
 )
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call
-from jinja2 import BaseLoader, Environment
-from pydantic import Field, constr, validator
 
-AWS_MANAGED_POLICY_TEMPLATE_TYPE = "NOQ::IAM::ManagedPolicy"
+AWS_MANAGED_POLICY_TEMPLATE_TYPE = "NOQ::AWS::IAM::ManagedPolicy"
 
 
 class Principal(BaseModel):

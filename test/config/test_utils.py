@@ -3,10 +3,11 @@ from __future__ import annotations
 import os
 import pathlib
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 import pytest
-
 from iambic.config.dynamic_config import Config
+from iambic.config.utils import check_and_update_resource_limit
 from iambic.core.iambic_enum import IambicManaged
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import (
@@ -80,3 +81,18 @@ def config(repo_path):
         file_path=f"{repo_path}/cool_location.yaml",
     )
     return test_config
+
+
+@patch("resource.setrlimit")
+@patch("resource.getrlimit")
+@patch("resource.RLIMIT_NOFILE")
+def test_check_and_update_resource_limit(
+    mock_rlimit, mock_getrlimit, mock_setrlimit, config
+):
+    mock_rlimit.value = 7
+    mock_getrlimit.return_value = (1024, 4096)
+    mock_setrlimit.return_value = None
+    check_and_update_resource_limit(config)
+    mock_setrlimit.assert_called_once_with(
+        mock_rlimit, (config.core.minimum_ulimit, 4096)
+    )

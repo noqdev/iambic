@@ -1,5 +1,5 @@
 BUILD_VERSION := $(shell python build_utils/tag_and_build_container.py print-current-version)
-IAMBIC_PUBLIC_ECR_ALIAS := "s2p9s3r8"
+IAMBIC_PUBLIC_ECR_ALIAS := iambic
 
 .PHONY: prepare_for_dist
 prepare_for_dist:
@@ -7,7 +7,7 @@ prepare_for_dist:
 
 .PHONY: auth_to_ecr
 auth_to_ecr:
-	bash -c "AWS_PROFILE=development/iambic_image_builder aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/s2p9s3r"
+	bash -c "AWS_PROFILE=iambic_open_source/iambic_image_builder aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}"
 
 docker_buildx := docker buildx build \
 	--platform=linux/amd64 \
@@ -28,6 +28,14 @@ upload_docker:
 	@echo "--> Uploading Iambic Docker image"
 	$(docker_buildx) --push .
 
+.PHONY: trivy_scan
+trivy_scan:
+	trivy image --output iambic.trivy.scan.txt --timeout 15m --skip-files /app/docs/web/docs/getting_started/aws/aws.mdx --secret-config trivy-secret.yaml --severity HIGH,CRITICAL public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
+
+.PHONY: trivy_sbom
+trivy_sbom:
+	trivy image --format spdx-json --timeout 15m --output iambic.sbom.json public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
+
 .PHONY: create_manifest
 create_manifest:
 	docker manifest create public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic public.ecr.aws/${IAMBIC_PUBLIC_ECR_ALIAS}/iambic:latest
@@ -38,11 +46,11 @@ push_manifest:
 
 .PHONY: test
 test:
-	python3.10 -m pytest test
+	python3.10 -m pytest --cov iambic --cov-report xml:cov_unit_tests.xml --cov-report html:cov_unit_tests.html test
 
 .PHONY: functional_test
 functional_test:
-	pytest --cov-report html --cov iambic functional_tests --ignore functional_tests/test_github_cicd.py -s
+	pytest --cov-report html --cov iambic --cov-report xml:cov_functional_tests.xml --cov-report html:cov_functional_tests.html  functional_tests --ignore functional_tests/test_github_cicd.py -s
 # 	pytest --cov-report html --cov iambic functional_tests -s
 # 	pytest --cov-report html --cov iambic functional_tests/aws/role/test_create_template.py -s
 # 	pytest --cov-report html --cov iambic functional_tests/aws/managed_policy/test_template_expiration.py -s

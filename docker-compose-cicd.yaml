@@ -3,7 +3,7 @@ services:
   iambic-cicd:
     # NOTE: This compose file loads the image from ECR, not from what you are running
     # locally.
-    image: public.ecr.aws/s2p9s3r8/iambic:latest
+    image: public.ecr.aws/iambic/iambic:latest
     environment:
       - IAMBIC_CONFIG=arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full
       - IAMBIC_CONFIG_ASSUME_ROLE=arn:aws:iam::759357822767:role/IambicSpokeRole

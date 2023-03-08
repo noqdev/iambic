@@ -8,6 +8,7 @@ import shutil
 import sys
 import tempfile
 import time
+import traceback
 import uuid
 from enum import Enum
 from typing import Any, Callable
@@ -85,7 +86,7 @@ def run_handler(context: dict[str, Any]):
     # TODO Support Github Enterprise with custom hostname
     # g = Github(base_url="https://{hostname}/api/v3", login_or_token="access_token")
 
-    f: Callable[[github.Github, dict[str, Any]]] = EVENT_DISPATCH_MAP.get(event_name)
+    f: Callable[[github.Github, dict[str, Any]], None] = EVENT_DISPATCH_MAP.get(event_name)
     if f:
         f(github_client, context)
     else:
@@ -99,7 +100,7 @@ def handle_iambic_command(
     github_token: str = context["iambic"]["GH_OVERRIDE_TOKEN"]
     command: str = context["iambic"]["IAMBIC_CLOUD_IMPORT_CMD"]
     github_client = github.Github(github_token)
-    f: Callable[[github.Github, dict[str, Any]]] = IAMBIC_CLOUD_IMPORT_DISPATCH_MAP.get(
+    f: Callable[[github.Github, dict[str, Any]], None] = IAMBIC_CLOUD_IMPORT_DISPATCH_MAP.get(
         command
     )
     if f:
@@ -325,7 +326,9 @@ def handle_iambic_git_apply(
     if pull_request.mergeable_state != MERGEABLE_STATE_CLEAN:
         # TODO log error and also make a comment to PR
         pull_request.create_issue_comment(
-            "mergeable_state is {0}".format(pull_request.mergeable_state)
+            "Mergable state is {0}. This probably means that the necessary approvals have not been granted for the request.".format(
+                pull_request.mergeable_state
+            )
         )
         return HandleIssueCommentReturnCode.MERGEABLE_STATE_NOT_CLEAN
 
@@ -333,9 +336,15 @@ def handle_iambic_git_apply(
     os.environ["IAMBIC_SESSION_NAME"] = session_name
 
     try:
+        # merge_sha is used when we trigger a merge
+        merge_sha = pull_request.head.sha
+
         repo = prepare_local_repo(
             repo_url, get_lambda_repo_path(), pull_request_branch_name
         )
+        # local_sha_before_git_apply may not match the initial merge
+        # sha because we apply the PR to local checkout tracking branch
+        local_sha_before_git_apply = repo.head.commit.hexsha
 
         if proposed_changes_path:
             # code smell to have to change a module variable
@@ -352,13 +361,19 @@ def handle_iambic_git_apply(
         diff_list = repo.head.commit.diff()
         if len(diff_list) > 0:
             repo.git.commit("-m", COMMIT_MESSAGE_FOR_GIT_APPLY_ABSOLUTE_TIME)
+        else:
+            log.debug("git_apply did not introduce additional changes")
+
+        local_sha_after_git_apply = repo.head.commit.hexsha
+        if local_sha_before_git_apply != local_sha_after_git_apply:
+            # signal changes due to git-apply
             repo.remotes.origin.push(
                 refspec=f"HEAD:{pull_request_branch_name}"
             ).raise_if_error()
-            log_params = {"sha": repo.head.commit.hexsha}
+            log_params = {"sha": local_sha_after_git_apply}
             log.info("git-apply new sha is", **log_params)
-        else:
-            log.debug("git_apply did not introduce additional changes")
+            # update merge sha because we add new commits to pull request
+            merge_sha = local_sha_after_git_apply
 
         post_result_as_pr_comment(
             pull_request, context, "git-apply", proposed_changes_path
@@ -372,16 +387,15 @@ def handle_iambic_git_apply(
                 time.sleep(5)
 
         pull_request = templates_repo.get_pull(pull_number)
-        pull_request.merge(
-            sha=repo.head.commit.hexsha
-        )  # Concern, whether we need the exact sha on the remote
+        pull_request.merge(sha=merge_sha)
         return HandleIssueCommentReturnCode.MERGED
 
     except Exception as e:
-        log.error("fault", exception=str(e))
+        captured_traceback = traceback.format_exc()
+        log.error("fault", exception=captured_traceback)
         pull_request.create_issue_comment(
-            "exception during git-apply is {0} \n {1}".format(
-                pull_request.mergeable_state, e
+            "exception during apply is {0} \n ```{1}```".format(
+                pull_request.mergeable_state, captured_traceback
             )
         )
         raise e
@@ -419,10 +433,11 @@ def handle_iambic_git_plan(
         copy_data_to_data_directory()
         return HandleIssueCommentReturnCode.PLANNED
     except Exception as e:
-        log.error("fault", exception=str(e))
+        captured_traceback = traceback.format_exc()
+        log.error("fault", exception=captured_traceback)
         pull_request.create_issue_comment(
-            "exception during git-plan is {0} \n {1}".format(
-                pull_request.mergeable_state, e
+            "exception during plan is {0} \n ```{1}```".format(
+                pull_request.mergeable_state, captured_traceback
             )
         )
         raise e
@@ -443,10 +458,11 @@ def handle_pull_request(github_client: github.Github, context: dict[str, Any]) -
     try:
         pull_request.create_issue_comment("iambic git-plan")
     except Exception as e:
-        log.error("fault", exception=str(e))
+        captured_traceback = traceback.format_exc()
+        log.error("fault", exception=captured_traceback)
         pull_request.create_issue_comment(
-            "exception during pull-request is {0} \n {1}".format(
-                pull_request.mergeable_state, e
+            "exception during pull-request is {0} \n ```{1}```".format(
+                pull_request.mergeable_state, captured_traceback
             )
         )
         raise e
@@ -590,6 +606,8 @@ IAMBIC_CLOUD_IMPORT_DISPATCH_MAP: dict[str, Callable] = {
 COMMENT_DISPATCH_MAP: dict[str, Callable] = {
     "iambic git-apply": handle_iambic_git_apply,
     "iambic git-plan": handle_iambic_git_plan,
+    "iambic apply": handle_iambic_git_apply,
+    "iambic plan": handle_iambic_git_plan,
 }
 
 if __name__ == "__main__":

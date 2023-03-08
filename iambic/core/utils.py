@@ -16,12 +16,13 @@ from urllib.parse import unquote_plus
 
 import aiofiles
 from asgiref.sync import sync_to_async
+from ruamel.yaml import YAML
+
 from iambic.core import noq_json as json
 from iambic.core.context import ExecutionContext
 from iambic.core.exceptions import RateLimitException
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
-from ruamel.yaml import YAML
 
 if TYPE_CHECKING:
     from iambic.core.models import ProposedChange
@@ -39,9 +40,15 @@ def init_writable_directory() -> None:
         __WRITABLE_DIRECTORY__ = pathlib.Path(temp_writable_directory)
     else:
         __WRITABLE_DIRECTORY__ = pathlib.Path.home()
+    if os.environ.get("IAMBIC_DOCKER_CONTAINER", False):
+        log.info("IAMBIC_DOCKER_CONTAINER is set, using /app as writable directory")
+        __WRITABLE_DIRECTORY__ = pathlib.Path("/app")
 
     this_module = sys.modules[__name__]
     setattr(this_module, "__WRITABLE_DIRECTORY__", __WRITABLE_DIRECTORY__)
+
+
+init_writable_directory()
 
 
 def get_writable_directory() -> pathlib.Path:

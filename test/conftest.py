@@ -3,7 +3,6 @@ from __future__ import annotations
 import itertools
 
 import pytest
-
 from iambic.config.dynamic_config import (
     CURRENT_IAMBIC_VERSION,
     Config,

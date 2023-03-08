@@ -1,10 +1,9 @@
 ---
 title: Google
 ---
-<!-- #TODO not sure where this goes. It's useful metainformation, but not really part of the flow of the tutorial. -->
-Noq's SaaS Platform provides enterprise Self-Service features that make Google Group requests easier for end-users. Reach out to us at [hello@noq.dev](mailto:hello@noq.dev) or visit [https://www.noq.dev](https://www.noq.dev) for more information.
 
-In this tutorial, you will configure IAMbic to manage Google Groups, and then practice using IAMbic to to create, manipulate, and expire a test group. These are the steps you will complete.
+In this tutorial, you will configure IAMbic to manage Google Groups, and then practice using IAMbic to to create,
+manipulate, and expire a test group. These are the steps you will complete.
 
 
 #### Setup
@@ -16,9 +15,6 @@ In this tutorial, you will configure IAMbic to manage Google Groups, and then pr
 4. Add users / groups to a Google group
 5. Provide temporary ("break-glass") access to a Google Group
 6. Expire a Google Group
-
-<!--  would be awesome to link these entries above to steps below
- Can we autogenerate a ToC in the sidebar, like in gdocs? -->
 
 
 ## Prerequisites
@@ -54,13 +50,11 @@ In this section, you will set up a Google Cloud Identity that will be used by IA
 
 </details>
 
-5. Enable Domain Wide Delegation for the Google account with the following scopes: <!-- #TODO: Needs censoring (??) -->
-<!-- #TODO do these need copy buttons? -->
-  - https://www.googleapis.com/auth/admin.directory.group
-  - https://www.googleapis.com/auth/admin.reports.audit.readonly
-  - https://www.googleapis.com/auth/admin.directory.user.security
-  - https://www.googleapis.com/auth/admin.directory.user
-  - https://www.googleapis.com/auth/admin.directory.group.member
+5. Enable Domain Wide Delegation for the Google account with the following scopes:
+
+```
+https://www.googleapis.com/auth/admin.directory.group,https://www.googleapis.com/auth/admin.reports.audit.readonly,https://www.googleapis.com/auth/admin.directory.user.security,https://www.googleapis.com/auth/admin.directory.user,https://www.googleapis.com/auth/admin.directory.group.member
+```
 
 <details>
   <summary>Screenshot</summary>

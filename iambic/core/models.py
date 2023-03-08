@@ -27,6 +27,11 @@ import aiofiles
 import dateparser
 from deepdiff.model import PrettyOrderedSet
 from git import Repo
+from jinja2 import BaseLoader, Environment
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Field, validate_model, validator
+from pydantic.fields import ModelField
+
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import Command, ExecutionStatus, IambicManaged
 from iambic.core.logger import log
@@ -39,10 +44,6 @@ from iambic.core.utils import (
     transform_comments,
     yaml,
 )
-from jinja2 import BaseLoader, Environment
-from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, validate_model, validator
-from pydantic.fields import ModelField
 
 if TYPE_CHECKING:
     from iambic.config.dynamic_config import Config
@@ -488,7 +489,9 @@ class BaseTemplate(
         log.info("Deleting template file", file_path=self.file_path)
         try:
             repo = Repo(self.file_path, search_parent_directories=True)
-            repo.index.remove([self.file_path], working_tree=True)
+            # why force=True? Expire could have modified the local contents
+            # without force=True, git rm would not be able to remove the file
+            repo.index.remove([self.file_path], working_tree=True, force=True)
         except Exception as e:
             log.error(
                 "Unable to remove file from local Git repo. Deleting manually",

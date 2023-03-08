@@ -10,10 +10,8 @@ def create_workflow_files(
     repo_dir: str, repo_name: str, commit_email: str, assume_role_arn: str, region: str
 ):
     replacement_val_map = {
-        "__TEMPLATE_IAMBIC_REPO": repo_name,
-        "__TEMPLATE_IAMBIC_COMMIT_EMAIL": commit_email,
-        "__TEMPLATE_IAMBIC_ASSUME_ROLE_ARN": assume_role_arn,
-        "__TEMPLATE_IAMBIC_AWS_REGION": region,
+        # Leave the example here
+        # "__TEMPLATE_IAMBIC_COMMIT_EMAIL": commit_email,
     }
 
     file_paths = glob.glob(f"{os.path.dirname(__file__)}/**/*.yaml", recursive=True)
