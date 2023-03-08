@@ -375,12 +375,11 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
                 InstanceArn=self.identity_center_details.instance_arn,
             )
             if permission_set_arns:
-                permission_set_detail_semaphore = NoqSemaphore(
-                    identity_center_client.describe_permission_set, 35, False
-                )
+                permission_set_detail_semaphore = NoqSemaphore(boto_crud_call, 35)
                 permission_set_details = await permission_set_detail_semaphore.process(
                     [
                         {
+                            "boto_fnc": identity_center_client.describe_permission_set,
                             "InstanceArn": self.identity_center_details.instance_arn,
                             "PermissionSetArn": permission_set_arn,
                         }

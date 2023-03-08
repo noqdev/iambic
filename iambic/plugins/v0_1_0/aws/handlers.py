@@ -3,12 +3,13 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import uuid
 from typing import TYPE_CHECKING, Union
 
 import boto3
 from iambic.config.dynamic_config import ExtendsConfig, ExtendsConfigKey
 from iambic.core.context import ctx
-from iambic.core.iambic_enum import IambicManaged
+from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
 from iambic.core.parser import load_templates
@@ -101,15 +102,22 @@ async def load(config: AWSConfig) -> AWSConfig:
 
 
 async def apply(
-    config: AWSConfig, templates: list[BaseTemplate], remote_worker=None
+    exe_message: ExecutionMessage,
+    config: AWSConfig,
+    templates: list[BaseTemplate],
+    remote_worker=None,
 ) -> list[TemplateChangeDetails]:
     """
-    The apply callable for the AWS IambicPlugin class.
+    The async_apply_callable for the AWS IambicPlugin class.
 
+    :param exe_message: Execution context
     :param config: The config object.
     :param templates: The list of templates to apply.
     :param remote_worker: The remote worker to use for applying templates.
     """
+    # TODO: Leverage exe_message as part of a distributed execution
+    # TODO: Leverage remote_worker as part of a distributed execution
+
     if any(
         isinstance(template, AWSIdentityCenterPermissionSetTemplate)
         for template in templates
@@ -165,7 +173,7 @@ async def import_service_resources(
             )
 
         if tasks:
-            if ctx.use_remote and remote_worker and not messages:
+            if base_runner and ctx.use_remote and remote_worker and not messages:
                 # TODO: Update to use the remote_worker
                 await asyncio.gather(*tasks)
                 # TODO: Add a process to gather status messages from the remote worker
@@ -193,12 +201,24 @@ async def import_identity_center_resources(
     remote_worker=None,
 ):
     identity_center_config = config.copy()
-    await identity_center_config.set_identity_center_details(exe_message.provider_id)
     identity_center_config.accounts = [
         account
-        for account in identity_center_config.accounts
+        for account in config.accounts
         if account.identity_center_details
+        and account.iambic_managed != IambicManaged.DISABLED
     ]
+    identity_center_accounts = [
+        account.account_id for account in identity_center_config.accounts
+    ]
+    if not identity_center_accounts:
+        return
+    elif (
+        exe_message.provider_id
+        and exe_message.provider_id not in identity_center_accounts
+    ):
+        return
+
+    await config.set_identity_center_details(exe_message.provider_id)
     await import_service_resources(
         exe_message,
         identity_center_config,
@@ -218,8 +238,6 @@ async def import_aws_resources(
     messages: list = None,
     remote_worker=None,
 ):
-    exe_message = exe_message.copy()
-    exe_message.provider_type = "aws"
     tasks = []
 
     if not exe_message.metadata or exe_message.metadata["service"] == "identity_center":
@@ -415,28 +433,72 @@ async def detect_changes(  # noqa: C901
                 QueueUrl=queue_url, MaxNumberOfMessages=10
             ).get("Messages", [])
 
-    tasks = []
+    exe_message = ExecutionMessage(
+        execution_id=str(uuid.uuid4()), command=Command.IMPORT, provider_type="aws"
+    )
+    collect_tasks = []
+
     if role_messages:
-        tasks.append(generate_aws_role_templates(config, repo_dir, role_messages))
+        collect_tasks.append(
+            collect_aws_roles(exe_message, config, repo_dir, role_messages)
+        )
     if user_messages:
-        tasks.append(generate_aws_user_templates(config, repo_dir, user_messages))
+        collect_tasks.append(
+            collect_aws_users(exe_message, config, repo_dir, user_messages)
+        )
     if group_messages:
-        tasks.append(generate_aws_group_templates(config, repo_dir, group_messages))
+        collect_tasks.append(
+            collect_aws_groups(exe_message, config, repo_dir, group_messages)
+        )
     if managed_policy_messages:
-        tasks.append(
-            generate_aws_managed_policy_templates(
-                config, repo_dir, managed_policy_messages
+        collect_tasks.append(
+            collect_aws_managed_policies(
+                exe_message, config, repo_dir, managed_policy_messages
             )
         )
     if permission_set_messages:
-        tasks.append(
-            generate_aws_permission_set_templates(
-                config, repo_dir, permission_set_messages
+        collect_tasks.append(
+            collect_aws_permission_sets(
+                exe_message, config, repo_dir, permission_set_messages
             )
         )
 
-    if tasks:
+    if collect_tasks:
+        await asyncio.gather(*collect_tasks)
+
+        tasks = []
+        if role_messages:
+            tasks.append(
+                generate_aws_role_templates(
+                    exe_message, config, repo_dir, role_messages
+                )
+            )
+        if user_messages:
+            tasks.append(
+                generate_aws_user_templates(
+                    exe_message, config, repo_dir, user_messages
+                )
+            )
+        if group_messages:
+            tasks.append(
+                generate_aws_group_templates(
+                    exe_message, config, repo_dir, group_messages
+                )
+            )
+        if managed_policy_messages:
+            tasks.append(
+                generate_aws_managed_policy_templates(
+                    exe_message, config, repo_dir, managed_policy_messages
+                )
+            )
+        if permission_set_messages:
+            tasks.append(
+                generate_aws_permission_set_templates(
+                    exe_message, config, repo_dir, permission_set_messages
+                )
+            )
         await asyncio.gather(*tasks)
+
         return commit_message
 
 
@@ -495,10 +557,12 @@ async def decode_aws_secret(config: AWSConfig, extend: ExtendsConfig) -> dict:
 
 
 async def discover_new_aws_accounts(
+    exe_message: ExecutionMessage,
     config: AWSConfig,
     config_account_idx_map: dict[str, int],
     orgs_accounts: list[list[AWSAccount]],
     repo_dir: str,
+    remote_worker=None,
 ) -> bool:
     run_apply = False
     run_import = False
@@ -525,7 +589,9 @@ async def discover_new_aws_accounts(
             "Applying templates to provision identities to the discovered account(s).",
         )
         templates = await gather_templates(repo_dir, "AWS.*")
-        await apply(config, load_templates(templates))
+        sub_message = exe_message.copy()
+        sub_message.command = Command.APPLY
+        await apply(exe_message, config, load_templates(templates), remote_worker)
 
     return run_import
 
@@ -579,7 +645,12 @@ async def discover_aws_account_attribute_changes(
     return run_import
 
 
-async def aws_account_update_and_discovery(config: AWSConfig, repo_dir: str):
+async def aws_account_update_and_discovery(
+    exe_message: ExecutionMessage,
+    config: AWSConfig,
+    repo_dir: str,
+    remote_worker=None,
+):
     """
     Update and discover AWS accounts.
 
@@ -594,6 +665,9 @@ async def aws_account_update_and_discovery(config: AWSConfig, repo_dir: str):
     Returns:
     - None
     """
+    # TODO: Leverage exe_message as part of a distributed execution
+    # TODO: Leverage remote_worker as part of a distributed execution
+
     if not config.organizations:
         return
 
@@ -606,7 +680,12 @@ async def aws_account_update_and_discovery(config: AWSConfig, repo_dir: str):
         *[org.get_accounts() for org in config.organizations]
     )
     import_new_account = await discover_new_aws_accounts(
-        config, config_account_idx_map, orgs_accounts, repo_dir
+        exe_message,
+        config,
+        config_account_idx_map,
+        orgs_accounts,
+        repo_dir,
+        remote_worker,
     )
     import_updated_account = await discover_aws_account_attribute_changes(
         config, config_account_idx_map, orgs_accounts
@@ -615,5 +694,6 @@ async def aws_account_update_and_discovery(config: AWSConfig, repo_dir: str):
         log.warning(
             "Running import to regenerate AWS templates.",
         )
-        # Replace this with the aws one
-        await import_aws_resources(config, repo_dir)
+        sub_message = exe_message.copy()
+        sub_message.command = Command.APPLY
+        await import_aws_resources(sub_message, config, repo_dir, remote_worker)

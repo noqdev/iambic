@@ -425,7 +425,11 @@ async def collect_aws_roles(
             generate_role_resource_file_for_all_accounts, 45
         )
         tasks = [
-            {"aws_accounts": aws_accounts, "role_name": role.role_name}
+            {
+                "exe_message": exe_message,
+                "aws_accounts": aws_accounts,
+                "role_name": role.role_name,
+            }
             for role in detect_messages
             if not role.delete
         ]
@@ -448,6 +452,7 @@ async def collect_aws_roles(
                         # There are other accounts for the template so re-eval the template
                         tasks.append(
                             {
+                                "exe_message": exe_message,
                                 "aws_accounts": aws_accounts,
                                 "role_name": existing_template.properties.role_name,
                                 "exe_message": exe_message,

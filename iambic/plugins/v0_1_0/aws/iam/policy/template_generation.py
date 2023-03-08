@@ -320,6 +320,7 @@ async def collect_aws_managed_policies(
 
         tasks = [
             {
+                "exe_message": exe_message,
                 "aws_accounts": aws_accounts,
                 "policy_path": managed_policy.policy_path,
                 "policy_name": managed_policy.policy_name,

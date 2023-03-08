@@ -404,7 +404,11 @@ async def collect_aws_users(
             generate_user_resource_file_for_all_accounts, 50
         )
         tasks = [
-            {"aws_accounts": aws_accounts, "user_name": user.user_name}
+            {
+                "exe_message": exe_message,
+                "aws_accounts": aws_accounts,
+                "user_name": user.user_name,
+            }
             for user in detect_messages
             if not user.delete
         ]
@@ -427,6 +431,7 @@ async def collect_aws_users(
                         # There are other accounts for the template so re-eval the template
                         tasks.append(
                             {
+                                "exe_message": exe_message,
                                 "aws_accounts": aws_accounts,
                                 "user_name": existing_template.properties.user_name,
                             }
