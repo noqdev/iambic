@@ -187,6 +187,8 @@ async def retrieve_git_changes(
     return files
 
 
+# WARNING, This is not used at the moment because we worry user's git rm template
+# intend is NOT to actually remove the resources.
 def create_templates_for_deleted_files(deleted_files: list[GitDiff]) -> list:
     """
     Create a class instance of the deleted file content with its template type

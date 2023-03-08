@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import itertools
+import os.path
+
 from git import Repo
 
 from iambic.config.dynamic_config import load_config
 from iambic.core.context import ExecutionContext, ctx
-from iambic.core.git import (
-    create_templates_for_deleted_files,
+from iambic.core.git import (  # create_templates_for_deleted_files,
     create_templates_for_modified_files,
     retrieve_git_changes,
 )
@@ -54,22 +56,41 @@ async def apply_git_changes(
         log.info("No changes found.")
         return []
 
-    templates = load_templates(
+    new_templates = load_templates(
         [git_diff.path for git_diff in file_changes["new_files"]]
     )
-    templates.extend(create_templates_for_deleted_files(file_changes["deleted_files"]))
-    templates.extend(
-        create_templates_for_modified_files(config, file_changes["modified_files"])
-    )
-    await flag_expired_resources([template.file_path for template in templates])
-    template_changes = await config.run_apply(templates)
 
-    # note modified_templates has different entries from create_templates_for_modified_files because
+    # Why did we comment out create_templates_for_deleted_files right now?
+    # We want to caution on deleting cloud resources reflect by git diff.
+    # Developers sometimes have to use git rm on the course of rearranging file
+    # locations. We comment it out for now.
+    # deleted_templates = create_templates_for_deleted_files(file_changes["deleted_files"])
+
+    modified_templates_doubles = create_templates_for_modified_files(
+        config, file_changes["modified_files"]
+    )
+
+    # You can only flag expired resources on new/modified-templates
+    await flag_expired_resources(
+        [
+            template.file_path
+            for template in itertools.chain(new_templates, modified_templates_doubles)
+            if os.path.exists(template.file_path)
+        ]
+    )
+
+    template_changes = await config.run_apply(
+        itertools.chain(new_templates, modified_templates_doubles)
+    )
+
+    # note modified_templates_exist_in_repo has different entries from create_templates_for_modified_files because
     # create_templates_for_modified_files actually has two template instance per a single modified file
-    modified_templates = load_templates(
+    modified_templates_exist_in_repo = load_templates(
         [git_diff.path for git_diff in file_changes["modified_files"]]
     )
-    commit_deleted_templates(repo_dir, modified_templates, template_changes)
+    commit_deleted_templates(
+        repo_dir, modified_templates_exist_in_repo, template_changes
+    )
 
     return template_changes
 
