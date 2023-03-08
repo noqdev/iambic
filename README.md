@@ -1,26 +1,24 @@
-
-
 # IAMbic: Entitlements as Code
+
+"It's like Terraform, but for Entitlements"
 
 IAMbic is a multi-cloud identity and access management (IAM) control plane that centralizes and organizes the tracking and management of cloud access and permissions. With IAMbic, teams can easily manage changes to identities, access rules, and permissions, and grant temporary or emergency access for end-users, while reducing the latency, overhead, and risk associated with permissions management. Learn more at [https://www.iambic.org](https://www.iambic.org).
 
 ## Key Features
 
-# TODO: Link these to specific sections of Docs
-
-- [Multi-Cloud](https://iambic.org/getting_started/): IAMbic provides human-readable entitlements across AWS, Okta, Google, and more cloud platforms in the future.
-- [Dynamic AWS Permissions](https://iambic.org/getting_started/aws#31---create-dynamic-iam-role-policies-that-vary-per-account): IAMbic is aware of all of your defined AWS organizations. AWS IAM Roles/Users/Groups/Policies, and Identity Center Permission Sets can specify different levels of permissions and access rules depending on the AWS account of the identity.
-- [Temporary Access, Permissions, and Identities](https://iambic.org/getting_started/aws#32---create-temporary-expiring-iam-permissions): IAMbic enables teams to declaratively define when a resource, cloud permission, or access rule will expire. Relative expiration dates are supported, and are automatically converted into absolute dates once the change is merged in. IAMbic provides GitHub Actions that automatically remove expired identities, access, and permissions.
-- Always Updated Source of Truth: IAMbic imports your existing cloud identities into Git without requiring extra effort on your part, and it keeps them updated with changes in your cloud environment. IAMbic works side-by-side with existing infrastructure-as-code solutions such as Terraform.
-- Extendable: IAMbic offers a robust plugin architecture, enabling development of internal plugins and plugins for different cloud providers.
-- Auditable: IAMbic provides a complete record of when entitlement changes happened within your environment, whether they happened through IAMbic, IaC, or ClickOps.
-- Developer-friendly Workflow: The source of truth in IAMbic is based in Git. Developers, Cloud Operations, Security, and Compliance teams are free to use existing tools at their disposal.
-- Custom Template Parameters: Stuck looking at CloudTrail logs having to context switch to discover which account arn:aws:iam::874326598251:role/administrator belongs to? No more! Specify variables such as `{{account_name}}` anywhere within
+- **[Multi-Cloud](https://iambic.org/getting_started/)**: No more juggling between multiple cloud UIs. Manage your cloud identities across AWS, Okta, Google Workspace, and other cloud platforms in the future in one simple human-readable format.
+- **[Dynamic AWS Permissions](https://iambic.org/getting_started/aws#31---create-dynamic-iam-role-policies-that-vary-per-account)**: Stop wasting time bootstrapping IAM "in a unique way" for each of your accounts. IAMbic provides a fully round-tripped, multi-account template structure designed to make multi-account AWS easier. IAMbic's template structure supports different permission levels, access rules, and expirations based on the AWS account the identity will be deployed to. IAMbic also groups similar identities across accounts in a single template, making multi-account AWS management easier.
+- **[Temporary Access, Permissions, and Identities](https://iambic.org/getting_started/aws#32---create-temporary-expiring-iam-permissions)**: IAMbic enables teams to declaratively define when a resource, cloud permission, or access rule will expire. Relative expiration dates are supported, and are automatically converted into absolute dates once the change is merged in. IAMbic provides GitHub Actions that automatically remove expired identities, access, and permissions.
+- **Always Updated Source of Truth**: Entitlements at scale has gotten out of hand. Compliance, Security, and Ops *need* a central repository to reason about and manage human and cloud identities. IAMbic's open format and tools enable you to create an entitlements infrastructure that works seamlessly with your existing infrastructure-as-code solutions, such as Terraform.
+- **Extendable**: IAMbic offers a robust plugin architecture, enabling development of internal plugins and plugins for different cloud providers.
+- **Auditable**: IAMbic provides a complete record of when entitlement changes happened within your environment, whether they happened through IAMbic, IaC, or ClickOps.
+- **Developer-friendly Workflow**: The source of truth in IAMbic is based in Git. Developers, Cloud Operations, Security, and Compliance teams are free to use existing tools at their disposal.
+- **Custom Template Parameters**: Stuck looking at CloudTrail logs having to context switch to discover which account arn:aws:iam::874326598251:role/administrator belongs to? No more! Specify variables such as `{{account_name}}` anywhere within
 a template and IAMbic will automatically perform the substitution. For example, `role_name: {{account_name}}_administrator` would result in a role name of `prod_administrator` if deployed to the `prod` account.
 
 ## Getting Started
 
-Please follow our [quick-start guide](http://iambic.org/getting_started/) to get IAMbic up and running.
+Please follow our [quick-start guide](http://iambic.org/getting_started/) to get up and running with IAMbic.
 
 ### Template Examples
 
@@ -138,7 +136,7 @@ properties:
 ### Google Group Assignments
 
 ```yaml
-template_type: NOQ::Google::Group
+template_type: NOQ::GoogleWorkspace::Group
 properties:
   name: DockerHub
   description: Dockerhub Access
@@ -154,7 +152,7 @@ properties:
 
 ## IAMbic - Beta Software
 
-Important: IAMbic is currently in beta, and is not yet recommended for use in production environments. We are actively working to improve the stability and performance of the software, and welcome feedback from the community.
+IAMbic is currently in beta, and is not yet recommended for use in production environments. We are actively working to improve the stability and performance of the software, and welcome feedback from the community.
 
 If you choose to use IAMbic in its current state, please be aware that you may encounter bugs, performance issues, or other unexpected behavior. We strongly recommend testing IAMbic thoroughly in a non-production environment before using it in production.
 
@@ -176,7 +174,7 @@ IAMbic is licensed under the AGPL-3.0 license. Commercial licenses and support a
 
 ### Provider Plugins
 
-Provider Plugins (Such as the AWS, Okta, and Google-Suite plugins) are licensed under Apache 2. You are free to write your own provider plugins for internal services without releasing its source code.
+Provider Plugins (Such as the AWS, Okta, and Google Workspace plugins) are licensed under Apache 2. You are free to write your own provider plugins for internal services without releasing its source code.
 
 ### Licensing Policy
 
