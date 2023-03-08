@@ -61,10 +61,6 @@ async def apply_git_changes(
         [git_diff.path for git_diff in file_changes["new_files"]]
     )
 
-    # Why did we comment out create_templates_for_deleted_files right now?
-    # We want to caution on deleting cloud resources reflect by git diff.
-    # Developers sometimes have to use git rm on the course of rearranging file
-    # locations. We comment it out for now.
     deleted_templates = create_templates_for_deleted_files(
         file_changes["deleted_files"]
     )
