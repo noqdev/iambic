@@ -572,6 +572,8 @@ class ExecutionMessage(PydanticBaseModel):
     command: Command
     provider_type: Optional[str]
     provider_id: Optional[str]
+    template_type: Optional[str]
+    template_id: Optional[str]
     metadata: Optional[Dict[str, Any]] = None
     templates: Optional[List[str]] = None
 
@@ -583,6 +585,10 @@ class ExecutionMessage(PydanticBaseModel):
         if path_param := self.provider_type or as_regex:
             path_params.append(path_param)
         if path_param := self.provider_id or as_regex:
+            path_params.append(path_param)
+        if path_param := self.template_type or as_regex:
+            path_params.append(path_param)
+        if path_param := self.template_id or as_regex:
             path_params.append(path_param)
         if path_param := self.metadata or as_regex:
             if path_param != as_regex:

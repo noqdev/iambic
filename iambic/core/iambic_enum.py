@@ -30,5 +30,6 @@ class Command(Enum):
 
 
 class ExecutionStatus(Enum):
-    SUCCESS = "success"
-    FAILURE = "failure"
+    RUNNING = "Running"
+    SUCCEEDED = "Succeeded"
+    FAILED = "Failed"

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import uuid
 import itertools
 import os.path
+import uuid
 
 from git import Repo
-
 from iambic.config.dynamic_config import load_config
 from iambic.core.context import ExecutionContext, ctx
 from iambic.core.git import (
@@ -85,7 +84,7 @@ async def apply_git_changes(
 
     template_changes = await config.run_apply(
         exe_message,
-        itertools.chain(new_templates, deleted_templates, modified_templates_doubles)
+        itertools.chain(new_templates, deleted_templates, modified_templates_doubles),
     )
 
     # note modified_templates_exist_in_repo has different entries from create_templates_for_modified_files because
