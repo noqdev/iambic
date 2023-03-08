@@ -3,13 +3,14 @@ from __future__ import annotations
 import asyncio
 import itertools
 import os
-import pathlib
 from collections import defaultdict
 from typing import TYPE_CHECKING, Union
 
 import aiofiles
+
 from iambic.core import noq_json as json
 from iambic.core.logger import log
+from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import (
     base_group_str_attribute,
     create_or_update_template,
@@ -18,7 +19,7 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, get_writable_directory, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import PermissionSetMessageDetails
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
@@ -33,27 +34,19 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3_resp
 
-if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
-
-
-# The dir to write the boto response to a file to prevent keeping too much in memory
-def get_identity_center_permission_set_response_dir() -> pathlib.Path:
-    return get_writable_directory().joinpath(
-        ".iambic", "resources", "aws", "identity_center", "permission_sets"
-    )
-
-
 # TODO: Update all grouping functions to support org grouping once multiple orgs with IdentityCenter is functional
 # TODO: Update partial import to support permission set only being deleted on a single org
 
+if TYPE_CHECKING:
+    from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 
-def get_permission_set_dir(base_dir: str) -> str:
-    repo_dir = os.path.join(
-        base_dir, "resources", "aws", "identity_center", "permission_sets"
-    )
+RESOURCE_DIR = ["identity_center", "permission_set"]
+
+
+def get_template_dir(base_dir: str) -> str:
+    repo_dir = os.path.join(base_dir, "resources", "aws", *RESOURCE_DIR)
     os.makedirs(repo_dir, exist_ok=True)
-    return str(repo_dir)
+    return repo_dir
 
 
 def get_templated_permission_set_file_path(
@@ -70,17 +63,9 @@ def get_templated_permission_set_file_path(
     return str(os.path.join(permission_set_dir, f"{file_name}.yaml"))
 
 
-def get_account_permission_set_resource_dir(account_id: str) -> str:
-    account_resource_dir = os.path.join(
-        get_identity_center_permission_set_response_dir(), account_id
-    )
-    os.makedirs(account_resource_dir, exist_ok=True)
-    return account_resource_dir
-
-
 async def gather_permission_set_names(
     aws_accounts: list[AWSAccount],
-    permission_set_messages: list[PermissionSetMessageDetails],
+    detect_messages: list[PermissionSetMessageDetails],
 ) -> list[str]:
     sso_admin_client_map = {
         aws_account.account_id: (
@@ -99,7 +84,7 @@ async def gather_permission_set_names(
                 message.instance_arn,
                 message.permission_set_arn,
             )
-            for message in permission_set_messages
+            for message in detect_messages
         ]
     )
 
@@ -121,6 +106,7 @@ async def generate_permission_set_resource_file(
     permission_set: dict,
     user_map: dict,
     group_map: dict,
+    account_resource_dir: str,
 ) -> dict:
     permission_set = await enrich_permission_set_details(
         identity_center_client, instance_arn, permission_set
@@ -132,7 +118,6 @@ async def generate_permission_set_resource_file(
         user_map,
         group_map,
     )
-    account_resource_dir = get_account_permission_set_resource_dir(account_id)
     file_path = os.path.join(account_resource_dir, f'{permission_set["Name"]}.json')
     response = dict(
         account_id=account_id, permission_set=permission_set, file_path=file_path
@@ -366,16 +351,27 @@ async def create_templated_permission_set(  # noqa: C901
     )
 
 
-async def generate_aws_permission_set_templates(
+async def collect_aws_permission_sets(
+    exe_message: ExecutionMessage,
     config: AWSConfig,
     base_output_dir: str,
-    permission_set_messages: list[PermissionSetMessageDetails] = None,
+    detect_messages: list[PermissionSetMessageDetails] = None,
 ):
+    resource_dir = exe_message.get_directory(*RESOURCE_DIR)
     aws_account_map = await get_aws_account_map(config)
-    existing_template_map = await get_existing_template_map(
-        base_output_dir, AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
-    )
-    resource_dir = get_permission_set_dir(base_output_dir)
+    if exe_message.provider_id:
+        aws_account_map = {
+            exe_message.provider_id: aws_account_map[exe_message.provider_id]
+        }
+
+    if detect_messages:
+        detect_messages = [
+            msg
+            for msg in detect_messages
+            if isinstance(msg, PermissionSetMessageDetails)
+        ]
+        if not detect_messages:
+            return
 
     identity_center_accounts = []
     if config.accounts:
@@ -398,7 +394,7 @@ async def generate_aws_permission_set_templates(
 
     messages = []
     permission_set_names = []
-    if permission_set_messages:
+    if detect_messages:
         permission_sets_in_aws = set(
             list(
                 itertools.chain.from_iterable(
@@ -412,7 +408,7 @@ async def generate_aws_permission_set_templates(
 
         permission_set_names = await gather_permission_set_names(
             identity_center_accounts,
-            permission_set_messages,
+            detect_messages,
         )
         permission_set_names = [
             name for name in permission_set_names if name in permission_sets_in_aws
@@ -441,6 +437,7 @@ async def generate_aws_permission_set_templates(
                             permission_set=permission_set,
                             user_map=aws_account.identity_center_details.user_map,
                             group_map=aws_account.identity_center_details.group_map,
+                            account_resource_dir=resource_dir,
                         )
                     )
         else:
@@ -455,6 +452,7 @@ async def generate_aws_permission_set_templates(
                         permission_set=permission_set,
                         user_map=aws_account.identity_center_details.user_map,
                         group_map=aws_account.identity_center_details.group_map,
+                        account_resource_dir=resource_dir,
                     )
                 )
 
@@ -475,12 +473,30 @@ async def generate_aws_permission_set_templates(
         org_accounts=list(aws_account_map.keys()),
         permission_set_count=len(messages),
     )
-    # # Use these for testing `create_templated_permission_set`
-    # all_permission_sets_output = json.dumps(all_permission_sets)
-    # with open("all_permission_sets_output.json", "w") as f:
-    #     f.write(all_permission_sets_output)
-    # with open("all_permission_sets_output.json") as f:
-    #     all_permission_sets = json.loads(f.read())
+
+    all_permission_sets_output = json.dumps(all_permission_sets)
+    with open(
+        exe_message.get_file_path(*RESOURCE_DIR, file_name_and_extension="output.json"),
+        "w",
+    ) as f:
+        f.write(all_permission_sets_output)
+
+
+async def generate_aws_permission_set_templates(
+    exe_message: ExecutionMessage,
+    config: AWSConfig,
+    base_output_dir: str,
+    detect_messages: list[PermissionSetMessageDetails] = None,
+):
+    resource_dir = get_template_dir(base_output_dir)
+    aws_account_map = await get_aws_account_map(config)
+    existing_template_map = await get_existing_template_map(
+        base_output_dir, AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
+    )
+
+    all_permission_sets = await exe_message.get_sub_exe_files(
+        *RESOURCE_DIR, file_name_and_extension="output.json", flatten_results=True
+    )
 
     permission_sets_grouped_by_account = defaultdict(list)
     # list[dict(account_id:str, resources=list[dict(resource_val: str, **)])]
@@ -516,7 +532,7 @@ async def generate_aws_permission_set_templates(
         )
         all_resource_ids.add(resource_template.resource_id)
 
-    if not permission_set_messages:
+    if not detect_messages:
         # NEVER call this if messages are passed in because all_resource_ids will only contain those resources
         delete_orphaned_templates(
             list(existing_template_map.values()), all_resource_ids

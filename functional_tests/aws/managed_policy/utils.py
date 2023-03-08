@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import random
+import uuid
 
+from functional_tests.conftest import IAMBIC_TEST_DETAILS
+from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
+from iambic.core.models import ExecutionMessage
 from iambic.core.utils import gather_templates
 from iambic.plugins.v0_1_0.aws.iam.policy.models import (
     AWS_MANAGED_POLICY_TEMPLATE_TYPE,
@@ -10,7 +14,9 @@ from iambic.plugins.v0_1_0.aws.iam.policy.models import (
     ManagedPolicyTemplate,
 )
 from iambic.plugins.v0_1_0.aws.iam.policy.template_generation import (
-    get_managed_policy_dir,
+    collect_aws_managed_policies,
+    generate_aws_managed_policy_templates,
+    get_template_dir,
 )
 
 
@@ -20,7 +26,7 @@ async def generate_managed_policy_template_from_base(
     managed_policies = await gather_templates(
         repo_dir, AWS_MANAGED_POLICY_TEMPLATE_TYPE
     )
-    managed_policy_dir = get_managed_policy_dir(repo_dir)
+    managed_policy_dir = get_template_dir(repo_dir)
     managed_policy_template = ManagedPolicyTemplate.load(
         random.choice(managed_policies)
     )
@@ -51,3 +57,21 @@ async def generate_managed_policy_template_from_base(
 
     managed_policy_template.write()
     return managed_policy_template
+
+
+async def managed_policy_full_import(detect_messages: list = None):
+    exe_message = ExecutionMessage(
+        execution_id=str(uuid.uuid4()), command=Command.IMPORT, provider_type="aws"
+    )
+    await collect_aws_managed_policies(
+        exe_message,
+        IAMBIC_TEST_DETAILS.config.aws,
+        IAMBIC_TEST_DETAILS.template_dir_path,
+        detect_messages,
+    )
+    await generate_aws_managed_policy_templates(
+        exe_message,
+        IAMBIC_TEST_DETAILS.config.aws,
+        IAMBIC_TEST_DETAILS.template_dir_path,
+        detect_messages,
+    )

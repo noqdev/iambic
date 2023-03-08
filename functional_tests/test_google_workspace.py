@@ -9,7 +9,7 @@ from iambic.main import run_apply
 
 
 def test_google():
-    iambic_functional_test_group_yaml = """template_type: NOQ::Google::Group
+    iambic_functional_test_group_yaml = """template_type: NOQ::GoogleWorkspace::Group
 properties:
   name: iambic_functional_test_temp_group
   description: 'This is a temporary group created by the iambic functional test suite.'
@@ -21,10 +21,12 @@ properties:
     - email: iambic_test_user_1@iambic.org
     - email: iambic_test_user_2@iambic.org
 """
-    test_group_fp = os.path.join(
+    test_group_path = os.path.join(
         IAMBIC_TEST_DETAILS.template_dir_path,
-        "resources/google/iambic.org/groups/iambic_test_group.yaml",
+        "resources/google_workspace/groups/iambic.org",
     )
+    test_group_fp = os.path.join(test_group_path, "iambic_test_group.yaml")
+    os.makedirs(test_group_path, exist_ok=True)
 
     with open(test_group_fp, "w") as temp_file:
         temp_file.write(iambic_functional_test_group_yaml)

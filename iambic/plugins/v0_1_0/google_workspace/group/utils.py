@@ -12,14 +12,17 @@ from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.google.group.models import GroupMember, GroupTemplate
-    from iambic.plugins.v0_1_0.google.iambic_plugin import GoogleProject
+    from iambic.plugins.v0_1_0.google_workspace.group.models import (
+        GroupMember,
+        GroupTemplate,
+    )
+    from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import GoogleProject
 
 
 async def list_groups(
     domain: str, google_project: GoogleProject
 ) -> list[GroupTemplate]:
-    from iambic.plugins.v0_1_0.google.group.models import get_group_template
+    from iambic.plugins.v0_1_0.google_workspace.group.models import get_group_template
 
     groups = []
     try:
@@ -43,7 +46,7 @@ async def list_groups(
 
 
 async def get_group(group_email: str, domain: str, google_project: GoogleProject):
-    from iambic.plugins.v0_1_0.google.group.models import get_group_template
+    from iambic.plugins.v0_1_0.google_workspace.group.models import get_group_template
 
     try:
         service = await google_project.get_service_connection(
@@ -306,7 +309,7 @@ async def maybe_delete_group(
 
 
 async def get_group_members(service, group):
-    from iambic.plugins.v0_1_0.google.group.models import (
+    from iambic.plugins.v0_1_0.google_workspace.group.models import (
         GroupMember,
         GroupMemberRole,
         GroupMemberStatus,

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import itertools
 import os
-import pathlib
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
@@ -10,6 +9,7 @@ import aiofiles
 
 from iambic.core import noq_json as json
 from iambic.core.logger import log
+from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import (
     base_group_str_attribute,
     create_or_update_template,
@@ -18,7 +18,7 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, get_writable_directory, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import UserMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.user.models import (
     AWS_IAM_USER_TEMPLATE_TYPE,
@@ -39,13 +39,18 @@ from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 
-
-def get_user_response_dir() -> pathlib.Path:
-    return get_writable_directory().joinpath(".iambic", "resources", "aws", "users")
+RESOURCE_DIR = ["iam", "user"]
 
 
-def get_user_dir(base_dir: str) -> str:
-    return str(os.path.join(base_dir, "resources", "aws", "users"))
+def get_response_dir(exe_message: ExecutionMessage, aws_account: AWSAccount) -> str:
+    if exe_message.provider_id:
+        return exe_message.get_directory(*RESOURCE_DIR)
+    else:
+        return exe_message.get_directory(aws_account.account_id, *RESOURCE_DIR)
+
+
+def get_template_dir(base_dir: str) -> str:
+    return str(os.path.join(base_dir, "resources", "aws", *RESOURCE_DIR))
 
 
 def get_templated_user_file_path(
@@ -70,14 +75,11 @@ def get_templated_user_file_path(
     return str(os.path.join(user_dir, separator, f"{file_name}.yaml"))
 
 
-def get_account_user_resource_dir(account_id: str) -> str:
-    account_user_response_dir = os.path.join(get_user_response_dir(), account_id)
-    os.makedirs(account_user_response_dir, exist_ok=True)
-    return account_user_response_dir
-
-
-async def generate_account_user_resource_files(aws_account: AWSAccount) -> dict:
-    account_user_response_dir = get_account_user_resource_dir(aws_account.account_id)
+async def generate_account_user_resource_files(
+    exe_message: ExecutionMessage,
+    aws_account: AWSAccount,
+) -> dict:
+    account_resource_dir = get_response_dir(exe_message, aws_account)
     user_resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
     messages = []
 
@@ -94,7 +96,7 @@ async def generate_account_user_resource_files(aws_account: AWSAccount) -> dict:
 
     for account_user in account_users:
         user_path = os.path.join(
-            account_user_response_dir, f'{account_user["UserName"]}.json'
+            account_resource_dir, f'{account_user["UserName"]}.json'
         )
         response["users"].append(
             {
@@ -118,10 +120,10 @@ async def generate_account_user_resource_files(aws_account: AWSAccount) -> dict:
 
 
 async def generate_user_resource_file_for_all_accounts(
-    aws_accounts: list[AWSAccount], user_name: str
+    exe_message: ExecutionMessage, aws_accounts: list[AWSAccount], user_name: str
 ) -> list:
-    account_user_response_dir_map = {
-        aws_account.account_id: get_account_user_resource_dir(aws_account.account_id)
+    account_resource_dir_map = {
+        aws_account.account_id: get_response_dir(exe_message, aws_account)
         for aws_account in aws_accounts
     }
     user_resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
@@ -141,7 +143,7 @@ async def generate_user_resource_file_for_all_accounts(
 
     for account_id, account_user in user_across_accounts.items():
         user_path = os.path.join(
-            account_user_response_dir_map[account_id],
+            account_resource_dir_map[account_id],
             f'{account_user["UserName"]}.json',
         )
         response.append(
@@ -367,16 +369,21 @@ async def create_templated_user(  # noqa: C901
     )
 
 
-async def generate_aws_user_templates(
+async def collect_aws_users(
+    exe_message: ExecutionMessage,
     config: AWSConfig,
     base_output_dir: str,
-    user_messages: list[UserMessageDetails] = None,
+    detect_messages: list[UserMessageDetails] = None,
 ):
     aws_account_map = await get_aws_account_map(config)
+    if exe_message.provider_id:
+        aws_account_map = {
+            exe_message.provider_id: aws_account_map[exe_message.provider_id]
+        }
+
     existing_template_map = await get_existing_template_map(
         base_output_dir, AWS_IAM_USER_TEMPLATE_TYPE
     )
-    user_dir = get_user_dir(base_output_dir)
     set_user_resource_inline_policies_semaphore = NoqSemaphore(
         set_user_resource_inline_policies, 20
     )
@@ -392,19 +399,23 @@ async def generate_aws_user_templates(
         "Beginning to retrieve AWS IAM Users.", accounts=list(aws_account_map.keys())
     )
 
-    if user_messages:
+    if detect_messages:
         aws_accounts = list(aws_account_map.values())
         generate_user_resource_file_for_all_accounts_semaphore = NoqSemaphore(
             generate_user_resource_file_for_all_accounts, 50
         )
         tasks = [
-            {"aws_accounts": aws_accounts, "user_name": user.user_name}
-            for user in user_messages
+            {
+                "exe_message": exe_message,
+                "aws_accounts": aws_accounts,
+                "user_name": user.user_name,
+            }
+            for user in detect_messages
             if not user.delete
         ]
 
         # Remove deleted or mark templates for update
-        deleted_users = [user for user in user_messages if user.delete]
+        deleted_users = [user for user in detect_messages if user.delete]
         if deleted_users:
             for user in deleted_users:
                 user_account = aws_account_map.get(user.account_id)
@@ -421,6 +432,7 @@ async def generate_aws_user_templates(
                         # There are other accounts for the template so re-eval the template
                         tasks.append(
                             {
+                                "exe_message": exe_message,
                                 "aws_accounts": aws_accounts,
                                 "user_name": existing_template.properties.user_name,
                             }
@@ -437,12 +449,20 @@ async def generate_aws_user_templates(
             dict(account_id=account_id, users=users)
             for account_id, users in account_user_map.items()
         ]
+    elif exe_message.provider_id:
+        aws_account = aws_account_map[exe_message.provider_id]
+        account_users = [
+            (await generate_account_user_resource_files(exe_message, aws_account))
+        ]
     else:
         generate_account_user_resource_files_semaphore = NoqSemaphore(
             generate_account_user_resource_files, 5
         )
         account_users = await generate_account_user_resource_files_semaphore.process(
-            [{"aws_account": aws_account} for aws_account in aws_account_map.values()]
+            [
+                {"exe_message": exe_message, "aws_account": aws_account}
+                for aws_account in aws_account_map.values()
+            ]
         )
 
     messages = []
@@ -467,12 +487,36 @@ async def generate_aws_user_templates(
     await set_user_resource_tags_semaphore.process(messages)
     log.info("Finished retrieving user details")
 
-    # Use these for testing `create_templated_user`
-    # account_user_output = json.dumps(account_users)
-    # with open("account_user_output.json", "w") as f:
-    #     f.write(account_user_output)
-    # with open("account_user_output.json") as f:
-    #     account_users = json.loads(f.read())
+    account_user_output = json.dumps(account_users)
+    with open(
+        exe_message.get_file_path(*RESOURCE_DIR, file_name_and_extension="output.json"),
+        "w",
+    ) as f:
+        f.write(account_user_output)
+
+
+async def generate_aws_user_templates(
+    exe_message: ExecutionMessage,
+    config: AWSConfig,
+    base_output_dir: str,
+    detect_messages: list[UserMessageDetails] = None,
+):
+    aws_account_map = await get_aws_account_map(config)
+
+    if detect_messages:
+        detect_messages = [
+            msg for msg in detect_messages if isinstance(msg, UserMessageDetails)
+        ]
+        if not detect_messages:
+            return
+
+    existing_template_map = await get_existing_template_map(
+        base_output_dir, AWS_IAM_USER_TEMPLATE_TYPE
+    )
+    user_dir = get_template_dir(base_output_dir)
+    account_users = await exe_message.get_sub_exe_files(
+        *RESOURCE_DIR, file_name_and_extension="output.json", flatten_results=True
+    )
 
     log.info("Grouping users")
     # Move everything to required structure
@@ -502,7 +546,7 @@ async def generate_aws_user_templates(
         )
         all_resource_ids.add(resource_template.resource_id)
 
-    if not user_messages:
+    if not detect_messages:
         # NEVER call this if messages are passed in because all_resource_ids will only contain those resources
         delete_orphaned_templates(
             list(existing_template_map.values()), all_resource_ids
