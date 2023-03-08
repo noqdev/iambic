@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import uuid
+import itertools
+import os.path
 
 from git import Repo
+
 from iambic.config.dynamic_config import load_config
 from iambic.core.context import ExecutionContext, ctx
 from iambic.core.git import (
@@ -59,22 +62,40 @@ async def apply_git_changes(
     exe_message = ExecutionMessage(
         execution_id=str(uuid.uuid4()), command=Command.APPLY
     )
-    templates = load_templates(
+    new_templates = load_templates(
         [git_diff.path for git_diff in file_changes["new_files"]]
     )
-    templates.extend(create_templates_for_deleted_files(file_changes["deleted_files"]))
-    templates.extend(
-        create_templates_for_modified_files(config, file_changes["modified_files"])
-    )
-    await flag_expired_resources([template.file_path for template in templates])
-    template_changes = await config.run_apply(exe_message, templates)
 
-    # note modified_templates has different entries from create_templates_for_modified_files because
+    deleted_templates = create_templates_for_deleted_files(
+        file_changes["deleted_files"]
+    )
+
+    modified_templates_doubles = create_templates_for_modified_files(
+        config, file_changes["modified_files"]
+    )
+
+    # You can only flag expired resources on new/modified-templates
+    await flag_expired_resources(
+        [
+            template.file_path
+            for template in itertools.chain(new_templates, modified_templates_doubles)
+            if os.path.exists(template.file_path)
+        ]
+    )
+
+    template_changes = await config.run_apply(
+        exe_message,
+        itertools.chain(new_templates, deleted_templates, modified_templates_doubles)
+    )
+
+    # note modified_templates_exist_in_repo has different entries from create_templates_for_modified_files because
     # create_templates_for_modified_files actually has two template instance per a single modified file
-    modified_templates = load_templates(
+    modified_templates_exist_in_repo = load_templates(
         [git_diff.path for git_diff in file_changes["modified_files"]]
     )
-    commit_deleted_templates(repo_dir, modified_templates, template_changes)
+    commit_deleted_templates(
+        repo_dir, modified_templates_exist_in_repo, template_changes
+    )
 
     return template_changes
 
