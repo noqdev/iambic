@@ -7,7 +7,8 @@ from git import Repo
 
 from iambic.config.dynamic_config import load_config
 from iambic.core.context import ExecutionContext, ctx
-from iambic.core.git import (  # create_templates_for_deleted_files,
+from iambic.core.git import (
+    create_templates_for_deleted_files,
     create_templates_for_modified_files,
     retrieve_git_changes,
 )
@@ -64,7 +65,9 @@ async def apply_git_changes(
     # We want to caution on deleting cloud resources reflect by git diff.
     # Developers sometimes have to use git rm on the course of rearranging file
     # locations. We comment it out for now.
-    # deleted_templates = create_templates_for_deleted_files(file_changes["deleted_files"])
+    deleted_templates = create_templates_for_deleted_files(
+        file_changes["deleted_files"]
+    )
 
     modified_templates_doubles = create_templates_for_modified_files(
         config, file_changes["modified_files"]
@@ -80,7 +83,7 @@ async def apply_git_changes(
     )
 
     template_changes = await config.run_apply(
-        itertools.chain(new_templates, modified_templates_doubles)
+        itertools.chain(new_templates, deleted_templates, modified_templates_doubles)
     )
 
     # note modified_templates_exist_in_repo has different entries from create_templates_for_modified_files because
