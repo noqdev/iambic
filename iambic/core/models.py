@@ -289,6 +289,9 @@ class ProposedChange(PydanticBaseModel):
     current_value: Optional[Union[list, dict, str, int]]
     new_value: Optional[Union[list, dict, str, int]]
     change_summary: Optional[dict]
+    exceptions_seen: list[str] = Field(
+        default=[]
+    )  # FIXME, can we do better than string?
 
 
 class AccountChangeDetails(PydanticBaseModel):
@@ -298,6 +301,7 @@ class AccountChangeDetails(PydanticBaseModel):
     current_value: Optional[dict]
     new_value: Optional[dict]
     proposed_changes: list[ProposedChange] = Field(default=[])
+    exceptions_seen: list[ProposedChange] = Field(default=[])
 
 
 class TemplateChangeDetails(PydanticBaseModel):
@@ -306,6 +310,9 @@ class TemplateChangeDetails(PydanticBaseModel):
     template_path: str
     # Supports multi-account providers and single-account providers
     proposed_changes: list[Union[AccountChangeDetails, ProposedChange]] = []
+    exceptions_seen: list[Union[AccountChangeDetails, ProposedChange]] = Field(
+        default=[]
+    )
 
     class Config:
         json_encoders = {PrettyOrderedSet: list}
@@ -557,7 +564,6 @@ class ExecutionMessage(PydanticBaseModel):
     provider_id: Optional[str]
     metadata: Optional[Dict[str, Any]] = None
     templates: Optional[List[str]] = None
-    requested_at: datetime.datetime = datetime.datetime.now(datetime.timezone.utc)
 
     def get_execution_dir(self, as_regex: bool = False) -> str:
         if as_regex:
@@ -597,7 +603,15 @@ class ExecutionMessage(PydanticBaseModel):
     ) -> List[dict]:
         async def _get_file_contents(file_path: str) -> dict:
             async with aiofiles.open(file_path, mode="r") as f:
-                return json.loads(await f.read())
+                file_text = await f.read()
+                if file_path.endswith(".yaml") or file_path.endswith(".yml"):
+                    return yaml.load(file_text)
+                elif file_path.endswith(".json"):
+                    return json.loads(file_text)
+                else:
+                    raise TypeError(
+                        "Unsupported file type. Must be one of yaml, yml, or json."
+                    )
 
         matching_files = glob.glob(
             os.path.join(

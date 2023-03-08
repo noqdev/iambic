@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 from iambic.config.dynamic_config import load_config
 from iambic.core.context import ExecutionContext, ctx
 from iambic.core.git import (
@@ -7,8 +9,9 @@ from iambic.core.git import (
     create_templates_for_modified_files,
     retrieve_git_changes,
 )
+from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
-from iambic.core.models import TemplateChangeDetails
+from iambic.core.models import ExecutionMessage, TemplateChangeDetails
 from iambic.core.parser import load_templates
 from iambic.request_handler.expire_resources import flag_expired_resources
 
@@ -52,6 +55,9 @@ async def apply_git_changes(
         log.info("No changes found.")
         return []
 
+    exe_message = ExecutionMessage(
+        execution_id=str(uuid.uuid4()), command=Command.APPLY
+    )
     templates = load_templates(
         [git_diff.path for git_diff in file_changes["new_files"]]
     )
@@ -60,4 +66,4 @@ async def apply_git_changes(
         create_templates_for_modified_files(config, file_changes["modified_files"])
     )
     await flag_expired_resources([template.file_path for template in templates])
-    return await config.run_apply(templates)
+    return await config.run_apply(exe_message, templates)
