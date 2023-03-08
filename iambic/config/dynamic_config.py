@@ -21,7 +21,7 @@ from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, TemplateChangeDetails
 from iambic.core.utils import sort_dict, yaml
-from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, google, okta
+from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, azure_ad, google, okta
 
 CURRENT_IAMBIC_VERSION = "1"
 
@@ -100,24 +100,29 @@ class Config(BaseTemplate):
     )
     plugins: Optional[list[PluginDefinition]] = Field(
         default=[
+            # PluginDefinition(
+            #     type=PluginType.DIRECTORY_PATH,
+            #     location=aws.__path__[0],
+            #     version=PLUGIN_VERSION,
+            # ),
+            # PluginDefinition(
+            #     type=PluginType.DIRECTORY_PATH,
+            #     location=google.__path__[0],
+            #     version=PLUGIN_VERSION,
+            # ),
+            # PluginDefinition(
+            #     type=PluginType.DIRECTORY_PATH,
+            #     location=okta.__path__[0],
+            #     version=PLUGIN_VERSION,
+            # ),
+            # PluginDefinition(
+            #     type=PluginType.DIRECTORY_PATH,
+            #     location=iambic.plugins.v0_1_0.github.__path__[0],
+            #     version=PLUGIN_VERSION,
+            # ),
             PluginDefinition(
                 type=PluginType.DIRECTORY_PATH,
-                location=aws.__path__[0],
-                version=PLUGIN_VERSION,
-            ),
-            PluginDefinition(
-                type=PluginType.DIRECTORY_PATH,
-                location=google.__path__[0],
-                version=PLUGIN_VERSION,
-            ),
-            PluginDefinition(
-                type=PluginType.DIRECTORY_PATH,
-                location=okta.__path__[0],
-                version=PLUGIN_VERSION,
-            ),
-            PluginDefinition(
-                type=PluginType.DIRECTORY_PATH,
-                location=iambic.plugins.v0_1_0.github.__path__[0],
+                location=iambic.plugins.v0_1_0.azure_ad.__path__[0],
                 version=PLUGIN_VERSION,
             ),
         ],
