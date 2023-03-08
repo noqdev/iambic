@@ -39,6 +39,7 @@ from iambic.core.utils import (
     apply_to_provider,
     create_commented_map,
     get_writable_directory,
+    sanitize_string,
     snake_to_camelcap,
     sort_dict,
     transform_comments,
@@ -197,7 +198,9 @@ class BaseModel(IambicPydanticBaseModel):
                 for k in properties.__dict__.keys()
                 if k not in exclude_keys
             }
-            resource_dict = {k: v for k, v in resource_dict.items() if bool(v)}
+            resource_dict = {
+                k: v for k, v in resource_dict.items() if v is not None
+            }  # using bool(v) will make it impossible to handle empty string tag value
         else:
             resource_dict = properties.dict(
                 exclude=exclude_keys, exclude_none=True, exclude_unset=False
@@ -216,6 +219,10 @@ class BaseModel(IambicPydanticBaseModel):
             variables["owner"] = owner
 
         rtemplate = Environment(loader=BaseLoader()).from_string(json.dumps(response))
+        valid_characters_re = r"[\w_+=,.@-]"
+        variables = {
+            k: sanitize_string(v, valid_characters_re) for k, v in variables.items()
+        }
         data = rtemplate.render(**variables)
         return json.loads(data)
 

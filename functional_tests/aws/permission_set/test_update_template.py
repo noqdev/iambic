@@ -8,6 +8,7 @@ from functional_tests.aws.permission_set.utils import (
     generate_permission_set_template_from_base,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+from iambic.core import noq_json as json
 from iambic.core.context import ctx
 
 
@@ -77,4 +78,8 @@ class UpdatePermissionSetTestCaseWithBadInput(IsolatedAsyncioTestCase):
         template_change_details = await self.template.apply(
             IAMBIC_TEST_DETAILS.config.aws, ctx
         )
-        self.assertEqual(len(template_change_details.exceptions_seen), 1, str(template_change_details.dict()))
+        self.assertEqual(
+            len(template_change_details.exceptions_seen),
+            1,
+            json.dumps(template_change_details.dict()),
+        )

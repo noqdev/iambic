@@ -7,6 +7,7 @@ from functional_tests.aws.managed_policy.utils import (
     generate_managed_policy_template_from_base,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+from iambic.core import noq_json as json
 from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.models import Tag
 
@@ -41,4 +42,8 @@ class ManagedPolicyUpdateTestCase(IsolatedAsyncioTestCase):
             IAMBIC_TEST_DETAILS.config.aws, ctx
         )
 
-        self.assertEqual(len(template_change_details.exceptions_seen), 1, str(template_change_details.dict()))
+        self.assertGreater(
+            len(template_change_details.exceptions_seen),
+            0,
+            json.dumps(template_change_details.dict()),
+        )

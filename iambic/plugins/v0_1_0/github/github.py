@@ -86,7 +86,9 @@ def run_handler(context: dict[str, Any]):
     # TODO Support Github Enterprise with custom hostname
     # g = Github(base_url="https://{hostname}/api/v3", login_or_token="access_token")
 
-    f: Callable[[github.Github, dict[str, Any]], None] = EVENT_DISPATCH_MAP.get(event_name)
+    f: Callable[[github.Github, dict[str, Any]], None] = EVENT_DISPATCH_MAP.get(
+        event_name
+    )
     if f:
         f(github_client, context)
     else:
@@ -100,9 +102,9 @@ def handle_iambic_command(
     github_token: str = context["iambic"]["GH_OVERRIDE_TOKEN"]
     command: str = context["iambic"]["IAMBIC_CLOUD_IMPORT_CMD"]
     github_client = github.Github(github_token)
-    f: Callable[[github.Github, dict[str, Any]], None] = IAMBIC_CLOUD_IMPORT_DISPATCH_MAP.get(
-        command
-    )
+    f: Callable[
+        [github.Github, dict[str, Any]], None
+    ] = IAMBIC_CLOUD_IMPORT_DISPATCH_MAP.get(command)
     if f:
         f(github_client, context)
     else:
