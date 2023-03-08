@@ -164,3 +164,20 @@ After pushing your changes to your branch, submit a Pull Request to IAMbic:
 6. Wait for the team to review and merge your pull request.
 
 That's it! You have successfully forked IAMbic in GitHub and submitted a pull request to the original repository.
+
+## Documentation
+
+Documentation requires [Yarn](https://classic.yarnpkg.com/lang/en/docs/install/#debian-stable) and [nodejs/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
+
+Documentation is located in docs/web and can be launched by following these steps:
+
+```bash
+# From the `iambic` repository directory
+cd docs/web
+yarn
+yarn start
+```
+
+This will open your browser to http://localhost:3000 where you can view the IAMbic documentation and see live edits to the Markdown files.
+
+All Markdown files are under `docs/web/docs` and are written in [Docusaurus Markdown](https://docusaurus.io/docs/markdown-features).
