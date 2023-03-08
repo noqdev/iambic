@@ -3,14 +3,14 @@ from __future__ import annotations
 import os
 from unittest import IsolatedAsyncioTestCase
 
-from functional_tests.aws.user.utils import generate_user_template_from_base
+from functional_tests.aws.user.utils import (
+    generate_user_template_from_base,
+    user_full_import,
+)
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.event_bridge.models import UserMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.user.models import UserTemplate
-from iambic.plugins.v0_1_0.aws.iam.user.template_generation import (
-    generate_aws_user_templates,
-)
 
 
 class PartialImportUserTestCase(IsolatedAsyncioTestCase):
@@ -35,16 +35,14 @@ class PartialImportUserTestCase(IsolatedAsyncioTestCase):
 
         self.assertTrue(os.path.exists(self.template.file_path))
 
-        await generate_aws_user_templates(
-            IAMBIC_TEST_DETAILS.config.aws,
-            IAMBIC_TEST_DETAILS.template_dir_path,
+        await user_full_import(
             [
                 UserMessageDetails(
                     account_id=included_account,
                     user_name=self.template.properties.user_name,
                     delete=True,
                 )
-            ],
+            ]
         )
 
         self.assertFalse(os.path.exists(self.template.file_path))
@@ -64,18 +62,14 @@ class PartialImportUserTestCase(IsolatedAsyncioTestCase):
 
         # Create the policy on all accounts except 1
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
-
-        # Refresh the template
-        await generate_aws_user_templates(
-            IAMBIC_TEST_DETAILS.config.aws,
-            IAMBIC_TEST_DETAILS.template_dir_path,
+        await user_full_import(
             [
                 UserMessageDetails(
                     account_id=deleted_account,
                     user_name=self.template.properties.user_name,
                     delete=True,
                 )
-            ],
+            ]
         )
 
         file_sys_template = UserTemplate.load(self.template.file_path)

@@ -3,14 +3,14 @@ from __future__ import annotations
 import os
 from unittest import IsolatedAsyncioTestCase
 
-from functional_tests.aws.group.utils import generate_group_template_from_base
+from functional_tests.aws.group.utils import (
+    generate_group_template_from_base,
+    group_full_import,
+)
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.event_bridge.models import GroupMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.group.models import GroupTemplate
-from iambic.plugins.v0_1_0.aws.iam.group.template_generation import (
-    generate_aws_group_templates,
-)
 
 
 class PartialImportGroupTestCase(IsolatedAsyncioTestCase):
@@ -35,9 +35,7 @@ class PartialImportGroupTestCase(IsolatedAsyncioTestCase):
 
         self.assertTrue(os.path.exists(self.template.file_path))
 
-        await generate_aws_group_templates(
-            IAMBIC_TEST_DETAILS.config.aws,
-            IAMBIC_TEST_DETAILS.template_dir_path,
+        await group_full_import(
             [
                 GroupMessageDetails(
                     account_id=included_account,
@@ -66,9 +64,7 @@ class PartialImportGroupTestCase(IsolatedAsyncioTestCase):
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         # Refresh the template
-        await generate_aws_group_templates(
-            IAMBIC_TEST_DETAILS.config.aws,
-            IAMBIC_TEST_DETAILS.template_dir_path,
+        await group_full_import(
             [
                 GroupMessageDetails(
                     account_id=deleted_account,

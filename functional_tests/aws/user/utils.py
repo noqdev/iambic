@@ -1,16 +1,24 @@
 from __future__ import annotations
 
 import random
+import uuid
 
+from functional_tests.conftest import IAMBIC_TEST_DETAILS
+from iambic.core.iambic_enum import Command
+from iambic.core.models import ExecutionMessage
 from iambic.plugins.v0_1_0.aws.iam.user.models import UserTemplate
-from iambic.plugins.v0_1_0.aws.iam.user.template_generation import get_user_dir
+from iambic.plugins.v0_1_0.aws.iam.user.template_generation import (
+    collect_aws_users,
+    generate_aws_user_templates,
+    get_template_dir,
+)
 from iambic.plugins.v0_1_0.aws.iam.user.utils import list_users
 
 
 async def generate_user_template_from_base(
     repo_dir: str,
 ) -> UserTemplate:
-    user_dir = get_user_dir(repo_dir)
+    user_dir = get_template_dir(repo_dir)
     identifier = f"iambic_test_{random.randint(0, 10000)}"
     file_path = f"{user_dir}/{identifier}.yaml"
     user_template = f"""
@@ -42,3 +50,22 @@ properties:
 async def get_modifiable_user(iam_client):
     account_users = await list_users(iam_client)
     return random.choice(account_users)
+
+
+async def user_full_import(detect_messages: list = None):
+    exe_message = ExecutionMessage(
+        execution_id=str(uuid.uuid4()), command=Command.IMPORT, provider_type="aws"
+    )
+    # Refresh the template
+    await collect_aws_users(
+        exe_message,
+        IAMBIC_TEST_DETAILS.config.aws,
+        IAMBIC_TEST_DETAILS.template_dir_path,
+        detect_messages,
+    )
+    await generate_aws_user_templates(
+        exe_message,
+        IAMBIC_TEST_DETAILS.config.aws,
+        IAMBIC_TEST_DETAILS.template_dir_path,
+        detect_messages,
+    )

@@ -5,14 +5,12 @@ from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.aws.managed_policy.utils import (
     generate_managed_policy_template_from_base,
+    managed_policy_full_import,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.event_bridge.models import ManagedPolicyMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyTemplate
-from iambic.plugins.v0_1_0.aws.iam.policy.template_generation import (
-    generate_aws_managed_policy_templates,
-)
 
 
 class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
@@ -46,9 +44,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
         file_sys_template = ManagedPolicyTemplate.load(self.template.file_path)
         self.assertEqual(file_sys_template.properties.description, initial_description)
 
-        await generate_aws_managed_policy_templates(
-            IAMBIC_TEST_DETAILS.config.aws,
-            IAMBIC_TEST_DETAILS.template_dir_path,
+        await managed_policy_full_import(
             [
                 ManagedPolicyMessageDetails(
                     account_id=included_account,
@@ -56,7 +52,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
                     policy_name=self.template.properties.policy_name,
                     delete=False,
                 )
-            ],
+            ]
         )
 
         file_sys_template = ManagedPolicyTemplate.load(self.template.file_path)
@@ -70,9 +66,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
 
         self.assertTrue(os.path.exists(self.template.file_path))
 
-        await generate_aws_managed_policy_templates(
-            IAMBIC_TEST_DETAILS.config.aws,
-            IAMBIC_TEST_DETAILS.template_dir_path,
+        await managed_policy_full_import(
             [
                 ManagedPolicyMessageDetails(
                     account_id=included_account,
@@ -80,9 +74,8 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
                     policy_name=self.template.properties.policy_name,
                     delete=True,
                 )
-            ],
+            ]
         )
-
         self.assertFalse(os.path.exists(self.template.file_path))
 
     async def test_delete_managed_policy_from_one_account(self):
@@ -107,9 +100,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
         # Refresh the template
-        await generate_aws_managed_policy_templates(
-            IAMBIC_TEST_DETAILS.config.aws,
-            IAMBIC_TEST_DETAILS.template_dir_path,
+        await managed_policy_full_import(
             [
                 ManagedPolicyMessageDetails(
                     account_id=deleted_account,
@@ -117,7 +108,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
                     policy_name=self.template.properties.policy_name,
                     delete=True,
                 )
-            ],
+            ]
         )
 
         file_sys_template = ManagedPolicyTemplate.load(self.template.file_path)

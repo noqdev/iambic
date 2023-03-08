@@ -3,14 +3,14 @@ from __future__ import annotations
 import os
 from unittest import IsolatedAsyncioTestCase
 
-from functional_tests.aws.role.utils import generate_role_template_from_base
+from functional_tests.aws.role.utils import (
+    generate_role_template_from_base,
+    role_full_import,
+)
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.event_bridge.models import RoleMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.role.models import RoleTemplate
-from iambic.plugins.v0_1_0.aws.iam.role.template_generation import (
-    generate_aws_role_templates,
-)
 
 
 class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
@@ -45,16 +45,14 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
 
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
-        await generate_aws_role_templates(
-            IAMBIC_TEST_DETAILS.config.aws,
-            IAMBIC_TEST_DETAILS.template_dir_path,
+        await role_full_import(
             [
                 RoleMessageDetails(
                     account_id=included_account,
                     role_name=self.template.properties.role_name,
                     delete=False,
                 )
-            ],
+            ]
         )
 
         file_sys_template = RoleTemplate.load(self.template.file_path)
@@ -68,16 +66,14 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
 
         self.assertTrue(os.path.exists(self.template.file_path))
 
-        await generate_aws_role_templates(
-            IAMBIC_TEST_DETAILS.config.aws,
-            IAMBIC_TEST_DETAILS.template_dir_path,
+        await role_full_import(
             [
                 RoleMessageDetails(
                     account_id=included_account,
                     role_name=self.template.properties.role_name,
                     delete=True,
                 )
-            ],
+            ]
         )
 
         self.assertFalse(os.path.exists(self.template.file_path))
@@ -98,17 +94,14 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
         # Create the policy on all accounts except 1
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
 
-        # Refresh the template
-        await generate_aws_role_templates(
-            IAMBIC_TEST_DETAILS.config.aws,
-            IAMBIC_TEST_DETAILS.template_dir_path,
+        await role_full_import(
             [
                 RoleMessageDetails(
                     account_id=deleted_account,
                     role_name=self.template.properties.role_name,
                     delete=True,
                 )
-            ],
+            ]
         )
 
         file_sys_template = RoleTemplate.load(self.template.file_path)
