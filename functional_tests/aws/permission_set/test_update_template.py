@@ -47,3 +47,34 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
                 "Description"
             ],
         )
+
+
+class UpdatePermissionSetTestCaseWithBadInput(IsolatedAsyncioTestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.template = asyncio.run(
+            generate_permission_set_template_from_base(
+                IAMBIC_TEST_DETAILS.template_dir_path
+            )
+        )
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+        sleep(5)
+        asyncio.run(
+            IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        sleep(5)
+        asyncio.run(
+            IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
+        )
+        cls.template.deleted = True
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+
+    async def test_update_description(self):
+        self.template.properties.description = ""  # this does not trigger error because default validation only happens during creation
+        template_change_details = await self.template.apply(
+            IAMBIC_TEST_DETAILS.config.aws, ctx
+        )
+        self.assertEqual(len(template_change_details.exceptions_seen), 1)
