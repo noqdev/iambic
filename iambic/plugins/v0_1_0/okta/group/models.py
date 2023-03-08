@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from itertools import chain
 from typing import TYPE_CHECKING, Any, List, Optional
 
@@ -152,6 +153,15 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
     @property
     def resource_type(self) -> str:
         return "okta:group"
+
+    def set_default_file_path(self, repo_dir: str):
+        file_name = f"{self.properties.name}.yaml"
+        self.file_path = os.path.expanduser(
+            os.path.join(
+                repo_dir,
+                f"resources/okta/groups/{self.properties.idp_name}/{file_name}",
+            )
+        )
 
     def apply_resource_dict(
         self, okta_organization: OktaOrganization, context: ExecutionContext

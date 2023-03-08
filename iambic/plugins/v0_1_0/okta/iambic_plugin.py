@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.okta.app.models import OktaAppTemplate
@@ -19,6 +20,10 @@ class OktaOrganization(BaseModel):
     api_token: SecretStr
     request_timeout: int = 60
     client: Any = None  # OktaClient
+    iambic_managed: Optional[IambicManaged] = Field(
+        IambicManaged.IMPORT_ONLY,
+        description="Controls the directionality of iambic changes",
+    )
 
     class Config:
         arbitrary_types_allowed = True
@@ -40,6 +45,12 @@ class OktaConfig(BaseModel):
     organizations: list[OktaOrganization] = Field(
         description="A list of Okta organizations."
     )
+
+    def get_organization(self, idp_name: str) -> OktaOrganization:
+        for o in self.organizations:
+            if o.idp_name == idp_name:
+                return o
+        raise Exception(f"Could not find organization for IDP {idp_name}")
 
 
 IAMBIC_PLUGIN = ProviderPlugin(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os.path
 from itertools import chain
 from typing import TYPE_CHECKING, Any, List, Optional
 
@@ -30,6 +31,7 @@ if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
 
 OKTA_GET_APP_SEMAPHORE = NoqSemaphore(get_app, 10)
+OKTA_APP_TEMPLATE_TYPE = "NOQ::Okta::App"
 
 
 class OktaAppTemplateProperties(ExpiryModel, BaseModel):
@@ -58,7 +60,7 @@ class OktaAppTemplateProperties(ExpiryModel, BaseModel):
 
 
 class OktaAppTemplate(BaseTemplate, ExpiryModel):
-    template_type = "NOQ::Okta::App"
+    template_type = OKTA_APP_TEMPLATE_TYPE
     properties: OktaAppTemplateProperties = Field(
         ..., description="Properties for the Okta App"
     )
@@ -122,6 +124,14 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
     @property
     def resource_type(self) -> str:
         return "okta:app"
+
+    def set_default_file_path(self, repo_dir: str):
+        file_name = f"{self.properties.name}.yaml"
+        self.file_path = os.path.expanduser(
+            os.path.join(
+                repo_dir, f"resources/okta/apps/{self.properties.idp_name}/{file_name}"
+            )
+        )
 
     def apply_resource_dict(
         self, okta_organization: OktaOrganization, context: ExecutionContext
@@ -244,7 +254,7 @@ async def get_app_template(okta_app) -> OktaAppTemplate:
     """Get a template for an app"""
     file_name = f"{okta_app.name}.yaml"
     app = OktaAppTemplate(
-        file_path=f"resources/okta/{okta_app.idp_name}/apps/{file_name}",
+        file_path=f"resources/okta/apps/{okta_app.idp_name}/{file_name}",
         template_type="NOQ::Okta::App",
         properties=OktaAppTemplateProperties(
             name=okta_app.name,
