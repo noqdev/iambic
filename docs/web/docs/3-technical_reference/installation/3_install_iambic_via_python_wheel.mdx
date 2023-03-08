@@ -1,0 +1,54 @@
+---
+title: Install IAMbic via Python Wheel
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+## Pre-requisites
+
+* Python 3.10 or later
+
+## Install Python if you have not already
+
+To download IAMbic from PyPI, you will need to ensure that Python is installed on your machine. Here are two methods for installing Python:
+
+### Method 1: Python
+
+1. Go to the [Python Downloads page]( https://www.python.org/downloads) and download and install Python 3.10 or later.
+1. Create a virtual environment and install IAMbic by running the following commands:
+
+```bash
+# Create a directory for your iambic templates if you didn't already create one
+mkdir iambic-templates
+cd iambic-templates
+
+# Create a virtual environment to store iambic and its dependencies
+python -m venv venv
+. venv/bin/activate
+
+# Install IAMbic
+pip install iambic-core
+```
+
+Test by running `iambic --help`
+
+### Method 2: Use pyenv (Recommended for managing multiple versions of Python)
+
+1. Install [pyenv](https://github.com/pyenv/pyenv) by following the instructions on their GitHub page. (`brew install pyenv` on Mac)
+1. Install [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv) by following the instructions on their GitHub page. (`brew install pyenv-virtualenv` on Mac)
+1. Create a virtual environment and install IAMbic by running the following commands:
+
+```bash
+# Install the desired version of Python (replace 3.10 with your desired version).
+pyenv install 3.10
+# Set the Python version globally with `pyenv global 3.10` or locally within a folder with `pyenv local 3.10`.
+pyenv local 3.10
+# Create a virtual environment (replace 3.10 and iambic with your desired version and environment name).
+pyenv virtualenv 3.10 iambic
+# Activate the virtual environment
+pyenv activate iambic
+# Install IAMbic
+pip install iambic-core
+```
+
+Test by running `iambic --help`

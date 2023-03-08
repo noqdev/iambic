@@ -40,8 +40,12 @@ async def boto_crud_call(boto_fnc, **kwargs) -> Union[list, dict]:
             else:
                 raise
         except NoCredentialsError as exc:
-            log.error(f"Unable to create an AWS session, you may need to run `aws configure` or export your AWS_PROFILE; err={exc}")
-            raise RuntimeError(f"Unable to create an AWS session, you may need to run `aws configure` or export your AWS_PROFILE; err={exc}")
+            log.error(
+                f"Unable to create an AWS session, you may need to run `aws configure` or export your AWS_PROFILE; err={exc}"
+            )
+            raise RuntimeError(
+                f"Unable to create an AWS session, you may need to run `aws configure` or export your AWS_PROFILE; err={exc}"
+            )
 
 
 async def paginated_search(
