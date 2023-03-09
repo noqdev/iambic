@@ -17,18 +17,6 @@
             "justMyCode": false
         },
         {
-            "name": "Iambic: Apply All Templates",
-            "type": "python",
-            "request": "launch",
-            "module": "iambic.main",
-            "console": "integratedTerminal",
-            "envFile": "${workspaceFolder}/.env",
-            "args": [
-                "apply",
-            ],
-            "justMyCode": true
-        },
-        {
             "name": "Iambic: Apply Specific Template",
             "type": "python",
             "request": "launch",
@@ -36,9 +24,6 @@
             "console": "integratedTerminal",
             "args": [
                 "apply",
-
-                "--template",
-                "${env:IAMBIC_TEMPLATE_PATH}"
             ],
             "envFile": "${workspaceFolder}/.env",
             "justMyCode": true

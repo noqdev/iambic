@@ -53,14 +53,12 @@ def cli():
 
 
 @cli.command()
-@click.option(
-    "--template",
-    "-t",
+@click.argument(
     "templates",
     required=False,
-    multiple=True,
+    envvar="IAMBIC_TEMPLATE_PATH",
     type=click.Path(exists=True),
-    help="The template file path(s) to expire. Example: ./aws/roles/engineering.yaml",
+    nargs=-1,
 )
 @click.option(
     "--repo-dir",
@@ -142,14 +140,12 @@ def run_clone_repos(repo_dir: str = str(pathlib.Path.cwd())):
     show_default=True,
     help="Apply changes without asking for permission?",
 )
-@click.option(
-    "--template",
-    "-t",
+@click.argument(
     "templates",
-    required=False,
-    multiple=True,
+    required=True,
+    envvar="IAMBIC_TEMPLATE_PATH",
     type=click.Path(exists=True),
-    help="The template file path(s) to apply. Example: ./aws/roles/engineering.yaml",
+    nargs=-1,
 )
 @click.option(
     "--allow-dirty",
@@ -262,14 +258,12 @@ def run_git_apply(
 
 
 @cli.command()
-@click.option(
-    "--template",
-    "-t",
+@click.argument(
     "templates",
     required=False,
-    multiple=True,
+    envvar="IAMBIC_TEMPLATE_PATH",
     type=click.Path(exists=True),
-    help="The template file path(s) to apply. Example: ./resources/aws/roles/engineering.yaml",
+    nargs=-1,
 )
 @click.option(
     "--plan-output",
@@ -368,14 +362,12 @@ def import_(repo_dir: str):
 
 
 @cli.command()
-@click.option(
-    "--template",
-    "-t",
+@click.argument(
     "templates",
     required=False,
-    multiple=True,
+    envvar="IAMBIC_TEMPLATE_PATH",
     type=click.Path(exists=True),
-    help="The template file path(s) to expire. Example: ./aws/roles/engineering.yaml",
+    nargs=-1,
 )
 @click.option(
     "--repo-dir",

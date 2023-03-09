@@ -186,7 +186,7 @@ In a production environment, this would be handled by a command issued on a Gith
 :::
 
 ```bash
-iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
 ```
 
 Confirm that the group has been created by running the following command and visiting the URL in your browser:
@@ -246,7 +246,7 @@ EOF
 Run the `apply` command to have IAMbic update the group:
 
 ```bash
-iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
 ```
 
 <!-- #TODO Is there a way we can test/verify that this worked and the user is in the GG now?
@@ -284,7 +284,7 @@ EOF
 ```
 
 ```bash
-iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
 ```
 
 After applying the change, notice that the `expires_at` date in the template was converted from a relative expiration time ("in two minutes") to an absolute date (Example: "2021-05-20T15:00:00-04:00"). This allows Iambic to know exactly when the request should be expired.
@@ -298,7 +298,7 @@ echo https://groups.google.com/a/$DOMAIN/g/iambic-test-group
 After a couple of minutes, the request should expire. In a production deployment, this process would be automatic. But for the purposes of testing, you can manually expire the request by re-running the apply command after two minutes have passed:
 
 ```bash
-iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
 ```
 
 ### 6. Expire the Google Group
@@ -324,7 +324,7 @@ properties:
       expires_at: in 2 minutes
 EOF
 
-iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
 
 cat google/groups/$DOMAIN/iambic-test-group.yaml
 ```
@@ -334,7 +334,7 @@ In the last line of the above commands, we printed the contents of the template 
 After a minute has passed, re-run the apply command to expire the request.
 
 ```bash
-iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
 ```
 
 <!-- #TODO Do something here to confrim it's expired properly -->

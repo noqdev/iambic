@@ -9,7 +9,7 @@ import re
 import sys
 import tempfile
 import typing
-from datetime import datetime
+from datetime import date, datetime
 from io import StringIO
 from typing import TYPE_CHECKING, Any, Coroutine, Optional, Union
 from urllib.parse import unquote_plus
@@ -35,14 +35,20 @@ __WRITABLE_DIRECTORY__ = pathlib.Path.home()
 
 
 def init_writable_directory() -> None:
-    if os.environ.get("AWS_LAMBDA_FUNCTION_NAME", False):
-        temp_writable_directory = tempfile.mkdtemp(prefix="lambda")
-        __WRITABLE_DIRECTORY__ = pathlib.Path(temp_writable_directory)
-    else:
-        __WRITABLE_DIRECTORY__ = pathlib.Path.home()
+
+    # use during development
+    __WRITABLE_DIRECTORY__ = pathlib.Path.home()
+
+    # use by docker image user
     if os.environ.get("IAMBIC_DOCKER_CONTAINER", False):
         log.info("IAMBIC_DOCKER_CONTAINER is set, using /app as writable directory")
         __WRITABLE_DIRECTORY__ = pathlib.Path("/app")
+
+    # use by lambda deployment - the order matters because lambda deployment
+    # still use a docker container but still cannot write to anywhere but os temp dir
+    if os.environ.get("AWS_LAMBDA_FUNCTION_NAME", False):
+        temp_writable_directory = tempfile.mkdtemp(prefix="lambda")
+        __WRITABLE_DIRECTORY__ = pathlib.Path(temp_writable_directory)
 
     this_module = sys.modules[__name__]
     setattr(this_module, "__WRITABLE_DIRECTORY__", __WRITABLE_DIRECTORY__)
@@ -585,3 +591,19 @@ def sanitize_string(unsanitized_str, valid_characters_re):
         if re.match(valid_characters_re, char):
             sanitized_str += char
     return sanitized_str
+
+
+def simplify_dt(_dt: Union[datetime, date]) -> str:
+    """
+    Simplify a datetime object  by converting it into a string
+    with minute granularity. Useful for handling
+    `expires_at` without needing to expose microsecond granularity in our templates.
+    """
+    if not isinstance(_dt, datetime) and not isinstance(_dt, date):
+        return _dt
+    dt_str = f"{_dt:%Y-%m-%dT%H:%M:%S}"[:-3]
+    if isinstance(_dt, datetime) and _dt.tzinfo:
+        dt_str += f" {_dt:%Z}"
+    else:
+        dt_str += " UTC"
+    return dt_str

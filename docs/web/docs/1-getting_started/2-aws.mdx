@@ -153,7 +153,7 @@ properties:
 Save the template, and in your terminal, use IAMbic to apply the change.
 
 ```bash
-iambic apply -t resources/aws/roles/all_accounts/iambic_test_role.yaml
+iambic apply resources/aws/roles/all_accounts/iambic_test_role.yaml
 ```
 
 If all went according to plan, you should now have a new role across all of the accounts you've defined, or the accounts we've detected in AWS Organizations.
@@ -213,7 +213,7 @@ properties:
 Save the template, and in your terminal, use IAMbic to apply the change.
 
 ```bash
-iambic apply -t resources/aws/roles/all_accounts/iambic_test_role.yaml
+iambic apply resources/aws/roles/all_accounts/iambic_test_role.yaml
 ```
 
 ### 3.2 - Create Temporary, Expiring IAM Permissions
@@ -275,7 +275,7 @@ properties:
 Now run the apply command.
 
 ```bash
-iambic apply -t resources/aws/roles/all_accounts/iambic_test_role.yaml
+iambic apply resources/aws/roles/all_accounts/iambic_test_role.yaml
 ```
 
 Once it has run, you'll notice the changes reflected in the cloud immediately, and the file has been updated to reflect the changes.
@@ -382,7 +382,7 @@ properties:
 Save the template, and in your terminal, use IAMbic to apply the change.
 
 ```bash
-iambic apply -t resources/aws/roles/all_accounts/iambic_test_role.yaml
+iambic apply resources/aws/roles/all_accounts/iambic_test_role.yaml
 ```
 
 After applying the changes, the users specified in the access rules will now have access to the role in the Noq platform for 3 days.
@@ -427,7 +427,7 @@ properties:
 
 Apply the file by running `iambic apply`.
 ```bash
-iambic apply -t resources/aws/identity_center/permission_sets/iambic_test_permission_set.yaml
+iambic apply resources/aws/identity_center/permission_sets/iambic_test_permission_set.yaml
 ```
 
 #### 4.2 Provide temporary access to a permission set
