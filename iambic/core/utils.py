@@ -35,14 +35,20 @@ __WRITABLE_DIRECTORY__ = pathlib.Path.home()
 
 
 def init_writable_directory() -> None:
-    if os.environ.get("AWS_LAMBDA_FUNCTION_NAME", False):
-        temp_writable_directory = tempfile.mkdtemp(prefix="lambda")
-        __WRITABLE_DIRECTORY__ = pathlib.Path(temp_writable_directory)
-    else:
-        __WRITABLE_DIRECTORY__ = pathlib.Path.home()
+
+    # use during development
+    __WRITABLE_DIRECTORY__ = pathlib.Path.home()
+
+    # use by docker image user
     if os.environ.get("IAMBIC_DOCKER_CONTAINER", False):
         log.info("IAMBIC_DOCKER_CONTAINER is set, using /app as writable directory")
         __WRITABLE_DIRECTORY__ = pathlib.Path("/app")
+
+    # use by lambda deployment - the order matters because lambda deployment
+    # still use a docker container but still cannot write to anywhere but os temp dir
+    if os.environ.get("AWS_LAMBDA_FUNCTION_NAME", False):
+        temp_writable_directory = tempfile.mkdtemp(prefix="lambda")
+        __WRITABLE_DIRECTORY__ = pathlib.Path(temp_writable_directory)
 
     this_module = sys.modules[__name__]
     setattr(this_module, "__WRITABLE_DIRECTORY__", __WRITABLE_DIRECTORY__)
