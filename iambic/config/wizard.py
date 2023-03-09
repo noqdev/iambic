@@ -11,9 +11,9 @@ import uuid
 from textwrap import dedent
 from typing import Union
 
-from aws_error_utils.aws_error_utils import errors
 import boto3
 import questionary
+from aws_error_utils.aws_error_utils import errors
 from botocore.exceptions import ClientError, NoCredentialsError
 
 from iambic.config.dynamic_config import (
@@ -276,7 +276,13 @@ class ConfigurationWizard:
             ).get_caller_identity()
             caller_arn = get_identity_arn(default_caller_identity)
             default_hub_account_id = caller_arn.split(":")[4]
-        except (AttributeError, IndexError, NoCredentialsError, ClientError, FileNotFoundError):
+        except (
+            AttributeError,
+            IndexError,
+            NoCredentialsError,
+            ClientError,
+            FileNotFoundError,
+        ):
             default_hub_account_id = None
             default_caller_identity = {}
 
@@ -444,9 +450,11 @@ class ConfigurationWizard:
                     continue
             except errors.FileNotFoundError as err:
                 log.error(
-                    ("We are unable to authenticate to AWS because the provided profile name has a credential_process "
-                    "rule setup in your AWS configuration file. Either remove the credential_process rule or use the "
-                    "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables."),
+                    (
+                        "We are unable to authenticate to AWS because the provided profile name has a credential_process "
+                        "rule setup in your AWS configuration file. Either remove the credential_process rule or use the "
+                        "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables."
+                    ),
                     error=str(err),
                 )
                 continue
@@ -464,7 +472,9 @@ class ConfigurationWizard:
                 continue
 
             self.profile_name = profile_name
-            with contextlib.suppress(ClientError, NoCredentialsError, FileNotFoundError):
+            with contextlib.suppress(
+                ClientError, NoCredentialsError, FileNotFoundError
+            ):
                 self.autodetected_org_settings = self.boto3_session.client(
                     "organizations"
                 ).describe_organization()["Organization"]
@@ -753,9 +763,7 @@ class ConfigurationWizard:
             if action == "Go back":
                 return
             elif action == "Update IdentityCenter":
-                org_to_edit.identity_center = set_identity_center(
-                    org_to_edit.identity_center.region_name
-                )
+                org_to_edit.identity_center = set_identity_center()
                 asyncio.run(self.attempt_aws_account_refresh())
 
             self.config.aws.organizations[
