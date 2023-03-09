@@ -14,39 +14,22 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
-from iambic.plugins.v0_1_0.aws.iam.models import Path
+from iambic.plugins.v0_1_0.aws.iam.models import Path, PermissionBoundary
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.user.utils import (
     apply_user_groups,
     apply_user_inline_policies,
     apply_user_managed_policies,
+    apply_user_permission_boundary,
     apply_user_tags,
     delete_iam_user,
     get_user,
 )
-from iambic.plugins.v0_1_0.aws.models import (
-    ARN_RE,
-    AccessModel,
-    AWSAccount,
-    AWSTemplate,
-    Tag,
-)
+from iambic.plugins.v0_1_0.aws.models import AccessModel, AWSAccount, AWSTemplate, Tag
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
-from pydantic import Field, constr, validator
+from pydantic import Field, validator
 
 AWS_IAM_USER_TEMPLATE_TYPE = "NOQ::AWS::IAM::User"
-
-
-class PermissionBoundary(ExpiryModel, AccessModel):
-    policy_arn: constr(regex=ARN_RE)
-
-    @property
-    def resource_type(self):
-        return "aws:iam:permission_boundary"
-
-    @property
-    def resource_id(self):
-        return self.policy_arn
 
 
 class Group(ExpiryModel, AccessModel):
@@ -223,6 +206,14 @@ class UserTemplate(AWSTemplate, AccessModel):
                             client,
                             account_user["Tags"],
                             current_user.get("Tags", []),
+                            log_params,
+                            context,
+                        ),
+                        apply_user_permission_boundary(
+                            user_name,
+                            client,
+                            account_user.get("PermissionsBoundary", {}),
+                            current_user.get("PermissionsBoundary", {}),
                             log_params,
                             context,
                         ),

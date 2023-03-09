@@ -9,6 +9,7 @@ from functional_tests.aws.role.utils import generate_role_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
+from iambic.plugins.v0_1_0.aws.iam.role.models import PermissionBoundary
 from iambic.plugins.v0_1_0.aws.iam.role.utils import get_role_across_accounts
 from iambic.plugins.v0_1_0.aws.models import Tag
 
@@ -113,6 +114,26 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
                     self.template.properties.description,
                     role["Description"],
                     f"{account_id} has invalid description for role {self.role_name}",
+                )
+
+    async def test_update_permission_boundary(self):
+        view_policy_arn = "arn:aws:iam::aws:policy/job-function/ViewOnlyAccess"
+        self.template.properties.permissions_boundary = PermissionBoundary(
+            policy_arn=view_policy_arn
+        )
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+
+        account_role_mapping = await get_role_across_accounts(
+            IAMBIC_TEST_DETAILS.config.aws.accounts, self.role_name, False
+        )
+
+        # Check description was updated across all accounts the role is on
+        for account_id, role in account_role_mapping.items():
+            if role:
+                self.assertEqual(
+                    self.template.properties.permissions_boundary.policy_arn,
+                    role["PermissionsBoundary"]["PermissionsBoundaryArn"],
+                    f"{account_id} has invalid permission boundary for role {self.role_name}",
                 )
 
     async def test_update_managed_policies(self):

@@ -30,6 +30,10 @@ warnings.filterwarnings("ignore", category=FutureWarning, module="botocore.clien
 
 os.environ.setdefault("IAMBIC_REPO_DIR", str(pathlib.Path.cwd()))
 
+IAMBIC_TEMPLATE_PATHS = []
+if configured_template := os.getenv("IAMBIC_TEMPLATE_PATH"):
+    IAMBIC_TEMPLATE_PATHS = configured_template.split(",")
+
 
 def output_proposed_changes(
     template_changes: list[TemplateChangeDetails], output_path: str = None
@@ -60,6 +64,7 @@ def cli():
     required=False,
     multiple=True,
     type=click.Path(exists=True),
+    default=IAMBIC_TEMPLATE_PATHS,
     help="The template file path(s) to expire. Example: ./aws/roles/engineering.yaml",
 )
 @click.option(
@@ -149,6 +154,7 @@ def run_clone_repos(repo_dir: str = str(pathlib.Path.cwd())):
     required=False,
     multiple=True,
     type=click.Path(exists=True),
+    default=IAMBIC_TEMPLATE_PATHS,
     help="The template file path(s) to apply. Example: ./aws/roles/engineering.yaml",
 )
 @click.option(
@@ -269,6 +275,7 @@ def run_git_apply(
     required=False,
     multiple=True,
     type=click.Path(exists=True),
+    default=IAMBIC_TEMPLATE_PATHS,
     help="The template file path(s) to apply. Example: ./resources/aws/roles/engineering.yaml",
 )
 @click.option(
@@ -375,6 +382,7 @@ def import_(repo_dir: str):
     required=False,
     multiple=True,
     type=click.Path(exists=True),
+    default=IAMBIC_TEMPLATE_PATHS,
     help="The template file path(s) to expire. Example: ./aws/roles/engineering.yaml",
 )
 @click.option(
