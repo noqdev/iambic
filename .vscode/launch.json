@@ -36,6 +36,7 @@
             "console": "integratedTerminal",
             "args": [
                 "apply",
+
                 "--template",
                 "${env:IAMBIC_TEMPLATE_PATH}"
             ],
