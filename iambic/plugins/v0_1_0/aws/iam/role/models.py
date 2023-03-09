@@ -5,8 +5,6 @@ import json
 from typing import Callable, Optional, Union
 
 import botocore
-from pydantic import Field, constr, validator
-
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -17,7 +15,11 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
-from iambic.plugins.v0_1_0.aws.iam.models import MaxSessionDuration, Path
+from iambic.plugins.v0_1_0.aws.iam.models import (
+    MaxSessionDuration,
+    Path,
+    PermissionBoundary,
+)
 from iambic.plugins.v0_1_0.aws.iam.policy.models import (
     AssumeRolePolicyDocument,
     ManagedPolicyRef,
@@ -26,13 +28,13 @@ from iambic.plugins.v0_1_0.aws.iam.policy.models import (
 from iambic.plugins.v0_1_0.aws.iam.role.utils import (
     apply_role_inline_policies,
     apply_role_managed_policies,
+    apply_role_permission_boundary,
     apply_role_tags,
     delete_iam_role,
     get_role,
     update_assume_role_policy,
 )
 from iambic.plugins.v0_1_0.aws.models import (
-    ARN_RE,
     AccessModel,
     AWSAccount,
     AWSTemplate,
@@ -40,6 +42,7 @@ from iambic.plugins.v0_1_0.aws.models import (
     Tag,
 )
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
+from pydantic import Field, validator
 
 AWS_IAM_ROLE_TEMPLATE_TYPE = "NOQ::AWS::IAM::Role"
 
@@ -61,18 +64,6 @@ class RoleAccess(ExpiryModel, AccessModel):
     @property
     def resource_id(self):
         return
-
-
-class PermissionBoundary(ExpiryModel, AccessModel):
-    policy_arn: constr(regex=ARN_RE)
-
-    @property
-    def resource_type(self):
-        return "aws:iam:permission_boundary"
-
-    @property
-    def resource_id(self):
-        return self.policy_arn
 
 
 class RoleProperties(BaseModel):
@@ -145,6 +136,34 @@ class RoleProperties(BaseModel):
         sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
         return sorted_v
 
+    @validator("max_session_duration")
+    def sort_max_session_duration(cls, v: list[MaxSessionDuration]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
+
+    @validator("permissions_boundary")
+    def sort_permissions_boundary(cls, v: list[PermissionBoundary]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
+
+    @validator("path")
+    def sort_path(cls, v: list[Path]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
+
+    @validator("description")
+    def sort_description(cls, v: list[Description]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
+
 
 class RoleTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_ROLE_TEMPLATE_TYPE
@@ -155,6 +174,11 @@ class RoleTemplate(AWSTemplate, AccessModel):
         [],
         description="Used to define users and groups who can access the role via Noq credential brokering",
     )
+
+    @validator("access_rules")
+    def sort_access_rules(cls, v: list[RoleAccess]):
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
 
     def _apply_resource_dict(
         self, aws_account: AWSAccount = None, context: ExecutionContext = None
@@ -274,6 +298,14 @@ class RoleTemplate(AWSTemplate, AccessModel):
                             client,
                             account_role.pop("AssumeRolePolicyDocument", {}),
                             current_role["AssumeRolePolicyDocument"],
+                            log_params,
+                            context,
+                        ),
+                        apply_role_permission_boundary(
+                            role_name,
+                            client,
+                            account_role.get("PermissionsBoundary", {}),
+                            current_role.get("PermissionsBoundary", {}),
                             log_params,
                             context,
                         ),

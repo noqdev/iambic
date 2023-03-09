@@ -15,6 +15,7 @@ from iambic.core.utils import (
     gather_templates,
     get_provider_value,
     is_regex_match,
+    sanitize_string,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
@@ -40,9 +41,12 @@ def templatize_resource(aws_account: AWSAccount, resource):
         resource = json.dumps(resource)
     elif resource_type != str:
         resource = str(resource)
-
+    valid_characters_re = r"[\w_+=,.@-]"
     resource = resource.replace(aws_account.account_id, "{{account_id}}")
-    resource = resource.replace(aws_account.account_name, "{{account_name}}")
+    resource = resource.replace(
+        sanitize_string(aws_account.account_name, valid_characters_re),
+        "{{account_name}}",
+    )
     for var in aws_account.variables:
         resource = resource.replace(var.value, "{{{}}}".format(var.key))
 

@@ -15,7 +15,7 @@ This page will walk you through the steps of configuring IAMbic, GitHub, and AWS
 3. Reviewer Bob will review the template changes along with the proposed_changes. Bob may request additional changes.
 4. Optional: Developer Alice updates the PR. The IAMbic GitHub action will run `iambic git-plan` again to calculate the new changes required.
 5. Reviewer Bob approves the PR.
-6. Developer Alice comments with `iambic git-apply` in the PR.
+6. Developer Alice comments with `iambic apply` in the PR.
 7. The IAMbic GitHub action will apply the changes in the PR.
 8. Once git-apply is successful, the GitHub action will close the pull request.
 
@@ -183,7 +183,7 @@ Add the following statement into the Allow statement block
 5. The installed pull request action will comment with `iambic git-plan` to place the changes. <!-- #TODO place them as a comment in the PR? --> Any time you want iambic github action to re-plan the changes, you can comment `iambic git-plan`.
 6. The plan will be a comment in line, as long as it is less than 65kb.(Be very careful with big plans because those are difficult for reviewers to review.) <!-- #TODO So then what? What's the alternative? -->
 7. Add reviewers to review your PR and plan that is in the PR comments.
-8. Once your reviewer approves your changes, add comment `iambic git-apply` to have iambic apply the changes. If the changes can be successfully applied, the PR will be automatically merged into main as well.
+8. Once your reviewer approves your changes, add comment `iambic apply` to have iambic apply the changes. If the changes can be successfully applied, the PR will be automatically merged into main as well.
 
 ## FAQ
 

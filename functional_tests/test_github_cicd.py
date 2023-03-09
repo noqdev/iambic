@@ -164,7 +164,7 @@ def prepare_template_repo(github_token: str, temp_templates_directory: str):
 
 # Opens a PR on noqdev/iambic-templates-test. The workflow on the repo will
 # pull container with "test label". It will then approve the PR and trigger
-# the "iambic git-apply" command on the PR. If the flow is successful, the PR
+# the "iambic apply" command on the PR. If the flow is successful, the PR
 # will be merged and we will check the workflow to be completed state.
 def test_github_cicd(filesystem, generate_templates_fixture, build_push_container):
 

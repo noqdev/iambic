@@ -77,43 +77,36 @@ def run_handler(event=None, context=None):
         context = {"command": "import"}
     lambda_context = LambdaContext(**context)
 
-    # TODO: Derive execution_id from context
-    exe_message = ExecutionMessage(
-        execution_id=str(uuid.uuid4()), command=Command.IMPORT
-    )
-
-    match lambda_context.command:
-        case LambdaCommand.run_import.value:
-            config_path = asyncio.run(resolve_config_template_path(REPO_BASE_PATH))
-            config = asyncio.run(load_config(config_path))
-            return asyncio.run(config.run_import(exe_message, REPO_BASE_PATH))
-        case LambdaCommand.run_detect.value:
-            return run_detect(REPO_BASE_PATH)
-        case LambdaCommand.run_apply.value:
-            return run_git_apply(
-                False,
-                FROM_SHA,
-                TO_SHA,
-                repo_dir=REPO_BASE_PATH,
-                output_path=PLAN_OUTPUT_PATH,
-            )
-        case LambdaCommand.run_plan.value:
-            return run_git_plan(PLAN_OUTPUT_PATH, repo_dir=REPO_BASE_PATH)
-        case LambdaCommand.run_git_apply.value:
-            return run_git_apply(
-                False,
-                FROM_SHA,
-                TO_SHA,
-                repo_dir=REPO_BASE_PATH,
-                output_path=PLAN_OUTPUT_PATH,
-            )
-        case LambdaCommand.run_git_plan.value:
-            return run_git_plan(PLAN_OUTPUT_PATH, repo_dir=REPO_BASE_PATH)
-        case LambdaCommand.run_clone_git_repos.value:
-            return run_clone_repos(REPO_BASE_PATH)
-        case _:
-            raise NotImplementedError(f"Unknown command {lambda_context.command}")
-
+    if lambda_context.command == LambdaCommand.run_import.value:
+        config_path = asyncio.run(resolve_config_template_path(REPO_BASE_PATH))
+        config = asyncio.run(load_config(config_path))
+        return asyncio.run(config.run_import(REPO_BASE_PATH))
+    elif lambda_context.command == LambdaCommand.run_detect.value:
+        return run_detect(REPO_BASE_PATH)
+    elif lambda_context.command == LambdaCommand.run_apply.value:
+        return run_git_apply(
+            False,
+            FROM_SHA,
+            TO_SHA,
+            repo_dir=REPO_BASE_PATH,
+            output_path=PLAN_OUTPUT_PATH,
+        )
+    elif lambda_context.command == LambdaCommand.run_plan.value:
+        return run_git_plan(PLAN_OUTPUT_PATH, repo_dir=REPO_BASE_PATH)
+    elif lambda_context.command == LambdaCommand.run_git_apply.value:
+        return run_git_apply(
+            False,
+            FROM_SHA,
+            TO_SHA,
+            repo_dir=REPO_BASE_PATH,
+            output_path=PLAN_OUTPUT_PATH,
+        )
+    elif lambda_context.command == LambdaCommand.run_git_plan.value:
+        return run_git_plan(PLAN_OUTPUT_PATH, repo_dir=REPO_BASE_PATH)
+    elif lambda_context.command == LambdaCommand.run_clone_git_repos.value:
+        return run_clone_repos(REPO_BASE_PATH)
+    else:
+        raise NotImplementedError(f"Unknown command {lambda_context.command}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

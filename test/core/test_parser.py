@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 import shutil
+import sys
 import tempfile
 import traceback
 
@@ -110,9 +111,15 @@ def test_missing_required_fields_templates(example_test_filesystem):
     with pytest.raises(ValueError) as exc_info:
         template_instances = load_templates(templates, raise_validation_err=True)
     assert len(template_instances) == 0
-    captured_traceback_lines = traceback.format_exception(
-        exc_info.value
-    )  # this is a pytest specific format
+    if sys.version_info < (3, 10):
+        exc = exc_info.value
+        captured_traceback_lines = traceback.format_exception(
+            type(exc), exc, exc.__traceback__
+        )
+    else:
+        captured_traceback_lines = traceback.format_exception(
+            exc_info.value
+        )  # this is a pytest specific format
     captured_traceback = "\n".join(captured_traceback_lines)
     assert "template has validation error" in captured_traceback
     assert (
@@ -129,9 +136,15 @@ def test_malformed_yaml(example_test_filesystem):
     with pytest.raises(ValueError) as exc_info:
         template_instances = load_templates(templates, raise_validation_err=True)
     assert len(template_instances) == 0
-    captured_traceback_lines = traceback.format_exception(
-        exc_info.value
-    )  # this is a pytest specific format
+    if sys.version_info < (3, 10):
+        exc = exc_info.value
+        captured_traceback_lines = traceback.format_exception(
+            type(exc), exc, exc.__traceback__
+        )
+    else:
+        captured_traceback_lines = traceback.format_exception(
+            exc_info.value
+        )  # this is a pytest specific format
     captured_traceback = "\n".join(captured_traceback_lines)
     assert "template has validation error" in captured_traceback
     assert (
