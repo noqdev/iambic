@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 from datetime import datetime, timedelta
+from typing import Union
 
 from iambic.core.logger import log
 from iambic.plugins.v0_1_0.aws.models import (
@@ -116,6 +117,7 @@ async def create_stack_set(
     parameters: list[dict],
     deployment_targets: dict,
     deployment_regions: list[str],
+    operation_preferences: dict[str, Union[int, str]],
     **kwargs,
 ) -> bool:
     try:
@@ -149,6 +151,7 @@ async def create_stack_set(
         StackSetName=stack_set_name,
         DeploymentTargets=deployment_targets,
         Regions=deployment_regions,
+        OperationPreferences=operation_preferences,
     )
 
     await asyncio.sleep(30)  # Wait for stack instances to be created
@@ -256,6 +259,10 @@ async def create_change_detection_stack_sets(
             "AccountFilterType": "NONE",
         },
         deployment_regions=["us-east-1"],
+        operation_preferences={
+            "MaxConcurrentCount": 1,
+            "FailureToleranceCount": 1,
+        },
         Capabilities=["CAPABILITY_NAMED_IAM"],
     )
 
@@ -302,6 +309,11 @@ async def create_spoke_role_stack_set(
             "AccountFilterType": "NONE",
         },
         deployment_regions=["us-east-1"],
+        operation_preferences={
+            "RegionConcurrencyType": "PARALLEL",
+            "MaxConcurrentCount": 10,
+            "FailureToleranceCount": 10,
+        },
         Capabilities=["CAPABILITY_NAMED_IAM"],
     )
 
@@ -362,7 +374,7 @@ async def create_iambic_role_stacks(
     if hub_role_created and org_client:
         log.info(
             "Creating stack instances. "
-            "You can check the progress here: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacksets/CreateIambicSpokeRole/stacks\n"
+            "You can check the progress here: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacksets/IambicSpokeRole/stacks"
             "WARNING: Don't Exit"
         )
         return await create_spoke_role_stack_set(cf_client, org_client, hub_account_id)
