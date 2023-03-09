@@ -649,5 +649,21 @@ class ExecutionMessage(PydanticBaseModel):
 
 
 class ExecutionResponse(ExecutionMessage):
-    status: ExecutionStatus
-    errors: Optional[list[str]]
+    status: Optional[ExecutionStatus] = Field(default=ExecutionStatus.RUNNING)
+    proposed_changes: list[Union[AccountChangeDetails, ProposedChange, TemplateChangeDetails]] = Field(
+        default=[]
+    )
+    exceptions_seen: list[Union[AccountChangeDetails, ProposedChange, TemplateChangeDetails]] = Field(
+        default=[]
+    )
+
+    def write(self):
+        fp = self.get_file_path(file_name_and_extension="execution_status.json")
+        with open(fp, mode="w") as f:
+            f.write(json.dumps(self.dict(), indent=2))
+
+    @classmethod
+    def create(cls, exe_message: ExecutionMessage) -> ExecutionResponse:
+        exe_response = cls(**exe_message.dict())
+        exe_response.write()
+        return exe_response

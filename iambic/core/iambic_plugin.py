@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+import itertools
+import json
 from typing import Any, Optional
 
+import aiofiles
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
 
 from iambic.core.context import ctx
-from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
+from iambic.core.iambic_enum import ExecutionStatus
+from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails, ExecutionResponse
 
 
 async def default_apply_callable(
@@ -92,3 +96,39 @@ class ProviderPlugin(PydanticBaseModel):
     templates: list = Field(
         description="The list of templates used for this provider.",
     )
+
+
+class RemoteWorkerPlugin(PydanticBaseModel):
+    version: str
+
+    async def consume(self, *, exe_message: ExecutionMessage, **kwargs):
+        raise NotImplementedError
+
+    async def distribute(self, *, exe_messages: list[ExecutionMessage], **kwargs):
+        raise NotImplementedError
+
+    @staticmethod
+    async def get_execution_statuses(exe_messages: list[ExecutionMessage]) -> tuple[bool, list[ExecutionResponse]]:
+        async def _get_subtask_status(exe_message: ExecutionMessage) -> list[ExecutionResponse]:
+            fp = exe_message.get_file_path(file_name_and_extension="execution_status.json")
+            try:
+                async with aiofiles.open(fp, mode="r") as f:
+                    exe_response = json.loads(await f.read())
+                    if isinstance(exe_response, dict):
+                        return [ExecutionResponse(**exe_response)]
+                    else:
+                        return [ExecutionResponse(**sub_exe_response) for sub_exe_response in exe_response]
+            except FileNotFoundError:
+                return [ExecutionResponse(**exe_message.dict())]
+
+        while True:
+            subtask_statuses = await asyncio.gather(*[
+                _get_subtask_status(exe_message) for exe_message in exe_messages
+            ])
+            subtask_statuses = list(itertools.chain.from_iterable(subtask_statuses))
+
+            if any([status.status == ExecutionStatus.RUNNING for status in subtask_statuses]):
+                await asyncio.sleep(3)
+                continue
+
+            return any([status.status == ExecutionStatus.FAILED for status in subtask_statuses]), subtask_statuses
