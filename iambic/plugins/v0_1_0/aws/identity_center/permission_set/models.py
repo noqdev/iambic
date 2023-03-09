@@ -4,6 +4,8 @@ import asyncio
 import re
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
+from pydantic import Field, validator
+
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -37,7 +39,6 @@ from iambic.plugins.v0_1_0.aws.models import (
     Tag,
 )
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
-from pydantic import Field, validator
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -166,6 +167,8 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
 
     @validator("description")
     def validate_description(cls, v: Union[str, list[Description]]):
+
+        # validation portion
         if isinstance(v, str) and not (1 <= len(v) <= 700):
             raise ValueError(
                 f"description must be between 1 and 700 characters: given {v}"
@@ -177,6 +180,13 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
                     raise ValueError(
                         f"description must be between 1 and 700 characters: given {description.description}"
                     )
+
+        # sorting portion
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
+
         return v
 
     @validator("managed_policies")
