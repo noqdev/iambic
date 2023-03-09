@@ -55,7 +55,7 @@ def cli():
 @cli.command()
 @click.argument(
     "templates",
-    required=True,
+    required=False,
     envvar="IAMBIC_TEMPLATE_PATH",
     type=click.Path(exists=True),
     nargs=-1,
@@ -260,7 +260,7 @@ def run_git_apply(
 @cli.command()
 @click.argument(
     "templates",
-    required=True,
+    required=False,
     envvar="IAMBIC_TEMPLATE_PATH",
     type=click.Path(exists=True),
     nargs=-1,
@@ -364,7 +364,7 @@ def import_(repo_dir: str):
 @cli.command()
 @click.argument(
     "templates",
-    required=True,
+    required=False,
     envvar="IAMBIC_TEMPLATE_PATH",
     type=click.Path(exists=True),
     nargs=-1,
