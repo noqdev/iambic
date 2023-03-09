@@ -1,41 +1,35 @@
-{% set data = [    {'resource_type': 'EC2 Instance', 'resource_id': 'i-1234567890abcdefg', 'action': 'Stop', 'proposed_change': 'None', 'accounts': ['Account A', 'Account B'], 'template_id': 'template_1'},
-    {'resource_type': 'RDS Instance', 'resource_id': 'db-abcdefghijklmno', 'action': 'Delete', 'proposed_change': 'None', 'accounts': ['Account A'], 'template_id': 'template_1'},
-    {'resource_type': 'Lambda Function', 'resource_id': 'arn:aws:lambda:us-west-2:123456789012:function:my-function', 'action': 'Update', 'proposed_change': 'Increase Memory', 'accounts': ['Account B'], 'template_id': 'template_2'},
-    {'resource_type': 'S3 Bucket', 'resource_id': 'my-bucket', 'action': 'Delete', 'proposed_change': 'None', 'accounts': ['Account A', 'Account B'], 'template_id': 'template_2'},
-] %}
-
 <table>
-  <thead>
-    <tr>
-      <th>Template ID</th>
-      <th>Account</th>
-      <th>Resource Type</th>
-      <th>Resource ID</th>
-      <th>Action</th>
-      <th>Proposed Change</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for template_id, template_data in data|groupby('template_id') %}
-      {% for account, account_data in template_data|groupby('accounts') %}
-        <tr class="accordion-toggle">
-          <td rowspan="{{ account_data|length }}">{{ template_id }}</td>
-          <td>{{ account }}</td>
-          <td>{{ account_data[0]['resource_type'] }}</td>
-          <td>{{ account_data[0]['resource_id'] }}</td>
-          <td>{{ account_data[0]['action'] }}</td>
-          <td>{{ account_data[0]['proposed_change'] }}</td>
+    <thead>
+        <tr>
+            <th>Template ID</th>
+            <th>Account</th>
+            <th>Resource Type</th>
+            <th>Resource ID</th>
+            <th>Action</th>
+            <th>Proposed Change</th>
         </tr>
-        {% for row in account_data[1:] %}
-          <tr class="accordion-toggle">
+    </thead>
+    <tbody>
+        {% for template_id, template_data in resource_changes|groupby('template_id') -%}
+            {% for account, account_data in template_data|groupby('accounts') -%}
+        <tr class="accordion-toggle">
+            <td rowspan="{{ account_data|length }}">{{ template_id }}</td>
+            <td>{{ ", ".join(account) }}</td>
+            <td>{{ account_data[0]['resource_type'] }}</td>
+            <td>{{ account_data[0]['resource_id'] }}</td>
+            <td>{{ account_data[0]['action'] }}</td>
+            <td>{{ account_data[0]['proposed_change'] }}</td>
+        </tr>
+            {% for row in account_data[1:] -%}
+        <tr class="accordion-toggle">
             <td>{{ account }}</td>
             <td>{{ row['resource_type'] }}</td>
             <td>{{ row['resource_id'] }}</td>
             <td>{{ row['action'] }}</td>
             <td>{{ row['proposed_change'] }}</td>
-          </tr>
-        {% endfor %}
-      {% endfor %}
-    {% endfor %}
-  </tbody>
+        </tr>
+            {% endfor -%}
+            {% endfor -%}
+        {% endfor -%}
+    </tbody>
 </table>

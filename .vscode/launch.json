@@ -13,6 +13,8 @@
             "envFile": "${workspaceFolder}/.env",
             "args": [
                 "plan",
+                "-t",
+                "../noq-templates/resources/aws/roles/all_accounts/readonly.yaml",
             ],
             "justMyCode": false
         },
