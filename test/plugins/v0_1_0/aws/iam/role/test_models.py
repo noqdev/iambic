@@ -528,7 +528,7 @@ def test_role_properties_tags():
     assert properties_1.tags == properties_2.tags
 
 
-def test_role_proerties_validation():
+def test_role_properties_validation():
 
     tags_1 = [
         {"key": "apple", "value": "red", "included_accounts": ["ses"]},
@@ -544,3 +544,113 @@ def test_role_proerties_validation():
     )  # double check the list is reversed because validation doesn't happen after creation
     properties_1.validate_model_afterward()
     assert properties_1.tags == tag_models_1
+
+
+def test_role_max_session_duration_validation():
+
+    max_session_duration = [
+        {"included_accounts": ["account_1", "account_2"], "max_session_duration": 3600},
+        {"included_accounts": ["account_3"], "max_session_duration": 600},
+    ]
+    properties_1 = RoleProperties(
+        role_name="foo", max_session_duration=max_session_duration
+    )
+    max_session_duration_models_1 = properties_1.max_session_duration
+    max_session_duration_models_2 = list(reversed(properties_1.max_session_duration))
+    assert (
+        max_session_duration_models_1 != max_session_duration_models_2
+    )  # because we reverse the list
+    properties_1.max_session_duration = max_session_duration_models_2
+    assert (
+        properties_1.max_session_duration == max_session_duration_models_2
+    )  # double check the list is reversed because validation doesn't happen after creation
+    properties_1.validate_model_afterward()
+    assert properties_1.max_session_duration == max_session_duration_models_1
+
+
+def test_role_permissions_boundary_validation():
+
+    permissions_boundary = [
+        {
+            "included_accounts": ["account_1", "account_2"],
+            "policy_arn": "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",
+        },
+        {
+            "included_accounts": ["account_3"],
+            "policy_arn": "arn:aws:iam::aws:policy/AmazonEKSServicePolicy",
+        },
+    ]
+    properties_1 = RoleProperties(
+        role_name="foo", permissions_boundary=permissions_boundary
+    )
+    permissions_boundary_models_1 = properties_1.permissions_boundary
+    permissions_boundary_models_2 = list(reversed(properties_1.permissions_boundary))
+    assert (
+        permissions_boundary_models_1 != permissions_boundary_models_2
+    )  # because we reverse the list
+    properties_1.permissions_boundary = permissions_boundary_models_2
+    assert (
+        properties_1.permissions_boundary == permissions_boundary_models_2
+    )  # double check the list is reversed because validation doesn't happen after creation
+    properties_1.validate_model_afterward()
+    assert properties_1.permissions_boundary == permissions_boundary_models_1
+
+
+def test_role_path_validation():
+
+    path = [
+        {"included_accounts": ["account_1", "account_2"], "file_path": "/engineering"},
+        {"included_accounts": ["account_3"], "file_path": "/finance"},
+    ]
+    properties_1 = RoleProperties(role_name="foo", path=path)
+    path_1 = properties_1.path
+    path_2 = list(reversed(properties_1.path))
+    assert path_1 != path_2  # because we reverse the list
+    properties_1.path = path_2
+    assert (
+        properties_1.path == path_2
+    )  # double check the list is reversed because validation doesn't happen after creation
+    properties_1.validate_model_afterward()
+    assert properties_1.path == path_1
+
+
+def test_description_path_validation():
+
+    description = [
+        {"included_accounts": ["account_1", "account_2"], "description": "foo"},
+        {"included_accounts": ["account_3"], "description": "bar"},
+    ]
+    properties_1 = RoleProperties(role_name="foo", description=description)
+    description_1 = properties_1.description
+    description_2 = list(reversed(properties_1.description))
+    assert description_1 != description_2  # because we reverse the list
+    properties_1.description = description_2
+    assert (
+        properties_1.description == description_2
+    )  # double check the list is reversed because validation doesn't happen after creation
+    properties_1.validate_model_afterward()
+    assert properties_1.description == description_1
+
+
+def test_access_rule_validation():
+
+    access_rules = [
+        {"included_accounts": ["account_1", "account_2"], "users": ["foo"]},
+        {"included_accounts": ["account_3"], "users": ["bar"]},
+    ]
+    properties_1 = RoleProperties(role_name="foo")
+    template_1 = RoleTemplate(
+        file_path="foo",
+        identifier="foo",
+        properties=properties_1,
+        access_rules=access_rules,
+    )
+    access_rules_1 = template_1.access_rules
+    access_rules_2 = list(reversed(template_1.access_rules))
+    assert access_rules_1 != access_rules_2  # because we reverse the list
+    template_1.access_rules = access_rules_2
+    assert (
+        template_1.access_rules == access_rules_2
+    )  # double check the list is reversed because validation doesn't happen after creation
+    template_1.validate_model_afterward()
+    assert template_1.access_rules == access_rules_1
