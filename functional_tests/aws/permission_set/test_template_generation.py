@@ -6,15 +6,13 @@ from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.aws.permission_set.utils import (
     generate_permission_set_template_from_base,
+    permission_set_full_import,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.event_bridge.models import PermissionSetMessageDetails
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetTemplate,
-)
-from iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation import (
-    generate_aws_permission_set_templates,
 )
 
 
@@ -53,9 +51,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
             self.template.properties.name
         )
 
-        await generate_aws_permission_set_templates(
-            IAMBIC_TEST_DETAILS.config.aws,
-            IAMBIC_TEST_DETAILS.template_dir_path,
+        await permission_set_full_import(
             [
                 PermissionSetMessageDetails(
                     account_id=identity_center_account.account_id,
@@ -64,7 +60,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
                         "PermissionSetArn"
                     ),
                 )
-            ],
+            ]
         )
 
         file_sys_template = AWSIdentityCenterPermissionSetTemplate.load(
@@ -77,9 +73,6 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
 
         self.assertTrue(os.path.exists(self.template.file_path))
 
-        await generate_aws_permission_set_templates(
-            IAMBIC_TEST_DETAILS.config.aws,
-            IAMBIC_TEST_DETAILS.template_dir_path,
-        )
+        await permission_set_full_import()
 
         self.assertFalse(os.path.exists(self.template.file_path))

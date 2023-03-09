@@ -7,17 +7,22 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
 
 from iambic.core.context import ctx
-from iambic.core.models import BaseTemplate, TemplateChangeDetails
+from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
 
 
 async def default_apply_callable(
-    config, templates: list[BaseTemplate]
+    exe_message: ExecutionMessage,
+    config,
+    templates: list[BaseTemplate],
+    remote_worker=None,
 ) -> list[TemplateChangeDetails]:
     """
     The default apply callable for the IambicPlugin class.
 
+    :param exe_message: Execution context
     :param config: The plugin's config object.
     :param templates: The list of templates to apply.
+    :param remote_worker: The remote worker to use for applying templates.
     """
     template_changes = await asyncio.gather(
         *[template.apply(config, ctx) for template in templates]
@@ -52,11 +57,13 @@ class ProviderPlugin(PydanticBaseModel):
     )
     async_import_callable: Any = Field(
         description="The function that called to import resources across all templates for this provider."
-        "This function must accept the params: (config: ProviderConfig, base_output_dir: str, messages: list = None)"
+        "This function must accept the "
+        "params: (exe_message: ExecutionMessage, config: ProviderConfig, base_output_dir: str, detect_messages: list = None, remote_worker: Worker = None)"
     )
     async_apply_callable: Any = Field(
         description="The function that called to apply resources across all templates for this provider."
-        "This function must accept the params: (config: ProviderConfig, templates: list[BaseTemplate])."
+        "This function must accept the "
+        "params: (exe_message: ExecutionMessage, config: ProviderConfig, templates: list[BaseTemplate], remote_worker: Worker = None)."
         "It must return a list[TemplateChangeDetails].",
         default=default_apply_callable,
     )
@@ -66,7 +73,8 @@ class ProviderPlugin(PydanticBaseModel):
         "The function is called more frequently than the import_callable."
         "It is used as a drift detection tool."
         "For example, the default AWS plugin supports an SQS queue containing cloudtrail events."
-        "This function must accept the params: (config: ProviderConfig, repo_dir: str)"
+        "This function must accept the "
+        "params: (config: ProviderConfig, repo_dir: str)"
         "It must return a str containing the detected changes.",
     )
     async_decode_secret_callable: Optional[Any] = Field(
@@ -79,7 +87,7 @@ class ProviderPlugin(PydanticBaseModel):
         description="(OPTIONAL) The function that called to discover upstream config changes."
         "An example of this would be a new account being added to an AWS Organization,"
         "or a change to AWS account's name or tags."
-        "This function must accept the params: (config: ProviderConfig, repo_dir: str)"
+        "This function must accept the params: (exe_message: ExecutionMessage, config: ProviderConfig, repo_dir: str, remote_worker: Worker = None)"
     )
     templates: list = Field(
         description="The list of templates used for this provider.",

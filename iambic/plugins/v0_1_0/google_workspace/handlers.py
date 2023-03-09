@@ -7,30 +7,24 @@ from iambic.core.context import ctx
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
-from iambic.plugins.v0_1_0.okta.app.template_generation import (
-    collect_org_apps,
-    generate_app_templates,
-)
-from iambic.plugins.v0_1_0.okta.group.template_generation import (
-    collect_org_groups,
+from iambic.plugins.v0_1_0.google_workspace.group.template_generation import (
+    collect_project_groups,
     generate_group_templates,
-)
-from iambic.plugins.v0_1_0.okta.user.template_generation import (
-    collect_org_users,
-    generate_user_templates,
 )
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig
+    from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import (
+        GoogleWorkspaceConfig,
+    )
 
 
-async def load(config: OktaConfig) -> OktaConfig:
+async def load(config: GoogleWorkspaceConfig) -> GoogleWorkspaceConfig:
     return config
 
 
-async def import_okta_resources(
+async def import_google_resources(
     exe_message: ExecutionMessage,
-    config: OktaConfig,
+    config: GoogleWorkspaceConfig,
     base_output_dir: str,
     messages: list = None,
     remote_worker=None,
@@ -38,24 +32,17 @@ async def import_okta_resources(
     base_runner = bool(not exe_message.provider_id)
     collector_tasks = []
 
-    for organization in config.organizations:
-        if organization.iambic_managed == IambicManaged.DISABLED:
+    for workspace in config.workspaces:
+        if workspace.iambic_managed == IambicManaged.DISABLED:
             continue
         elif (
-            exe_message.provider_id and exe_message.provider_id != organization.idp_name
+            exe_message.provider_id and exe_message.provider_id != workspace.project_id
         ):
             continue
 
         task_message = exe_message.copy()
-        task_message.provider_id = organization.idp_name
-
-        collector_tasks.extend(
-            [
-                collect_org_apps(task_message, config),
-                collect_org_groups(task_message, config),
-                collect_org_users(task_message, config),
-            ]
-        )
+        task_message.provider_id = workspace.project_id
+        collector_tasks.append(collect_project_groups(task_message, config))
 
     if collector_tasks:
         if base_runner and ctx.use_remote and remote_worker and not messages:
@@ -71,8 +58,6 @@ async def import_okta_resources(
 
     if base_runner:
         generator_tasks = [
-            generate_app_templates(exe_message, base_output_dir),
-            generate_group_templates(exe_message, base_output_dir),
-            generate_user_templates(exe_message, base_output_dir),
+            generate_group_templates(exe_message, config, base_output_dir)
         ]
         await asyncio.gather(*generator_tasks)

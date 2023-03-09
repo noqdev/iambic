@@ -1,9 +1,17 @@
 from __future__ import annotations
 
 import random
+import uuid
 
+from functional_tests.conftest import IAMBIC_TEST_DETAILS
+from iambic.core.iambic_enum import Command
+from iambic.core.models import ExecutionMessage
 from iambic.plugins.v0_1_0.aws.iam.role.models import RoleAccess, RoleTemplate
-from iambic.plugins.v0_1_0.aws.iam.role.template_generation import get_role_dir
+from iambic.plugins.v0_1_0.aws.iam.role.template_generation import (
+    collect_aws_roles,
+    generate_aws_role_templates,
+    get_template_dir,
+)
 from iambic.plugins.v0_1_0.aws.iam.role.utils import list_roles
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
@@ -47,7 +55,7 @@ def attach_access_rule(
 async def generate_role_template_from_base(
     repo_dir: str,
 ) -> RoleTemplate:
-    role_dir = get_role_dir(repo_dir)
+    role_dir = get_template_dir(repo_dir)
     identifier = f"iambic_test_{random.randint(0, 10000)}"
     file_path = f"{role_dir}/{identifier}.yaml"
     role_template = f"""
@@ -92,3 +100,21 @@ async def get_modifiable_role(iam_client):
         if "service-role" not in role["Path"] and "AWSReserved" not in role["RoleName"]
     ]
     return random.choice(account_roles)
+
+
+async def role_full_import(detect_messages: list = None):
+    exe_message = ExecutionMessage(
+        execution_id=str(uuid.uuid4()), command=Command.IMPORT, provider_type="aws"
+    )
+    await collect_aws_roles(
+        exe_message,
+        IAMBIC_TEST_DETAILS.config.aws,
+        IAMBIC_TEST_DETAILS.template_dir_path,
+        detect_messages,
+    )
+    await generate_aws_role_templates(
+        exe_message,
+        IAMBIC_TEST_DETAILS.config.aws,
+        IAMBIC_TEST_DETAILS.template_dir_path,
+        detect_messages,
+    )

@@ -19,9 +19,9 @@ import iambic.plugins.v0_1_0.github
 from iambic.core.context import ctx
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
-from iambic.core.models import BaseTemplate, TemplateChangeDetails
+from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
 from iambic.core.utils import sort_dict, yaml
-from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, google, okta
+from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, google_workspace, okta
 
 CURRENT_IAMBIC_VERSION = "1"
 
@@ -107,7 +107,7 @@ class Config(BaseTemplate):
             ),
             PluginDefinition(
                 type=PluginType.DIRECTORY_PATH,
-                location=google.__path__[0],
+                location=google_workspace.__path__[0],
                 version=PLUGIN_VERSION,
             ),
             PluginDefinition(
@@ -193,19 +193,36 @@ class Config(BaseTemplate):
                                     )
                                 self.secrets.setdefault(k, v)
 
-    async def run_import(self, output_dir: str, messages: list = None):
+    async def run_import(
+        self,
+        exe_message: ExecutionMessage,
+        output_dir: str,
+    ):
         # It's the responsibility of the provider to handle throttling.
-        await asyncio.gather(
-            *[
-                plugin.async_import_callable(
-                    self.get_config_plugin(plugin), output_dir, messages
-                )
+        if exe_message.provider_type:
+            plugin = [
+                plugin
                 for plugin in self.configured_plugins
-            ]
-        )
+                if plugin.config_name == exe_message.provider_type
+            ][0]
+            await plugin.async_import_callable(
+                exe_message, self.get_config_plugin(plugin), output_dir
+            )
+        else:
+            tasks = []
+            for plugin in self.configured_plugins:
+                task_message = exe_message.copy()
+                task_message.provider_type = plugin.config_name
+                tasks.append(
+                    plugin.async_import_callable(
+                        exe_message, self.get_config_plugin(plugin), output_dir
+                    )
+                )
+
+            await asyncio.gather(*tasks)
 
     async def run_apply(
-        self, templates: list[BaseTemplate]
+        self, exe_message: ExecutionMessage, templates: list[BaseTemplate]
     ) -> list[TemplateChangeDetails]:
         # It's the responsibility of the provider to handle throttling.
         # Build a map of a plugin's template types to the plugin
@@ -224,13 +241,25 @@ class Config(BaseTemplate):
 
         tasks = []
         for plugin in self.plugin_instances:
+            if (
+                exe_message.provider_type
+                and plugin.config_name != exe_message.provider_type
+            ):
+                continue
+
             if templates := plugin_templates.get(plugin.config_name):
                 if plugin_config := self.get_config_plugin(plugin):
-                    tasks.append(plugin.async_apply_callable(plugin_config, templates))
+                    task_message = exe_message.copy()
+                    task_message.provider_type = plugin.config_name
+                    tasks.append(
+                        plugin.async_apply_callable(
+                            task_message, plugin_config, templates
+                        )
+                    )
                 else:
                     log.critical(
                         "Templates discovered for a plugin not defined in the config file.",
-                        missing_config=plugin_config.config_name,
+                        missing_config=plugin.config_name,
                     )
 
         # Retrieve template changes across plugins and flatten responses
@@ -274,17 +303,24 @@ class Config(BaseTemplate):
         ]:
             return "\n".join(change_str_list)
 
-    async def run_discover_upstream_config_changes(self, repo_dir: str):
-        log.info("Scanning for upstream changes to config attributes.")
-        await asyncio.gather(
-            *[
-                plugin.async_discover_upstream_config_changes_callable(
-                    self.get_config_plugin(plugin), repo_dir
+    async def run_discover_upstream_config_changes(
+        self, exe_message: ExecutionMessage, repo_dir: str
+    ):
+        tasks = []
+        for plugin in self.configured_plugins:
+            if plugin.async_discover_upstream_config_changes_callable:
+                task_message = exe_message.copy()
+                task_message.provider_type = plugin.config_name
+                tasks.append(
+                    plugin.async_discover_upstream_config_changes_callable(
+                        task_message, self.get_config_plugin(plugin), repo_dir
+                    )
                 )
-                for plugin in self.configured_plugins
-                if plugin.async_discover_upstream_config_changes_callable
-            ]
-        )
+
+        if tasks:
+            log.info("Scanning for upstream changes to config attributes.")
+            await asyncio.gather(*tasks)
+
         log.info("Finished scanning for upstream changes to config attributes.")
         self.write()
 

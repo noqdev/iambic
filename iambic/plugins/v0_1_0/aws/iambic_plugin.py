@@ -58,11 +58,22 @@ class AWSConfig(BaseModel):
                 if account.hub_role_arn
             ][0]
 
-    async def set_identity_center_details(self):
+    async def set_identity_center_details(self, account_id: str = None):
         if self.accounts:
-            await asyncio.gather(
-                *[account.set_identity_center_details() for account in self.accounts]
-            )
+            if account_id:
+                account = next(
+                    account
+                    for account in self.accounts
+                    if account.account_id == account_id
+                )
+                await account.set_identity_center_details()
+            else:
+                await asyncio.gather(
+                    *[
+                        account.set_identity_center_details()
+                        for account in self.accounts
+                    ]
+                )
 
     async def get_boto_session_from_arn(self, arn: str, region_name: str = None):
         region_name = region_name or arn.split(":")[3]

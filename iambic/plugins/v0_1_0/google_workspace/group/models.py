@@ -16,7 +16,7 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
-from iambic.plugins.v0_1_0.google.group.utils import (
+from iambic.plugins.v0_1_0.google_workspace.group.utils import (
     create_group,
     get_group,
     get_group_members,
@@ -27,7 +27,7 @@ from iambic.plugins.v0_1_0.google.group.utils import (
     update_group_members,
     update_group_name,
 )
-from iambic.plugins.v0_1_0.google.models import (
+from iambic.plugins.v0_1_0.google_workspace.models import (
     GoogleTemplate,
     GroupMemberRole,
     GroupMemberStatus,
@@ -41,9 +41,9 @@ from iambic.plugins.v0_1_0.google.models import (
 )
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.google.iambic_plugin import GoogleProject
+    from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import GoogleProject
 
-GOOGLE_GROUP_TEMPLATE_TYPE = "NOQ::Google::Group"
+GOOGLE_GROUP_TEMPLATE_TYPE = "NOQ::GoogleWorkspace::Group"
 
 
 class GroupMember(BaseModel, ExpiryModel):
@@ -265,6 +265,11 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
     @property
     def resource_type(self):
         return "google:group"
+
+    @property
+    def default_file_path(self):
+        file_name = f"{self.properties.email.split('@')[0]}.yaml"
+        return f"resources/google/groups/{self.properties.domain}/{file_name}"
 
     def _is_iambic_import_only(self, google_project: GoogleProject):
         return (

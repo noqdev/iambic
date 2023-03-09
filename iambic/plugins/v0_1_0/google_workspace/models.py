@@ -14,7 +14,10 @@ from iambic.core.models import (
 )
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.google.iambic_plugin import GoogleConfig, GoogleProject
+    from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import (
+        GoogleProject,
+        GoogleWorkspaceConfig,
+    )
 
 
 class WhoCanInvite(Enum):
@@ -91,7 +94,7 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
         raise NotImplementedError
 
     async def apply(
-        self, config: GoogleConfig, context: ExecutionContext
+        self, config: GoogleWorkspaceConfig, context: ExecutionContext
     ) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
@@ -102,7 +105,7 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
         log_params = dict(
             resource_type=self.resource_type, resource_id=self.resource_id
         )
-        for account in config.projects:
+        for account in config.workspaces:
             # if evaluate_on_google_account(self, account):
             if context.execute:
                 log_str = "Applying changes to resource."

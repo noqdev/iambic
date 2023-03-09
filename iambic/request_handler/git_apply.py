@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import itertools
 import os.path
+import uuid
 
 from git import Repo
-
 from iambic.config.dynamic_config import load_config
 from iambic.core.context import ExecutionContext, ctx
 from iambic.core.git import (
@@ -12,8 +12,9 @@ from iambic.core.git import (
     create_templates_for_modified_files,
     retrieve_git_changes,
 )
+from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
-from iambic.core.models import BaseTemplate, TemplateChangeDetails
+from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
 from iambic.core.parser import load_templates
 from iambic.request_handler.expire_resources import flag_expired_resources
 
@@ -57,6 +58,9 @@ async def apply_git_changes(
         log.info("No changes found.")
         return []
 
+    exe_message = ExecutionMessage(
+        execution_id=str(uuid.uuid4()), command=Command.APPLY
+    )
     new_templates = load_templates(
         [git_diff.path for git_diff in file_changes["new_files"]]
     )
@@ -79,7 +83,8 @@ async def apply_git_changes(
     )
 
     template_changes = await config.run_apply(
-        itertools.chain(new_templates, deleted_templates, modified_templates_doubles)
+        exe_message,
+        itertools.chain(new_templates, deleted_templates, modified_templates_doubles),
     )
 
     # note modified_templates_exist_in_repo has different entries from create_templates_for_modified_files because
