@@ -5,8 +5,6 @@ import json
 from typing import Callable, Optional, Union
 
 import botocore
-from pydantic import Field, validator
-
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -44,6 +42,7 @@ from iambic.plugins.v0_1_0.aws.models import (
     Tag,
 )
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
+from pydantic import Field, validator
 
 AWS_IAM_ROLE_TEMPLATE_TYPE = "NOQ::AWS::IAM::Role"
 
@@ -272,7 +271,7 @@ class RoleTemplate(AWSTemplate, AccessModel):
                         apply_role_permission_boundary(
                             role_name,
                             client,
-                            account_role["PermissionsBoundary"],
+                            account_role.get("PermissionsBoundary", {}),
                             current_role.get("PermissionsBoundary", {}),
                             log_params,
                             context,
