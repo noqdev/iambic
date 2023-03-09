@@ -136,6 +136,34 @@ class RoleProperties(BaseModel):
         sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
         return sorted_v
 
+    @validator("max_session_duration")
+    def sort_max_session_duration(cls, v: list[MaxSessionDuration]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
+
+    @validator("permissions_boundary")
+    def sort_permissions_boundary(cls, v: list[PermissionBoundary]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
+
+    @validator("path")
+    def sort_path(cls, v: list[Path]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
+
+    @validator("description")
+    def sort_description(cls, v: list[Description]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
+
 
 class RoleTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_ROLE_TEMPLATE_TYPE
@@ -146,6 +174,11 @@ class RoleTemplate(AWSTemplate, AccessModel):
         [],
         description="Used to define users and groups who can access the role via Noq credential brokering",
     )
+
+    @validator("access_rules")
+    def sort_access_rules(cls, v: list[RoleAccess]):
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
 
     def _apply_resource_dict(
         self, aws_account: AWSAccount = None, context: ExecutionContext = None
