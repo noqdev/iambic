@@ -27,7 +27,7 @@ CURRENT_IAMBIC_VERSION = "1"
 
 
 class CoreConfig(BaseModel):
-    minimum_ulimit: int = 4096
+    minimum_ulimit: int = 64000
 
 
 class PluginType(Enum):

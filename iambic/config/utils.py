@@ -31,7 +31,7 @@ async def resolve_config_template_path(repo_dir: str) -> pathlib.Path:
 
 def check_and_update_resource_limit(config: Config):
     soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
-    minimum_ulimit = 4096
+    minimum_ulimit = 64000
     if config.core:
         minimum_ulimit = config.core.minimum_ulimit
     if soft_limit < minimum_ulimit:

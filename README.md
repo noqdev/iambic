@@ -24,14 +24,24 @@ Please follow our [quick-start guide](http://iambic.org/getting_started/) to get
 
 This section provides a sneak peak at the power of IAMbic.
 
-#### AWS Multi-Account Administrator Role
+#### AWS Multi-Account Cloudwatch Role
+
+This is a simple example of a Cloudwatch role with a static
+set of permissions across three accounts. The name of the role is dynamically
+generated on each of the accounts it is applied to. This template would
+result in the creation of three roles: dev_cloudwatch,
+"staging_cloudwatch", and "prod_cloudwatch" on the respective AWS accounts.
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
-identifier: '{{account_name}}_administrator'
+identifier: '{{account_name}}_cloudwatch'
+included_accounts:
+    - dev
+    - staging
+    - prod
 properties:
   description:
-    - description: Admin Role
+    - description: Cloudwatch role for {{account_name}}
   assume_role_policy_document:
     statement:
       - action:
@@ -39,65 +49,81 @@ properties:
           - sts:TagSession
         effect: Allow
         principal:
-          aws: arn:aws:iam::940552945933:role/NoqCentralRoleCorpNoqDev
+          aws: arn:aws:iam::123456789012:role/NoqCentralRole
     version: '2012-10-17'
+  inline_policies:
+    policy_name: cloudwatch_logs
+    statement:
+      - effect: allow
+        action:
+            - logs:DescribeLogGroups
+            - logs:DescribeLogStreams
+            - logs:GetLogEvents
+            - logs:GetLogRecord
+            - logs:GetQueryResults
+            - logs:TestMetricFilter
+            - logs:FilterLogEvents
+            - logs:StartQuery
+            - logs:StopQuery
+        resource: "*"
   managed_policies:
     - policy_arn: arn:aws:iam::aws:policy/AdministratorAccess
-  role_name: '{{account_name}}_administrator'
+  role_name: '{{account_name}}_cloudwatch'
   tags:
     - key: owner
-      value: cloud_sec
+      value: devops
 ```
 
 ### AWS Dynamic Permissions
 
+This template is a little more complex. It shows a BackendDeveloperRole that has varying degrees of permissions depending on the environment:
+
 ```yaml
 template_type: NOQ::AWS::IAM::Role
-identifier: "{{account_name}}_iambic_test_role"
+identifier: '{{account_name}}_backend_developer'
 included_accounts:
-  - "*" # Include this role on all AWS Accounts
-expires_at: in 3 days
+    - '*'
 properties:
-  description: IAMbic test role on {{account_name}}
+  description:
+    - description: Backend developer role for {{account_name}}
   assume_role_policy_document:
     statement:
-      - action: sts:AssumeRole
-        effect: Deny
+      - action:
+          - sts:AssumeRole
+          - sts:TagSession
+        effect: Allow
         principal:
-          service: ec2.amazonaws.com
+          aws: arn:aws:iam::123456789012:role/NoqCentralRole
+    version: '2012-10-17'
   inline_policies:
-    - policy_name: spoke-acct-policy
+    - policy_name: s3_policy
       statement:
-        - expires_at: 2021-01-01 # Expire the permission on a specific date
-          excluded_accounts: # Include this policy on the role across all accounts, except ACCOUNT_A
-            - ACCOUNT_A
+        - excluded_accounts: # Policy applies to role on all accounts except sensitive one.
+            - sensitive_account
+          effect: allow
           action:
-            - s3:ListBucket
-          effect: Deny
-          resource: "*"
-        - expires_at: tomorrow # Expire the permission at a relative time. IAMbic converts this to an absolute date once it is applied and merged
-          included_accounts: # Only include the policy statement on ACCOUNT_A
-            - ACCOUNT_A
+              - s3:GetObject
+              - s3:ListObject
+          resource:
+              - "*"
+          condition:
+            StringNotEquals:
+                s3:ResourceTag/sensitive: 'true'
+        - included_accounts: # allow write access to non-sensitive resources on the dev account
+            - dev
+          effect: allow
           action:
-            - s3:GetObject
-          effect: Deny
-          resource: "*"
-        - expires_at: in 4 hours
-          included_accounts: # Include the policy statement on all accounts except ACCOUNT_A and ACCOUNT_B
-            - "*"
-          excluded_accounts:
-            - ACCOUNT_A
-            - ACCOUNT_B
-          action:
-            - s3:ListAllMyBuckets
-          effect: Deny
-          resource: "*"
-  managed_policies:
-    - policy_arn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
-  path: /iambic_test/
-  permissions_boundary:
-    policy_arn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
-  role_name: "{{account_name}}_iambic_test_role"
+              - s3:PutObject
+          resource:
+              - "*"
+          condition:
+                StringNotEquals:
+                    s3:ResourceTag/sensitive: 'true'
+  permission_boundary
+  role_name: '{{account_name}}_backend_developer'
+  tags:
+    - key: owner
+      value: devops
 ```
 
 ### Okta Application Assignments
