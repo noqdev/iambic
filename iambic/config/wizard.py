@@ -387,11 +387,9 @@ class ConfigurationWizard:
             ).describe_organization()["Organization"]
 
     def resolve_aws_profile_defaults_from_env(self) -> str:
-        if "AWS_PROFILE" in os.environ:
-            profile_name = os.environ["AWS_PROFILE"]
+        if profile_name := os.environ.get("AWS_PROFILE"):
             log.info("Using AWS profile from environment", profile=self.profile_name)
-        elif "AWS_DEFAULT_PROFILE" in os.environ:
-            profile_name = os.environ["AWS_DEFAULT_PROFILE"]
+        elif profile_name := os.environ.get("AWS_DEFAULT_PROFILE"):
             log.info(
                 "Using AWS default profile from environment", profile=self.profile_name
             )
