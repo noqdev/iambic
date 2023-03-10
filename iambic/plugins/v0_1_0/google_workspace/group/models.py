@@ -4,8 +4,6 @@ import asyncio
 from itertools import chain
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from pydantic import Field
-
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -39,6 +37,7 @@ from iambic.plugins.v0_1_0.google_workspace.models import (
     WhoCanViewGroup,
     WhoCanViewMembership,
 )
+from pydantic import Field, validator
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import GoogleProject
@@ -92,6 +91,11 @@ class GroupTemplateProperties(BaseModel):
     @property
     def resource_id(self):
         return self.email
+
+    @validator("members")
+    def sort_groups(cls, v: list[GroupMember]):
+        sorted_v = sorted(v, key=lambda member: member.email)
+        return sorted_v
 
 
 class GroupTemplate(GoogleTemplate, ExpiryModel):
