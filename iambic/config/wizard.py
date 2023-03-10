@@ -396,6 +396,8 @@ class ConfigurationWizard:
         aws_default_profile = os.getenv("AWS_PROFILE", "")
         if aws_default_profile == "" and len(available_profiles) > 0:
             aws_default_profile = available_profiles[0]
+        elif aws_default_profile != "" and len(available_profiles) > 0 and aws_default_profile in available_profiles:
+            aws_default_profile = [x for x in available_profiles if x == aws_default_profile][0]
         else:
             aws_default_profile = None
 
