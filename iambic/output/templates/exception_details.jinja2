@@ -1,9 +1,9 @@
 {% extends "accounts.jinja2" %}
 {% block account scoped %}
 
-{% for change in account.changes %}
+{% for exception in account.exceptions %}
 <details>
-<summary>{{ change.meta.name }} (Count: {{ change.meta.number }})</summary>
+<summary>{{ exception.meta.name }} (Count: {{ exception.meta.number }})</summary>
     <table>
         <thead>
             <tr>
@@ -15,7 +15,7 @@
             </tr>
         </thead>
         <tbody>
-            {% for template_id, template_data in change.resources -%}
+            {% for template_id, template_data in exception.resources -%}
             <tr class="accordion-toggle">
                 <td rowspan="{{ template_data|length }}">{{ template_id }}</td>
                 <td>{{ template_data[0]['resource_type'] }}</td>

@@ -1,0 +1,10 @@
+{% extends "summary.jinja2" %}
+{% block action %}
+
+{% for action in iambic.changes.actions %}
+<details>
+<summary>{{ action.meta.name }} (Count: {{ action.meta.number }})</summary>
+  {% block template scoped %}
+  {% endblock %}
+</details>
+{% endfor %}

@@ -1,0 +1,12 @@
+{% extends "template.jinja2" %}
+{% block account scoped %}
+
+{% for account in template.accounts %}
+<details>
+<summary>{{ account.meta.name }} (Count: {{ account.meta.number }})</summary>
+  {% block change scoped %}
+  {% endblock %}
+</details>
+{% endfor %}
+
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "actions.jinja2" %}
+{% block template scoped %}
+
+{% for template in action.templates %}
+<details>
+<summary>{{ template.meta.name }} (Count: {{ template.meta.number }})</summary>
+  {% block account scoped %}
+  {% endblock %}
+</details>
+{% endfor %}
+
+{% endblock %}
