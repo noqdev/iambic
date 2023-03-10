@@ -388,15 +388,15 @@ class ConfigurationWizard:
 
     def resolve_aws_profile_defaults_from_env(self) -> str:
         if profile_name := os.environ.get("AWS_PROFILE"):
-            log.info("Using AWS profile from environment", profile=self.profile_name)
+            log.info("Using AWS profile from environment", profile=profile_name)
         elif profile_name := os.environ.get("AWS_DEFAULT_PROFILE"):
             log.info(
-                "Using AWS default profile from environment", profile=self.profile_name
+                "Using AWS default profile from environment", profile=profile_name
             )
         elif "AWS_ACCESS_KEY_ID" in os.environ:
             profile_name = "default"
             log.info(
-                "Using AWS default profile from environment", profile=self.profile_name
+                "Using AWS default profile from environment", profile=profile_name
             )
         else:
             profile_name = "None"
