@@ -476,6 +476,16 @@ class ConfigurationWizard:
                     error=str(err),
                 )
                 continue
+            except errors.InvalidClientTokenId as err:
+                log.error(
+                    "AWS returned an error indicating that the provided credentials are invalid. Somethings to try:"
+                    "\n - Ensure that the credentials are correct"
+                    "\n - Ensure that the credentials are for the correct AWS account"
+                    "\n - Ensure that the credentials have the correct permissions"
+                    "\n - Ensure that the credentials are not expired"
+                    "\n - Ensure that the credentials are not for a federated user"
+                    )
+                continue
 
             self.profile_name = profile_name
             with contextlib.suppress(
