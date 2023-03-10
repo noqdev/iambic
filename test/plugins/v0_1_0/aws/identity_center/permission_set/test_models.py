@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import sys
 import traceback
+from typing import Optional
 
 import pytest
 from pydantic import ValidationError
 
+from iambic.core.models import ProviderChild
+from iambic.core.template_generation import merge_access_model_list
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetProperties,
     AWSIdentityCenterPermissionSetTemplate,
+    PermissionSetAccess,
 )
 from iambic.plugins.v0_1_0.aws.models import Description
 
@@ -107,3 +111,45 @@ def test_access_rule_validation():
     )  # double check the list is reversed because validation doesn't happen after creation
     template_1.validate_model_afterward()
     assert template_1.access_rules == access_rules_1
+
+
+class FakeAccount(ProviderChild):
+
+    name: str
+    account_owner: str
+
+    @property
+    def parent_id(self) -> Optional[str]:
+        """
+        For example, the parent_id of an AWS account is the AWS organization ID
+        """
+        return self.account_owner
+
+    @property
+    def preferred_identifier(self) -> str:
+        return self.name
+
+    @property
+    def all_identifiers(self) -> set[str]:
+        return set([self.name])
+
+
+def test_merge_access_rule():
+    # if we have an old list of PermissionSets and a an new list of reversed-order PermissionSets
+    # after merging, the expectation is nothing has changed from the old list.
+
+    access_rules_1 = [
+        {"included_accounts": ["account_1", "account_2"], "users": ["foo"]},
+        {"included_accounts": ["account_3"], "users": ["bar"]},
+    ]
+    old_list = [PermissionSetAccess(**rule) for rule in access_rules_1]
+    new_list = list(reversed(old_list))
+    assert old_list != new_list  # because we reverse the list
+    accounts = [
+        FakeAccount(name="account_1", account_owner="foo"),
+        FakeAccount(name="account_2", account_owner="foo"),
+        FakeAccount(name="account_3", account_owner="foo"),
+    ]
+    new_value = merge_access_model_list(new_list, old_list, accounts)
+    for i, element in enumerate(new_value):
+        assert element.json() == new_list[i].json()
