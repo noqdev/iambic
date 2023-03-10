@@ -4,6 +4,8 @@ import asyncio
 from typing import Callable, Optional, Union
 
 import botocore
+from pydantic import Field, validator
+
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -27,7 +29,6 @@ from iambic.plugins.v0_1_0.aws.iam.user.utils import (
 )
 from iambic.plugins.v0_1_0.aws.models import AccessModel, AWSAccount, AWSTemplate, Tag
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
-from pydantic import Field, validator
 
 AWS_IAM_USER_TEMPLATE_TYPE = "NOQ::AWS::IAM::User"
 
@@ -103,6 +104,20 @@ class UserProperties(BaseModel):
     @validator("inline_policies")
     def sort_inline_policies(cls, v: list[PolicyDocument]):
         sorted_v = sorted(v, key=cls.sort_func("policy_name"))
+        return sorted_v
+
+    @validator("path")
+    def sort_path(cls, v: list[Path]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
+
+    @validator("permissions_boundary")
+    def sort_permissions_boundary(cls, v: list[PermissionBoundary]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
         return sorted_v
 
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import List, Optional, Union
+from typing import Callable, List, Optional, Union
 
 import botocore
 from jinja2 import BaseLoader, Environment
@@ -270,6 +270,39 @@ class ManagedPolicyProperties(BaseModel):
     @property
     def resource_id(self):
         return self.policy_name
+
+    @validator("path")
+    def sort_path(cls, v: list[Path]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
+
+    @validator("description")
+    def sort_description(cls, v: list[Description]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
+
+    @validator("policy_document")
+    def sort_policy_document(cls, v: list[ManagedPolicyDocument]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
+
+    @classmethod
+    def sort_func(cls, attribute_name: str) -> Callable:
+        def _sort_func(obj):
+            return f"{getattr(obj, attribute_name)}!{obj.access_model_sort_weight()}"
+
+        return _sort_func
+
+    @validator("tags")
+    def sort_tags(cls, v: list[Tag]):
+        sorted_v = sorted(v, key=cls.sort_func("key"))
+        return sorted_v
 
 
 class ManagedPolicyTemplate(AWSTemplate, AccessModel):
