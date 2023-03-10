@@ -386,6 +386,26 @@ class ConfigurationWizard:
                 "organizations"
             ).describe_organization()["Organization"]
 
+    def resolve_aws_profile_defaults_from_env(self) -> str:
+        if "AWS_PROFILE" in os.environ:
+            profile_name = os.environ["AWS_PROFILE"]
+            log.info("Using AWS profile from environment", profile=self.profile_name)
+        elif "AWS_DEFAULT_PROFILE" in os.environ:
+            profile_name = os.environ["AWS_DEFAULT_PROFILE"]
+            log.info(
+                "Using AWS default profile from environment", profile=self.profile_name
+            )
+        elif "AWS_ACCESS_KEY_ID" in os.environ:
+            profile_name = "default"
+            log.info(
+                "Using AWS default profile from environment", profile=self.profile_name
+            )
+        else:
+            profile_name = "None"
+        
+        return profile_name
+        
+
     def set_aws_profile_name(
         self, question_text: str = None, allow_none: bool = False
     ) -> Union[str, None]:
@@ -393,13 +413,17 @@ class ConfigurationWizard:
         if allow_none:
             available_profiles.insert(0, "None")
 
-        aws_default_profile = os.getenv("AWS_PROFILE", "")
-        if aws_default_profile == "" and len(available_profiles) > 0:
-            aws_default_profile = available_profiles[0]
-        elif aws_default_profile != "" and len(available_profiles) > 0 and aws_default_profile in available_profiles:
-            aws_default_profile = [x for x in available_profiles if x == aws_default_profile][0]
-        else:
-            aws_default_profile = None
+        default_profile = self.resolve_aws_profile_defaults_from_env()
+        if default_profile == "None" and not allow_none:
+            questionary.print(
+                f"""
+                We couldn't find your AWS credentials, or they're not linked to the Hub Account ({self.hub_account_id}).
+                The specified AWS credentials need to be able to create CloudFormation stacks, stack sets,
+                and stack set instances.
+
+                Please provide an AWS profile to use for this operation, or restart the wizard with valid AWS credentials: """
+            )
+            return None
 
         if not question_text:
             question_text = dedent(
@@ -422,14 +446,14 @@ class ConfigurationWizard:
                 profile_name = questionary.select(
                     question_text,
                     choices=available_profiles,
-                    default=os.getenv("AWS_PROFILE", ""),
+                    default=default_profile,
                 ).unsafe_ask()
             else:
                 profile_name = questionary.autocomplete(
                     question_text,
                     choices=available_profiles,
                     style=CUSTOM_AUTO_COMPLETE_STYLE,
-                    default=os.getenv("AWS_PROFILE", ""),
+                    default=default_profile,
                 ).unsafe_ask()
         except KeyboardInterrupt:
             log.info("Exiting...")
