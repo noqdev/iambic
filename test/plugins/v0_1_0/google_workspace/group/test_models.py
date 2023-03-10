@@ -89,8 +89,30 @@ def test_merge_list_group_members_expires_at():
         new_document, existing_document, []
     )
     assert existing_members != new_members
-    assert merged_document.members[0].email == "user@example.com"
-    assert (
-        merged_document.members[0].expires_at == existing_document.members[0].expires_at
+    for member in merged_document.members:
+        if member.email == "user@example.com":
+            assert member.expires_at == existing_document.members[0].expires_at
+
+
+def test_members_sorting():
+
+    members = [
+        {"email": "user_1@example.org"},
+        {"email": "user_2@example.org"},
+    ]
+    properties_1 = GroupTemplateProperties(
+        name="example_group",
+        domain="example.org",
+        email="example_group@example.org",
+        description="Example Group",
+        members=members,
     )
-    assert merged_document.members[0].email == "user@example.com"
+    members_1 = properties_1.members
+    members_2 = list(reversed(members_1))
+    assert members_1 != members_2  # because we reverse the list
+    properties_1.members = members_2
+    assert (
+        properties_1.members == members_2
+    )  # double check the list is reversed because validation doesn't happen after creation
+    properties_1.validate_model_afterward()
+    assert properties_1.members == members_1

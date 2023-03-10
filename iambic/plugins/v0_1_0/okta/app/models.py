@@ -5,8 +5,6 @@ import os.path
 from itertools import chain
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from pydantic import Field
-
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -26,6 +24,7 @@ from iambic.plugins.v0_1_0.okta.app.utils import (
     update_app_name,
 )
 from iambic.plugins.v0_1_0.okta.models import App, Assignment, Status
+from pydantic import Field, validator
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
@@ -57,6 +56,11 @@ class OktaAppTemplateProperties(ExpiryModel, BaseModel):
     @property
     def resource_id(self) -> str:
         return self.app_id
+
+    @validator("assignments")
+    def sort_groups(cls, v: list[Assignment]):
+        sorted_v = sorted(v, key=lambda assignment: assignment.resource_id)
+        return sorted_v
 
 
 class OktaAppTemplate(BaseTemplate, ExpiryModel):
