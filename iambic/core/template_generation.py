@@ -673,14 +673,22 @@ def merge_access_model_list(
     provider_child_map = {
         child.preferred_identifier: child for child in all_provider_children
     }
-    for new_model in new_list:
+    for new_model_index, new_model in enumerate(new_list):
         matching_existing_models = [
             existing_model
             for existing_model in existing_list
-            if existing_model.resource_id == new_model.resource_id
+            if (existing_model.resource_id == new_model.resource_id)
+            and new_model.resource_id  # we cannot match on empty string like value
         ]
         if not matching_existing_models:
-            merged_list.append(new_model)
+            # #attempt to carry over previous list's iambic specific information for the merged_value
+            if new_model_index < len(existing_list):
+                existing_model = existing_list[new_model_index]
+                merged_list.append(
+                    merge_model(new_model, existing_model, all_provider_children)
+                )
+            else:
+                merged_list.append(new_model)
         elif new_model.included_children == ["*"]:
             # Find the least specific
             matching_existing_models = sort_access_models_by_included_children(
