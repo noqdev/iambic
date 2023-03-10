@@ -393,6 +393,12 @@ class ConfigurationWizard:
         if allow_none:
             available_profiles.insert(0, "None")
 
+        aws_default_profile = os.getenv("AWS_PROFILE", "")
+        if aws_default_profile == "" and len(available_profiles) > 0:
+            aws_default_profile = available_profiles[0]
+        else:
+            aws_default_profile = None
+
         if not question_text:
             question_text = dedent(
                 f"""
