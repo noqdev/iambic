@@ -159,7 +159,7 @@ properties:
 
 ```
 
-### Okta User Attributes
+### Okta User Attributes (TODO)
 
 ### Google Group Assignments
 

@@ -57,24 +57,28 @@ By installing IAMbic GitHub App, the app can integrate the pull-request and merg
 3. Input `Iambic Integrations` for "GitHub App name".
 4. Input `https://iambic.org/` for "Homepage URL".
 5. Uncheck "Active" for "Webhook".
-6. Select "Read and Write" for "Content" Under "Permissions".
-7. Select "Read and Write" for "Pull requests" Under "Permissions".
-7. Select "Read and Write" for "Issues" Under "Permissions".
-8. Leave default "Only on this account" for "Where can this GitHub App bed installed?".
-9. Click "Create GitHub App".
-10. Scroll down to "Private Keys".
-11. Click "Generate a private key".
-12. A file named "iambic-integrations.2023-02-17.private-key.pem" should be downloaded by your browser. (The exact filename will be different due to timestamp.)
+6. Select "Read and Write" for "Content" Under "Repository/Permissions".
+7. Select "Read and Write" for "Issues" Under "Repository/Permissions".
+8. Select "Read and Write" for "Pull requests" Under "Repository/Permissions".
+9. Leave default "Only on this account" for "Where can this GitHub App be installed?".
+10. Click "Create GitHub App".
+11. Scroll down to "Private Keys".
+12. Click "Generate a private key".
+13. The private key should be downloaded automatically by your browser.
 
-### Store the following secrets in AWS SecretManager in the same AWS account running GitHub App lambda function.
+### Store the following secrets in AWS Secrets Manager in the same AWS account running GitHub App lambda function.
 
-1. Store the earlier downloaded private key contents (not the filename) to SecretManager and name it `staging/github-app-private-key`. (This is the default name in the later terraform. If you use another name, be sure to update it in the terraform procedure later.)
+1. Store the earlier downloaded private key contents (not the filename) in AWS Secrets Manager and name it `staging/github-app-private-key`. (This is the default name used in the Terraform. If you use another name, be sure to update it in the Terraform procedure later.)
 
-2. Generate a webhook secret. (e.g., by taking the output of `ruby -rsecurerandom -e 'puts SecureRandom.hex(20)'` at the terminal). Store the webhook secret in SecretManager and name it `staging/github-app-webhook-secret`.
+# TODO: Mention plaintext etc.
+
+2. Generate a webhook secret. (e.g., by taking the output of `ruby -rsecurerandom -e 'puts SecureRandom.hex(20)'` at the terminal). Store the webhook secret in AWS Secrets Manager and name it `staging/github-app-webhook-secret`.
 
 ### Create an IAM role for Lambda function execution
+# TODO: Where do I put this file and how do I write it?
 
-```
+
+```yaml
 template_type: NOQ::AWS::IAM::Role
 included_accounts:
   - NAME_OF_AWS_ACCOUNT_THAT_HAS_IambicHubRole
@@ -122,13 +126,13 @@ properties:
 
 You will need to replace the "NAME_OF_AWS_ACCOUNT_THAT_HAS_IambicHubRole" with the account name of the AWS account holding the IambicHubRole. In the event you change the secret names, you need to update those values as well.
 
-Place the above iambic template to your iambic templates repo
+Place the above IAMbic template to your `iambic-templates` repo
 
-You can then apply the template via `iambic apply - PATH_TO_YOUR_iambic_template
+You can then apply the template via `iambic apply /path/to/your/template.yaml`
 
 ### You have created the GitHub App. A GitHub App has to be a hosted application. Now deploy the GitHub App as a lambda function.
 
-1. Checkout iambic repository. <!-- #TODO does this need a code example? Even if they should already know it? -->
+1. [Checkout iambic repository](/technical_reference/installation/install_iambic_via_the_repo#checkout-the-iambic-repository).
 2. `cd deployment/github_app`
 3. `terraform init`
 4. `terraform apply` (Examine the plan, it is the resources it will create). Enter `yes` if you accept the plan to continue.
@@ -207,3 +211,11 @@ Typical pull-requests review flow requires reviewers approval. Action such as au
 4. Can I set IAMbic to run on just a small porton of my cloud? How do I do that?
 
 	A: <!-- #TODO  -->
+
+5. How do I debug the GitHub App?
+
+	A: <!-- #TODO  - Something about cloudwatch logs -->
+
+6. How do I update the GitHub App Lambda?
+
+	A: <!-- #TODO  - something about running terraform apply -->

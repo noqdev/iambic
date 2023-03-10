@@ -33,7 +33,7 @@ resource "null_resource" "iambic_public_repo" {
     command = <<EOF
         docker logout ${var.iambic_public_repo_url}
         docker pull ${var.iambic_public_repo_url}/${var.iambic_image_name}:${var.iambic_image_tag}
-        aws --profile ${var.aws_profile} ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${local.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com
+        aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${local.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com
         docker tag ${var.iambic_public_repo_url}/${var.iambic_image_name}:${var.iambic_image_tag} ${aws_ecr_repository.iambic_private_ecr.repository_url}:${local.ecr_image_tag}
         docker push ${aws_ecr_repository.iambic_private_ecr.repository_url}:${local.ecr_image_tag}
 
