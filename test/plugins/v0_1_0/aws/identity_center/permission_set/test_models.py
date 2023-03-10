@@ -135,6 +135,8 @@ class FakeAccount(ProviderChild):
 
 
 def test_merge_access_rule():
+    # if we have an old list of PermissionSets and a an new list of reversed-order PermissionSets
+    # after merging, the expectation is nothing has changed from the old list.
 
     access_rules_1 = [
         {"included_accounts": ["account_1", "account_2"], "users": ["foo"]},
