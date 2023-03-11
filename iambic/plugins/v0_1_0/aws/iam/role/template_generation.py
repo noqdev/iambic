@@ -6,7 +6,6 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import aiofiles
-
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
@@ -227,6 +226,22 @@ async def _account_id_to_role_map(role_refs):
     return account_id_to_role_map
 
 
+def calculate_import_preference(existing_template):
+    prefer_templatized = False
+    try:
+        if existing_template:
+            # this is expensive just to compute if
+            # the existing template is already bias toward templatized.
+            existing_template_in_str = existing_template.json()
+            prefer_templatized = "{{" in existing_template_in_str
+    except Exception as exc_info:
+        # We are willing to tolerate exception because
+        # we are calculating preference from possibly bad templates on disk
+        log_params = {"exc_info": str(exc_info)}
+        log.error("cannot calculate preference from existing template", **log_params)
+    return prefer_templatized
+
+
 async def create_templated_role(  # noqa: C901
     aws_account_map: dict[str, AWSAccount],
     role_name: str,
@@ -240,6 +255,11 @@ async def create_templated_role(  # noqa: C901
 
     min_accounts_required_for_wildcard_included_accounts = (
         config.min_accounts_required_for_wildcard_included_accounts
+    )
+
+    # calculate preference based on existing template
+    prefer_templatized = calculate_import_preference(
+        existing_template_map.get(role_name)
     )
 
     # Generate the params used for attribute creation
@@ -344,12 +364,18 @@ async def create_templated_role(  # noqa: C901
         role_template_properties[
             "assume_role_policy_document"
         ] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, assume_role_policy_document_resources
+            aws_account_map,
+            num_of_accounts,
+            assume_role_policy_document_resources,
+            prefer_templatized=prefer_templatized,
         )
 
     if permissions_boundary_resources:
         role_template_properties["permissions_boundary"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, permissions_boundary_resources
+            aws_account_map,
+            num_of_accounts,
+            permissions_boundary_resources,
+            prefer_templatized=prefer_templatized,
         )
 
     if description_resources:
@@ -359,17 +385,29 @@ async def create_templated_role(  # noqa: C901
 
     if managed_policy_resources:
         role_template_properties["managed_policies"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, managed_policy_resources, False
+            aws_account_map,
+            num_of_accounts,
+            managed_policy_resources,
+            False,
+            prefer_templatized=prefer_templatized,
         )
 
     if inline_policy_document_resources:
         role_template_properties["inline_policies"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, inline_policy_document_resources, False
+            aws_account_map,
+            num_of_accounts,
+            inline_policy_document_resources,
+            False,
+            prefer_templatized=prefer_templatized,
         )
 
     if tag_resources:
         tags = await group_dict_attribute(
-            aws_account_map, num_of_accounts, tag_resources, True
+            aws_account_map,
+            num_of_accounts,
+            tag_resources,
+            True,
+            prefer_templatized=prefer_templatized,
         )
         if isinstance(tags, dict):
             tags = [tags]

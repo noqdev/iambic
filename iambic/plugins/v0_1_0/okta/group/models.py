@@ -5,8 +5,6 @@ import os
 from itertools import chain
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from pydantic import Field
-
 from iambic.core.context import ExecutionContext, ctx
 from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
@@ -28,6 +26,7 @@ from iambic.plugins.v0_1_0.okta.group.utils import (
     update_group_name,
 )
 from iambic.plugins.v0_1_0.okta.models import Group, UserStatus
+from pydantic import Field, validator
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
@@ -85,6 +84,11 @@ class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
     @property
     def resource_id(self) -> str:
         return self.group_id
+
+    @validator("members")
+    def sort_groups(cls, v: list[UserSimple]):
+        sorted_v = sorted(v, key=lambda member: member.username)
+        return sorted_v
 
 
 class OktaGroupTemplate(BaseTemplate, ExpiryModel):
