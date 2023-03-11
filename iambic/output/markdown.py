@@ -1,5 +1,120 @@
 import pathlib
+from typing import Any, Dict, List
 from jinja2 import Environment, FileSystemLoader
+from pydantic import BaseModel as PydanticBaseModel
+
+from iambic.core.logger import log
+from iambic.core.models import (
+    AccountChangeDetails,
+    ProposedChange, 
+    ProposedChangeType,
+    TemplateChangeDetails,
+)
+
+
+class ApplicableChange(PydanticBaseModel):
+    change: ProposedChange
+    template_change: TemplateChangeDetails
+    template_name: str
+
+    def __init__(self, change: ProposedChange, template_change: TemplateChangeDetails, **data: Any) -> None:
+        self.template_name = pathlib.Path(template_change.template_path).name
+        super().__init__(change=change, template_change=template_change, **data)
+
+
+class AccountSummary(PydanticBaseModel):
+    account: str
+    count: int
+    proposed_changes: List[ProposedChange]
+
+
+class TemplateSummary(PydanticBaseModel):
+    template_path: str
+    template_name: str
+    count: int
+    accounts: List[AccountSummary]
+
+    def __init__(self, template_path: str, template_name: str, count: int, accounts: List[AccountSummary], **data: Any) -> None:
+        pass
+
+
+class ActionSummary(PydanticBaseModel):
+    action: str
+    count: int
+    templates: List[TemplateSummary]
+
+    @classmethod
+    async def compile_proposed_changes(cls, resources_changes: List[TemplateChangeDetails], proposed_change_type: str) -> Any:
+        """Compile a list of TemplateChangeDetails into a list of TemplateSummary objects.
+
+        :param resources_changes: list of TemplateChangeDetails objects
+        :returns: None
+        """
+        def _get_annotated_change(change: ProposedChange, template_change: TemplateChangeDetails) -> ApplicableChange:
+            return ApplicableChange(
+                change=change,
+                template_change=template_change,
+            )
+
+        applicable_changes: List[ApplicableChange] = list()
+        for template_change in resources_changes:
+            for proposed_change in template_change.proposed_changes:
+                if isinstance(proposed_change, AccountChangeDetails):
+                    # If proposed change is a list of AccountChangeDetails, we need to iterate through those
+                    for account_change in proposed_change.proposed_changes:
+                        if account_change.change_type == proposed_change_type:
+                            applicable_changes.append(_get_annotated_change(account_change, template_change))
+                if proposed_change.change_type == proposed_change_type:
+                    # If proposed change is a single change, we can just append it
+                    applicable_changes.append(_get_annotated_change(proposed_change, template_change))
+
+        log.debug(f"Found {len(applicable_changes)} applicable changes")
+
+        self = cls(action=proposed_change_type, count=len(applicable_changes), templates=[])
+        self.templates = [
+            TemplateSummary(
+                template_path=x.template_change.template_path,
+                template_name=x.template_name,
+                count=len([y for y in applicable_changes if y.template_change.template_path == x.template_change.template_path]),
+            ) for x in applicable_changes] 
+
+        return self
+
+    @classmethod
+    async def compile_exceptions_seen(cls, resources_changes: List[TemplateChangeDetails]) -> Any:
+        pass
+
+
+async def get_template_data(resources_changes: List[TemplateChangeDetails]) -> Dict[str, Any]:
+    """Convert TemplateChangeDetails into a format that is oriented in this format.
+
+    * Action (Add, Delete, Modify)
+    * Template Name (Count of <action>)
+    * Account Name (Count of <action>)
+    * Changes for Account (Count of <action>)
+    * Table of proposed changes
+
+    For each, the corresponding jinja2 templates are:
+
+    * Action: templates/actions.jinja2
+    * Template Name: templates/template.jinja2
+    * Account Name: templates/accounts.jinja2
+    * Changes for Account: templates/resource_change.jinja2
+
+    There is also a jinja template to display all exceptions:
+
+    * Exceptions: templates/exception_details.jinja2
+
+    :param resources_changes: list of TemplateChangeDetails objects
+    :returns: Dict[str, Any]
+    """
+    action_summaries = [ActionSummary.compile]
+    # Get all proposed changes
+    proposed_changes = [x.proposed_changes for x in resources_changes]
+    proposed_changes.extend([x.proposed_changes for y in resources_changes for x in y.proposed_changes if isinstance(x, AccountChangeDetails)])
+    template_data = {x.account for y in resources_changes for x in y.proposed_changes if isinstance(x, AccountChangeDetails)}    
+
+    return template_data
 
 
 def render_resource_changes(resource_changes):
