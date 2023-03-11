@@ -5,8 +5,10 @@ import json
 from typing import Callable, Optional, Union
 
 import botocore
-from iambic.core.context import ExecutionContext
-from iambic.core.iambic_enum import IambicManaged
+from pydantic import Field, validator
+
+from iambic.core.context import ExecutionContext, ctx
+from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -42,7 +44,6 @@ from iambic.plugins.v0_1_0.aws.models import (
     Tag,
 )
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
-from pydantic import Field, validator
 
 AWS_IAM_ROLE_TEMPLATE_TYPE = "NOQ::AWS::IAM::Role"
 
@@ -250,6 +251,11 @@ class RoleTemplate(AWSTemplate, AccessModel):
         current_role = await get_role(role_name, client)
         if current_role:
             account_change_details.current_value = {**current_role}  # Create a new dict
+
+            if ctx.command == Command.CONFIG_DISCOVERY:
+                # Don't overwrite a resource during config discovery
+                account_change_details.new_value = {}
+                return account_change_details
 
         deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
         if isinstance(deleted, list):

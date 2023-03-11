@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 from pydantic import Field
 
-from iambic.core.context import ExecutionContext
-from iambic.core.iambic_enum import IambicManaged
+from iambic.core.context import ExecutionContext, ctx
+from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -171,6 +171,11 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
         current_app: Optional[App] = current_app_task[0]
         if current_app:
             change_details.current_value = current_app
+
+            if ctx.command == Command.CONFIG_DISCOVERY:
+                # Don't overwrite a resource during config discovery
+                change_details.new_value = {}
+                return change_details
 
         app_exists = bool(current_app)
         tasks = []

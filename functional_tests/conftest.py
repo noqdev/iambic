@@ -7,7 +7,6 @@ import tempfile
 import uuid
 
 import pytest
-
 from iambic.config.dynamic_config import Config, load_config
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command

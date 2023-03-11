@@ -198,6 +198,7 @@ class Config(BaseTemplate):
         exe_message: ExecutionMessage,
         output_dir: str,
     ):
+        ctx.command = exe_message.parent_command
         # It's the responsibility of the provider to handle throttling.
         if exe_message.provider_type:
             plugin = [
@@ -226,6 +227,7 @@ class Config(BaseTemplate):
     ) -> list[TemplateChangeDetails]:
         # It's the responsibility of the provider to handle throttling.
         # Build a map of a plugin's template types to the plugin
+        ctx.command = exe_message.parent_command
         template_provider_map = {}
         for plugin in self.plugin_instances:
             for template in plugin.templates:
@@ -306,6 +308,7 @@ class Config(BaseTemplate):
     async def run_discover_upstream_config_changes(
         self, exe_message: ExecutionMessage, repo_dir: str
     ):
+        ctx.command = exe_message.parent_command
         tasks = []
         for plugin in self.configured_plugins:
             if plugin.async_discover_upstream_config_changes_callable:

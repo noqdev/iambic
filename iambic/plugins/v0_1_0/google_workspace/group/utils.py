@@ -34,7 +34,7 @@ async def list_groups(
         http = _auth.authorized_http(service._http.credentials)
     except AttributeError as err:
         log.exception("Unable to process google groups.", error=err)
-        return
+        raise
 
     req = await aio_wrapper(service.groups().list, domain=domain)
     res = req.execute(http=http)

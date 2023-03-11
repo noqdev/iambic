@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 from pydantic import Field, validator
 
-from iambic.core.context import ExecutionContext
-from iambic.core.iambic_enum import IambicManaged
+from iambic.core.context import ExecutionContext, ctx
+from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccessModelMixin,
@@ -478,6 +478,12 @@ class AWSIdentityCenterPermissionSetTemplate(
             account_change_details.current_value[
                 "AccountAssignments"
             ] = current_account_assignments
+
+            if ctx.command == Command.CONFIG_DISCOVERY:
+                # Don't overwrite a resource during config discovery
+                account_change_details.new_value = {}
+                return account_change_details
+
         deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
         if isinstance(deleted, list):
             deleted = deleted[0].deleted

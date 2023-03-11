@@ -8,8 +8,8 @@ import botocore
 from jinja2 import BaseLoader, Environment
 from pydantic import Field, constr, validator
 
-from iambic.core.context import ExecutionContext
-from iambic.core.iambic_enum import IambicManaged
+from iambic.core.context import ExecutionContext, ctx
+from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -358,6 +358,11 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
         current_policy = await get_managed_policy(client, policy_arn)
         if current_policy:
             account_change_details.current_value = {**current_policy}
+
+            if ctx.command == Command.CONFIG_DISCOVERY:
+                # Don't overwrite a resource during config discovery
+                account_change_details.new_value = {}
+                return account_change_details
 
         deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
         if isinstance(deleted, list):
