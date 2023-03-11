@@ -106,7 +106,7 @@ class ActionSummaries(PydanticBaseModel):
     exceptions: List[ExceptionSummary]
 
     def __init__(self, changes: List[TemplateChangeDetails]):
-        self.action_summaries = [ActionSummary.compile(changes, x) for x in list(ProposedChangeType)]
+        self.action_summaries = [ActionSummary.compile_proposed_changes(changes, x) for x in list(ProposedChangeType)]
         self.num_actions = len(self.action_summaries)
         self.num_templates = sum([len(x.templates) for x in self.action_summaries])
         self.num_accounts = sum([len(z.accounts) for y in self.action_summaries for z in y.templates])

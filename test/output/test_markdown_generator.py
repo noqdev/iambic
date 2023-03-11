@@ -3338,7 +3338,7 @@ template_yaml = """  - resource_id: kris_test
 
 
 def get_templates():
-    return TemplateChangeDetails.parse_obj(yaml.load(template_yaml))
+    return [TemplateChangeDetails.parse_obj(x) for x in yaml.load(template_yaml)]
 
 
 # def test_render_resource_changes():
