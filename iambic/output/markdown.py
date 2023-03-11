@@ -6,7 +6,7 @@ from pydantic import BaseModel as PydanticBaseModel
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
-    ProposedChange, 
+    ProposedChange,
     ProposedChangeType,
     TemplateChangeDetails,
 )
@@ -27,6 +27,11 @@ class AccountSummary(PydanticBaseModel):
     count: int
     proposed_changes: List[ProposedChange]
 
+    def __init__(self, account: str, count: int, changes: List[ProposedChange], **data: Any) -> None:
+        self.account = account
+        self.count = count
+        self.proposed_changes = changes
+
 
 class TemplateSummary(PydanticBaseModel):
     template_path: str
@@ -34,8 +39,12 @@ class TemplateSummary(PydanticBaseModel):
     count: int
     accounts: List[AccountSummary]
 
-    def __init__(self, template_path: str, template_name: str, count: int, accounts: List[AccountSummary], **data: Any) -> None:
-        pass
+    def __init__(self, template_path: str, template_name: str, changes: List[ProposedChange], **data: Any) -> None:
+        self.accounts = [AccountSummary(
+            account=change.account,
+            count=len(changes),
+            proposed_changes=[x for x in changes if x.account == change.account],
+        ) for change in changes]
 
 
 class ActionSummary(PydanticBaseModel):
@@ -75,14 +84,32 @@ class ActionSummary(PydanticBaseModel):
             TemplateSummary(
                 template_path=x.template_change.template_path,
                 template_name=x.template_name,
-                count=len([y for y in applicable_changes if y.template_change.template_path == x.template_change.template_path]),
-            ) for x in applicable_changes] 
+                changes=[y for y in applicable_changes if y.template_change.template_path == x.template_change.template_path],
+            ) for x in applicable_changes]
 
         return self
 
     @classmethod
     async def compile_exceptions_seen(cls, resources_changes: List[TemplateChangeDetails]) -> Any:
         pass
+
+
+class ExceptionSummary(PydanticBaseModel):
+    exception: str
+
+
+class ActionSummaries(PydanticBaseModel):
+    num_actions: int
+    num_templates: int
+    num_accounts: int
+    action_summaries: List[ActionSummary]
+    exceptions: List[ExceptionSummary]
+
+    def __init__(self, changes: List[TemplateChangeDetails]):
+        self.action_summaries = [ActionSummary.compile(changes, x) for x in list(ProposedChangeType)]
+        self.num_actions = len(self.action_summaries)
+        self.num_templates = sum([len(x.templates) for x in self.action_summaries])
+        self.num_accounts = sum([len(z.accounts) for y in self.action_summaries for z in y.templates])
 
 
 async def get_template_data(resources_changes: List[TemplateChangeDetails]) -> Dict[str, Any]:
@@ -108,13 +135,10 @@ async def get_template_data(resources_changes: List[TemplateChangeDetails]) -> D
     :param resources_changes: list of TemplateChangeDetails objects
     :returns: Dict[str, Any]
     """
-    action_summaries = [ActionSummary.compile]
+    action_summaries = ActionSummaries(resources_changes)
     # Get all proposed changes
-    proposed_changes = [x.proposed_changes for x in resources_changes]
-    proposed_changes.extend([x.proposed_changes for y in resources_changes for x in y.proposed_changes if isinstance(x, AccountChangeDetails)])
-    template_data = {x.account for y in resources_changes for x in y.proposed_changes if isinstance(x, AccountChangeDetails)}    
 
-    return template_data
+    return action_summaries
 
 
 def render_resource_changes(resource_changes):
