@@ -8,13 +8,28 @@ from typing import TYPE_CHECKING, Optional, Union
 
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
-
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.utils import aio_wrapper, camel_to_snake
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+
+
+def calculate_import_preference(existing_template):
+    prefer_templatized = False
+    try:
+        if existing_template:
+            # this is expensive just to compute if
+            # the existing template is already bias toward templatized.
+            existing_template_in_str = existing_template.json()
+            prefer_templatized = "{{" in existing_template_in_str
+    except Exception as exc_info:
+        # We are willing to tolerate exception because
+        # we are calculating preference from possibly bad templates on disk
+        log_params = {"exc_info": str(exc_info)}
+        log.error("cannot calculate preference from existing template", **log_params)
+    return prefer_templatized
 
 
 async def boto_crud_call(boto_fnc, **kwargs) -> Union[list, dict]:

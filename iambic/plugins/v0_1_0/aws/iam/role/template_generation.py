@@ -33,7 +33,11 @@ from iambic.plugins.v0_1_0.aws.iam.role.utils import (
     list_roles,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
-from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3_resp
+from iambic.plugins.v0_1_0.aws.utils import (
+    calculate_import_preference,
+    get_aws_account_map,
+    normalize_boto3_resp,
+)
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -224,22 +228,6 @@ async def _account_id_to_role_map(role_refs):
                 content_dict
             )
     return account_id_to_role_map
-
-
-def calculate_import_preference(existing_template):
-    prefer_templatized = False
-    try:
-        if existing_template:
-            # this is expensive just to compute if
-            # the existing template is already bias toward templatized.
-            existing_template_in_str = existing_template.json()
-            prefer_templatized = "{{" in existing_template_in_str
-    except Exception as exc_info:
-        # We are willing to tolerate exception because
-        # we are calculating preference from possibly bad templates on disk
-        log_params = {"exc_info": str(exc_info)}
-        log.error("cannot calculate preference from existing template", **log_params)
-    return prefer_templatized
 
 
 async def create_templated_role(  # noqa: C901
