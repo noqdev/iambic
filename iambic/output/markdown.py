@@ -112,7 +112,7 @@ class ActionSummaries(PydanticBaseModel):
         self.num_accounts = sum([len(z.accounts) for y in self.action_summaries for z in y.templates])
 
 
-async def get_template_data(resources_changes: List[TemplateChangeDetails]) -> Dict[str, Any]:
+def get_template_data(resources_changes: List[TemplateChangeDetails]) -> Dict[str, Any]:
     """Convert TemplateChangeDetails into a format that is oriented in this format.
 
     * Action (Add, Delete, Modify)
