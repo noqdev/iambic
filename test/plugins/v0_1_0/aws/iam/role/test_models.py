@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from iambic.core.template_generation import merge_model
 from iambic.plugins.v0_1_0.aws.iam.role.models import RoleProperties, RoleTemplate
+from iambic.plugins.v0_1_0.aws.models import AWSAccount, Description
 
 
-def test_merge_role_template_without_sid(aws_accounts):
+def test_merge_role_template_without_sid(aws_accounts: list[AWSAccount]):
     existing_properties = {
         "role_name": "bar",
         "inline_policies": [
@@ -55,7 +56,7 @@ def test_merge_role_template_without_sid(aws_accounts):
     )
 
 
-def test_merge_role_template_access_rules(aws_accounts):
+def test_merge_role_template_access_rules(aws_accounts: list[AWSAccount]):
     existing_properties = {
         "role_name": "bar",
         "inline_policies": [
@@ -125,7 +126,7 @@ def test_merge_role_template_access_rules(aws_accounts):
     assert merged_document.access_rules == existing_document.access_rules
 
 
-def test_merge_role_with_forked_policy(aws_accounts):
+def test_merge_role_with_forked_policy(aws_accounts: list[AWSAccount]):
     prod_accounts = [
         account.account_name
         for account in aws_accounts
@@ -208,7 +209,7 @@ def test_merge_role_with_forked_policy(aws_accounts):
             assert sorted(inline_policy.included_accounts) == sorted(non_prod_accounts)
 
 
-def test_merge_role_with_access_preservation(aws_accounts):
+def test_merge_role_with_access_preservation(aws_accounts: list[AWSAccount]):
     prod_accounts = [
         account.account_name
         for account in aws_accounts
@@ -307,7 +308,7 @@ def test_merge_role_with_access_preservation(aws_accounts):
             assert inline_policy.expires_at == non_prod_expires_at
 
 
-def test_merge_role_with_assignment_resolution(aws_accounts):
+def test_merge_role_with_assignment_resolution(aws_accounts: list[AWSAccount]):
     account_names = [account.account_name for account in aws_accounts]
     non_prod_accounts = [
         account_name for account_name in account_names if "prod" not in account_name
@@ -369,7 +370,7 @@ def test_merge_role_with_assignment_resolution(aws_accounts):
     assert "prod*" in inline_policy.included_accounts
 
 
-def test_merge_role_with_new_excluded_account(aws_accounts):
+def test_merge_role_with_new_excluded_account(aws_accounts: list[AWSAccount]):
     prod_accounts = [
         account.account_name
         for account in aws_accounts
@@ -428,7 +429,7 @@ def test_merge_role_with_new_excluded_account(aws_accounts):
     assert inline_policy.excluded_accounts == [removed_account]
 
 
-def test_merge_role_with_multiple_access_removals(aws_accounts):
+def test_merge_role_with_multiple_access_removals(aws_accounts: list[AWSAccount]):
     all_accounts = [account.account_name for account in aws_accounts]
     dev_accounts = [account for account in all_accounts if "dev" in account]
     non_dev_accounts = [account for account in all_accounts if "dev" not in account]
@@ -654,3 +655,14 @@ def test_access_rule_validation():
     )  # double check the list is reversed because validation doesn't happen after creation
     template_1.validate_model_afterward()
     assert template_1.access_rules == access_rules_1
+
+
+def test_mixed_type_description_merges():
+    existing_description = [Description(description="foo")]
+    existing_properties = RoleProperties(
+        role_name="foo", description=existing_description
+    )
+    new_description = "foo"  # intend to be mixed types because the RoleProperties::Description allow mixed types
+    new_properties = RoleProperties(role_name="foo", description=new_description)
+    merged_model = merge_model(new_properties, existing_properties, [])
+    assert merged_model.description[0].description == "foo"
