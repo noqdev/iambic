@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+from itertools import chain
 from typing import Union
 
 from deepdiff import DeepDiff
-
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
-from iambic.core.utils import aio_wrapper
+from iambic.core.utils import aio_wrapper, plugin_apply_wrapper
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, paginated_search
 
@@ -29,7 +29,29 @@ async def get_role_instance_profiles(role_name: str, iam_client):
 
 
 async def list_roles(iam_client):
-    return await paginated_search(iam_client.list_roles, "Roles")
+    # role_details_list is missing MaxSessionDuration, see https://docs.aws.amazon.com/IAM/latest/APIReference/API_RoleDetail.html
+    role_details_list = await paginated_search(
+        iam_client.get_account_authorization_details, "RoleDetailList", Filter=["Role"]
+    )
+    role_name_to_role_details = {
+        role_details["RoleName"]: role_details for role_details in role_details_list
+    }
+
+    # roles_list is missing PermissionBoundary, see https://github.com/awsdocs/iam-user-guide/issues/81
+    role_list = await paginated_search(iam_client.list_roles, "Roles")
+
+    # glue the missing info to roles_list
+    for role in role_list:
+        role_name = role["RoleName"]
+        if (
+            role_name in role_name_to_role_details
+            and "PermissionsBoundary" in role_name_to_role_details[role_name]
+        ):
+            role["PermissionsBoundary"] = role_name_to_role_details[role_name][
+                "PermissionsBoundary"
+            ]
+
+    return role_list
 
 
 async def list_role_tags(role_name: str, iam_client):
@@ -362,6 +384,96 @@ async def apply_role_managed_policies(
         await asyncio.gather(*tasks)
 
     return response
+
+
+async def apply_role_permission_boundary(
+    role_name,
+    iam_client,
+    template_permission_boundary: dict,
+    existing_permission_boundary: dict,
+    log_params: dict,
+    context: ExecutionContext,
+) -> list[ProposedChange]:
+    tasks = []
+    response = []
+    template_boundary_policy_arn = template_permission_boundary.get(
+        "PolicyArn"
+    )  # from serializing iambic template
+    existing_boundary_policy_arn = existing_permission_boundary.get(
+        "PermissionsBoundaryArn"
+    )  # from boto response
+
+    if template_boundary_policy_arn and (
+        existing_boundary_policy_arn != template_boundary_policy_arn
+    ):
+        log_str = "New or updated permission boundary discovered."
+
+        proposed_changes = [
+            ProposedChange(
+                change_type=ProposedChangeType.ATTACH,
+                resource_id=template_boundary_policy_arn,
+                attribute="permission_boundary",
+            )
+        ]
+        response.extend(proposed_changes)
+
+        if context.execute:
+            log_str = f"{log_str} Attaching permission boundary..."
+
+            tasks = [
+                plugin_apply_wrapper(
+                    boto_crud_call(
+                        iam_client.put_role_permissions_boundary,
+                        RoleName=role_name,
+                        PermissionsBoundary=template_boundary_policy_arn,
+                    ),
+                    proposed_changes,
+                )
+            ]
+
+        log.info(
+            log_str, permission_boundary=template_boundary_policy_arn, **log_params
+        )
+
+    # Detach permission boundary not in template
+    if template_boundary_policy_arn is None and (
+        existing_boundary_policy_arn != template_boundary_policy_arn
+    ):
+        log_str = "Stale permission boundary discovered."
+
+        proposed_changes = [
+            ProposedChange(
+                change_type=ProposedChangeType.DETACH,
+                resource_id=existing_boundary_policy_arn,
+                attribute="permission_boundary",
+            )
+        ]
+        response.extend(proposed_changes)
+
+        if context.execute:
+            log_str = f"{log_str} Detaching permission boundary..."
+
+            tasks.extend(
+                [
+                    plugin_apply_wrapper(
+                        boto_crud_call(
+                            iam_client.delete_role_permissions_boundary,
+                            RoleName=role_name,
+                        ),
+                        proposed_changes,
+                    )
+                ]
+            )
+
+        log.info(
+            log_str, permission_boundary=existing_boundary_policy_arn, **log_params
+        )
+
+    if tasks:
+        results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+        return list(chain.from_iterable(results))
+    else:
+        return response
 
 
 async def apply_role_inline_policies(

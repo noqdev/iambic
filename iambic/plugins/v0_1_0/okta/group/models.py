@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from itertools import chain
 from typing import TYPE_CHECKING, Any, List, Optional
 
@@ -25,7 +26,7 @@ from iambic.plugins.v0_1_0.okta.group.utils import (
     update_group_name,
 )
 from iambic.plugins.v0_1_0.okta.models import Group, UserStatus
-from pydantic import Field
+from pydantic import Field, validator
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
@@ -83,6 +84,11 @@ class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
     @property
     def resource_id(self) -> str:
         return self.group_id
+
+    @validator("members")
+    def sort_groups(cls, v: list[UserSimple]):
+        sorted_v = sorted(v, key=lambda member: member.username)
+        return sorted_v
 
 
 class OktaGroupTemplate(BaseTemplate, ExpiryModel):
@@ -151,6 +157,15 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
     @property
     def resource_type(self) -> str:
         return "okta:group"
+
+    def set_default_file_path(self, repo_dir: str):
+        file_name = f"{self.properties.name}.yaml"
+        self.file_path = os.path.expanduser(
+            os.path.join(
+                repo_dir,
+                f"resources/okta/groups/{self.properties.idp_name}/{file_name}",
+            )
+        )
 
     def apply_resource_dict(
         self, okta_organization: OktaOrganization, context: ExecutionContext

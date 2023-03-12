@@ -21,7 +21,10 @@ async def get_user_inline_policy_names(user_name: str, iam_client):
 
 
 async def list_users(iam_client):
-    return await paginated_search(iam_client.list_users, "Users")
+    # user_details_list is missing MaxSessionDuration, see https://docs.aws.amazon.com/IAM/latest/APIReference/API_RoleDetail.html
+    return await paginated_search(
+        iam_client.get_account_authorization_details, "UserDetailList", Filter=["User"]
+    )
 
 
 async def list_user_tags(user_name: str, iam_client):
@@ -191,6 +194,96 @@ async def apply_user_tags(
             tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
 
         log.info(log_str, tags=tags_to_apply, **log_params)
+
+    if tasks:
+        results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+        return list(chain.from_iterable(results))
+    else:
+        return response
+
+
+async def apply_user_permission_boundary(
+    user_name,
+    iam_client,
+    template_permission_boundary: dict,
+    existing_permission_boundary: dict,
+    log_params: dict,
+    context: ExecutionContext,
+) -> list[ProposedChange]:
+    tasks = []
+    response = []
+    template_boundary_policy_arn = template_permission_boundary.get(
+        "PolicyArn"
+    )  # from serializing iambic template
+    existing_boundary_policy_arn = existing_permission_boundary.get(
+        "PermissionsBoundaryArn"
+    )  # from boto response
+
+    if template_boundary_policy_arn and (
+        existing_boundary_policy_arn != template_boundary_policy_arn
+    ):
+        log_str = "New or updated permission boundary discovered."
+
+        proposed_changes = [
+            ProposedChange(
+                change_type=ProposedChangeType.ATTACH,
+                resource_id=template_boundary_policy_arn,
+                attribute="permission_boundary",
+            )
+        ]
+        response.extend(proposed_changes)
+
+        if context.execute:
+            log_str = f"{log_str} Attaching permission boundary..."
+
+            tasks = [
+                plugin_apply_wrapper(
+                    boto_crud_call(
+                        iam_client.put_user_permissions_boundary,
+                        UserName=user_name,
+                        PermissionsBoundary=template_boundary_policy_arn,
+                    ),
+                    proposed_changes,
+                )
+            ]
+
+        log.info(
+            log_str, permission_boundary=template_boundary_policy_arn, **log_params
+        )
+
+    # Detach permission boundary not in template
+    if template_boundary_policy_arn is None and (
+        existing_boundary_policy_arn != template_boundary_policy_arn
+    ):
+        log_str = "Stale permission boundary discovered."
+
+        proposed_changes = [
+            ProposedChange(
+                change_type=ProposedChangeType.DETACH,
+                resource_id=existing_boundary_policy_arn,
+                attribute="permission_boundary",
+            )
+        ]
+        response.extend(proposed_changes)
+
+        if context.execute:
+            log_str = f"{log_str} Detaching permission boundary..."
+
+            tasks.extend(
+                [
+                    plugin_apply_wrapper(
+                        boto_crud_call(
+                            iam_client.delete_user_permissions_boundary,
+                            UserName=user_name,
+                        ),
+                        proposed_changes,
+                    )
+                ]
+            )
+
+        log.info(
+            log_str, permission_boundary=existing_boundary_policy_arn, **log_params
+        )
 
     if tasks:
         results: list[list[ProposedChange]] = await asyncio.gather(*tasks)

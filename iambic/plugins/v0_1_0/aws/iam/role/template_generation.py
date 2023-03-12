@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import itertools
 import os
-import pathlib
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import aiofiles
-
 from iambic.core import noq_json as json
 from iambic.core.logger import log
+from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import (
     base_group_str_attribute,
     create_or_update_template,
@@ -18,7 +17,7 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, get_writable_directory, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import RoleMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.policy.models import AssumeRolePolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.role.models import (
@@ -34,18 +33,27 @@ from iambic.plugins.v0_1_0.aws.iam.role.utils import (
     list_roles,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
-from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3_resp
+from iambic.plugins.v0_1_0.aws.utils import (
+    calculate_import_preference,
+    get_aws_account_map,
+    normalize_boto3_resp,
+)
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 
-
-def get_role_response_dir() -> pathlib.Path:
-    return get_writable_directory().joinpath(".iambic", "resources", "aws", "roles")
+RESOURCE_DIR = ["iam", "role"]
 
 
-def get_role_dir(base_dir: str) -> str:
-    return str(os.path.join(base_dir, "resources", "aws", "roles"))
+def get_response_dir(exe_message: ExecutionMessage, aws_account: AWSAccount) -> str:
+    if exe_message.provider_id:
+        return exe_message.get_directory(*RESOURCE_DIR)
+    else:
+        return exe_message.get_directory(aws_account.account_id, *RESOURCE_DIR)
+
+
+def get_template_dir(base_dir: str) -> str:
+    return str(os.path.join(base_dir, "resources", "aws", *RESOURCE_DIR))
 
 
 def get_templated_role_file_path(
@@ -70,14 +78,11 @@ def get_templated_role_file_path(
     return str(os.path.join(role_dir, separator, f"{file_name}.yaml"))
 
 
-def get_account_role_resource_dir(account_id: str) -> str:
-    account_role_response_dir = os.path.join(get_role_response_dir(), account_id)
-    os.makedirs(account_role_response_dir, exist_ok=True)
-    return account_role_response_dir
-
-
-async def generate_account_role_resource_files(aws_account: AWSAccount) -> dict:
-    account_role_response_dir = get_account_role_resource_dir(aws_account.account_id)
+async def generate_account_role_resource_files(
+    exe_message: ExecutionMessage,
+    aws_account: AWSAccount,
+) -> dict:
+    account_resource_dir = get_response_dir(exe_message, aws_account)
     role_resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
     messages = []
 
@@ -94,7 +99,7 @@ async def generate_account_role_resource_files(aws_account: AWSAccount) -> dict:
 
     for account_role in account_roles:
         role_path = os.path.join(
-            account_role_response_dir, f'{account_role["RoleName"]}.json'
+            account_resource_dir, f'{account_role["RoleName"]}.json'
         )
         response["roles"].append(
             {
@@ -118,10 +123,12 @@ async def generate_account_role_resource_files(aws_account: AWSAccount) -> dict:
 
 
 async def generate_role_resource_file_for_all_accounts(
-    aws_accounts: list[AWSAccount], role_name: str
+    exe_message: ExecutionMessage,
+    aws_accounts: list[AWSAccount],
+    role_name: str,
 ) -> list:
-    account_role_response_dir_map = {
-        aws_account.account_id: get_account_role_resource_dir(aws_account.account_id)
+    account_resource_dir_map = {
+        aws_account.account_id: get_response_dir(exe_message, aws_account)
         for aws_account in aws_accounts
     }
     role_resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
@@ -141,7 +148,7 @@ async def generate_role_resource_file_for_all_accounts(
 
     for account_id, account_role in role_across_accounts.items():
         role_path = os.path.join(
-            account_role_response_dir_map[account_id],
+            account_resource_dir_map[account_id],
             f'{account_role["RoleName"]}.json',
         )
         response.append(
@@ -236,6 +243,11 @@ async def create_templated_role(  # noqa: C901
 
     min_accounts_required_for_wildcard_included_accounts = (
         config.min_accounts_required_for_wildcard_included_accounts
+    )
+
+    # calculate preference based on existing template
+    prefer_templatized = calculate_import_preference(
+        existing_template_map.get(role_name)
     )
 
     # Generate the params used for attribute creation
@@ -340,12 +352,18 @@ async def create_templated_role(  # noqa: C901
         role_template_properties[
             "assume_role_policy_document"
         ] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, assume_role_policy_document_resources
+            aws_account_map,
+            num_of_accounts,
+            assume_role_policy_document_resources,
+            prefer_templatized=prefer_templatized,
         )
 
     if permissions_boundary_resources:
         role_template_properties["permissions_boundary"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, permissions_boundary_resources
+            aws_account_map,
+            num_of_accounts,
+            permissions_boundary_resources,
+            prefer_templatized=prefer_templatized,
         )
 
     if description_resources:
@@ -355,17 +373,29 @@ async def create_templated_role(  # noqa: C901
 
     if managed_policy_resources:
         role_template_properties["managed_policies"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, managed_policy_resources, False
+            aws_account_map,
+            num_of_accounts,
+            managed_policy_resources,
+            False,
+            prefer_templatized=prefer_templatized,
         )
 
     if inline_policy_document_resources:
         role_template_properties["inline_policies"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, inline_policy_document_resources, False
+            aws_account_map,
+            num_of_accounts,
+            inline_policy_document_resources,
+            False,
+            prefer_templatized=prefer_templatized,
         )
 
     if tag_resources:
         tags = await group_dict_attribute(
-            aws_account_map, num_of_accounts, tag_resources, True
+            aws_account_map,
+            num_of_accounts,
+            tag_resources,
+            True,
+            prefer_templatized=prefer_templatized,
         )
         if isinstance(tags, dict):
             tags = [tags]
@@ -388,16 +418,21 @@ async def create_templated_role(  # noqa: C901
     )
 
 
-async def generate_aws_role_templates(
+async def collect_aws_roles(
+    exe_message: ExecutionMessage,
     config: AWSConfig,
     base_output_dir: str,
-    role_messages: list[RoleMessageDetails] = None,
+    detect_messages: list[RoleMessageDetails] = None,
 ):
     aws_account_map = await get_aws_account_map(config)
+    if exe_message.provider_id:
+        aws_account_map = {
+            exe_message.provider_id: aws_account_map[exe_message.provider_id]
+        }
+
     existing_template_map = await get_existing_template_map(
         base_output_dir, AWS_IAM_ROLE_TEMPLATE_TYPE
     )
-    role_dir = get_role_dir(base_output_dir)
     set_role_resource_inline_policies_semaphore = NoqSemaphore(
         set_role_resource_inline_policies, 20
     )
@@ -411,19 +446,23 @@ async def generate_aws_role_templates(
         "Beginning to retrieve AWS IAM Roles.", accounts=list(aws_account_map.keys())
     )
 
-    if role_messages:
+    if detect_messages:
         aws_accounts = list(aws_account_map.values())
         generate_role_resource_file_for_all_accounts_semaphore = NoqSemaphore(
             generate_role_resource_file_for_all_accounts, 45
         )
         tasks = [
-            {"aws_accounts": aws_accounts, "role_name": role.role_name}
-            for role in role_messages
+            {
+                "exe_message": exe_message,
+                "aws_accounts": aws_accounts,
+                "role_name": role.role_name,
+            }
+            for role in detect_messages
             if not role.delete
         ]
 
         # Remove deleted or mark templates for update
-        deleted_roles = [role for role in role_messages if role.delete]
+        deleted_roles = [role for role in detect_messages if role.delete]
         if deleted_roles:
             for role in deleted_roles:
                 role_account = aws_account_map.get(role.account_id)
@@ -440,8 +479,10 @@ async def generate_aws_role_templates(
                         # There are other accounts for the template so re-eval the template
                         tasks.append(
                             {
+                                "exe_message": exe_message,
                                 "aws_accounts": aws_accounts,
                                 "role_name": existing_template.properties.role_name,
+                                "exe_message": exe_message,
                             }
                         )
 
@@ -456,12 +497,20 @@ async def generate_aws_role_templates(
             dict(account_id=account_id, roles=roles)
             for account_id, roles in account_role_map.items()
         ]
+    elif exe_message.provider_id:
+        aws_account = aws_account_map[exe_message.provider_id]
+        account_roles = [
+            (await generate_account_role_resource_files(exe_message, aws_account))
+        ]
     else:
         generate_account_role_resource_files_semaphore = NoqSemaphore(
             generate_account_role_resource_files, 5
         )
         account_roles = await generate_account_role_resource_files_semaphore.process(
-            [{"aws_account": aws_account} for aws_account in aws_account_map.values()]
+            [
+                {"aws_account": aws_account, "exe_message": exe_message}
+                for aws_account in aws_account_map.values()
+            ]
         )
 
     messages = []
@@ -484,12 +533,35 @@ async def generate_aws_role_templates(
     await set_role_resource_tags_semaphore.process(messages)
     log.info("Finished retrieving role details")
 
-    # Use these for testing `create_templated_role`
-    # account_role_output = json.dumps(account_roles)
-    # with open("account_role_output.json", "w") as f:
-    #     f.write(account_role_output)
-    # with open("account_role_output.json") as f:
-    #     account_roles = json.loads(f.read())
+    account_role_output = json.dumps(account_roles)
+    with open(
+        exe_message.get_file_path(*RESOURCE_DIR, file_name_and_extension="output.json"),
+        "w",
+    ) as f:
+        f.write(account_role_output)
+
+
+async def generate_aws_role_templates(
+    exe_message: ExecutionMessage,
+    config: AWSConfig,
+    base_output_dir: str,
+    detect_messages: list[RoleMessageDetails] = None,
+):
+    role_dir = get_template_dir(base_output_dir)
+    aws_account_map = await get_aws_account_map(config)
+    existing_template_map = await get_existing_template_map(
+        base_output_dir, AWS_IAM_ROLE_TEMPLATE_TYPE
+    )
+    account_roles = await exe_message.get_sub_exe_files(
+        *RESOURCE_DIR, file_name_and_extension="output.json", flatten_results=True
+    )
+
+    if detect_messages:
+        detect_messages = [
+            msg for msg in detect_messages if isinstance(msg, RoleMessageDetails)
+        ]
+        if not detect_messages:
+            return
 
     log.info("Grouping roles")
     # Move everything to required structure
@@ -519,7 +591,7 @@ async def generate_aws_role_templates(
         )
         all_resource_ids.add(resource_template.resource_id)
 
-    if not role_messages:
+    if not detect_messages:
         # NEVER call this if messages are passed in because all_resource_ids will only contain those resources
         delete_orphaned_templates(
             list(existing_template_map.values()), all_resource_ids

@@ -4,17 +4,22 @@ import asyncio
 import os
 import pathlib
 import sys
+import uuid
 import warnings
 
 import click
 
 from iambic.config.dynamic_config import Config, init_plugins, load_config
-from iambic.config.utils import resolve_config_template_path, check_and_update_resource_limit
+from iambic.config.utils import (
+    check_and_update_resource_limit,
+    resolve_config_template_path,
+)
 from iambic.config.wizard import ConfigurationWizard
 from iambic.core.context import ctx
 from iambic.core.git import clone_git_repos
+from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
-from iambic.core.models import TemplateChangeDetails
+from iambic.core.models import ExecutionMessage, TemplateChangeDetails
 from iambic.core.parser import load_templates
 from iambic.core.utils import gather_templates, yaml
 from iambic.request_handler.expire_resources import flag_expired_resources
@@ -48,14 +53,12 @@ def cli():
 
 
 @cli.command()
-@click.option(
-    "--template",
-    "-t",
+@click.argument(
     "templates",
     required=False,
-    multiple=True,
+    envvar="IAMBIC_TEMPLATE_PATH",
     type=click.Path(exists=True),
-    help="The template file path(s) to expire. Example: ./aws/roles/engineering.yaml",
+    nargs=-1,
 )
 @click.option(
     "--repo-dir",
@@ -107,7 +110,7 @@ def run_detect(repo_dir: str):
     "repo_dir",
     required=True,
     type=click.Path(exists=True),
-    default=str(pathlib.Path.cwd()),
+    default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo base directory that should contain the templates. Example: ~/iambic/templates",
 )
 def clone_repos(repo_dir: str):
@@ -137,14 +140,12 @@ def run_clone_repos(repo_dir: str = str(pathlib.Path.cwd())):
     show_default=True,
     help="Apply changes without asking for permission?",
 )
-@click.option(
-    "--template",
-    "-t",
+@click.argument(
     "templates",
-    required=False,
-    multiple=True,
+    required=True,
+    envvar="IAMBIC_TEMPLATE_PATH",
     type=click.Path(exists=True),
-    help="The template file path(s) to apply. Example: ./aws/roles/engineering.yaml",
+    nargs=-1,
 )
 @click.option(
     "--allow-dirty",
@@ -210,14 +211,17 @@ def apply(
 
 
 def run_apply(config: Config, templates: list[str]):
+    exe_message = ExecutionMessage(
+        execution_id=str(uuid.uuid4()), command=Command.APPLY
+    )
     templates = load_templates(templates)
     asyncio.run(flag_expired_resources([template.file_path for template in templates]))
-    template_changes = asyncio.run(config.run_apply(templates))
+    template_changes = asyncio.run(config.run_apply(exe_message, templates))
     output_proposed_changes(template_changes)
 
     if ctx.eval_only and template_changes and click.confirm("Proceed?"):
         ctx.eval_only = False
-        asyncio.run(config.run_apply(templates))
+        asyncio.run(config.run_apply(exe_message, templates))
     # This was here before, but I don't think it's needed. Leaving it here for now to see if anything breaks.
     # asyncio.run(config.run_detect_changes(repo_dir))
 
@@ -254,14 +258,12 @@ def run_git_apply(
 
 
 @cli.command()
-@click.option(
-    "--template",
-    "-t",
+@click.argument(
     "templates",
     required=False,
-    multiple=True,
+    envvar="IAMBIC_TEMPLATE_PATH",
     type=click.Path(exists=True),
-    help="The template file path(s) to apply. Example: ./resources/aws/roles/engineering.yaml",
+    nargs=-1,
 )
 @click.option(
     "--plan-output",
@@ -313,10 +315,14 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
 
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
-
+    exe_message = ExecutionMessage(
+        execution_id=str(uuid.uuid4()), command=Command.APPLY
+    )
     asyncio.run(flag_expired_resources(templates))
     ctx.eval_only = True
-    output_proposed_changes(asyncio.run(config.run_apply(load_templates(templates))))
+    output_proposed_changes(
+        asyncio.run(config.run_apply(exe_message, load_templates(templates)))
+    )
 
 
 @cli.command()
@@ -349,18 +355,19 @@ def import_(repo_dir: str):
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
     check_and_update_resource_limit(config)
-    asyncio.run(config.run_import(repo_dir))
+    execution_message = ExecutionMessage(
+        execution_id=str(uuid.uuid4()), command=Command.IMPORT
+    )
+    asyncio.run(config.run_import(execution_message, repo_dir))
 
 
 @cli.command()
-@click.option(
-    "--template",
-    "-t",
+@click.argument(
     "templates",
     required=False,
-    multiple=True,
+    envvar="IAMBIC_TEMPLATE_PATH",
     type=click.Path(exists=True),
-    help="The template file path(s) to expire. Example: ./aws/roles/engineering.yaml",
+    nargs=-1,
 )
 @click.option(
     "--repo-dir",

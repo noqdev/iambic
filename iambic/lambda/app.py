@@ -5,11 +5,13 @@ import os
 import sys
 import tempfile
 import time
+import uuid
 from enum import Enum
 
 from iambic.config.dynamic_config import load_config
 from iambic.config.utils import resolve_config_template_path
-from iambic.core.models import BaseModel
+from iambic.core.iambic_enum import Command
+from iambic.core.models import BaseModel, ExecutionMessage
 from iambic.main import run_clone_repos, run_detect, run_git_apply, run_git_plan
 
 REPO_BASE_PATH = os.path.expanduser("~/.iambic/repos/")
@@ -68,45 +70,43 @@ def handler(event, context):
 
 def run_handler(event=None, context=None):
     """
-    Default handler for AWS Lambda. It is split out from the actual
-    handler so we can also run via IDE run configurations
+    Default handler for AWS Lambda.
+    It is split out from the actual handler, so we can also run via IDE run configurations
     """
     if not context:
         context = {"command": "import"}
     lambda_context = LambdaContext(**context)
 
-    match lambda_context.command:
-        case LambdaCommand.run_import.value:
-            config_path = asyncio.run(resolve_config_template_path(REPO_BASE_PATH))
-            config = asyncio.run(load_config(config_path))
-            return asyncio.run(config.run_import(REPO_BASE_PATH))
-        case LambdaCommand.run_detect.value:
-            return run_detect(REPO_BASE_PATH)
-        case LambdaCommand.run_apply.value:
-            return run_git_apply(
-                False,
-                FROM_SHA,
-                TO_SHA,
-                repo_dir=REPO_BASE_PATH,
-                output_path=PLAN_OUTPUT_PATH,
-            )
-        case LambdaCommand.run_plan.value:
-            return run_git_plan(PLAN_OUTPUT_PATH, repo_dir=REPO_BASE_PATH)
-        case LambdaCommand.run_git_apply.value:
-            return run_git_apply(
-                False,
-                FROM_SHA,
-                TO_SHA,
-                repo_dir=REPO_BASE_PATH,
-                output_path=PLAN_OUTPUT_PATH,
-            )
-        case LambdaCommand.run_git_plan.value:
-            return run_git_plan(PLAN_OUTPUT_PATH, repo_dir=REPO_BASE_PATH)
-        case LambdaCommand.run_clone_git_repos.value:
-            return run_clone_repos(REPO_BASE_PATH)
-        case _:
-            raise NotImplementedError(f"Unknown command {lambda_context.command}")
-
+    if lambda_context.command == LambdaCommand.run_import.value:
+        config_path = asyncio.run(resolve_config_template_path(REPO_BASE_PATH))
+        config = asyncio.run(load_config(config_path))
+        return asyncio.run(config.run_import(REPO_BASE_PATH))
+    elif lambda_context.command == LambdaCommand.run_detect.value:
+        return run_detect(REPO_BASE_PATH)
+    elif lambda_context.command == LambdaCommand.run_apply.value:
+        return run_git_apply(
+            False,
+            FROM_SHA,
+            TO_SHA,
+            repo_dir=REPO_BASE_PATH,
+            output_path=PLAN_OUTPUT_PATH,
+        )
+    elif lambda_context.command == LambdaCommand.run_plan.value:
+        return run_git_plan(PLAN_OUTPUT_PATH, repo_dir=REPO_BASE_PATH)
+    elif lambda_context.command == LambdaCommand.run_git_apply.value:
+        return run_git_apply(
+            False,
+            FROM_SHA,
+            TO_SHA,
+            repo_dir=REPO_BASE_PATH,
+            output_path=PLAN_OUTPUT_PATH,
+        )
+    elif lambda_context.command == LambdaCommand.run_git_plan.value:
+        return run_git_plan(PLAN_OUTPUT_PATH, repo_dir=REPO_BASE_PATH)
+    elif lambda_context.command == LambdaCommand.run_clone_git_repos.value:
+        return run_clone_repos(REPO_BASE_PATH)
+    else:
+        raise NotImplementedError(f"Unknown command {lambda_context.command}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

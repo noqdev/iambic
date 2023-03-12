@@ -9,6 +9,7 @@ import sys
 import tempfile
 import time
 import traceback
+import uuid
 from enum import Enum
 from typing import Any, Callable
 from urllib.parse import urlparse
@@ -19,7 +20,9 @@ from github.PullRequest import PullRequest
 from iambic.config.dynamic_config import load_config
 from iambic.config.utils import resolve_config_template_path
 from iambic.core.git import Repo, clone_git_repo, get_remote_default_branch
+from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
+from iambic.core.models import ExecutionMessage
 from iambic.core.utils import yaml
 from iambic.main import run_detect, run_expire
 
@@ -83,7 +86,9 @@ def run_handler(context: dict[str, Any]):
     # TODO Support Github Enterprise with custom hostname
     # g = Github(base_url="https://{hostname}/api/v3", login_or_token="access_token")
 
-    f: Callable[[github.Github, dict[str, Any]]] = EVENT_DISPATCH_MAP.get(event_name)
+    f: Callable[[github.Github, dict[str, Any]], None] = EVENT_DISPATCH_MAP.get(
+        event_name
+    )
     if f:
         f(github_client, context)
     else:
@@ -97,9 +102,9 @@ def handle_iambic_command(
     github_token: str = context["iambic"]["GH_OVERRIDE_TOKEN"]
     command: str = context["iambic"]["IAMBIC_CLOUD_IMPORT_CMD"]
     github_client = github.Github(github_token)
-    f: Callable[[github.Github, dict[str, Any]]] = IAMBIC_CLOUD_IMPORT_DISPATCH_MAP.get(
-        command
-    )
+    f: Callable[
+        [github.Github, dict[str, Any]], None
+    ] = IAMBIC_CLOUD_IMPORT_DISPATCH_MAP.get(command)
     if f:
         f(github_client, context)
     else:
@@ -333,9 +338,15 @@ def handle_iambic_git_apply(
     os.environ["IAMBIC_SESSION_NAME"] = session_name
 
     try:
+        # merge_sha is used when we trigger a merge
+        merge_sha = pull_request.head.sha
+
         repo = prepare_local_repo(
             repo_url, get_lambda_repo_path(), pull_request_branch_name
         )
+        # local_sha_before_git_apply may not match the initial merge
+        # sha because we apply the PR to local checkout tracking branch
+        local_sha_before_git_apply = repo.head.commit.hexsha
 
         if proposed_changes_path:
             # code smell to have to change a module variable
@@ -352,13 +363,19 @@ def handle_iambic_git_apply(
         diff_list = repo.head.commit.diff()
         if len(diff_list) > 0:
             repo.git.commit("-m", COMMIT_MESSAGE_FOR_GIT_APPLY_ABSOLUTE_TIME)
+        else:
+            log.debug("git_apply did not introduce additional changes")
+
+        local_sha_after_git_apply = repo.head.commit.hexsha
+        if local_sha_before_git_apply != local_sha_after_git_apply:
+            # signal changes due to git-apply
             repo.remotes.origin.push(
                 refspec=f"HEAD:{pull_request_branch_name}"
             ).raise_if_error()
-            log_params = {"sha": repo.head.commit.hexsha}
+            log_params = {"sha": local_sha_after_git_apply}
             log.info("git-apply new sha is", **log_params)
-        else:
-            log.debug("git_apply did not introduce additional changes")
+            # update merge sha because we add new commits to pull request
+            merge_sha = local_sha_after_git_apply
 
         post_result_as_pr_comment(
             pull_request, context, "git-apply", proposed_changes_path
@@ -372,9 +389,7 @@ def handle_iambic_git_apply(
                 time.sleep(5)
 
         pull_request = templates_repo.get_pull(pull_number)
-        pull_request.merge(
-            sha=repo.head.commit.hexsha
-        )  # Concern, whether we need the exact sha on the remote
+        pull_request.merge(sha=merge_sha)
         return HandleIssueCommentReturnCode.MERGED
 
     except Exception as e:
@@ -506,11 +521,14 @@ def handle_import(github_client: github.Github, context: dict[str, Any]) -> None
 
 def _handle_import(repo_url: str, default_branch: str) -> None:
     try:
+        exe_message = ExecutionMessage(
+            execution_id=str(uuid.uuid4()), command=Command.IMPORT
+        )
         repo_dir = get_lambda_repo_path()
         repo = prepare_local_repo_for_new_commits(repo_url, repo_dir, "import")
         config_path = asyncio.run(resolve_config_template_path(repo_dir))
         config = asyncio.run(load_config(config_path))
-        asyncio.run(config.run_import(repo_dir))
+        asyncio.run(config.run_import(exe_message, repo_dir))
         repo.git.add(".")
         diff_list = repo.head.commit.diff()
         if len(diff_list) > 0:

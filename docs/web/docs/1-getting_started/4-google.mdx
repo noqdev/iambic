@@ -2,10 +2,8 @@
 title: Google
 ---
 
-<!-- #TODO not sure where this goes. It's useful metainformation, but not really part of the flow of the tutorial. -->
-Noq's SaaS Platform provides enterprise Self-Service features that make Google Group requests easier for end-users. Reach out to us at [hello@noq.dev](mailto:hello@noq.dev) or visit [https://www.noq.dev](https://www.noq.dev) for more information.
-
-In this tutorial, you will configure IAMbic to manage Google Groups, and then practice using IAMbic to to create, manipulate, and expire a test group. These are the steps you will complete.
+In this tutorial, you will configure IAMbic to manage Google Groups, and then practice using IAMbic to to create,
+manipulate, and expire a test group. These are the steps you will complete.
 
 
 #### Setup
@@ -17,9 +15,6 @@ In this tutorial, you will configure IAMbic to manage Google Groups, and then pr
 4. Add users / groups to a Google group
 5. Provide temporary ("break-glass") access to a Google Group
 6. Expire a Google Group
-
-<!--  would be awesome to link these entries above to steps below
- Can we autogenerate a ToC in the sidebar, like in gdocs? -->
 
 
 ## Prerequisites
@@ -55,13 +50,11 @@ In this section, you will set up a Google Cloud Identity that will be used by IA
 
 </details>
 
-5. Enable Domain Wide Delegation for the Google account with the following scopes: <!-- #TODO: Needs censoring (??) -->
-<!-- #TODO do these need copy buttons? -->
-  - https://www.googleapis.com/auth/admin.directory.group
-  - https://www.googleapis.com/auth/admin.reports.audit.readonly
-  - https://www.googleapis.com/auth/admin.directory.user.security
-  - https://www.googleapis.com/auth/admin.directory.user
-  - https://www.googleapis.com/auth/admin.directory.group.member
+5. Enable Domain Wide Delegation for the Google account with the following scopes:
+
+```
+https://www.googleapis.com/auth/admin.directory.group,https://www.googleapis.com/auth/admin.reports.audit.readonly,https://www.googleapis.com/auth/admin.directory.user.security,https://www.googleapis.com/auth/admin.directory.user,https://www.googleapis.com/auth/admin.directory.group.member
+```
 
 <details>
   <summary>Screenshot</summary>
@@ -193,7 +186,7 @@ In a production environment, this would be handled by a command issued on a Gith
 :::
 
 ```bash
-iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
 ```
 
 Confirm that the group has been created by running the following command and visiting the URL in your browser:
@@ -253,7 +246,7 @@ EOF
 Run the `apply` command to have IAMbic update the group:
 
 ```bash
-iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
 ```
 
 <!-- #TODO Is there a way we can test/verify that this worked and the user is in the GG now?
@@ -291,7 +284,7 @@ EOF
 ```
 
 ```bash
-iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
 ```
 
 After applying the change, notice that the `expires_at` date in the template was converted from a relative expiration time ("in two minutes") to an absolute date (Example: "2021-05-20T15:00:00-04:00"). This allows Iambic to know exactly when the request should be expired.
@@ -305,7 +298,7 @@ echo https://groups.google.com/a/$DOMAIN/g/iambic-test-group
 After a couple of minutes, the request should expire. In a production deployment, this process would be automatic. But for the purposes of testing, you can manually expire the request by re-running the apply command after two minutes have passed:
 
 ```bash
-iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
 ```
 
 ### 6. Expire the Google Group
@@ -331,7 +324,7 @@ properties:
       expires_at: in 2 minutes
 EOF
 
-iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
 
 cat google/groups/$DOMAIN/iambic-test-group.yaml
 ```
@@ -341,7 +334,7 @@ In the last line of the above commands, we printed the contents of the template 
 After a minute has passed, re-run the apply command to expire the request.
 
 ```bash
-iambic apply -t google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
 ```
 
 <!-- #TODO Do something here to confrim it's expired properly -->

@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import glob
 import inspect
+import itertools
 import json
 import os
 import typing
 from enum import Enum
+from hashlib import md5
 from types import GenericAlias
 from typing import (
     TYPE_CHECKING,
@@ -20,6 +23,7 @@ from typing import (
     get_origin,
 )
 
+import aiofiles
 import dateparser
 from deepdiff.model import PrettyOrderedSet
 from git import Repo
@@ -29,12 +33,14 @@ from pydantic import Field, validate_model, validator
 from pydantic.fields import ModelField
 
 from iambic.core.context import ExecutionContext
-from iambic.core.iambic_enum import IambicManaged
+from iambic.core.iambic_enum import Command, ExecutionStatus, IambicManaged
 from iambic.core.logger import log
 from iambic.core.utils import (
     apply_to_provider,
     create_commented_map,
+    get_writable_directory,
     sanitize_string,
+    simplify_dt,
     snake_to_camelcap,
     sort_dict,
     transform_comments,
@@ -491,7 +497,9 @@ class BaseTemplate(
         log.info("Deleting template file", file_path=self.file_path)
         try:
             repo = Repo(self.file_path, search_parent_directories=True)
-            repo.index.remove([self.file_path], working_tree=True)
+            # why force=True? Expire could have modified the local contents
+            # without force=True, git rm would not be able to remove the file
+            repo.index.remove([self.file_path], working_tree=True, force=True)
         except Exception as e:
             log.error(
                 "Unable to remove file from local Git repo. Deleting manually",
@@ -536,14 +544,21 @@ class ExpiryModel(IambicPydanticBaseModel):
         ),
     )
 
+    class Config:
+        json_encoders = {
+            datetime.datetime: simplify_dt,
+            datetime.date: simplify_dt,
+        }
+
     @validator("expires_at", pre=True)
     def parse_expires_at(cls, value):
         if not value:
             return value
-        if isinstance(value, datetime.date):
-            dt = datetime.datetime.combine(
-                value, datetime.datetime.min.time()
-            ).astimezone(datetime.timezone.utc)
+        if isinstance(value, datetime.date) and not isinstance(
+            value, datetime.datetime
+        ):
+            dt = datetime.datetime.combine(value, datetime.datetime.min.time())
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
             return dt
         if isinstance(value, datetime.datetime):
             dt = value
@@ -558,3 +573,89 @@ class ExpiryModel(IambicPydanticBaseModel):
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
         return {"expires_at", "deleted"}
+
+
+class ExecutionMessage(PydanticBaseModel):
+    execution_id: str
+    command: Command
+    provider_type: Optional[str]
+    provider_id: Optional[str]
+    template_type: Optional[str]
+    template_id: Optional[str]
+    metadata: Optional[Dict[str, Any]] = None
+    templates: Optional[List[str]] = None
+
+    def get_execution_dir(self, as_regex: bool = False) -> str:
+        if as_regex:
+            as_regex = "**"
+
+        path_params = [self.execution_id]
+        if path_param := self.provider_type or as_regex:
+            path_params.append(path_param)
+        if path_param := self.provider_id or as_regex:
+            path_params.append(path_param)
+        if path_param := self.template_type or as_regex:
+            path_params.append(path_param)
+        if path_param := self.template_id or as_regex:
+            path_params.append(path_param)
+        if path_param := self.metadata or as_regex:
+            if path_param != as_regex:
+                path_param = md5(
+                    json.dumps(path_param, sort_keys=True).encode("utf-8")
+                ).hexdigest()
+            path_params.append(path_param)
+
+        file_path = os.path.join(get_writable_directory(), ".iambic", *path_params)
+        if not as_regex:
+            os.makedirs(file_path, exist_ok=True)
+
+        return file_path
+
+    def get_directory(self, *path_dirs) -> str:
+        dir_path = os.path.join(self.get_execution_dir(), *path_dirs)
+        os.makedirs(dir_path, exist_ok=True)
+        return dir_path
+
+    def get_file_path(self, *path_dirs, file_name_and_extension: str) -> str:
+        return os.path.join(self.get_directory(*path_dirs), file_name_and_extension)
+
+    async def get_sub_exe_files(
+        self,
+        *path_dirs,
+        file_name_and_extension: str = None,
+        flatten_results: bool = False,
+    ) -> List[dict]:
+        async def _get_file_contents(file_path: str) -> dict:
+            async with aiofiles.open(file_path, mode="r") as f:
+                file_text = await f.read()
+                if file_path.endswith(".yaml") or file_path.endswith(".yml"):
+                    return yaml.load(file_text)
+                elif file_path.endswith(".json"):
+                    return json.loads(file_text)
+                else:
+                    raise TypeError(
+                        "Unsupported file type. Must be one of yaml, yml, or json."
+                    )
+
+        matching_files = glob.glob(
+            os.path.join(
+                self.get_execution_dir(True),
+                *path_dirs if path_dirs else "**",
+                file_name_and_extension or "**",
+            ),
+            recursive=True,
+        )
+        response = list(
+            await asyncio.gather(
+                *[_get_file_contents(file_path) for file_path in set(matching_files)]
+            )
+        )
+        if flatten_results:
+            return list(itertools.chain.from_iterable(response))
+
+        return response
+
+
+class ExecutionResponse(ExecutionMessage):
+    status: ExecutionStatus
+    errors: Optional[list[str]]

@@ -197,19 +197,19 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
                 )
             except Exception as err:
                 log.warning(err)
-    
-            sts_client = session.client("sts")
-            if self.hub_role_arn and self.hub_role_arn != get_current_role_arn(sts_client):
-                boto3_session = await create_assume_role_session(
-                    session,
-                    self.hub_role_arn,
-                    region_name,
-                    external_id=self.external_id,
-                    session_name=os.environ.get("IAMBIC_SESSION_NAME", None),
-                )
-                if boto3_session:
-                    self.boto3_session_map[region_name] = boto3_session
-                    return boto3_session
+
+        sts_client = session.client("sts")
+        if self.hub_role_arn and self.hub_role_arn != get_current_role_arn(sts_client):
+            boto3_session = await create_assume_role_session(
+                session,
+                self.hub_role_arn,
+                region_name,
+                external_id=self.external_id,
+                session_name=os.environ.get("IAMBIC_SESSION_NAME", None),
+            )
+            if boto3_session:
+                self.boto3_session_map[region_name] = boto3_session
+                return boto3_session
 
         self.boto3_session_map[region_name] = session
         return self.boto3_session_map[region_name]
@@ -374,12 +374,11 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
                 InstanceArn=self.identity_center_details.instance_arn,
             )
             if permission_set_arns:
-                permission_set_detail_semaphore = NoqSemaphore(
-                    identity_center_client.describe_permission_set, 35, False
-                )
+                permission_set_detail_semaphore = NoqSemaphore(boto_crud_call, 35)
                 permission_set_details = await permission_set_detail_semaphore.process(
                     [
                         {
+                            "boto_fnc": identity_center_client.describe_permission_set,
                             "InstanceArn": self.identity_center_details.instance_arn,
                             "PermissionSetArn": permission_set_arn,
                         }
@@ -760,3 +759,7 @@ class Description(AccessModel):
     @property
     def resource_id(self) -> str:
         return self.description
+
+    @classmethod
+    def new_instance_from_string(cls, s: str) -> Description:
+        return Description(description=s)

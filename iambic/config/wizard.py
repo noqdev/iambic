@@ -2,29 +2,36 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import os
 import re
+import select
 import sys
+import uuid
+from textwrap import dedent
 from typing import Union
 
 import boto3
-import botocore
 import questionary
+from aws_error_utils.aws_error_utils import errors
 from botocore.exceptions import ClientError, NoCredentialsError
+
 from iambic.config.dynamic_config import (
     CURRENT_IAMBIC_VERSION,
     Config,
     ExtendsConfig,
     ExtendsConfigKey,
     load_config,
+    process_config,
 )
 from iambic.config.utils import (
     check_and_update_resource_limit,
     resolve_config_template_path,
 )
 from iambic.core.context import ctx
-from iambic.core.iambic_enum import IambicManaged
+from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
+from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import get_existing_template_map
 from iambic.core.utils import yaml
 from iambic.github.utils import create_workflow_files
@@ -58,7 +65,10 @@ from iambic.plugins.v0_1_0.aws.utils import (
     get_identity_arn,
     is_valid_account_id,
 )
-from iambic.plugins.v0_1_0.google.iambic_plugin import GoogleConfig, GoogleProject
+from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import (
+    GoogleProject,
+    GoogleWorkspaceConfig,
+)
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
 
 CUSTOM_AUTO_COMPLETE_STYLE = questionary.Style(
@@ -67,6 +77,50 @@ CUSTOM_AUTO_COMPLETE_STYLE = questionary.Style(
         ("selected", "bold bg:#000000"),
     ]
 )
+
+
+def clear_stdin_buffer():
+    """Clears the standard input (stdin) buffer.
+
+    This function reads and discards any input that may be present in the standard
+    input (stdin) buffer. This can be useful in cases where previous input may be
+    interfering with the desired behavior of a subsequent input operation.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
+    # Warning: This appears to work fine in a real terminal,
+    # but not VSCode's Debug Terminal
+
+    r, _, _ = select.select([sys.stdin], [], [], 0)
+    while r:
+        # If there is input waiting, read and discard it.
+        sys.stdin.readline()
+        r, _, _ = select.select([sys.stdin], [], [], 0)
+
+
+def monkeypatch_questionary():
+    """Monkeypatches the questionary functions in use to clear stdin buffer."""
+    original_functions = {
+        "prompt": questionary.prompt,
+        "ask": questionary.Question.ask,
+        "unsafe_ask": questionary.Question.unsafe_ask,
+        "select": questionary.select,
+    }
+
+    def patched_function(original_function):
+        @functools.wraps(original_function)
+        def wrapper(*args, **kwargs):
+            clear_stdin_buffer()
+            return original_function(*args, **kwargs)
+
+        return wrapper
+
+    for function_name, original_function in original_functions.items():
+        setattr(questionary, function_name, patched_function(original_function))
 
 
 def set_aws_region(question_text: str, default_val: Union[str, RegionName]) -> str:
@@ -195,8 +249,10 @@ class ConfigurationWizard:
         self.default_region = "us-east-1"
         try:
             self.boto3_session = boto3.Session(region_name=self.default_region)
-        except Exception:
-            self.boto3_session = None
+        except Exception as exc:
+            log.error(f"Unable to access your AWS account: {exc}")
+            sys.exit(1)
+
         self.autodetected_org_settings = {}
         self.existing_role_template_map = {}
         self.aws_account_map = {}
@@ -214,28 +270,29 @@ class ConfigurationWizard:
         else:
             self.hub_account_id = None
 
-        if self.boto3_session:
-            try:
-                default_caller_identity = self.boto3_session.client(
-                    "sts"
-                ).get_caller_identity()
-                caller_arn = get_identity_arn(default_caller_identity)
-                default_hub_account_id = caller_arn.split(":")[4]
-            except (AttributeError, IndexError, NoCredentialsError, ClientError):
-                default_hub_account_id = None
-                default_caller_identity = {}
-        else:
+        try:
+            default_caller_identity = self.boto3_session.client(
+                "sts"
+            ).get_caller_identity()
+            caller_arn = get_identity_arn(default_caller_identity)
+            default_hub_account_id = caller_arn.split(":")[4]
+        except (
+            AttributeError,
+            IndexError,
+            NoCredentialsError,
+            ClientError,
+            FileNotFoundError,
+        ):
             default_hub_account_id = None
             default_caller_identity = {}
 
         if not self.hub_account_id:
             while True:
                 self.hub_account_id = set_required_text_value(
-                    "What is the Account ID where you would like to deploy the IAMbic hub role?\n"
-                    "This is the account that will be used to assume into all other accounts by IAMbic.\n"
-                    "If you have an AWS Organization, that would be your hub account.\n"
-                    "However, if you are just trying IAMbic out, you can provide any account.\n"
-                    "Just be sure to delete all IAMbic stacks when/if you decide to use a different account as your hub.",
+                    "To get started with the IAMbic setup wizard, you'll need an AWS account.\n"
+                    "This is where IAMbic will deploy its main role. If you have an AWS Organization, "
+                    "that account will be your hub account.\n"
+                    "Which Account ID should we use to deploy the IAMbic hub role?",
                     default_val=default_hub_account_id,
                 )
                 if is_valid_account_id(self.hub_account_id):
@@ -245,9 +302,9 @@ class ConfigurationWizard:
             identity_arn = get_identity_arn(default_caller_identity)
             if questionary.confirm(
                 f"IAMbic detected you are using {identity_arn} for AWS access.\n"
-                f"This role will require the ability to create"
+                f"This identity will require the ability to create"
                 f"CloudFormation stacks, stack sets, and stack set instances.\n"
-                f"Would you like to use this role?"
+                f"Would you like to use this identity?"
             ).ask():
                 self.caller_identity = default_caller_identity
             else:
@@ -315,25 +372,37 @@ class ConfigurationWizard:
                 sys.exit(1)
         else:
             # Create a stubbed out config file to use for the wizard
-            config: Config = Config(
+            self.config_path = f"{self.repo_dir}/iambic_config.yaml"
+            base_config: Config = Config(
                 file_path=self.config_path, version=CURRENT_IAMBIC_VERSION
             )
-            config.write()
-            try:
-                self.config = await load_config(self.config_path)
-            except Exception as err:
-                log.error(
-                    "Error creating the configuration file",
-                    config_path=self.config_path,
-                    error=repr(err),
-                )
-                os.remove(self.config_path)
-                sys.exit(1)
 
-        with contextlib.suppress(ClientError, NoCredentialsError):
+            self.config = await process_config(
+                base_config, self.config_path, base_config.dict()
+            )
+
+        with contextlib.suppress(ClientError, NoCredentialsError, FileNotFoundError):
             self.autodetected_org_settings = self.boto3_session.client(
                 "organizations"
             ).describe_organization()["Organization"]
+
+    def resolve_aws_profile_defaults_from_env(self) -> str:
+        if profile_name := os.environ.get("AWS_PROFILE"):
+            log.info("Using AWS profile from environment", profile=profile_name)
+        elif profile_name := os.environ.get("AWS_DEFAULT_PROFILE"):
+            log.info(
+                "Using AWS default profile from environment", profile=profile_name
+            )
+        elif "AWS_ACCESS_KEY_ID" in os.environ:
+            profile_name = "default"
+            log.info(
+                "Using AWS default profile from environment", profile=profile_name
+            )
+        else:
+            profile_name = "None"
+        
+        return profile_name
+        
 
     def set_aws_profile_name(
         self, question_text: str = None, allow_none: bool = False
@@ -342,13 +411,26 @@ class ConfigurationWizard:
         if allow_none:
             available_profiles.insert(0, "None")
 
+        default_profile = self.resolve_aws_profile_defaults_from_env()
+        if default_profile == "None" and not allow_none:
+            questionary.print(
+                f"""
+                We couldn't find your AWS credentials, or they're not linked to the Hub Account ({self.hub_account_id}).
+                The specified AWS credentials need to be able to create CloudFormation stacks, stack sets,
+                and stack set instances.
+
+                Please provide an AWS profile to use for this operation, or restart the wizard with valid AWS credentials: """
+            )
+            return None
+
         if not question_text:
-            question_text = (
-                f"Unable to detect default AWS credentials or "
-                f"they are not for the Hub Account ({self.hub_account_id}).\n"
-                f"Please specify the profile to use with access to the Hub Account.\n"
-                f"This role will require the ability to create "
-                f"CloudFormation stacks, stack sets, and stack set instances."
+            question_text = dedent(
+                f"""
+                We couldn't find your AWS credentials, or they're not linked to the Hub Account ({self.hub_account_id}).
+                The specified AWS credentials need to be able to create CloudFormation stacks, stack sets,
+                and stack set instances.
+
+                Please provide an AWS profile to use for this operation, or restart the wizard with valid AWS credentials: """
             )
 
         try:
@@ -362,14 +444,14 @@ class ConfigurationWizard:
                 profile_name = questionary.select(
                     question_text,
                     choices=available_profiles,
-                    default=os.getenv("AWS_PROFILE", ""),
+                    default=default_profile,
                 ).unsafe_ask()
             else:
                 profile_name = questionary.autocomplete(
                     question_text,
                     choices=available_profiles,
                     style=CUSTOM_AUTO_COMPLETE_STYLE,
-                    default=os.getenv("AWS_PROFILE", ""),
+                    default=default_profile,
                 ).unsafe_ask()
         except KeyboardInterrupt:
             log.info("Exiting...")
@@ -379,34 +461,64 @@ class ConfigurationWizard:
 
     def set_boto3_session(self):
         self._has_cf_permissions = True
-        profile_name = self.set_aws_profile_name()
-        self.boto3_session = boto3.Session(
-            profile_name=profile_name, region_name=self.default_region
-        )
-        try:
-            self.caller_identity = self.boto3_session.client(
-                "sts"
-            ).get_caller_identity()
-            selected_hub_account_id = self.caller_identity.get("Arn").split(":")[4]
-            if selected_hub_account_id != self.hub_account_id:
-                log.error(
-                    "The selected profile does not have access to the Hub Account. Please try again.",
-                    required_account_id=self.hub_account_id,
-                    selected_account_id=selected_hub_account_id,
+        while True:
+            try:
+                profile_name = self.set_aws_profile_name()
+                self.boto3_session = boto3.Session(
+                    profile_name=profile_name, region_name=self.default_region
                 )
-                self.set_boto3_session()
-        except botocore.exceptions.ClientError as err:
-            log.info(
-                "Unable to create a session for the provided profile name. Please try again.",
-                error=str(err),
-            )
-            self.set_boto3_session()
+                self.caller_identity = self.boto3_session.client(
+                    "sts"
+                ).get_caller_identity()
+                selected_hub_account_id = self.caller_identity.get("Arn").split(":")[4]
+                if selected_hub_account_id != self.hub_account_id:
+                    log.error(
+                        "The selected profile does not have access to the Hub Account. Please try again.",
+                        required_account_id=self.hub_account_id,
+                        selected_account_id=selected_hub_account_id,
+                    )
+                    continue
+            except errors.FileNotFoundError as err:
+                log.error(
+                    (
+                        "We are unable to authenticate to AWS because the provided profile name has a credential_process "
+                        "rule setup in your AWS configuration file. Either remove the credential_process rule or use the "
+                        "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables."
+                    ),
+                    error=str(err),
+                )
+                continue
+            except errors.ClientError as err:
+                log.info(
+                    "Unable to create a session for the provided profile name. Please try again.",
+                    error=str(err),
+                )
+                continue
+            except errors.ProfileNotFound as err:
+                log.info(
+                    "Selected profile doesn't exist. Please try again.",
+                    error=str(err),
+                )
+                continue
+            except errors.InvalidClientTokenId as err:
+                log.error(
+                    "AWS returned an error indicating that the provided credentials are invalid. Somethings to try:"
+                    "\n - Ensure that the credentials are correct"
+                    "\n - Ensure that the credentials are for the correct AWS account"
+                    "\n - Ensure that the credentials have the correct permissions"
+                    "\n - Ensure that the credentials are not expired"
+                    "\n - Ensure that the credentials are not for a federated user"
+                    )
+                continue
 
-        self.profile_name = profile_name
-        with contextlib.suppress(ClientError, NoCredentialsError):
-            self.autodetected_org_settings = self.boto3_session.client(
-                "organizations"
-            ).describe_organization()["Organization"]
+            self.profile_name = profile_name
+            with contextlib.suppress(
+                ClientError, NoCredentialsError, FileNotFoundError
+            ):
+                self.autodetected_org_settings = self.boto3_session.client(
+                    "organizations"
+                ).describe_organization()["Organization"]
+            break
 
     def get_boto3_session_for_account(self, account_id: str):
         if account_id == self.hub_account_id:
@@ -442,7 +554,13 @@ class ConfigurationWizard:
             return
 
         try:
-            await self.config.run_discover_upstream_config_changes(self.repo_dir)
+            exe_message = ExecutionMessage(
+                execution_id=str(uuid.uuid4()),
+                command=Command.CONFIG_DISCOVERY,
+            )
+            await self.config.run_discover_upstream_config_changes(
+                exe_message, self.repo_dir
+            )
             await self.config.aws.set_identity_center_details()
         except Exception as err:
             log.info("Failed to refresh AWS accounts", error=err)
@@ -685,9 +803,7 @@ class ConfigurationWizard:
             if action == "Go back":
                 return
             elif action == "Update IdentityCenter":
-                org_to_edit.identity_center = set_identity_center(
-                    org_to_edit.identity_center.region_name
-                )
+                org_to_edit.identity_center = set_identity_center()
                 asyncio.run(self.attempt_aws_account_refresh())
 
             self.config.aws.organizations[
@@ -896,7 +1012,7 @@ class ConfigurationWizard:
                         "client_x509_cert_url",
                     }
                 )
-                for project in self.config.google.projects
+                for project in self.config.google.workspaces
             ]
 
         secret_details = self.config.extends[0]
@@ -933,17 +1049,19 @@ class ConfigurationWizard:
             self.config.secrets.setdefault("google", {}).setdefault(
                 "projects", []
             ).append(google_obj)
-            self.config.google = GoogleConfig(projects=[GoogleProject(**google_obj)])
+            self.config.google = GoogleWorkspaceConfig(
+                projects=[GoogleProject(**google_obj)]
+            )
             self.update_secret()
         else:
             self.config.secrets = {"google": {"projects": [google_obj]}}
             self.create_secret()
 
     def configuration_wizard_google_project_edit(self):
-        project_ids = [project.project_id for project in self.config.google.projects]
+        project_ids = [project.project_id for project in self.config.google.workspaces]
         project_id_to_config_elem_map = {
             project.project_id: elem
-            for elem, project in enumerate(self.config.google.projects)
+            for elem, project in enumerate(self.config.google.workspaces)
         }
         if len(project_ids) > 1:
             action = questionary.select(
@@ -955,7 +1073,7 @@ class ConfigurationWizard:
             project_to_edit = next(
                 (
                     project
-                    for project in self.config.google.projects
+                    for project in self.config.google.workspaces
                     if project.project_id == action
                 ),
                 None,
@@ -964,7 +1082,7 @@ class ConfigurationWizard:
                 log.debug("Could not find AWS Organization to edit", org_id=action)
                 return
         else:
-            project_to_edit = self.config.google.projects[0]
+            project_to_edit = self.config.google.workspaces[0]
 
         project_id = project_to_edit.project_id
         choices = [
@@ -1031,7 +1149,7 @@ class ConfigurationWizard:
                     project_to_edit.client_x509_cert_url
                 )
 
-            self.config.google.projects[
+            self.config.google.workspaces[
                 project_id_to_config_elem_map[project_id]
             ] = project_to_edit
             self.update_secret()
@@ -1313,3 +1431,6 @@ class ConfigurationWizard:
                         )
             except KeyboardInterrupt:
                 ...
+
+
+monkeypatch_questionary()

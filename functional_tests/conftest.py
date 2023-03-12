@@ -4,12 +4,15 @@ import asyncio
 import os
 import shutil
 import tempfile
+import uuid
 
 import pytest
 
 from iambic.config.dynamic_config import Config, load_config
 from iambic.core.context import ctx
+from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
+from iambic.core.models import ExecutionMessage
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
 if not os.environ.get("GITHUB_ACTIONS", None):
@@ -109,8 +112,13 @@ def generate_templates_fixture(request):
     )
 
     if not FUNCTIONAL_TEST_TEMPLATE_DIR:
+        exe_message = ExecutionMessage(
+            execution_id=str(uuid.uuid4()), command=Command.IMPORT
+        )
         asyncio.run(
-            IAMBIC_TEST_DETAILS.config.run_import(IAMBIC_TEST_DETAILS.template_dir_path)
+            IAMBIC_TEST_DETAILS.config.run_import(
+                exe_message, IAMBIC_TEST_DETAILS.template_dir_path
+            )
         )
         log.info("Finished generating templates for testing")
 

@@ -4,7 +4,7 @@ import asyncio
 from typing import Callable, Optional, Union
 
 import botocore
-from pydantic import Field, constr, validator
+from pydantic import Field, validator
 
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
@@ -12,7 +12,6 @@ from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
     BaseModel,
-    ExpiryModel,
     ProposedChange,
     ProposedChangeType,
 )
@@ -25,27 +24,10 @@ from iambic.plugins.v0_1_0.aws.iam.group.utils import (
 )
 from iambic.plugins.v0_1_0.aws.iam.models import Path
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
-from iambic.plugins.v0_1_0.aws.models import (
-    ARN_RE,
-    AccessModel,
-    AWSAccount,
-    AWSTemplate,
-)
+from iambic.plugins.v0_1_0.aws.models import AccessModel, AWSAccount, AWSTemplate
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
 
 AWS_IAM_GROUP_TEMPLATE_TYPE = "NOQ::AWS::IAM::Group"
-
-
-class PermissionBoundary(ExpiryModel, AccessModel):
-    policy_arn: constr(regex=ARN_RE)
-
-    @property
-    def resource_type(self):
-        return "aws:iam:permission_boundary"
-
-    @property
-    def resource_id(self):
-        return self.policy_arn
 
 
 class GroupProperties(BaseModel):
@@ -85,6 +67,13 @@ class GroupProperties(BaseModel):
     @validator("inline_policies")
     def sort_inline_policies(cls, v: list[PolicyDocument]):
         sorted_v = sorted(v, key=cls.sort_func("policy_name"))
+        return sorted_v
+
+    @validator("path")
+    def sort_path(cls, v: list[Path]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
         return sorted_v
 
 

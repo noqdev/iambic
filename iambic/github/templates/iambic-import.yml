@@ -1,44 +1,22 @@
 name: Run Iambic Import
 on:
+  workflow_dispatch:
   schedule:
-    - cron:  '*/15 * * * *'
+    - cron:  '0 */4 * * *' # import at minute 0 past every 4th hour
 jobs:
   iambic-import:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
+    environment: production
     name: Import Cloud and Google Environment
+    timeout-minutes: 60 # Setting this to 60 min for now. If this takes longer, it needs better performance improvement
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: false
     permissions:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: __TEMPLATE_IAMBIC_REPO
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          path: './iambic-templates'
-      - uses: actions/checkout@v3
-        with:
-          repository: noqdev/iambic
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          path: './iambic'
-      - name: Configure AWS Credentials
-        if: ${{ !env.ACT }}
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          role-to-assume: __TEMPLATE_IAMBIC_ASSUME_ROLE_ARN
-          aws-region: __TEMPLATE_IAMBIC_AWS_REGION
-      - name: Configure AWS Credentials for Local Execution
-        if: ${{ env.ACT }}
+      - name: trigger_workflow
+        id: trigger_workflow
         run: |
-          mkdir ~/.aws
-          echo $CREDS_FILE | base64 -d > ~/.aws/credentials
-      - name: import
-        id: plan
-        env:
-          COMMIT_EMAIL: __TEMPLATE_IAMBIC_COMMIT_EMAIL
-          COMMIT_USERNAME: "Iambic Automation"
-          COMMIT_MESSAGE: "Automatic import"
-        run: |
-          cd ./iambic-templates && git fetch origin && git checkout -b task/auto-baseline-${GITHUB_RUN_ID} origin/main && cd ../
-          docker-compose -f ./iambic/docker-compose-cicd.yaml run -v ~/.ssh/:/root/.ssh/ -v $(pwd)/iambic-templates/:/root/.iambic/repos/ iambic-cicd /bin/bash -c "python -m iambic.lambda.app import --repo-dir /root/.iambic/repos && cat proposed_changes.json > /root/.iambic/repos/proposed_changes.json " 2>&1 | tee plan-output.txt
-          cd ./iambic-templates && git config user.email "${COMMIT_EMAIL}" && git config user.name "${COMMIT_USERNAME}" && git add . && git commit -m "${COMMIT_MESSAGE}" && git push origin HEAD:main
-        continue-on-error: true
+          echo "trigger workflow"

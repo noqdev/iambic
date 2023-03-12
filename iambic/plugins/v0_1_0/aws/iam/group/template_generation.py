@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import itertools
 import os
-import pathlib
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import aiofiles
-
 from iambic.core import noq_json as json
 from iambic.core.logger import log
+from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import (
     base_group_str_attribute,
     create_or_update_template,
@@ -18,7 +17,7 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, get_writable_directory, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import GroupMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.group.models import (
     AWS_IAM_GROUP_TEMPLATE_TYPE,
@@ -32,18 +31,27 @@ from iambic.plugins.v0_1_0.aws.iam.group.utils import (
     list_groups,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
-from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3_resp
+from iambic.plugins.v0_1_0.aws.utils import (
+    calculate_import_preference,
+    get_aws_account_map,
+    normalize_boto3_resp,
+)
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 
-
-def get_group_response_dir() -> pathlib.Path:
-    return get_writable_directory().joinpath(".iambic", "resources", "aws", "groups")
+RESOURCE_DIR = ["iam", "group"]
 
 
-def get_group_dir(base_dir: str) -> str:
-    return str(os.path.join(base_dir, "resources", "aws", "groups"))
+def get_response_dir(exe_message: ExecutionMessage, aws_account: AWSAccount) -> str:
+    if exe_message.provider_id:
+        return exe_message.get_directory(*RESOURCE_DIR)
+    else:
+        return exe_message.get_directory(aws_account.account_id, *RESOURCE_DIR)
+
+
+def get_template_dir(base_dir: str) -> str:
+    return str(os.path.join(base_dir, "resources", "aws", *RESOURCE_DIR))
 
 
 def get_templated_group_file_path(
@@ -68,14 +76,11 @@ def get_templated_group_file_path(
     return str(os.path.join(group_dir, separator, f"{file_name}.yaml"))
 
 
-def get_account_group_resource_dir(account_id: str) -> str:
-    account_group_response_dir = os.path.join(get_group_response_dir(), account_id)
-    os.makedirs(account_group_response_dir, exist_ok=True)
-    return account_group_response_dir
-
-
-async def generate_account_group_resource_files(aws_account: AWSAccount) -> dict:
-    account_group_response_dir = get_account_group_resource_dir(aws_account.account_id)
+async def generate_account_group_resource_files(
+    exe_message: ExecutionMessage,
+    aws_account: AWSAccount,
+) -> dict:
+    account_group_response_dir = get_response_dir(exe_message, aws_account)
     group_resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
     messages = []
 
@@ -116,10 +121,10 @@ async def generate_account_group_resource_files(aws_account: AWSAccount) -> dict
 
 
 async def generate_group_resource_file_for_all_accounts(
-    aws_accounts: list[AWSAccount], group_name: str
+    exe_message: ExecutionMessage, aws_accounts: list[AWSAccount], group_name: str
 ) -> list:
     account_group_response_dir_map = {
-        aws_account.account_id: get_account_group_resource_dir(aws_account.account_id)
+        aws_account.account_id: get_response_dir(exe_message, aws_account)
         for aws_account in aws_accounts
     }
     group_resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
@@ -214,6 +219,11 @@ async def create_templated_group(  # noqa: C901
         config.min_accounts_required_for_wildcard_included_accounts
     )
 
+    # calculate preference based on existing template
+    prefer_templatized = calculate_import_preference(
+        existing_template_map.get(group_name)
+    )
+
     # Generate the params used for attribute creation
     group_template_params = {"identifier": group_name}
     group_template_properties = {"group_name": group_name}
@@ -270,12 +280,20 @@ async def create_templated_group(  # noqa: C901
 
     if managed_policy_resources:
         group_template_properties["managed_policies"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, managed_policy_resources, False
+            aws_account_map,
+            num_of_accounts,
+            managed_policy_resources,
+            False,
+            prefer_templatized=prefer_templatized,
         )
 
     if inline_policy_document_resources:
         group_template_properties["inline_policies"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, inline_policy_document_resources, False
+            aws_account_map,
+            num_of_accounts,
+            inline_policy_document_resources,
+            False,
+            prefer_templatized=prefer_templatized,
         )
 
     file_path = get_templated_group_file_path(
@@ -294,16 +312,28 @@ async def create_templated_group(  # noqa: C901
     )
 
 
-async def generate_aws_group_templates(
+async def collect_aws_groups(
+    exe_message: ExecutionMessage,
     config: AWSConfig,
     base_output_dir: str,
-    group_messages: list[GroupMessageDetails] = None,
+    detect_messages: list[GroupMessageDetails] = None,
 ):
     aws_account_map = await get_aws_account_map(config)
+    if exe_message.provider_id:
+        aws_account_map = {
+            exe_message.provider_id: aws_account_map[exe_message.provider_id]
+        }
+
+    if detect_messages:
+        detect_messages = [
+            msg for msg in detect_messages if isinstance(msg, GroupMessageDetails)
+        ]
+        if not detect_messages:
+            return
+
     existing_template_map = await get_existing_template_map(
         base_output_dir, AWS_IAM_GROUP_TEMPLATE_TYPE
     )
-    group_dir = get_group_dir(base_output_dir)
     set_group_resource_inline_policies_semaphore = NoqSemaphore(
         set_group_resource_inline_policies, 20
     )
@@ -316,19 +346,19 @@ async def generate_aws_group_templates(
         "Beginning to retrieve AWS IAM Groups.", accounts=list(aws_account_map.keys())
     )
 
-    if group_messages:
+    if detect_messages:
         aws_accounts = list(aws_account_map.values())
         generate_group_resource_file_for_all_accounts_semaphore = NoqSemaphore(
             generate_group_resource_file_for_all_accounts, 45
         )
         tasks = [
             {"aws_accounts": aws_accounts, "group_name": group.group_name}
-            for group in group_messages
+            for group in detect_messages
             if not group.delete
         ]
 
         # Remove deleted or mark templates for update
-        deleted_groups = [group for group in group_messages if group.delete]
+        deleted_groups = [group for group in detect_messages if group.delete]
         if deleted_groups:
             for group in deleted_groups:
                 group_account = aws_account_map.get(group.account_id)
@@ -345,6 +375,7 @@ async def generate_aws_group_templates(
                         # There are other accounts for the template so re-eval the template
                         tasks.append(
                             {
+                                "exe_message": exe_message,
                                 "aws_accounts": aws_accounts,
                                 "group_name": existing_template.properties.group_name,
                             }
@@ -361,12 +392,20 @@ async def generate_aws_group_templates(
             dict(account_id=account_id, groups=groups)
             for account_id, groups in account_group_map.items()
         ]
+    elif exe_message.provider_id:
+        aws_account = aws_account_map[exe_message.provider_id]
+        account_groups = [
+            (await generate_account_group_resource_files(exe_message, aws_account))
+        ]
     else:
         generate_account_group_resource_files_semaphore = NoqSemaphore(
             generate_account_group_resource_files, 5
         )
         account_groups = await generate_account_group_resource_files_semaphore.process(
-            [{"aws_account": aws_account} for aws_account in aws_account_map.values()]
+            [
+                {"exe_message": exe_message, "aws_account": aws_account}
+                for aws_account in aws_account_map.values()
+            ]
         )
 
     if not any(account_group["groups"] for account_group in account_groups):
@@ -391,12 +430,28 @@ async def generate_aws_group_templates(
     await set_group_resource_managed_policies_semaphore.process(messages)
     log.info("Finished retrieving group details")
 
-    # Use these for testing `create_templated_group`
-    # account_group_output = json.dumps(account_groups)
-    # with open("account_group_output.json", "w") as f:
-    #     f.write(account_group_output)
-    # with open("account_group_output.json") as f:
-    #     account_groups = json.loads(f.read())
+    account_group_output = json.dumps(account_groups)
+    with open(
+        exe_message.get_file_path(*RESOURCE_DIR, file_name_and_extension="output.json"),
+        "w",
+    ) as f:
+        f.write(account_group_output)
+
+
+async def generate_aws_group_templates(
+    exe_message: ExecutionMessage,
+    config: AWSConfig,
+    base_output_dir: str,
+    detect_messages: list[GroupMessageDetails] = None,
+):
+    aws_account_map = await get_aws_account_map(config)
+    existing_template_map = await get_existing_template_map(
+        base_output_dir, AWS_IAM_GROUP_TEMPLATE_TYPE
+    )
+    group_dir = get_template_dir(base_output_dir)
+    account_groups = await exe_message.get_sub_exe_files(
+        *RESOURCE_DIR, file_name_and_extension="output.json", flatten_results=True
+    )
 
     log.info("Grouping groups")
     # Move everything to required structure
@@ -428,7 +483,7 @@ async def generate_aws_group_templates(
         )
         all_resource_ids.add(resource_template.resource_id)
 
-    if not group_messages:
+    if not detect_messages:
         # NEVER call this if messages are passed in because all_resource_ids will only contain those resources
         delete_orphaned_templates(
             list(existing_template_map.values()), all_resource_ids

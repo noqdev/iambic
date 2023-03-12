@@ -4,6 +4,8 @@ import asyncio
 from typing import Callable, Optional, Union
 
 import botocore
+from pydantic import Field, validator
+
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -14,39 +16,21 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
-from iambic.plugins.v0_1_0.aws.iam.models import Path
+from iambic.plugins.v0_1_0.aws.iam.models import Path, PermissionBoundary
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.user.utils import (
     apply_user_groups,
     apply_user_inline_policies,
     apply_user_managed_policies,
+    apply_user_permission_boundary,
     apply_user_tags,
     delete_iam_user,
     get_user,
 )
-from iambic.plugins.v0_1_0.aws.models import (
-    ARN_RE,
-    AccessModel,
-    AWSAccount,
-    AWSTemplate,
-    Tag,
-)
+from iambic.plugins.v0_1_0.aws.models import AccessModel, AWSAccount, AWSTemplate, Tag
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
-from pydantic import Field, constr, validator
 
 AWS_IAM_USER_TEMPLATE_TYPE = "NOQ::AWS::IAM::User"
-
-
-class PermissionBoundary(ExpiryModel, AccessModel):
-    policy_arn: constr(regex=ARN_RE)
-
-    @property
-    def resource_type(self):
-        return "aws:iam:permission_boundary"
-
-    @property
-    def resource_id(self):
-        return self.policy_arn
 
 
 class Group(ExpiryModel, AccessModel):
@@ -120,6 +104,20 @@ class UserProperties(BaseModel):
     @validator("inline_policies")
     def sort_inline_policies(cls, v: list[PolicyDocument]):
         sorted_v = sorted(v, key=cls.sort_func("policy_name"))
+        return sorted_v
+
+    @validator("path")
+    def sort_path(cls, v: list[Path]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
+
+    @validator("permissions_boundary")
+    def sort_permissions_boundary(cls, v: list[PermissionBoundary]):
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
         return sorted_v
 
 
@@ -223,6 +221,14 @@ class UserTemplate(AWSTemplate, AccessModel):
                             client,
                             account_user["Tags"],
                             current_user.get("Tags", []),
+                            log_params,
+                            context,
+                        ),
+                        apply_user_permission_boundary(
+                            user_name,
+                            client,
+                            account_user.get("PermissionsBoundary", {}),
+                            current_user.get("PermissionsBoundary", {}),
                             log_params,
                             context,
                         ),

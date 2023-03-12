@@ -10,8 +10,6 @@ from iambic.main import run_apply
 
 
 def test_okta_group():
-    temp_templates_directory = IAMBIC_TEST_DETAILS.template_dir_path
-
     iambic_functional_test_group_yaml = """template_type: NOQ::Okta::Group
 properties:
   name: iambic_functional_test_group
@@ -22,10 +20,12 @@ properties:
     - username: user2@example.com
     - username: user3@example.com
 """
-    test_group_fp = os.path.join(
-        temp_templates_directory,
-        "resources/okta/development/groups/iambic_functional_test_group.yaml",
+    test_group_path = os.path.join(
+        IAMBIC_TEST_DETAILS.template_dir_path,
+        "resources/okta/groups/development",
     )
+    test_group_fp = os.path.join(test_group_path, "iambic_functional_test_group.yaml")
+    os.makedirs(test_group_path, exist_ok=True)
 
     with open(test_group_fp, "w") as temp_file:
         temp_file.write(iambic_functional_test_group_yaml)

@@ -15,6 +15,7 @@ from iambic.core.utils import (
     gather_templates,
     get_provider_value,
     is_regex_match,
+    sanitize_string,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
@@ -33,15 +34,19 @@ async def get_existing_template_map(repo_dir: str, template_type: str) -> dict:
 
 
 def templatize_resource(aws_account: AWSAccount, resource):
+    # TODO: Move away from AWSAccount to a provider agnostic implementation
     resource_type = type(resource)
 
     if isinstance(resource, dict) or isinstance(resource, list):
         resource = json.dumps(resource)
     elif resource_type != str:
         resource = str(resource)
-
+    valid_characters_re = r"[\w_+=,.@-]"
     resource = resource.replace(aws_account.account_id, "{{account_id}}")
-    resource = resource.replace(aws_account.account_name, "{{account_name}}")
+    resource = resource.replace(
+        sanitize_string(aws_account.account_name, valid_characters_re),
+        "{{account_name}}",
+    )
     for var in aws_account.variables:
         resource = resource.replace(var.value, "{{{}}}".format(var.key))
 
@@ -93,6 +98,7 @@ async def base_group_str_attribute(
     The reverse of resource_val_map which is an int representing the elem with a list of all resource_val reprs
         Under elem_resource_val_map
     """
+    # TODO: Move away from AWSAccount to a provider agnostic implementation
     for account_resource_elem, account_resource in enumerate(account_resources):
         account_resources[account_resource_elem]["resource_val_map"] = dict()
         account_resources[account_resource_elem]["elem_resource_val_map"] = dict()
@@ -187,7 +193,9 @@ async def base_group_str_attribute(
 
 
 async def base_group_dict_attribute(
-    aws_account_map: dict[str, AWSAccount], account_resources: list[dict]
+    aws_account_map: dict[str, AWSAccount],
+    account_resources: list[dict],
+    prefer_templatized=False,
 ) -> list[dict]:
     """Groups an attribute that is a dict or list of dicts with matching aws_accounts
 
@@ -206,6 +214,7 @@ async def base_group_dict_attribute(
     Create a reverse of resource_hash_map which is an int representing the elem with a list of all resource_hash reprs
         Under elem_resource_hash_map
     """
+    # TODO: Move away from AWSAccount to a provider agnostic implementation
     hash_map = dict()
 
     for account_resource_elem, account_resource in enumerate(account_resources):
@@ -301,10 +310,15 @@ async def base_group_dict_attribute(
             elif len(resource_hashes) == 1:
                 resource_hash = resource_hashes[0]
             else:
-                # Take priority over raw output
-                resource_hash = [
-                    rv for rv in resource_hashes if "{{" not in str(hash_map[rv])
-                ][0]
+                if prefer_templatized:
+                    resource_hash = resource_hashes[
+                        -1
+                    ]  # take the last one because it's the templatized version
+                else:
+                    # Take priority over raw output
+                    resource_hash = [
+                        rv for rv in resource_hashes if "{{" not in str(hash_map[rv])
+                    ][0]
 
             grouped_resource_map[resource_hash] = {
                 "resource_val": hash_map[resource_hash],
@@ -326,6 +340,7 @@ async def set_included_accounts_for_grouped_attribute(
     :param grouped_attribute:
     :return:
     """
+    # TODO: Move away from AWSAccount to a provider agnostic implementation
     if isinstance(grouped_attribute, dict):  # via base_group_str_attribute
         for k, resource_vals in grouped_attribute.items():
             if len(resource_vals) == number_of_accounts_resource_on:
@@ -370,6 +385,7 @@ async def group_int_or_str_attribute(
     :param key: Used to form the list[dict] response when there are multiple values for the attribute.
     :return:
     """
+    # TODO: Move away from AWSAccount to a provider agnostic implementation
     if isinstance(account_resources, list):
         grouped_attribute = await base_group_str_attribute(
             aws_account_map, account_resources
@@ -399,6 +415,7 @@ async def group_dict_attribute(
     number_of_accounts_resource_on: int,
     account_resources: list[dict],
     is_dict_attr: bool = True,
+    prefer_templatized: bool = False,
 ) -> Union[dict, list[dict]]:
     """Groups an attribute by aws_accounts, formats the attribute and normalizes the included aws_accounts.
 
@@ -409,11 +426,18 @@ async def group_dict_attribute(
     :return:
     """
 
+    # TODO: Move away from AWSAccount to a provider agnostic implementation
     response = []
     grouped_attributes = await set_included_accounts_for_grouped_attribute(
         aws_account_map,
         number_of_accounts_resource_on,
-        (await base_group_dict_attribute(aws_account_map, account_resources)),
+        (
+            await base_group_dict_attribute(
+                aws_account_map,
+                account_resources,
+                prefer_templatized=prefer_templatized,
+            )
+        ),
     )
 
     if len(grouped_attributes) == 1 and is_dict_attr:
@@ -663,14 +687,22 @@ def merge_access_model_list(
     provider_child_map = {
         child.preferred_identifier: child for child in all_provider_children
     }
-    for new_model in new_list:
+    for new_model_index, new_model in enumerate(new_list):
         matching_existing_models = [
             existing_model
             for existing_model in existing_list
-            if existing_model.resource_id == new_model.resource_id
+            if (existing_model.resource_id == new_model.resource_id)
+            and new_model.resource_id  # we cannot match on empty string like value
         ]
         if not matching_existing_models:
-            merged_list.append(new_model)
+            # #attempt to carry over previous list's iambic specific information for the merged_value
+            if new_model_index < len(existing_list):
+                existing_model = existing_list[new_model_index]
+                merged_list.append(
+                    merge_model(new_model, existing_model, all_provider_children)
+                )
+            else:
+                merged_list.append(new_model)
         elif new_model.included_children == ["*"]:
             # Find the least specific
             matching_existing_models = sort_access_models_by_included_children(
@@ -862,6 +894,13 @@ def merge_model(
                         If not found in the existing value, add the new model to the list
                         If not found in the new value, remove the existing model from the list
                     """
+
+                    # type conversion due to field allow mixed types
+                    if isinstance(new_value, str):
+                        _cls = type(inner_element)
+                        new_value = [_cls.new_instance_from_string(new_value)]
+                        value_as_list = True  # because cast it into a list
+
                     new_value = merge_access_model_list(
                         new_value, existing_value, all_provider_children
                     )
@@ -880,11 +919,24 @@ def merge_model(
             else:
                 setattr(merged_model, key, new_value)
         elif isinstance(existing_value, BaseModel):
-            setattr(
-                merged_model,
-                key,
-                merge_model(new_value, existing_value, all_provider_children),
-            )
+
+            if isinstance(new_value, BaseModel):
+                setattr(
+                    merged_model,
+                    key,
+                    merge_model(new_value, existing_value, all_provider_children),
+                )
+            elif isinstance(new_value, list):
+                # handling conversion from existing BaseModel type to incoming list type
+                setattr(
+                    merged_model,
+                    key,
+                    merge_model_list(
+                        new_value, [existing_value], all_provider_children
+                    ),
+                )
+            else:
+                raise NotImplementedError
         elif key not in iambic_fields:
             setattr(merged_model, key, new_value)
     return merged_model

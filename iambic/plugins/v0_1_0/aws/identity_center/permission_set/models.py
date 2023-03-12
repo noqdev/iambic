@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import re
-from itertools import chain
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 from pydantic import Field, validator
@@ -18,7 +17,7 @@ from iambic.core.models import (
     ProposedChangeType,
     TemplateChangeDetails,
 )
-from iambic.core.utils import aio_wrapper, evaluate_on_provider
+from iambic.core.utils import aio_wrapper, evaluate_on_provider, plugin_apply_wrapper
 from iambic.plugins.v0_1_0.aws.iam.policy.models import PolicyStatement
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
     apply_account_assignments,
@@ -138,7 +137,7 @@ class InlinePolicy(BaseModel, ExpiryModel):
 class AWSIdentityCenterPermissionSetProperties(BaseModel):
     name: str
     description: Optional[Union[str, list[Description]]] = Field(
-        "",
+        None,
         description="Description of the permission set",
     )
     relay_state: Optional[str] = None
@@ -165,6 +164,30 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
             return f"{getattr(obj, attribute_name)}!{obj.access_model_sort_weight()}"
 
         return _sort_func
+
+    @validator("description")
+    def validate_description(cls, v: Union[str, list[Description]]):
+
+        # validation portion
+        if isinstance(v, str) and not (1 <= len(v) <= 700):
+            raise ValueError(
+                f"description must be between 1 and 700 characters: given {v}"
+            )
+        if isinstance(v, list):
+            for description in v:
+                description: Description
+                if not (1 <= len(description.description) <= 700):
+                    raise ValueError(
+                        f"description must be between 1 and 700 characters: given {description.description}"
+                    )
+
+        # sorting portion
+        if not isinstance(v, list):
+            return v
+        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
+        return sorted_v
+
+        return v
 
     @validator("managed_policies")
     def sort_managed_policy_refs(cls, v: list[ManagedPolicyArn]):
@@ -414,6 +437,7 @@ class AWSIdentityCenterPermissionSetTemplate(
                 **template_permission_set,
             ),
             proposed_changes=[],
+            exceptions_seen=[],
         )
         log_params = dict(
             resource_type=self.resource_type,
@@ -521,28 +545,30 @@ class AWSIdentityCenterPermissionSetTemplate(
 
                 if update_resource_params:
                     log_str = "Out of date resource found."
+                    proposed_changes = [
+                        ProposedChange(
+                            change_type=ProposedChangeType.UPDATE,
+                            resource_id=name,
+                            resource_type=self.resource_type,
+                        )
+                    ]
                     if context.execute:
                         log.info(
                             f"{log_str} Updating resource...",
                             **update_resource_log_params,
                         )
+                        apply_awaitable = boto_crud_call(
+                            identity_center_client.update_permission_set,
+                            InstanceArn=instance_arn,
+                            PermissionSetArn=permission_set_arn,
+                            **update_resource_params,
+                        )
                         tasks.append(
-                            boto_crud_call(
-                                identity_center_client.update_permission_set,
-                                InstanceArn=instance_arn,
-                                PermissionSetArn=permission_set_arn,
-                                **update_resource_params,
-                            )
+                            plugin_apply_wrapper(apply_awaitable, proposed_changes)
                         )
                     else:
                         log.info(log_str, **update_resource_log_params)
-                        account_change_details.proposed_changes.append(
-                            ProposedChange(
-                                change_type=ProposedChangeType.UPDATE,
-                                resource_id=name,
-                                resource_type=self.resource_type,
-                            )
-                        )
+                        account_change_details.proposed_changes.extend(proposed_changes)
             else:
                 account_change_details.proposed_changes.append(
                     ProposedChange(
@@ -628,10 +654,11 @@ class AWSIdentityCenterPermissionSetTemplate(
             ]
         )
         try:
-            changes_made = await asyncio.gather(*tasks)
+            results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+
             # apply_account_assignments is a dedicated call due to the request limit on CreateAccountAssignment
             #   per https://docs.aws.amazon.com/singlesignon/latest/userguide/limits.html
-            changes_made.append(
+            results.append(
                 await apply_account_assignments(
                     identity_center_client,
                     instance_arn,
@@ -646,10 +673,21 @@ class AWSIdentityCenterPermissionSetTemplate(
             log.error("Unable to apply changes to resource", error=e, **log_params)
             return account_change_details
 
+        # separate out the success versus failure calls
+        exceptions: list[ProposedChange] = []
+        changes_made: list[ProposedChange] = []
+        for result in results:
+            for r in result:
+                if isinstance(r, ProposedChange):
+                    if len(r.exceptions_seen) == 0:
+                        changes_made.append(r)
+                    else:
+                        exceptions.append(r)
+
         if any(changes_made):
-            account_change_details.proposed_changes.extend(
-                list(chain.from_iterable(changes_made))
-            )
+            account_change_details.proposed_changes.extend(changes_made)
+        if any(exceptions):
+            account_change_details.exceptions_seen.extend(exceptions)
 
         if context.execute:
             if any(changes_made):
@@ -679,7 +717,7 @@ class AWSIdentityCenterPermissionSetTemplate(
                     continue
             if self.deleted:
                 self.delete()
-            self.write()
+            self.write()  # why are writing the template here?
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),
@@ -703,6 +741,7 @@ class AWSIdentityCenterPermissionSetTemplate(
             resource_id=self.resource_id,
             resource_type=self.resource_type,
             template_path=self.file_path,
+            exceptions_seen=[],
         )
         log_params = dict(
             resource_type=self.resource_type, resource_id=self.resource_id
@@ -725,6 +764,12 @@ class AWSIdentityCenterPermissionSetTemplate(
             account_change
             for account_change in account_changes
             if any(account_change.proposed_changes)
+        ]
+        # aggregate exceptions
+        template_changes.exceptions_seen = [
+            account_change
+            for account_change in account_changes
+            if any(account_change.exceptions_seen)
         ]
 
         proposed_changes = [x for x in account_changes if x.proposed_changes]
