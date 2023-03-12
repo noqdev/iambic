@@ -1,0 +1,84 @@
+# IAMbic Summary
+## Change Detection
+* {{ iambic.num_actions }} distinct actions.
+* {{ iambic.num_templates }} templates with changes.
+* {{ iambic.num_accounts }} accounts affected.
+## Exceptions
+* {{ iambic.num_exceptions }} exceptions were recorded.
+
+# IAMbic Change Details
+{% for action_summary in iambic.action_summaries -%}
+<details>
+<summary>Action: {{ action_summary.action }} (Number of Templates: {{ action_summary.num_templates }})</summary>
+    {% for template in action_summary.templates -%}
+    <details>
+    <summary>Template: {{ template.template_name }} (Number of Accounts: {{ template.num_accounts }})</summary>
+        {% for account in template.accounts -%}
+        <details>
+        <summary>Account: {{ account.account }} (Number of Changes: {{ account.num_changes }})</summary>
+            {% for change in account.changes -%}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Resource ID</th>
+                        <th>Resource Type</th>
+                        <th>Change Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ change.resource_id }}</td>
+                        <td>{{ change.resource_type }}</td>
+                        <td>{{ change.change.change_type.value }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="100%">{{ change.diff }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            {% endfor -%}
+        </details>
+        {% endfor -%}
+    </details>
+    {% endfor -%}
+</details>
+{% endfor %}
+
+# IAMbic Exceptions
+
+{% for action_summary in iambic.exceptions %}
+<details>
+<summary>Action: {{ action_summary.action }} (Number of Templates: {{ action_summary.num_templates }})</summary>
+    {% for template in action_summary.templates -%}
+    <details>
+    <summary>Template: {{ template.template_name }} (Number of Accounts: {{ template.num_accounts }})</summary>
+        {% for account in template.accounts -%}
+        <details>
+        <summary>Account: {{ account.account }} (Number of Changes: {{ account.num_changes }})</summary>
+            {% for change in account.changes -%}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Resource ID</th>
+                        <th>Resource Type</th>
+                        <th>Change Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ change.resource_id }}</td>
+                        <td>{{ change.resource_type }}</td>
+                        <td>{{ change.change.change_type.value }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="100%">{{ change.diff }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            {% endfor -%}
+        </details>
+        {% endfor -%}
+    </details>
+    {% endfor -%}
+</details>
+{% endfor -%}
