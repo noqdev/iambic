@@ -1,40 +1,32 @@
 {% extends "accounts.jinja2" %}
-{% block account scoped %}
+{% block account %}
 
+{{ super() }}
 {% for change in account.changes %}
 <details>
-<summary>{{ change.meta.name }} (Count: {{ change.meta.number }})</summary>
+<summary>{{ change.resource_id }} (Count: {{ change.resource_type }})</summary>
     <table>
         <thead>
             <tr>
-                <th>Template ID</th>
-                <th>Resource Type</th>
                 <th>Resource ID</th>
-                <th>Action</th>
-                <th>Proposed Change</th>
+                <th>Resource Type</th>
+                <th>Current Value</th>
+                <th>New Value</th>
+                <th>Change Summary</th>
+                <th>Exceptions</th>
             </tr>
         </thead>
         <tbody>
-            {% for template_id, template_data in change.resources -%}
-            <tr class="accordion-toggle">
-                <td rowspan="{{ template_data|length }}">{{ template_id }}</td>
-                <td>{{ template_data[0]['resource_type'] }}</td>
-                <td>{{ template_data[0]['resource_id'] }}</td>
-                <td>{{ template_data[0]['action'] }}</td>
-                <td>{{ template_data[0]['proposed_change'] }}</td>
+            <tr>
+                <td>{{ change.resource_id }}</td>
+                <td>{{ change.resource_type }}</td>
+                <td>{{ change.current_value }}</td>
+                <td>{{ change.new_value }}</td>
+                <td>{{ change.change_summary }}</td>
+                <td>{{ change.exceptions_seen }}</td>
             </tr>
-                {% for row in template_data[1:] -%}
-            <tr class="accordion-toggle">
-                <td>{{ row['resource_type'] }}</td>
-                <td>{{ row['resource_id'] }}</td>
-                <td>{{ row['action'] }}</td>
-                <td>{{ row['proposed_change'] }}</td>
-            </tr>
-                {% endfor -%}
-            {% endfor -%}
         </tbody>
     </table>
 </details>
 {% endfor %}
-
 {% endblock %}

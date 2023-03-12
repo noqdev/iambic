@@ -1,9 +1,9 @@
 {% extends "summary.jinja2" %}
 {% block action scoped %}
 
-{% for action in iambic.actions %}
+{% for action_summary in iambic.action_summaries %}
 <details>
-<summary>{{ action.action }} (Count: {{ action.count }})</summary>
+<summary>{{ action_summary.action }} (Count: {{ action_summary.count }})</summary>
   {% block template scoped %}
   {% endblock %}
 </details>

@@ -1,12 +1,11 @@
 import pytest
-from iambic.core.models import ProposedChange
 from iambic.output.markdown import ActionSummaries, get_template_data, render_resource_changes
 
 from iambic.core.utils import yaml
 from iambic.core.models import TemplateChangeDetails
 
 
-template_yaml = """  - resource_id: kris_test
+template_yaml_delete = """  - resource_id: kris_test
     resource_type: aws:iam:role
     template_path: ./resources/aws/roles/development-2/kris_test.yaml
     proposed_changes:
@@ -3337,80 +3336,434 @@ template_yaml = """  - resource_id: kris_test
 """
 
 
-def get_templates():
-    return [TemplateChangeDetails.parse_obj(x) for x in yaml.load(template_yaml)]
+template_yaml_mixed = """  - resource_id: prod_iambic_test_role
+    resource_type: aws:iam:role
+    template_path: resources/aws/iam/role/design-prod/iambic_test_role_prod.yaml
+    proposed_changes:
+      - account: design-prod - (006933239187)
+        resource_id: prod_iambic_test_role
+        new_value:
+          RoleName: prod_iambic_test_role
+          Description: IAMbic test role on design-prod
+          MaxSessionDuration: 3600
+          Path: /iambic_test/
+          Tags: []
+          ManagedPolicies:
+            - PolicyArn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+          InlinePolicies:
+            - PolicyName: spoke-acct-policy
+              Statement:
+                - Effect: Deny
+                  Action:
+                    - s3:ListBucket
+                  Resource: '*'
+                - Effect: Deny
+                  Action:
+                    - s3:GetObject
+                  Resource: '*'
+                - Effect: Deny
+                  Action:
+                    - s3:ListAllMyBuckets
+                  Resource: '*'
+          AssumeRolePolicyDocument:
+            Version: '2008-10-17'
+            Statement:
+              - Effect: Deny
+                Principal:
+                  Service: ec2.amazonaws.com
+                Action: sts:AssumeRole
+          PermissionsBoundary:
+            PolicyArn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+        proposed_changes:
+          - change_type: Create
+            resource_id: prod_iambic_test_role
+            resource_type: aws:iam:role
+        exceptions_seen: []
+    exceptions_seen: []
+  - resource_id: '{{account_name}}_iambic_test_role'
+    resource_type: aws:iam:role
+    template_path: resources/aws/iam/role/all_accounts/iambic_test_role.yaml
+    proposed_changes:
+      - account: product-dev - (572565049541)
+        resource_id: product-dev_iambic_test_role
+        new_value:
+          RoleName: product-dev_iambic_test_role
+          Description: IAMbic test role on product-dev
+          MaxSessionDuration: 3600
+          Path: /iambic_test/
+          Tags: []
+          ManagedPolicies:
+            - PolicyArn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+          InlinePolicies:
+            - PolicyName: spoke-acct-policy
+              Statement:
+                - Effect: Deny
+                  Action:
+                    - s3:ListBucket
+                  Resource: '*'
+                - Effect: Deny
+                  Action:
+                    - s3:ListAllMyBuckets
+                  Resource: '*'
+          AssumeRolePolicyDocument:
+            Version: '2008-10-17'
+            Statement:
+              - Effect: Deny
+                Principal:
+                  Service: ec2.amazonaws.com
+                Action: sts:AssumeRole
+          PermissionsBoundary:
+            PolicyArn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+        proposed_changes:
+          - change_type: Create
+            resource_id: product-dev_iambic_test_role
+            resource_type: aws:iam:role
+        exceptions_seen: []
+      - account: Iambic Standalone Org - (566255053759)
+        resource_id: IambicStandaloneOrg_iambic_test_role
+        new_value:
+          RoleName: IambicStandaloneOrg_iambic_test_role
+          Description: IAMbic test role on IambicStandaloneOrg
+          MaxSessionDuration: 3600
+          Path: /iambic_test/
+          Tags: []
+          ManagedPolicies:
+            - PolicyArn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+          InlinePolicies:
+            - PolicyName: spoke-acct-policy
+              Statement:
+                - Effect: Deny
+                  Action:
+                    - s3:ListBucket
+                  Resource: '*'
+                - Effect: Deny
+                  Action:
+                    - s3:ListAllMyBuckets
+                  Resource: '*'
+          AssumeRolePolicyDocument:
+            Version: '2008-10-17'
+            Statement:
+              - Effect: Deny
+                Principal:
+                  Service: ec2.amazonaws.com
+                Action: sts:AssumeRole
+          PermissionsBoundary:
+            PolicyArn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+        proposed_changes:
+          - change_type: Create
+            resource_id: IambicStandaloneOrg_iambic_test_role
+            resource_type: aws:iam:role
+        exceptions_seen: []
+      - account: design-dev - (570737236821)
+        resource_id: design-dev_iambic_test_role
+        new_value:
+          RoleName: design-dev_iambic_test_role
+          Description: IAMbic test role on design-dev
+          MaxSessionDuration: 3600
+          Path: /iambic_test/
+          Tags: []
+          ManagedPolicies:
+            - PolicyArn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+          InlinePolicies:
+            - PolicyName: spoke-acct-policy
+              Statement:
+                - Effect: Deny
+                  Action:
+                    - s3:ListBucket
+                  Resource: '*'
+                - Effect: Deny
+                  Action:
+                    - s3:ListAllMyBuckets
+                  Resource: '*'
+          AssumeRolePolicyDocument:
+            Version: '2008-10-17'
+            Statement:
+              - Effect: Deny
+                Principal:
+                  Service: ec2.amazonaws.com
+                Action: sts:AssumeRole
+          PermissionsBoundary:
+            PolicyArn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+        proposed_changes:
+          - change_type: Create
+            resource_id: design-dev_iambic_test_role
+            resource_type: aws:iam:role
+        exceptions_seen: []
+      - account: design-tools - (728312732489)
+        resource_id: design-tools_iambic_test_role
+        new_value:
+          RoleName: design-tools_iambic_test_role
+          Description: IAMbic test role on design-tools
+          MaxSessionDuration: 3600
+          Path: /iambic_test/
+          Tags: []
+          ManagedPolicies:
+            - PolicyArn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+          InlinePolicies:
+            - PolicyName: spoke-acct-policy
+              Statement:
+                - Effect: Deny
+                  Action:
+                    - s3:ListBucket
+                  Resource: '*'
+                - Effect: Deny
+                  Action:
+                    - s3:ListAllMyBuckets
+                  Resource: '*'
+          AssumeRolePolicyDocument:
+            Version: '2008-10-17'
+            Statement:
+              - Effect: Deny
+                Principal:
+                  Service: ec2.amazonaws.com
+                Action: sts:AssumeRole
+          PermissionsBoundary:
+            PolicyArn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+        proposed_changes:
+          - change_type: Create
+            resource_id: design-tools_iambic_test_role
+            resource_type: aws:iam:role
+        exceptions_seen: []
+      - account: design-staging - (158048798909)
+        resource_id: design-staging_iambic_test_role
+        new_value:
+          RoleName: design-staging_iambic_test_role
+          Description: IAMbic test role on design-staging
+          MaxSessionDuration: 3600
+          Path: /iambic_test/
+          Tags: []
+          ManagedPolicies:
+            - PolicyArn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+          InlinePolicies:
+            - PolicyName: spoke-acct-policy
+              Statement:
+                - Effect: Deny
+                  Action:
+                    - s3:ListBucket
+                  Resource: '*'
+                - Effect: Deny
+                  Action:
+                    - s3:ListAllMyBuckets
+                  Resource: '*'
+          AssumeRolePolicyDocument:
+            Version: '2008-10-17'
+            Statement:
+              - Effect: Deny
+                Principal:
+                  Service: ec2.amazonaws.com
+                Action: sts:AssumeRole
+          PermissionsBoundary:
+            PolicyArn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+        proposed_changes:
+          - change_type: Create
+            resource_id: design-staging_iambic_test_role
+            resource_type: aws:iam:role
+        exceptions_seen: []
+      - account: design-prod - (006933239187)
+        resource_id: design-prod_iambic_test_role
+        new_value:
+          RoleName: design-prod_iambic_test_role
+          Description: IAMbic test role on design-prod
+          MaxSessionDuration: 3600
+          Path: /iambic_test/
+          Tags: []
+          ManagedPolicies:
+            - PolicyArn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+          InlinePolicies:
+            - PolicyName: spoke-acct-policy
+              Statement:
+                - Effect: Deny
+                  Action:
+                    - s3:ListBucket
+                  Resource: '*'
+                - Effect: Deny
+                  Action:
+                    - s3:ListAllMyBuckets
+                  Resource: '*'
+          AssumeRolePolicyDocument:
+            Version: '2008-10-17'
+            Statement:
+              - Effect: Deny
+                Principal:
+                  Service: ec2.amazonaws.com
+                Action: sts:AssumeRole
+          PermissionsBoundary:
+            PolicyArn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+        proposed_changes:
+          - change_type: Create
+            resource_id: design-prod_iambic_test_role
+            resource_type: aws:iam:role
+        exceptions_seen: []
+      - account: design-vpc - (172623945520)
+        resource_id: design-vpc_iambic_test_role
+        new_value:
+          RoleName: design-vpc_iambic_test_role
+          Description: IAMbic test role on design-vpc
+          MaxSessionDuration: 3600
+          Path: /iambic_test/
+          Tags: []
+          ManagedPolicies:
+            - PolicyArn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+          InlinePolicies:
+            - PolicyName: spoke-acct-policy
+              Statement:
+                - Effect: Deny
+                  Action:
+                    - s3:ListBucket
+                  Resource: '*'
+                - Effect: Deny
+                  Action:
+                    - s3:ListAllMyBuckets
+                  Resource: '*'
+          AssumeRolePolicyDocument:
+            Version: '2008-10-17'
+            Statement:
+              - Effect: Deny
+                Principal:
+                  Service: ec2.amazonaws.com
+                Action: sts:AssumeRole
+          PermissionsBoundary:
+            PolicyArn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+        proposed_changes:
+          - change_type: Create
+            resource_id: design-vpc_iambic_test_role
+            resource_type: aws:iam:role
+        exceptions_seen: []
+      - account: design-workspaces - (667373557420)
+        resource_id: design-workspaces_iambic_test_role
+        new_value:
+          RoleName: design-workspaces_iambic_test_role
+          Description: IAMbic test role on design-workspaces
+          MaxSessionDuration: 3600
+          Path: /iambic_test/
+          Tags: []
+          ManagedPolicies:
+            - PolicyArn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+          InlinePolicies:
+            - PolicyName: spoke-acct-policy
+              Statement:
+                - Effect: Deny
+                  Action:
+                    - s3:ListBucket
+                  Resource: '*'
+                - Effect: Deny
+                  Action:
+                    - s3:ListAllMyBuckets
+                  Resource: '*'
+          AssumeRolePolicyDocument:
+            Version: '2008-10-17'
+            Statement:
+              - Effect: Deny
+                Principal:
+                  Service: ec2.amazonaws.com
+                Action: sts:AssumeRole
+          PermissionsBoundary:
+            PolicyArn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+        proposed_changes:
+          - change_type: Create
+            resource_id: design-workspaces_iambic_test_role
+            resource_type: aws:iam:role
+        exceptions_seen: []
+      - account: design-test - (992251240124)
+        resource_id: design-test_iambic_test_role
+        new_value:
+          RoleName: design-test_iambic_test_role
+          Description: IAMbic test role on design-test
+          MaxSessionDuration: 3600
+          Path: /iambic_test/
+          Tags: []
+          ManagedPolicies:
+            - PolicyArn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+          InlinePolicies:
+            - PolicyName: spoke-acct-policy
+              Statement:
+                - Effect: Deny
+                  Action:
+                    - s3:ListBucket
+                  Resource: '*'
+                - Effect: Deny
+                  Action:
+                    - s3:GetObject
+                  Resource: '*'
+          AssumeRolePolicyDocument:
+            Version: '2008-10-17'
+            Statement:
+              - Effect: Deny
+                Principal:
+                  Service: ec2.amazonaws.com
+                Action: sts:AssumeRole
+          PermissionsBoundary:
+            PolicyArn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+        proposed_changes:
+          - change_type: Create
+            resource_id: design-test_iambic_test_role
+            resource_type: aws:iam:role
+        exceptions_seen: []
+      - account: product-prod - (883466000970)
+        resource_id: product-prod_iambic_test_role
+        new_value:
+          RoleName: product-prod_iambic_test_role
+          Description: IAMbic test role on product-prod
+          MaxSessionDuration: 3600
+          Path: /iambic_test/
+          Tags: []
+          ManagedPolicies:
+            - PolicyArn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+          InlinePolicies:
+            - PolicyName: spoke-acct-policy
+              Statement:
+                - Effect: Deny
+                  Action:
+                    - s3:ListBucket
+                  Resource: '*'
+                - Effect: Deny
+                  Action:
+                    - s3:ListAllMyBuckets
+                  Resource: '*'
+          AssumeRolePolicyDocument:
+            Version: '2008-10-17'
+            Statement:
+              - Effect: Deny
+                Principal:
+                  Service: ec2.amazonaws.com
+                Action: sts:AssumeRole
+          PermissionsBoundary:
+            PolicyArn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+        proposed_changes:
+          - change_type: Create
+            resource_id: product-prod_iambic_test_role
+            resource_type: aws:iam:role
+        exceptions_seen: []
+    exceptions_seen: []
+"""
 
 
-# def test_render_resource_changes():
-#     resource_changes = [
-#         {'resource_type': 'EC2 Instance', 'resource_id': 'i-1234567890abcdefg', 'action': 'Stop', 'proposed_change': 'None', 'accounts': ['Account A', 'Account B'], 'template_id': 'template_1'},
-#         {'resource_type': 'RDS Instance', 'resource_id': 'db-abcdefghijklmno', 'action': 'Delete', 'proposed_change': 'None', 'accounts': ['Account A'], 'template_id': 'template_1'},
-#         {'resource_type': 'Lambda Function', 'resource_id': 'arn:aws:lambda:us-west-2:123456789012:function:my-function', 'action': 'Update', 'proposed_change': 'Increase Memory', 'accounts': ['Account B'], 'template_id': 'template_2'},
-#         {'resource_type': 'S3 Bucket', 'resource_id': 'my-bucket', 'action': 'Delete', 'proposed_change': 'None', 'accounts': ['Account A', 'Account B'], 'template_id': 'template_2'},
-#     ]
+def get_templates_delete():
+    return [TemplateChangeDetails.parse_obj(x) for x in yaml.load(template_yaml_delete)]
 
-#     expected_output = '''
-# <table>
-#     <thead>
-#         <tr>
-#             <th>Template ID</th>
-#             <th>Account</th>
-#             <th>Resource Type</th>
-#             <th>Resource ID</th>
-#             <th>Action</th>
-#             <th>Proposed Change</th>
-#         </tr>
-#     </thead>
-#     <tbody>
-#         <tr class="accordion-toggle">
-#             <td rowspan="1">template_1</td>
-#             <td>Account A</td>
-#             <td>RDS Instance</td>
-#             <td>db-abcdefghijklmno</td>
-#             <td>Delete</td>
-#             <td>None</td>
-#         </tr>
-#             <tr class="accordion-toggle">
-#             <td rowspan="1">template_1</td>
-#             <td>Account A, Account B</td>
-#             <td>EC2 Instance</td>
-#             <td>i-1234567890abcdefg</td>
-#             <td>Stop</td>
-#             <td>None</td>
-#         </tr>
-#             <tr class="accordion-toggle">
-#             <td rowspan="1">template_2</td>
-#             <td>Account A, Account B</td>
-#             <td>S3 Bucket</td>
-#             <td>my-bucket</td>
-#             <td>Delete</td>
-#             <td>None</td>
-#         </tr>
-#             <tr class="accordion-toggle">
-#             <td rowspan="1">template_2</td>
-#             <td>Account B</td>
-#             <td>Lambda Function</td>
-#             <td>arn:aws:lambda:us-west-2:123456789012:function:my-function</td>
-#             <td>Update</td>
-#             <td>Increase Memory</td>
-#         </tr>
-#             </tbody>
-# </table>
-# '''
 
-#     # Render the actual output
-#     actual_output = render_resource_changes(resource_changes)
-
-#     with open("test.md", "w") as f:
-#         f.write(actual_output)
-
-#     # Compare the expected and actual output
-#     assert actual_output.strip().replace(' ', '') == expected_output.strip().replace(' ', '')
+def get_templates_mixed():
+    return [TemplateChangeDetails.parse_obj(x) for x in yaml.load(template_yaml_mixed)]
 
 
 @pytest.mark.parametrize("template_change_details, expected_output", [
-    (get_templates(), ActionSummaries),
+    (get_templates_delete(), ActionSummaries(num_accounts=15, num_actions=1, num_templates=20)),
+    (get_templates_mixed(), ActionSummaries(num_accounts=10, num_actions=1, num_templates=2)),
 ])
-def test_get_template_data(template_change_details, expected_output):
+def test_get_template_data(template_change_details: list[TemplateChangeDetails], expected_output: ActionSummaries):
     template_data = get_template_data(template_change_details)
-    assert template_data == expected_output
+    assert template_data.num_accounts == expected_output.num_accounts
+    assert template_data.num_actions == expected_output.num_actions
+    assert template_data.num_templates == expected_output.num_templates
+
+
+@pytest.mark.parametrize("template_change_details, expected_output", [
+    (get_templates_delete(), ActionSummaries(num_accounts=15, num_actions=1, num_templates=20)),
+    (get_templates_mixed(), ActionSummaries(num_accounts=10, num_actions=1, num_templates=2)),
+])
+def test_render_resource_changes(template_change_details: list[TemplateChangeDetails], expected_output: ActionSummaries):
+    rendered_markdown = render_resource_changes(template_change_details)
+    import time
+    with open(f"test_render_resource_changes-{time.time()}.md", "w") as f:
+        f.write(rendered_markdown)
+    assert rendered_markdown != ""
