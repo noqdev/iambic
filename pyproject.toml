@@ -50,7 +50,6 @@ questionary = "^1.10.0"
 types-dateparser = "^1.1.4.5"
 cryptography = "^39.0.1"
 recursive-diff = "^1.1.0"
-frozendict = "^2.3.5"
 aws-error-utils = "^2.7.0"
 
 [tool.poetry.scripts]
