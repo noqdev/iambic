@@ -63,10 +63,11 @@
     </details>
     {% endfor -%}
 </details>
-{% endfor -%}
+{% endfor %}
 
 # IAMbic Exceptions
-{% for action_summary in iambic.exceptions -%}
+
+{% for action_summary in iambic.exceptions %}
 <details>
 <summary>Action: {{ action_summary.action }} (Number of Templates: {{ action_summary.num_templates }})</summary>
     {% for template in action_summary.templates -%}

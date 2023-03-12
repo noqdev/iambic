@@ -143,7 +143,7 @@ class ExceptionSummary(PydanticBaseModel):
         exceptions = get_applicable_changes(template_changes, proposed_change_type, attribute="exceptions_seen")
         log.debug(f"Found {len(exceptions)} exceptions")
 
-        instance = cls(action=proposed_change_type, count=len(exceptions), templates=[])
+        instance = cls(action=proposed_change_type, count=len(exceptions), num_templates=0, templates=[])
         templates = set([
             TemplateSummary.compile(
                 template_path=x.template_change.template_path,
