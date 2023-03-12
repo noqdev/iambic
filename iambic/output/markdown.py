@@ -1,7 +1,11 @@
+import json
 import pathlib
 from typing import Any, Dict, List, Set
+
+import frozendict
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel as PydanticBaseModel, Field
+from recursive_diff import recursive_diff
 
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -10,6 +14,15 @@ from iambic.core.models import (
     ProposedChangeType,
     TemplateChangeDetails,
 )
+from iambic.core.utils import yaml
+
+
+class ProposedChangeDiff(ProposedChange):
+    diff: str = Field(default=None)
+
+    def __init__(self, proposed_change: ProposedChange) -> None:
+        super().__init__(**proposed_change.dict())
+        self.diff = "\n".join(list(recursive_diff(self.current_value, self.new_value)))
 
 
 class ApplicableChange(PydanticBaseModel):
@@ -24,7 +37,7 @@ class ApplicableChange(PydanticBaseModel):
         return hash((self.resource_id, self.resource_type))
 
     def __init__(self, change: ProposedChange, template_change: TemplateChangeDetails, **data: Any) -> None:
-        super().__init__(change=change, template_change=template_change, **data)
+        super().__init__(change=ProposedChangeDiff(change), template_change=template_change, **data)
         self.template_name = pathlib.Path(template_change.template_path).name
     
 
@@ -204,9 +217,9 @@ def get_template_data(resources_changes: List[TemplateChangeDetails]) -> Dict[st
     return ActionSummaries.compile(resources_changes)
 
 
-def render_resource_changes(resource_changes: List[TemplateChangeDetails]):
+def gh_render_resource_changes(resource_changes: List[TemplateChangeDetails]):
     template_data = get_template_data(resource_changes)
     my_path = pathlib.Path(__file__).parent.absolute()
     env = Environment(loader=FileSystemLoader(my_path / 'templates'))
-    template = env.get_template("summary.jinja2")
+    template = env.get_template("github_summary.jinja2")
     return template.render(iambic=template_data)
