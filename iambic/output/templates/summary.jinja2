@@ -4,7 +4,7 @@
 * {{ iambic.num_templates }} templates with changes.
 * {{ iambic.num_accounts }} accounts affected.
 ## Exceptions
-* {{ iambic.exceptions|length }} exceptions were recorded.
+* {{ iambic.num_exceptions }} exceptions were recorded.
 
 # IAMbic Change Details
 {% for action_summary in iambic.action_summaries -%}
@@ -66,4 +66,60 @@
 {% endfor -%}
 
 # IAMbic Exceptions
-{ % block exception scoped %}{ % endblock %}
+{% for action_summary in iambic.exceptions -%}
+<details>
+<summary>Action: {{ action_summary.action }} (Number of Templates: {{ action_summary.num_templates }})</summary>
+    {% for template in action_summary.templates -%}
+    <details>
+    <summary>Template: {{ template.template_name }} (Number of Accounts: {{ template.num_accounts }})</summary>
+        {% for account in template.accounts -%}
+        <details>
+        <summary>Account: {{ account.account }} (Number of Changes: {{ account.num_changes }})</summary>
+            {% for change in account.changes -%}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Resource ID</th>
+                        <th>Resource Type</th>
+                        <th>Change Type</th>
+                        {% if change.current_value -%}
+                        <th>Current Value</th>
+                        {% endif -%}
+                        {% if change.new_value -%}
+                        <th>New Value</th>
+                        {% endif -%}
+                        {% if change.change_summary -%}
+                        <th>Change Summary</th>
+                        {% endif -%}
+                        {% if change.exceptions_seen -%}
+                        <th>Exceptions</th>
+                        {% endif -%}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ change.resource_id }}</td>
+                        <td>{{ change.resource_type }}</td>
+                        <td>{{ change.change.change_type.value }}</td>
+                        {% if change.current_value -%}
+                        <td>{{ change.current_value }}</td>
+                        {% endif -%}
+                        {% if change.new_value -%}
+                        <td>{{ change.new_value }}</td>
+                        {% endif -%}
+                        {% if change.change_summary -%}
+                        <td>{{ change.change_summary }}</td>
+                        {% endif -%}
+                        {% if change.exceptions_seen -%}
+                        <td>{{ change.exceptions_seen }}</td>
+                        {% endif -%}
+                    </tr>
+                </tbody>
+            </table>
+            {% endfor -%}
+        </details>
+        {% endfor -%}
+    </details>
+    {% endfor -%}
+</details>
+{% endfor -%}
