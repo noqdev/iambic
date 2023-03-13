@@ -605,6 +605,18 @@ docs = ["sphinx"]
 test = ["pytest", "pytest-cov"]
 
 [[package]]
+name = "mock-generator"
+version = "2.4.0"
+description = "Generate python mocks and assertions quickly"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+mock = ">=3.0.5"
+pyperclip = "1.8.2"
+
+[[package]]
 name = "multidict"
 version = "6.0.4"
 description = "multidict implementation"
@@ -883,6 +895,14 @@ python-versions = ">=3.6.8"
 diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
+name = "pyperclip"
+version = "1.8.2"
+description = "A cross-platform clipboard module for Python. (Only handles plain text for now.)"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "pytest"
 version = "7.2.2"
 description = "pytest: simple powerful testing with Python"
@@ -945,6 +965,17 @@ pytest = ">=5.0"
 
 [package.extras]
 dev = ["pre-commit", "pytest-asyncio", "tox"]
+
+[[package]]
+name = "pytest-mock-generator"
+version = "1.2.0"
+description = "A pytest fixture wrapper for https://pypi.org/project/mock-generator"
+category = "dev"
+optional = false
+python-versions = ">=3.7,<4.0"
+
+[package.dependencies]
+mock-generator = ">=2.4,<3.0"
 
 [[package]]
 name = "python-dateutil"
@@ -1344,7 +1375,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "c0df83f950f5c4d42d694168f1ac83bb89eb5b5694dc5fcc85d858c0d911fd5f"
+content-hash = "aff0a0dfa9283267906bb7ff3e3c6ee4746cc8666e0f0652fc57db729cbc009a"
 
 [metadata.files]
 aenum = [
@@ -1967,6 +1998,10 @@ mock = [
     {file = "mock-5.0.1-py3-none-any.whl", hash = "sha256:c41cfb1e99ba5d341fbcc5308836e7d7c9786d302f995b2c271ce2144dece9eb"},
     {file = "mock-5.0.1.tar.gz", hash = "sha256:e3ea505c03babf7977fd21674a69ad328053d414f05e6433c30d8fa14a534a6b"},
 ]
+mock-generator = [
+    {file = "mock-generator-2.4.0.tar.gz", hash = "sha256:8750092440a903a56d0afe5e2c4b1ea1f498a452c9cb5edea736927d30be4bf7"},
+    {file = "mock_generator-2.4.0-py3-none-any.whl", hash = "sha256:fae15d936bb5fa3866686f33be512d9513861885b6305d590d30f27993002226"},
+]
 multidict = [
     {file = "multidict-6.0.4-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:0b1a97283e0c85772d613878028fec909f003993e1007eafa715b24b377cb9b8"},
     {file = "multidict-6.0.4-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:eeb6dcc05e911516ae3d1f207d4b0520d07f54484c49dfc294d6e7d63b734171"},
@@ -2223,6 +2258,9 @@ pyparsing = [
     {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},
     {file = "pyparsing-3.0.9.tar.gz", hash = "sha256:2b020ecf7d21b687f219b71ecad3631f644a47f01403fa1d1036b0c6416d70fb"},
 ]
+pyperclip = [
+    {file = "pyperclip-1.8.2.tar.gz", hash = "sha256:105254a8b04934f0bc84e9c24eb360a591aaf6535c9def5f29d92af107a9bf57"},
+]
 pytest = [
     {file = "pytest-7.2.2-py3-none-any.whl", hash = "sha256:130328f552dcfac0b1cec75c12e3f005619dc5f874f0a06e8ff7263f0ee6225e"},
     {file = "pytest-7.2.2.tar.gz", hash = "sha256:c99ab0c73aceb050f68929bc93af19ab6db0558791c6a0715723abe9d0ade9d4"},
@@ -2238,6 +2276,10 @@ pytest-cov = [
 pytest-mock = [
     {file = "pytest-mock-3.10.0.tar.gz", hash = "sha256:fbbdb085ef7c252a326fd8cdcac0aa3b1333d8811f131bdcc701002e1be7ed4f"},
     {file = "pytest_mock-3.10.0-py3-none-any.whl", hash = "sha256:f4c973eeae0282963eb293eb173ce91b091a79c1334455acfac9ddee8a1c784b"},
+]
+pytest-mock-generator = [
+    {file = "pytest-mock-generator-1.2.0.tar.gz", hash = "sha256:89a08abe2ce09bbf0e6d41c3903a790448aad3be0748e3a8faaebcdde6ec3788"},
+    {file = "pytest_mock_generator-1.2.0-py3-none-any.whl", hash = "sha256:251b6fabc1182e30a685ed34d60331c33ae95c3ecf06c3dcdec11da18120468c"},
 ]
 python-dateutil = [
     {file = "python-dateutil-2.8.2.tar.gz", hash = "sha256:0123cacc1627ae19ddf3c27a5de5bd67ee4586fbdd6440d9748f8abb483d3e86"},
