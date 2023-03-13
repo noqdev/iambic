@@ -6,7 +6,6 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import aiofiles
-
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
@@ -34,7 +33,11 @@ from iambic.plugins.v0_1_0.aws.iam.user.utils import (
     list_users,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
-from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3_resp
+from iambic.plugins.v0_1_0.aws.utils import (
+    calculate_import_preference,
+    get_aws_account_map,
+    normalize_boto3_resp,
+)
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -233,6 +236,11 @@ async def create_templated_user(  # noqa: C901
         config.min_accounts_required_for_wildcard_included_accounts
     )
 
+    # calculate preference based on existing template
+    prefer_templatized = calculate_import_preference(
+        existing_template_map.get(user_name)
+    )
+
     # Generate the params used for attribute creation
     user_template_params = {"identifier": user_name}
     user_template_properties = {"user_name": user_name}
@@ -322,7 +330,10 @@ async def create_templated_user(  # noqa: C901
 
     if permissions_boundary_resources:
         user_template_properties["permissions_boundary"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, permissions_boundary_resources
+            aws_account_map,
+            num_of_accounts,
+            permissions_boundary_resources,
+            prefer_templatized=prefer_templatized,
         )
 
     if description_resources:
@@ -332,21 +343,37 @@ async def create_templated_user(  # noqa: C901
 
     if managed_policy_resources:
         user_template_properties["managed_policies"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, managed_policy_resources, False
+            aws_account_map,
+            num_of_accounts,
+            managed_policy_resources,
+            False,
+            prefer_templatized=prefer_templatized,
         )
 
     if inline_policy_document_resources:
         user_template_properties["inline_policies"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, inline_policy_document_resources, False
+            aws_account_map,
+            num_of_accounts,
+            inline_policy_document_resources,
+            False,
+            prefer_templatized=prefer_templatized,
         )
 
     if group_resources:
         user_template_properties["groups"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, group_resources, False
+            aws_account_map,
+            num_of_accounts,
+            group_resources,
+            False,
+            prefer_templatized=prefer_templatized,
         )
     if tag_resources:
         tags = await group_dict_attribute(
-            aws_account_map, num_of_accounts, tag_resources, True
+            aws_account_map,
+            num_of_accounts,
+            tag_resources,
+            True,
+            prefer_templatized=prefer_templatized,
         )
         if isinstance(tags, dict):
             tags = [tags]

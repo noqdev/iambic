@@ -478,8 +478,6 @@ def create_or_update_template(
     # iambic-specific knowledge requires us to load the existing template
     # because it will not be reflected by AWS API.
     if existing_template := existing_template_map.get(identifier, None):
-        if identifier == "{{account_name}}_administrator":
-            pass
         merged_template = merge_model(
             new_template, existing_template, all_provider_children
         )
