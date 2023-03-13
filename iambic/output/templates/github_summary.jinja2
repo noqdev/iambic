@@ -6,7 +6,10 @@
 ## Exceptions
 * {{ iambic.num_exceptions }} exceptions were recorded.
 
+{% if iambic.num_templates > 0 -%}
+
 # IAMbic Change Details
+
 {% for action_summary in iambic.action_summaries -%}
 {% if action_summary.num_templates > 0 -%}
 <details>
@@ -57,6 +60,10 @@
 </details>
 {% endif -%}
 {% endfor %}
+{% endif -%}
+
+
+{% if iambic.num_exceptions > 0 -%}
 
 # IAMbic Exceptions
 
@@ -110,3 +117,4 @@
 </details>
 {% endif -%}
 {% endfor %}
+{% endif -%}
