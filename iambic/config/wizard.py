@@ -3,11 +3,13 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
+import json
 import os
 import re
 import select
 import sys
 import uuid
+from enum import Enum
 from textwrap import dedent
 from typing import Union
 
@@ -15,6 +17,8 @@ import boto3
 import questionary
 from aws_error_utils.aws_error_utils import errors
 from botocore.exceptions import ClientError, NoCredentialsError
+from pydantic.json import pydantic_encoder
+from pydantic.types import SecretStr
 
 from iambic.config.dynamic_config import (
     CURRENT_IAMBIC_VERSION,
@@ -32,21 +36,22 @@ from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
+from iambic.core.parser import load_templates
 from iambic.core.template_generation import get_existing_template_map
-from iambic.core.utils import yaml
+from iambic.core.utils import gather_templates, yaml
 from iambic.github.utils import create_workflow_files
 from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
     create_iambic_eventbridge_stacks,
     create_iambic_role_stacks,
     create_spoke_role_stack,
 )
+from iambic.plugins.v0_1_0.aws.handlers import apply as aws_apply
+from iambic.plugins.v0_1_0.aws.handlers import import_aws_resources
+from iambic.plugins.v0_1_0.aws.handlers import load as aws_load
 from iambic.plugins.v0_1_0.aws.iam.policy.models import PolicyDocument, PolicyStatement
 from iambic.plugins.v0_1_0.aws.iam.role.models import (
     AWS_IAM_ROLE_TEMPLATE_TYPE,
     RoleTemplate,
-)
-from iambic.plugins.v0_1_0.aws.iam.role.template_generation import (
-    generate_aws_role_templates,
 )
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import (
@@ -65,10 +70,13 @@ from iambic.plugins.v0_1_0.aws.utils import (
     get_identity_arn,
     is_valid_account_id,
 )
+from iambic.plugins.v0_1_0.google_workspace.handlers import import_google_resources
 from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import (
     GoogleProject,
+    GoogleSubject,
     GoogleWorkspaceConfig,
 )
+from iambic.plugins.v0_1_0.okta.handlers import import_okta_resources
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
 
 CUSTOM_AUTO_COMPLETE_STYLE = questionary.Style(
@@ -77,6 +85,12 @@ CUSTOM_AUTO_COMPLETE_STYLE = questionary.Style(
         ("selected", "bold bg:#000000"),
     ]
 )
+
+
+class Operation(Enum):
+    ADDED = "added"
+    UPDATED = "updated"
+    DELETED = "deleted"
 
 
 def clear_stdin_buffer():
@@ -121,6 +135,16 @@ def monkeypatch_questionary():
 
     for function_name, original_function in original_functions.items():
         setattr(questionary, function_name, patched_function(original_function))
+
+
+def get_secret_dict_with_val(pydantic_model, **kwargs) -> dict:
+    def show_secrets_encoder(obj):
+        if isinstance(obj, SecretStr):
+            return obj.get_secret_value()
+        else:
+            return pydantic_encoder(obj)
+
+    return json.loads(pydantic_model.json(encoder=show_secrets_encoder, **kwargs))
 
 
 def set_aws_region(question_text: str, default_val: Union[str, RegionName]) -> str:
@@ -243,6 +267,36 @@ def set_identity_center(
     return identity_center
 
 
+def confirm_command_exe(
+    provider_type: str, operation: Operation, requires_sync: bool = False
+):
+    command_type = "import"
+    if requires_sync:
+        command_type = (
+            "an apply of applicable templates that are NOT in the account and an import"
+        )
+
+    if operation == Operation.ADDED:
+        operation_str = f"{operation.value} to"
+    elif operation == Operation.UPDATED:
+        operation_str = f"{operation.value} in"
+    elif operation == Operation.DELETED:
+        operation_str = f"{operation.value} from"
+    else:
+        raise ValueError(f"Invalid operation: {operation}")
+
+    if not questionary.confirm(
+        f"To preserve these changes, {command_type} must be ran to sync your templates.\n"
+        "Proceed?"
+    ).unsafe_ask():
+        if questionary.confirm(
+            f"The {provider_type} will not be {operation_str} the config and wizard will exit.\n"
+            "Proceed?"
+        ).unsafe_ask():
+            log.info("Exiting...")
+            sys.exit(0)
+
+
 class ConfigurationWizard:
     def __init__(self, repo_dir: str):
         # TODO: Handle the case where the config file exists but is not valid
@@ -312,7 +366,7 @@ class ConfigurationWizard:
         else:
             self.set_boto3_session()
 
-        asyncio.run(self.attempt_aws_account_refresh())
+        asyncio.run(self.sync_config_aws_org())
 
         log.debug("Starting configuration wizard", config_path=self.config_path)
 
@@ -390,38 +444,27 @@ class ConfigurationWizard:
         if profile_name := os.environ.get("AWS_PROFILE"):
             log.info("Using AWS profile from environment", profile=profile_name)
         elif profile_name := os.environ.get("AWS_DEFAULT_PROFILE"):
-            log.info(
-                "Using AWS default profile from environment", profile=profile_name
-            )
+            log.info("Using AWS default profile from environment", profile=profile_name)
         elif "AWS_ACCESS_KEY_ID" in os.environ:
             profile_name = "default"
-            log.info(
-                "Using AWS default profile from environment", profile=profile_name
-            )
+            log.info("Using AWS default profile from environment", profile=profile_name)
         else:
             profile_name = "None"
-        
+
         return profile_name
-        
 
     def set_aws_profile_name(
         self, question_text: str = None, allow_none: bool = False
     ) -> Union[str, None]:
+        questionary_params = {}
         available_profiles = self.boto3_session.available_profiles
         if allow_none:
             available_profiles.insert(0, "None")
 
         default_profile = self.resolve_aws_profile_defaults_from_env()
-        if default_profile == "None" and not allow_none:
-            questionary.print(
-                f"""
-                We couldn't find your AWS credentials, or they're not linked to the Hub Account ({self.hub_account_id}).
-                The specified AWS credentials need to be able to create CloudFormation stacks, stack sets,
-                and stack set instances.
-
-                Please provide an AWS profile to use for this operation, or restart the wizard with valid AWS credentials: """
-            )
-            return None
+        if default_profile != "None":
+            questionary_params["default"] = default_profile
+            available_profiles.append(default_profile)
 
         if not question_text:
             question_text = dedent(
@@ -430,7 +473,8 @@ class ConfigurationWizard:
                 The specified AWS credentials need to be able to create CloudFormation stacks, stack sets,
                 and stack set instances.
 
-                Please provide an AWS profile to use for this operation, or restart the wizard with valid AWS credentials: """
+                Please provide an AWS profile to use for this operation, or restart the wizard with valid AWS credentials:
+                """
             )
 
         try:
@@ -442,16 +486,14 @@ class ConfigurationWizard:
                 sys.exit(0)
             elif len(available_profiles) < 10:
                 profile_name = questionary.select(
-                    question_text,
-                    choices=available_profiles,
-                    default=default_profile,
+                    question_text, choices=available_profiles, **questionary_params
                 ).unsafe_ask()
             else:
                 profile_name = questionary.autocomplete(
                     question_text,
                     choices=available_profiles,
                     style=CUSTOM_AUTO_COMPLETE_STYLE,
-                    default=default_profile,
+                    **questionary_params,
                 ).unsafe_ask()
         except KeyboardInterrupt:
             log.info("Exiting...")
@@ -500,7 +542,7 @@ class ConfigurationWizard:
                     error=str(err),
                 )
                 continue
-            except errors.InvalidClientTokenId as err:
+            except errors.InvalidClientTokenId:
                 log.error(
                     "AWS returned an error indicating that the provided credentials are invalid. Somethings to try:"
                     "\n - Ensure that the credentials are correct"
@@ -508,7 +550,7 @@ class ConfigurationWizard:
                     "\n - Ensure that the credentials have the correct permissions"
                     "\n - Ensure that the credentials are not expired"
                     "\n - Ensure that the credentials are not for a federated user"
-                    )
+                )
                 continue
 
             self.profile_name = profile_name
@@ -547,27 +589,113 @@ class ConfigurationWizard:
                 profile_name,
             )
 
-    async def attempt_aws_account_refresh(self):
-        self.aws_account_map = {}
+    async def run_import_aws_resources(self):
+        log.info("Importing AWS identities")
+        current_command = ctx.command
+        ctx.command = Command.IMPORT
 
+        exe_message = ExecutionMessage(
+            execution_id=str(uuid.uuid4()),
+            command=Command.IMPORT,
+            provider_type="aws",
+        )
+        await import_aws_resources(
+            exe_message,
+            self.config.aws,
+            self.repo_dir,
+        )
+
+        ctx.command = current_command
+
+    async def sync_config_aws_accounts(self, accounts: list[AWSAccount]):
+        if (
+            not len(self.config.aws.accounts)
+            > self.config.aws.min_accounts_required_for_wildcard_included_accounts
+        ):
+            await self.run_import_aws_resources()
+            return
+
+        templates = await gather_templates(self.repo_dir, "AWS.*")
+        if templates:
+            current_command = ctx.command
+            ctx.command = Command.CONFIG_DISCOVERY
+            log.info(
+                "Applying templates to provision identities to the account(s). "
+                "This will NOT overwrite any resources that already exist on the account(s). ",
+                accounts=[account.account_name for account in accounts],
+            )
+            exe_message = ExecutionMessage(
+                execution_id=str(uuid.uuid4()),
+                command=Command.APPLY,
+                provider_type="aws",
+            )
+            sub_config = self.config.aws.copy()
+            sub_config.accounts = accounts
+            await aws_apply(exe_message, sub_config, load_templates(templates))
+            ctx.command = current_command
+
+        await self.run_import_aws_resources()
+
+    async def sync_config_aws_org(self, run_config_discovery: bool = True):
         if not self.config.aws:
             return
 
+        self.aws_account_map = {}
+        current_command = ctx.command
+
         try:
-            exe_message = ExecutionMessage(
-                execution_id=str(uuid.uuid4()),
-                command=Command.CONFIG_DISCOVERY,
-            )
-            await self.config.run_discover_upstream_config_changes(
-                exe_message, self.repo_dir
-            )
+            if run_config_discovery:
+                exe_message = ExecutionMessage(
+                    execution_id=str(uuid.uuid4()),
+                    command=Command.CONFIG_DISCOVERY,
+                )
+                await self.config.run_discover_upstream_config_changes(
+                    exe_message, self.repo_dir
+                )
             await self.config.aws.set_identity_center_details()
         except Exception as err:
             log.info("Failed to refresh AWS accounts", error=err)
 
+        ctx.command = current_command
         self.aws_account_map = {
             account.account_id: account for account in self.config.aws.accounts
         }
+
+    async def run_import_google_workspace_resources(self):
+        log.info("Importing Google Workspace identities")
+        current_command = ctx.command
+        ctx.command = Command.IMPORT
+
+        exe_message = ExecutionMessage(
+            execution_id=str(uuid.uuid4()),
+            command=Command.IMPORT,
+            provider_type="google_workspace",
+        )
+        await import_google_resources(
+            exe_message,
+            self.config.google_workspace,
+            self.repo_dir,
+        )
+
+        ctx.command = current_command
+
+    async def run_import_okta_resources(self):
+        log.info("Importing Okta identities")
+        current_command = ctx.command
+        ctx.command = Command.IMPORT
+
+        exe_message = ExecutionMessage(
+            execution_id=str(uuid.uuid4()),
+            command=Command.IMPORT,
+            provider_type="okta",
+        )
+        await import_okta_resources(
+            exe_message,
+            self.config.okta,
+            self.repo_dir,
+        )
+
+        ctx.command = current_command
 
     async def save_and_deploy_changes(self, role_template: RoleTemplate):
         log.info(
@@ -676,34 +804,25 @@ class ConfigurationWizard:
             account.hub_role_arn = get_hub_role_arn(account_id)
         # account.partition = set_aws_account_partition(account.partition)
 
-        if not questionary.confirm("Keep these settings?").unsafe_ask():
-            if questionary.confirm(
-                "The AWS account will not be added to the config and wizard will exit. "
-                "Proceed?"
-            ).unsafe_ask():
-                log.info("Exiting")
-                sys.exit(0)
+        confirm_command_exe(
+            "AWS Account", Operation.ADDED, requires_sync=is_hub_account
+        )
 
         self.config.aws.accounts.append(account)
 
         if is_hub_account:
-            log.info("Importing AWS identities")
-            asyncio.run(self.attempt_aws_account_refresh())
-            for account in self.config.aws.accounts:
-                if account.identity_center_details:
-                    asyncio.run(account.set_identity_center_details())
             check_and_update_resource_limit(self.config)
-            asyncio.run(
-                generate_aws_role_templates(
-                    self.config.aws,
-                    self.repo_dir,
-                )
-            )
+            asyncio.run(self.run_import_aws_resources())
         else:
-            asyncio.run(self.attempt_aws_account_refresh())
+            self.config.aws = asyncio.run(aws_load(self.config.aws))
+            asyncio.run(self.sync_config_aws_accounts([account]))
 
     def configuration_wizard_aws_account_edit(self):
-        account_names = [account.account_name for account in self.config.aws.accounts]
+        account_names = [
+            account.account_name
+            for account in self.config.aws.accounts
+            if not account.org_id
+        ]
         account_id_to_config_elem_map = {
             account.account_id: elem
             for elem, account in enumerate(self.config.aws.accounts)
@@ -727,6 +846,12 @@ class ConfigurationWizard:
             if not account:
                 log.debug("Could not find AWS Account")
                 return
+        elif not account_names:
+            log.info(
+                "No editable accounts found.\n"
+                "TIP: An AWS account cannot be edited if it attached to an Organization in the config."
+            )
+            return
         else:
             account = self.config.aws.accounts[0]
 
@@ -747,9 +872,12 @@ class ConfigurationWizard:
                     default=account.account_name,
                 ).unsafe_ask()
 
+            confirm_command_exe("AWS Account", Operation.UPDATED)
+
             self.config.aws.accounts[
                 account_id_to_config_elem_map[account.account_id]
             ] = account
+            asyncio.run(self.run_import_aws_resources())
             self.config.write()
 
     def configuration_wizard_aws_accounts(self):
@@ -804,8 +932,9 @@ class ConfigurationWizard:
                 return
             elif action == "Update IdentityCenter":
                 org_to_edit.identity_center = set_identity_center()
-                asyncio.run(self.attempt_aws_account_refresh())
+                asyncio.run(self.sync_config_aws_org(False))
 
+            confirm_command_exe("AWS Organization", Operation.UPDATED)
             self.config.aws.organizations[
                 org_id_to_config_elem_map[org_to_edit.org_id]
             ] = org_to_edit
@@ -883,7 +1012,7 @@ class ConfigurationWizard:
                 "The AWS Org will not be added to the config and wizard will exit. "
                 "Proceed?"
             ).unsafe_ask():
-                log.info("Exiting")
+                log.info("Exiting...")
                 sys.exit(0)
 
         log.info("Saving config.")
@@ -896,10 +1025,10 @@ class ConfigurationWizard:
                 "This is required to finish the setup process. Wizard will exit if this has not been setup. "
                 "Exit?"
             ).unsafe_ask():
-                log.info("Exiting")
+                log.info("Exiting...")
                 sys.exit(0)
 
-        asyncio.run(self.attempt_aws_account_refresh())
+        asyncio.run(self.sync_config_aws_org())
 
     def configuration_wizard_aws_organizations(self):
         # Currently only 1 org per config is supported.
@@ -953,7 +1082,7 @@ class ConfigurationWizard:
 
         client = session.client(service_name="secretsmanager")
         response = client.create_secret(
-            Name="iambic-config-secrets",
+            Name=f"iambic-config-secrets-{str(uuid.uuid4())}",
             Description="IAMbic managed secret used to store protected config values",
             SecretString=yaml.dump({"secrets": self.config.secrets}),
         )
@@ -990,31 +1119,16 @@ class ConfigurationWizard:
     def update_secret(self):
         if not self.config.secrets:
             self.config.secrets = {}
+
         if self.config.okta:
-            self.config.secrets.setdefault("okta", {})["organizations"] = [
-                org.dict() for org in self.config.okta.organizations
-            ]
+            self.config.secrets["okta"] = get_secret_dict_with_val(
+                self.config.okta, exclude={"client"}
+            )
 
-        if self.config.google:
-            self.config.secrets.setdefault("google", {})["projects"] = [
-                project.dict(
-                    include={
-                        "subjects",
-                        "type",
-                        "project_id",
-                        "private_key_id",
-                        "private_key",
-                        "client_email",
-                        "client_id",
-                        "auth_uri",
-                        "token_uri",
-                        "auth_provider_x509_cert_url",
-                        "client_x509_cert_url",
-                    }
-                )
-                for project in self.config.google.workspaces
-            ]
-
+        if self.config.google_workspace:
+            self.config.secrets["google_workspace"] = get_secret_dict_with_val(
+                self.config.google_workspace, exclude={"_service_connection_map"}
+            )
         secret_details = self.config.extends[0]
         secret_arn = secret_details.value
         region = secret_arn.split(":")[3]
@@ -1031,7 +1145,7 @@ class ConfigurationWizard:
             SecretString=yaml.dump({"secrets": self.config.secrets}),
         )
 
-    def configuration_wizard_google_project_add(self):
+    def configuration_wizard_google_workspace_add(self):
         google_obj = {
             "subjects": [set_google_subject()],
             "type": set_google_project_type(),
@@ -1045,27 +1159,47 @@ class ConfigurationWizard:
             "auth_provider_x509_cert_url": set_google_auth_provider_cert_url(),
             "client_x509_cert_url": set_google_client_cert_url(),
         }
+
+        confirm_command_exe("Google Workspace", Operation.ADDED)
+
         if self.config.secrets:
-            self.config.secrets.setdefault("google", {}).setdefault(
-                "projects", []
-            ).append(google_obj)
-            self.config.google = GoogleWorkspaceConfig(
-                projects=[GoogleProject(**google_obj)]
-            )
+            if self.config.google_workspace:
+                self.config.google_workspace.workspaces.append(
+                    GoogleProject(**google_obj)
+                )
+            else:
+                self.config.google_workspace = GoogleWorkspaceConfig(
+                    workspaces=[
+                        GoogleProject(
+                            iambic_managed=IambicManaged.READ_AND_WRITE, **google_obj
+                        )
+                    ]
+                )
             self.update_secret()
         else:
-            self.config.secrets = {"google": {"projects": [google_obj]}}
+            self.config.google_workspace = GoogleWorkspaceConfig(
+                workspaces=[
+                    GoogleProject(
+                        iambic_managed=IambicManaged.READ_AND_WRITE, **google_obj
+                    )
+                ]
+            )
+            self.config.secrets = {"google_workspace": {"workspaces": [google_obj]}}
             self.create_secret()
 
-    def configuration_wizard_google_project_edit(self):
-        project_ids = [project.project_id for project in self.config.google.workspaces]
+        asyncio.run(self.run_import_google_workspace_resources())
+
+    def configuration_wizard_google_workspace_edit(self):
+        project_ids = [
+            project.project_id for project in self.config.google_workspace.workspaces
+        ]
         project_id_to_config_elem_map = {
             project.project_id: elem
-            for elem, project in enumerate(self.config.google.workspaces)
+            for elem, project in enumerate(self.config.google_workspace.workspaces)
         }
         if len(project_ids) > 1:
             action = questionary.select(
-                "Which Google Project would you like to edit?",
+                "Which Google Workspace would you like to edit?",
                 choices=["Go back", *project_ids],
             ).unsafe_ask()
             if action == "Go back":
@@ -1073,7 +1207,7 @@ class ConfigurationWizard:
             project_to_edit = next(
                 (
                     project
-                    for project in self.config.google.workspaces
+                    for project in self.config.google_workspace.workspaces
                     if project.project_id == action
                 ),
                 None,
@@ -1082,14 +1216,15 @@ class ConfigurationWizard:
                 log.debug("Could not find AWS Organization to edit", org_id=action)
                 return
         else:
-            project_to_edit = self.config.google.workspaces[0]
+            project_to_edit = self.config.google_workspace.workspaces[0]
 
         project_id = project_to_edit.project_id
         choices = [
             "Go back",
             "Update Subject",
             "Update Type",
-            "Update Private Key" "Update Private Key ID",
+            "Update Private Key",
+            "Update Private Key ID",
             "Update Client Email",
             "Update Client ID",
             "Update Auth URI",
@@ -1112,7 +1247,7 @@ class ConfigurationWizard:
                     default_domain = None
                     default_service = None
                 project_to_edit.subjects = [
-                    set_google_subject(default_domain, default_service)
+                    GoogleSubject(**set_google_subject(default_domain, default_service))
                 ]
             elif action == "Update Type":
                 project_to_edit.type = set_google_project_type(project_to_edit.type)
@@ -1149,19 +1284,23 @@ class ConfigurationWizard:
                     project_to_edit.client_x509_cert_url
                 )
 
-            self.config.google.workspaces[
+            confirm_command_exe("Google Workspace", Operation.UPDATED)
+
+            self.config.google_workspace.workspaces[
                 project_id_to_config_elem_map[project_id]
             ] = project_to_edit
+
+            asyncio.run(self.run_import_google_workspace_resources())
             self.update_secret()
             self.config.write()
 
-    def configuration_wizard_google(self):
+    def configuration_wizard_google_workspace(self):
         log.info(
-            "For details on how to retrieve the information required to add a Google Project "
+            "For details on how to retrieve the information required to add a Google Workspace "
             "to IAMbic check out our docs: https://iambic.org/getting_started/google/"
         )
 
-        if self.config.google:
+        if self.config.google_workspace:
             action = questionary.select(
                 "What would you like to do?",
                 choices=["Go back", "Add", "Edit"],
@@ -1169,11 +1308,11 @@ class ConfigurationWizard:
             if action == "Go back":
                 return
             elif action == "Add":
-                self.configuration_wizard_google_project_add()
+                self.configuration_wizard_google_workspace_add()
             elif action == "Edit":
-                self.configuration_wizard_google_project_edit()
+                self.configuration_wizard_google_workspace_edit()
         else:
-            self.configuration_wizard_google_project_add()
+            self.configuration_wizard_google_workspace_add()
 
     def configuration_wizard_okta_organization_add(self):
         okta_obj = {
@@ -1181,15 +1320,33 @@ class ConfigurationWizard:
             "org_url": set_okta_org_url(),
             "api_token": set_okta_api_token(),
         }
+
+        confirm_command_exe("Okta Organization", Operation.ADDED)
+
         if self.config.secrets:
-            self.config.secrets.setdefault("okta", {}).setdefault(
-                "organizations", []
-            ).append(okta_obj)
-            self.config.okta = OktaConfig(organizations=[OktaOrganization(**okta_obj)])
+            if self.config.okta and self.config.okta.organizations:
+                self.config.okta.organizations.append(OktaOrganization(**okta_obj))
+            else:
+                self.config.okta = OktaConfig(
+                    organizations=[
+                        OktaOrganization(
+                            iambic_managed=IambicManaged.READ_AND_WRITE, **okta_obj
+                        )
+                    ]
+                )
             self.update_secret()
         else:
+            self.config.okta = OktaConfig(
+                organizations=[
+                    OktaOrganization(
+                        iambic_managed=IambicManaged.READ_AND_WRITE, **okta_obj
+                    )
+                ]
+            )
             self.config.secrets = {"okta": {"organizations": [okta_obj]}}
             self.create_secret()
+
+        asyncio.run(self.run_import_okta_resources())
 
     def configuration_wizard_okta_organization_edit(self):
         org_names = [org.idp_name for org in self.config.okta.organizations]
@@ -1239,9 +1396,13 @@ class ConfigurationWizard:
             elif action == "Update API Token":
                 org_to_edit.api_token = set_okta_api_token(org_to_edit.api_token)
 
+            confirm_command_exe("Okta Organization", Operation.UPDATED)
             self.config.okta.organizations[
                 org_name_to_config_elem_map[org_name]
             ] = org_to_edit
+
+            asyncio.run(self.run_import_okta_resources())
+
             self.update_secret()
             self.config.write()
 
@@ -1371,8 +1532,8 @@ class ConfigurationWizard:
                 if self.existing_role_template_map:
                     choices = ["AWS"]
                     # Currently, the config wizard only support IAMbic plugins
-                    if "google" in self.config.__fields__:
-                        choices.append("Google")
+                    if "google_workspace" in self.config.__fields__:
+                        choices.append("Google Workspace")
                     if "okta" in self.config.__fields__:
                         choices.append("Okta")
 
@@ -1401,11 +1562,11 @@ class ConfigurationWizard:
                     return
                 elif action == "AWS":
                     self.configuration_wizard_aws()
-                elif action == "Google":
+                elif action == "Google Workspace":
                     if questionary.confirm(
                         f"{secret_question_text} Proceed?"
                     ).unsafe_ask():
-                        self.configuration_wizard_google()
+                        self.configuration_wizard_google_workspace()
                 elif action == "Okta":
                     if questionary.confirm(
                         f"{secret_question_text} Proceed?"

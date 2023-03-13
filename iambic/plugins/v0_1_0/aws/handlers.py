@@ -7,7 +7,6 @@ import uuid
 from typing import TYPE_CHECKING, Union
 
 import boto3
-
 from iambic.config.dynamic_config import ExtendsConfig, ExtendsConfigKey
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command, IambicManaged
@@ -26,6 +25,7 @@ from iambic.plugins.v0_1_0.aws.iam.group.template_generation import (
     collect_aws_groups,
     generate_aws_group_templates,
 )
+from iambic.plugins.v0_1_0.aws.iam.policy.models import AWS_MANAGED_POLICY_TEMPLATE_TYPE
 from iambic.plugins.v0_1_0.aws.iam.policy.template_generation import (
     collect_aws_managed_policies,
     generate_aws_managed_policy_templates,
@@ -126,8 +126,27 @@ async def apply(
     ):
         await generate_permission_set_map(config.accounts, templates)
 
-    template_changes: list[TemplateChangeDetails] = await asyncio.gather(
-        *[template.apply(config, ctx) for template in templates]
+    template_changes: list[TemplateChangeDetails] = []
+
+    if managed_policy_tasks := [
+        template.apply(config, ctx)
+        for template in templates
+        if template.template_type == AWS_MANAGED_POLICY_TEMPLATE_TYPE
+    ]:
+        template_changes.extend(await asyncio.gather(*managed_policy_tasks))
+        if len(template_changes) > len(managed_policy_tasks):
+            # There are other template changes that could rely on the managed policy
+            # Give a few seconds to allow the managed policies to be created in AWS
+            await asyncio.sleep(10)
+
+    template_changes.extend(
+        await asyncio.gather(
+            *[
+                template.apply(config, ctx)
+                for template in templates
+                if template.template_type != AWS_MANAGED_POLICY_TEMPLATE_TYPE
+            ]
+        )
     )
 
     return [
@@ -566,8 +585,8 @@ async def discover_new_aws_accounts(
     repo_dir: str,
     remote_worker=None,
 ) -> bool:
-    run_apply = False
     run_import = False
+    accounts_to_apply = []
     for org_accounts in orgs_accounts:
         for account in org_accounts:
             if config_account_idx_map.get(account.account_id) is None:
@@ -581,19 +600,21 @@ async def discover_new_aws_accounts(
                     IambicManaged.DISABLED,
                     IambicManaged.IMPORT_ONLY,
                 ]:
-                    run_apply = True
+                    accounts_to_apply.append(account)
 
                 if account.iambic_managed != IambicManaged.DISABLED:
                     run_import = True
 
-    if run_apply:
+    if accounts_to_apply:
         log.warning(
             "Applying templates to provision identities to the discovered account(s).",
         )
         templates = await gather_templates(repo_dir, "AWS.*")
         sub_message = exe_message.copy()
         sub_message.command = Command.APPLY
-        await apply(exe_message, config, load_templates(templates), remote_worker)
+        sub_config = config.copy()
+        sub_config.accounts = accounts_to_apply
+        await apply(exe_message, sub_config, load_templates(templates), remote_worker)
 
     return run_import
 
@@ -697,5 +718,5 @@ async def aws_account_update_and_discovery(
             "Running import to regenerate AWS templates.",
         )
         sub_message = exe_message.copy()
-        sub_message.command = Command.APPLY
+        sub_message.command = Command.IMPORT
         await import_aws_resources(sub_message, config, repo_dir, remote_worker)

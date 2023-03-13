@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import Field
 
-from iambic.core.context import ExecutionContext
-from iambic.core.iambic_enum import IambicManaged
+from iambic.core.context import ExecutionContext, ctx
+from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -186,6 +186,11 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
         current_user: Optional[User] = current_user_task[0]
         if current_user:
             change_details.current_value = current_user
+
+            if ctx.command == Command.CONFIG_DISCOVERY:
+                # Don't overwrite a resource during config discovery
+                change_details.new_value = {}
+                return change_details
 
         user_exists = bool(current_user)
         tasks = []

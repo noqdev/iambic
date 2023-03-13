@@ -5,8 +5,10 @@ import os.path
 from itertools import chain
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from iambic.core.context import ExecutionContext
-from iambic.core.iambic_enum import IambicManaged
+from pydantic import Field, validator
+
+from iambic.core.context import ExecutionContext, ctx
+from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -24,7 +26,6 @@ from iambic.plugins.v0_1_0.okta.app.utils import (
     update_app_name,
 )
 from iambic.plugins.v0_1_0.okta.models import App, Assignment, Status
-from pydantic import Field, validator
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
@@ -175,6 +176,11 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
         current_app: Optional[App] = current_app_task[0]
         if current_app:
             change_details.current_value = current_app
+
+            if ctx.command == Command.CONFIG_DISCOVERY:
+                # Don't overwrite a resource during config discovery
+                change_details.new_value = {}
+                return change_details
 
         app_exists = bool(current_app)
         tasks = []

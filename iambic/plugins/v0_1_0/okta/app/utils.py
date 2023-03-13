@@ -5,7 +5,6 @@ import functools
 from typing import TYPE_CHECKING, List
 
 import okta.models as models
-
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType

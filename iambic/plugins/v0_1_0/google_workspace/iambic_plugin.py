@@ -19,7 +19,7 @@ from iambic.plugins.v0_1_0.google_workspace.handlers import (
 )
 
 
-class GoogleSubjects(BaseModel):
+class GoogleSubject(BaseModel):
     domain: str
     service_account: str
 
@@ -27,7 +27,7 @@ class GoogleSubjects(BaseModel):
 class GoogleProject(BaseModel):
     project_id: str
     project_name: Optional[str]
-    subjects: list[GoogleSubjects]
+    subjects: list[GoogleSubject]
     type: str
     private_key_id: str
     private_key: SecretStr

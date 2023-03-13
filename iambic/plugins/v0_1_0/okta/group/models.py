@@ -5,8 +5,8 @@ import os
 from itertools import chain
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from iambic.core.context import ExecutionContext
-from iambic.core.iambic_enum import IambicManaged
+from iambic.core.context import ExecutionContext, ctx
+from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -198,6 +198,11 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
         )
         if current_group:
             change_details.current_value = current_group
+
+            if ctx.command == Command.CONFIG_DISCOVERY:
+                # Don't overwrite a resource during config discovery
+                change_details.new_value = {}
+                return change_details
 
         group_exists = bool(current_group)
         tasks = []

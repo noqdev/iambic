@@ -4,8 +4,10 @@ import asyncio
 from itertools import chain
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from iambic.core.context import ExecutionContext
-from iambic.core.iambic_enum import IambicManaged
+from pydantic import Field, validator
+
+from iambic.core.context import ExecutionContext, ctx
+from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -37,7 +39,6 @@ from iambic.plugins.v0_1_0.google_workspace.models import (
     WhoCanViewGroup,
     WhoCanViewMembership,
 )
-from pydantic import Field, validator
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import GoogleProject
@@ -134,6 +135,11 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
         )
         if current_group:
             change_details.current_value = current_group
+
+            if ctx.command == Command.CONFIG_DISCOVERY:
+                # Don't overwrite a resource during config discovery
+                change_details.new_value = {}
+                return change_details
 
         group_exists = bool(current_group)
 
