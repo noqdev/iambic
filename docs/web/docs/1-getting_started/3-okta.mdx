@@ -57,8 +57,8 @@ Okta API Token: <input type="text" id="inputOktaApiToken" value="s3cr3tOktaToken
 
 ```bash
 export EMAIL=<your_okta_email_address>
-export OKTA_DOMAIN=<your_okta_domain> # ex: https://dev-12345.okta.com/
-export OKTA_ORG_NAME=<your_okta_org_name> # ex: development. This is a friendly name to identify your Okta organization
+export OKTA_DOMAIN=<your_okta_domain> # ex: https://dev-12345.okta.com/, you get the `dev-12345` portion, specific to your environment from the Okta portal.
+export OKTA_ORG_NAME=<your_okta_org_name> # ex: development. This is a friendly name to identify your Okta organization.  Any arbitrary string will work here.
 export OKTA_API_TOKEN=<your_okta_api_token> # An administrative API token for your Okta organization, follow the instructions in the following steps to create one.
 ```
 
@@ -108,6 +108,12 @@ Never commit secrets Git. Ensure that you have a  `.gitignore` file in the root 
 repository that is configured to ignore secrets.yaml files with `**/secrets.yaml`. [Learn more](https://git-scm.com/docs/gitignore) about `.gitignore` files.
 
 :::
+
+As a reminder and in case you did not export the bash variables in the `Prerequisities` section:
+
+* OKTA_DOMAIN=<your_okta_domain> # ex: https://dev-12345.okta.com/, you get the `dev-12345` portion, specific to your environment from the Okta portal.
+* OKTA_ORG_NAME=<your_okta_org_name> # ex: development. This is a friendly name to identify your Okta organization. Any arbitrary string will work here.
+* OKTA_API_TOKEN=<your_okta_api_token> # An administrative API token for your Okta organization
 
 
 ```bash
