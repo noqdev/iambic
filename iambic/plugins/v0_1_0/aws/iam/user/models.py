@@ -6,8 +6,8 @@ from typing import Callable, Optional, Union
 import botocore
 from pydantic import Field, validator
 
-from iambic.core.context import ExecutionContext
-from iambic.core.iambic_enum import IambicManaged
+from iambic.core.context import ExecutionContext, ctx
+from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -179,6 +179,11 @@ class UserTemplate(AWSTemplate, AccessModel):
         current_user = await get_user(user_name, client)
         if current_user:
             account_change_details.current_value = {**current_user}  # Create a new dict
+
+            if ctx.command == Command.CONFIG_DISCOVERY:
+                # Don't overwrite a resource during config discovery
+                account_change_details.new_value = {}
+                return account_change_details
 
         deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
         if isinstance(deleted, list):

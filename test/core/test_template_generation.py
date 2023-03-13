@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Union
 
 import pytest
+
 from iambic.core.models import AccessModelMixin, BaseModel
 from iambic.core.template_generation import group_dict_attribute, merge_model
 

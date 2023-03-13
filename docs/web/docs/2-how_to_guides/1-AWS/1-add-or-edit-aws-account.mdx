@@ -1,0 +1,44 @@
+---
+title: Adding or editing AWS accounts in your IAMbic config
+---
+
+> Account in this document references any provider that you want to manage with IAMbic.
+> For example, an AWS Account, Google Workspace, or an Okta Organization.
+
+## Overview
+To add or edit accounts in your IAMbic config simply use the wizard.
+Run `iambic setup` command to launch the [Configuration Wizard](/how_to_guides/configure_iambic_with_wizard).
+
+Using the wizard is crucial to ensure your IAMbic config is valid, secrets are written correctly, and templates are properly synced.
+
+## Adding an account
+When you add an account through the wizard, in addition to updating your config, your templates will be synced.
+
+### What happens when my templates are synced?
+When you add an account, any templates that apply to the new account are created on the account.
+The exception to this is if the resource already exists on the account or `iambic_managed` is not set to `read_and_write`.
+
+For example, if you have a template that creates the IAM role `engineering` in all accounts, that role will be created on the new account.
+However, if the `engineering` role already exists on the new account, it will not be overwritten.
+If another you have another IAM role template called `qa-intern` to be deployed in all accounts, and it does not exist on the new account, it will be created.
+
+After templates are applied to the new account, IAMbic will run an import to pull in all resources unique to that account if `iambic_managed` is not set to `disabled`.
+
+## Updating an account
+> NOTE: An AWS account assigned to an AWS organization CANNOT be updated through the wizard.
+> Any changes to an AWS organization account should be done in the AWS console.
+> Once the change has been made it will be picked up by the GitHub config discovery job or can be pulled in manually by running the command `iambic config-discovery`.
+
+When you add an account through the wizard, in addition to updating your config, your templates will be synced.
+
+### What happens when my templates are synced?
+
+When you update an account through the wizard, in addition to updating your config, your templates will be synced  if `iambic_managed` is not set to `disabled` for the account.
+
+Updating an account is much more straightforward than adding an account.
+Once the config has been updated, IAMbic will run an import to refresh the representation of the resources for the account.
+The primary purpose of this is to update any interpolation in your templates.
+
+For example, if you have a template that creates an IAM role with the account name in the role name, updating the account name will update the way the role name is represented in your template.
+If the account was named `service-tm` and it was updated to `service-team` and a role exists with the name `qa-service-team-role`, the role name would be updated to `qa-{{account_name}}-role` in the template.
+

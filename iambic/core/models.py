@@ -29,7 +29,7 @@ from deepdiff.model import PrettyOrderedSet
 from git import Repo
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, validate_model, validator
+from pydantic import Field, root_validator, validate_model, validator
 from pydantic.fields import ModelField
 
 from iambic.core.context import ExecutionContext
@@ -578,12 +578,20 @@ class ExpiryModel(IambicPydanticBaseModel):
 class ExecutionMessage(PydanticBaseModel):
     execution_id: str
     command: Command
+    parent_command: Optional[Command]
     provider_type: Optional[str]
     provider_id: Optional[str]
     template_type: Optional[str]
     template_id: Optional[str]
     metadata: Optional[Dict[str, Any]] = None
     templates: Optional[List[str]] = None
+
+    @root_validator
+    def check_parent_command(cls, values: dict):
+        if not values.get("parent_command"):
+            values["parent_command"] = values.get("command")
+
+        return values
 
     def get_execution_dir(self, as_regex: bool = False) -> str:
         if as_regex:

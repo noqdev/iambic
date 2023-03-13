@@ -11,17 +11,16 @@ from pathlib import Path
 from typing import List, Optional, Union
 from uuid import uuid4
 
-import ujson as json
-from pydantic import BaseModel, Field
-from pydantic import create_model as create_pydantic_model
-
 import iambic.plugins.v0_1_0.github
+import ujson as json
 from iambic.core.context import ctx
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
 from iambic.core.utils import sort_dict, yaml
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, google_workspace, okta
+from pydantic import BaseModel, Field
+from pydantic import create_model as create_pydantic_model
 
 CURRENT_IAMBIC_VERSION = "1"
 
@@ -198,6 +197,7 @@ class Config(BaseTemplate):
         exe_message: ExecutionMessage,
         output_dir: str,
     ):
+        ctx.command = exe_message.parent_command
         # It's the responsibility of the provider to handle throttling.
         if exe_message.provider_type:
             plugin = [
@@ -226,6 +226,7 @@ class Config(BaseTemplate):
     ) -> list[TemplateChangeDetails]:
         # It's the responsibility of the provider to handle throttling.
         # Build a map of a plugin's template types to the plugin
+        ctx.command = exe_message.parent_command
         template_provider_map = {}
         for plugin in self.plugin_instances:
             for template in plugin.templates:
@@ -306,6 +307,7 @@ class Config(BaseTemplate):
     async def run_discover_upstream_config_changes(
         self, exe_message: ExecutionMessage, repo_dir: str
     ):
+        ctx.command = exe_message.parent_command
         tasks = []
         for plugin in self.configured_plugins:
             if plugin.async_discover_upstream_config_changes_callable:

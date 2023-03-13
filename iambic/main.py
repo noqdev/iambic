@@ -418,6 +418,7 @@ def init_plugins_cmd(repo_dir: str):
     help="The repo directory. Example: ~/iambic-templates",
 )
 def setup(repo_dir: str):
+    ctx.command = Command.APPLY
     ConfigurationWizard(repo_dir).run()
 
 

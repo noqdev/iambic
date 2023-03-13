@@ -5,13 +5,11 @@ import os
 import sys
 import tempfile
 import time
-import uuid
 from enum import Enum
 
 from iambic.config.dynamic_config import load_config
 from iambic.config.utils import resolve_config_template_path
-from iambic.core.iambic_enum import Command
-from iambic.core.models import BaseModel, ExecutionMessage
+from iambic.core.models import BaseModel
 from iambic.main import run_clone_repos, run_detect, run_git_apply, run_git_plan
 
 REPO_BASE_PATH = os.path.expanduser("~/.iambic/repos/")
@@ -107,6 +105,7 @@ def run_handler(event=None, context=None):
         return run_clone_repos(REPO_BASE_PATH)
     else:
         raise NotImplementedError(f"Unknown command {lambda_context.command}")
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

@@ -5,7 +5,6 @@ import functools
 from typing import TYPE_CHECKING, List
 
 import okta.models as models
-
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
@@ -29,6 +28,7 @@ async def list_app_user_assignments(
         app_user_list, _, err = await retry_controller(handle_okta_fn, fn)
     if err:
         log.error("Error encountered when listing app users", error=str(err))
+        raise Exception(f"Error listing app users: {str(err)}")
 
     user_assignments = []
     if app_user_list:
@@ -156,11 +156,14 @@ async def list_all_apps(okta_organization: OktaOrganization) -> List[App]:
             next_apps, err = await retry_controller(handle_okta_fn, resp.next)
         if err:
             log.error("Error encountered when listing apps", error=str(err))
-            return []
+            raise Exception("Error encountered when listing apps")
         raw_apps.append(next_apps)
+
+    if not raw_apps:
+        return []
+
     tasks = []
     apps = []
-
     for app_raw in raw_apps:
         app = App(
             id=app_raw.id,
