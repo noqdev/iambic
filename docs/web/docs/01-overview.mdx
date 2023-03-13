@@ -78,6 +78,10 @@ and efficient process for managing cloud permissions.
 
 ## What is the difference between IAMbic and Infrastructure-as-Code (IaC)?
 
+IAMbic is complementary to Infrastructure-as-Code (IaC). It's fine to operate with both in parallel, as long as you
+do not manage IaC resources with IAMbic. IAMbic will automatically capture changes made via IaC or other methods, and store
+them as commits in Git, giving you a clear timeline of when permissions were changed, and what the changes were.
+
 Infrastructure-as-Code (IaC) is a way for developers to manage their infrastructure, but it comes with its own challenges.
 IaC promotes decentralization by project, meaning it's hard to get a full picture of your environment's existing configuration
 in a single place. Additionally, as the complexity of IaC code and custom Terraform modules increases and becomes spread

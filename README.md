@@ -84,7 +84,9 @@ This template is a little more complex. It shows a BackendDeveloperRole that has
 template_type: NOQ::AWS::IAM::Role
 identifier: '{{account_name}}_backend_developer'
 included_accounts:
-    - '*'
+  - '*'
+excluded_accounts:
+  - compliance
 properties:
   description:
     - description: Backend developer role for {{account_name}}
@@ -100,9 +102,9 @@ properties:
   inline_policies:
     - policy_name: s3_policy
       statement:
-        - # Policy applies to role on all accounts except sensitive one.
+        - # Policy applies to role on all accounts except `customer_data`.
           excluded_accounts:
-            - sensitive_account
+            - customer_data
           effect: allow
           action:
               - s3:GetObject
@@ -123,7 +125,6 @@ properties:
           condition:
                 StringNotEquals:
                     s3:ResourceTag/sensitive: 'true'
-  permission_boundary
   role_name: '{{account_name}}_backend_developer'
   tags:
     - key: owner
