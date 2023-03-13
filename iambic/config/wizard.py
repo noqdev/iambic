@@ -456,21 +456,15 @@ class ConfigurationWizard:
     def set_aws_profile_name(
         self, question_text: str = None, allow_none: bool = False
     ) -> Union[str, None]:
+        questionary_params = {}
         available_profiles = self.boto3_session.available_profiles
         if allow_none:
             available_profiles.insert(0, "None")
 
         default_profile = self.resolve_aws_profile_defaults_from_env()
-        if default_profile == "None" and not allow_none:
-            questionary.print(
-                f"""
-                We couldn't find your AWS credentials, or they're not linked to the Hub Account ({self.hub_account_id}).
-                The specified AWS credentials need to be able to create CloudFormation stacks, stack sets,
-                and stack set instances.
-
-                Please provide an AWS profile to use for this operation, or restart the wizard with valid AWS credentials: """
-            )
-            return None
+        if default_profile != "None":
+            questionary_params["default"] = default_profile
+            available_profiles.append(default_profile)
 
         if not question_text:
             question_text = dedent(
@@ -479,7 +473,8 @@ class ConfigurationWizard:
                 The specified AWS credentials need to be able to create CloudFormation stacks, stack sets,
                 and stack set instances.
 
-                Please provide an AWS profile to use for this operation, or restart the wizard with valid AWS credentials: """
+                Please provide an AWS profile to use for this operation, or restart the wizard with valid AWS credentials:
+                """
             )
 
         try:
@@ -491,16 +486,14 @@ class ConfigurationWizard:
                 sys.exit(0)
             elif len(available_profiles) < 10:
                 profile_name = questionary.select(
-                    question_text,
-                    choices=available_profiles,
-                    default=default_profile,
+                    question_text, choices=available_profiles, **questionary_params
                 ).unsafe_ask()
             else:
                 profile_name = questionary.autocomplete(
                     question_text,
                     choices=available_profiles,
                     style=CUSTOM_AUTO_COMPLETE_STYLE,
-                    default=default_profile,
+                    **questionary_params,
                 ).unsafe_ask()
         except KeyboardInterrupt:
             log.info("Exiting...")
