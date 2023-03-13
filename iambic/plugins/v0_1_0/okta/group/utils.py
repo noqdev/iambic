@@ -34,6 +34,10 @@ async def list_all_users(okta_organization: OktaOrganization) -> List[User]:
     ) as retry_controller:
         fn = functools.partial(client.list_users)
         users, resp, err = await retry_controller(handle_okta_fn, fn)
+        if err:
+            log.error("Error encountered when listing users", error=str(err))
+            raise Exception(f"Error listing users: {str(err)}")
+
     while resp.has_next():
         async with GlobalRetryController(
             fn_identifier="okta.list_users"
@@ -41,8 +45,11 @@ async def list_all_users(okta_organization: OktaOrganization) -> List[User]:
             next_users, err = await retry_controller(handle_okta_fn, resp.next)
         if err:
             log.error("Error encountered when listing users", error=str(err))
-            return []
+            raise Exception(f"Error listing users: {str(err)}")
         users.append(next_users)
+
+    if not users:
+        return []
 
     users_to_return = []
     for user in users:
@@ -80,18 +87,23 @@ async def list_group_users(group: Group, okta_organization: OktaOrganization) ->
     ) as retry_controller:
         fn = functools.partial(client.list_group_users, group.group_id)
         users, resp, err = await retry_controller(handle_okta_fn, fn)
-    if err:
-        raise Exception(f"Error listing users: {str(err)}")
+        if err:
+            log.error("Error encountered when listing users in group", error=str(err))
+            raise Exception(f"Error listing users for group: {group.name}, {str(err)}")
 
     while resp.has_next():
         async with GlobalRetryController(
             fn_identifier="okta.list_group_users"
         ) as retry_controller:
-            next_users, err = await retry_controller(resp.next)
+            next_users, err = await retry_controller(handle_okta_fn, resp.next)
         if err:
             log.error("Error encountered when listing users in group", error=str(err))
-            return group
+            raise Exception(f"Error listing users for group: {group.name}, {str(err)}")
         users.append(next_users)
+
+    if not users:
+        return group
+
     users_to_return = []
     for user in users:
         users_to_return.append(
@@ -127,15 +139,22 @@ async def list_all_groups(okta_organization: OktaOrganization) -> List[Group]:
     ) as retry_controller:
         fn = functools.partial(client.list_groups)
         groups, resp, err = await retry_controller(handle_okta_fn, fn)
+        if err:
+            log.error("Error encountered when listing groups", error=str(err))
+            raise Exception(f"Error listing groups: {str(err)}")
+
     while resp.has_next():
         async with GlobalRetryController(
             fn_identifier="okta.list_groups"
         ) as retry_controller:
             next_groups, err = await retry_controller(handle_okta_fn, resp.next)
         if err:
-            log.error("Error encountered when listing users", error=str(err))
-            return []
+            log.error("Error encountered when listing groups", error=str(err))
+            raise Exception(f"Error listing groups: {str(err)}")
         groups.append(next_groups)
+
+    if not groups:
+        return []
 
     tasks = []
     for group_raw in groups:
@@ -484,7 +503,7 @@ async def update_group_members(
                 _, err = await retry_controller(handle_okta_fn, fn)
             if err:
                 log.error(
-                    "Error removing user to group",
+                    "Error removing user from group",
                     user=user,
                     group=group.name,
                     **log_params,
