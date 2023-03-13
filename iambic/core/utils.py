@@ -560,7 +560,7 @@ class GlobalRetryController:
                     raise e
                 if self.max_retries == retries + 1:
                     raise e
-                if endpoint in RATE_LIMIT_STORAGE:
+                if RATE_LIMIT_STORAGE.get(endpoint):
                     wait_time = (
                         RATE_LIMIT_STORAGE[endpoint] - asyncio.get_running_loop().time()
                     )
