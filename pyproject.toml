@@ -49,6 +49,7 @@ questionary = "^1.10.0"
 types-dateparser = "^1.1.4.5"
 cryptography = "^39.0.1"
 aws-error-utils = "^2.7.0"
+types-mock = "^5.0.0.5"
 
 [tool.poetry.scripts]
 iambic = "iambic.main:cli"
@@ -58,3 +59,4 @@ types-cachetools = "^5.2.1"
 types-pyyaml = "^6.0.12.2"
 types-aiofiles = "^22.1.0.4"
 types-ujson = "^5.7.0.0"
+mock = "^5.0.1"
