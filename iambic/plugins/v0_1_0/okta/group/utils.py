@@ -131,7 +131,7 @@ async def list_all_groups(okta_organization: OktaOrganization) -> List[Group]:
         async with GlobalRetryController(
             fn_identifier="okta.list_groups"
         ) as retry_controller:
-            next_groups, err = await retry_controller(handle_okta_fn, resp.next)
+            next_groups, resp, err = await retry_controller(handle_okta_fn, resp.next)
         if err:
             log.error("Error encountered when listing users", error=str(err))
             return []
