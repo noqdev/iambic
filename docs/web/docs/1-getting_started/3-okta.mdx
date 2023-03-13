@@ -97,6 +97,19 @@ repository that is configured to ignore secrets.yaml files with `**/secrets.yaml
 
 :::
 
+
+There are three configuration items needed to complete the IAMbic integration with Okta:
+
+<details>
+<summary>Screenshot</summary>
+![Okta-API](/img/okta/okta_integration.png)
+</details>
+
+* idp_name ($OKTA_ORG_NAME): is the name of the API authorization server, in this example `default`
+* org_url ($OKTA_DOMAIN): the okta domain can be found on the top right corner underneath your name (in this case: okta-dev-79.........)
+* api_token: ($OKTA_API_TOKEN): you get this token from the Okta on the Tokens screen. Make sure to copy the token when you create it
+
+
 ```bash
 cat <<EOF > config/secrets.yaml
 secrets:
