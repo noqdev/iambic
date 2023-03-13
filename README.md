@@ -1,8 +1,8 @@
-# IAMbic: Entitlements as Code
+# IAMbic: Distributed Permissions Management as Code
 
-"IAMbic is like Terraform, but for Entitlements"
+"IAMbic is like Terraform, but for distributed Cloud IAM"
 
-IAMbic is a multi-cloud identity and access management (IAM) control plane that centralizes and organizes the tracking and management of cloud access and permissions. With IAMbic, teams can track historical changes to cloud identities and entitlements over time, as well as manage changes to identities, access rules, and permissions. IAMbic facilitates the granting of temporary or emergency access for end-users while minimizing the associated risks, overhead, and latency involved in permissions management.
+IAMbic is a multi-cloud identity and access management (IAM) control plane that centralizes and organizes the tracking and management of cloud access and permissions. With IAMbic, teams can track historical changes to cloud identities and permissions over time, as well as manage changes to identities, access rules, and permissions. IAMbic facilitates the granting of temporary or emergency access for end-users while minimizing the associated risks, overhead, and latency involved in permissions management.
 
 Learn more at [https://www.iambic.org](https://www.iambic.org).
 
@@ -11,7 +11,7 @@ Learn more at [https://www.iambic.org](https://www.iambic.org).
 - **[Multi-Cloud](https://iambic.org/getting_started/)**: No more juggling between multiple cloud UIs. Manage your cloud identities across AWS, Okta, Google Workspace, and other cloud platforms in the future in one simple human-readable format.
 - **[Dynamic AWS Permissions](https://iambic.org/getting_started/aws#31---create-dynamic-iam-role-policies-that-vary-per-account)**: Stop wasting time bootstrapping IAM "in a unique way" for each of your accounts. IAMbic provides a multi-account template structure designed to make multi-account AWS easier. IAMbic's template structure supports different permission levels, access rules, and expirations based on the AWS account the identity will be deployed to. IAMbic also groups similar identities across accounts in a single template, calling out any differences by account.
 - **[Temporary Access, Permissions, and Identities](https://iambic.org/getting_started/aws#32---create-temporary-expiring-iam-permissions)**: IAMbic enables teams to declaratively define when a resource, cloud permission, or access rule will expire. Relative expiration dates are supported, and are automatically converted into absolute dates once the change is merged in. IAMbic provides GitHub Actions that automatically remove expired identities, access, and permissions.
-- **Always Updated Source of Truth**: Entitlements at scale has gotten out of hand. Compliance, Security, and Ops *need* a central repository to reason about and manage human and cloud identities. IAMbic's open and human readable format enable you to create an entitlements infrastructure that works seamlessly with your existing infrastructure-as-code solutions, such as Terraform.
+- **Always Updated Source of Truth**: Cloud Permissions and entitlements at scale have gotten out of hand. Compliance, Security, and Ops *need* a central repository to reason about and manage human and cloud identities. IAMbic's open and human readable format enable you to create an permissions infrastructure that works seamlessly with your existing infrastructure-as-code solutions, such as Terraform.
 - **Extendable**: IAMbic offers a robust plugin architecture, enabling development of internal plugins and plugins for different cloud providers.
 - **Auditable**: IAMbic provides a complete record of when entitlement changes happened within your environment, whether they happened through IAMbic, IaC, or ClickOps.
 - **Developer-friendly Workflow**: The source of truth in IAMbic is based in Git. Developers, Cloud Operations, Security, and Compliance teams are free to use existing tools at their disposal.
@@ -100,7 +100,8 @@ properties:
   inline_policies:
     - policy_name: s3_policy
       statement:
-        - excluded_accounts: # Policy applies to role on all accounts except sensitive one.
+        - # Policy applies to role on all accounts except sensitive one.
+          excluded_accounts:
             - sensitive_account
           effect: allow
           action:
@@ -111,7 +112,8 @@ properties:
           condition:
             StringNotEquals:
                 s3:ResourceTag/sensitive: 'true'
-        - included_accounts: # allow write access to non-sensitive resources on the dev account
+        - # Allow write access to non-sensitive resources on the dev account
+          included_accounts:
             - dev
           effect: allow
           action:

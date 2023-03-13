@@ -4,14 +4,14 @@ import asyncio
 import functools
 from typing import TYPE_CHECKING, List, Optional
 
-import okta.models as models
-
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import GlobalRetryController
 from iambic.plugins.v0_1_0.okta.models import Group, User
 from iambic.plugins.v0_1_0.okta.utils import generate_user_profile, handle_okta_fn
+
+import okta.models as models
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.group.models import UserSimple
@@ -128,6 +128,9 @@ async def list_all_groups(okta_organization: OktaOrganization) -> List[Group]:
     ) as retry_controller:
         fn = functools.partial(client.list_groups)
         groups, resp, err = await retry_controller(handle_okta_fn, fn)
+        if err:
+            log.error("Error encountered when listing users", error=str(err))
+            return []
     while resp.has_next():
         async with GlobalRetryController(
             fn_identifier="okta.list_groups"
@@ -138,6 +141,12 @@ async def list_all_groups(okta_organization: OktaOrganization) -> List[Group]:
             return []
         groups.append(next_groups)
 
+    if not groups:
+        log.info(
+            "No groups found in Okta Organization",
+            okta_organization=okta_organization.idp_name,
+        )
+        return []
     tasks = []
     for group_raw in groups:
         group = Group(
