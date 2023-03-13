@@ -70,6 +70,33 @@ entitlements. And because IAMbic is stateless, you can make small changes quickl
 In summary, while IaC is great for managing infrastructure, IAMbic is designed specifically to manage entitlements
 and provide a complete and mutable representation of your entitlements in one central location.
 
+## What is the Git workflow and how does IAMbic use it to create a system of record?
+
+Git flow is a branching model and a set of guidelines for managing and organizing Git repositories. It was introduced by
+Vincent Driessen in 2010 as a way to address common issues in software development, such as collaboration, release management,
+and maintenance. The Git flow model is based on two main branches: the master branch and the development branch. The master 
+branch represents the stable, production-ready version of the software, while the development branch is used for ongoing 
+development and testing. Developers create feature branches off the development branch to work on specific features or changes. 
+Once a feature is completed, it is merged back into the development branch, which is continuously integrated and tested. 
+When the development branch reaches a stable state, it is merged into the master branch, and a new release is created.
+
+Git flow also defines several other types of branches, including release branches, which are used to prepare for a new 
+release by stabilizing the code and fixing any issues, and hotfix branches, which are used to quickly address critical 
+bugs or security vulnerabilities in the master branch. The Git flow model provides a clear structure and process for managing 
+the development lifecycle of a software project, making it easier for teams to collaborate and ensure that code changes are 
+properly tested and integrated. It also allows for more efficient release management, as releases are prepared on stable 
+release branches rather than the development branch.
+
+IAMbic relies on the lifecycle of a branch with all of it's commits to generate a record of change. Any deviation from the
+system of record requires a git commit in order for IAMbic to understand the difference in the deviation, without
+using countless of expensive cloud requests to gather that information. Using git flow and the git system allows IAMbic to
+understand deltas immediately, based on locally available metadata that is kept up-to-date with a central cloud repository.
+
+This provides a challenge: an account change does not take effect until a git commit can be used to determine the difference
+of the current change. This means that all changes must first be committed, before they are applied. IAMbic will skip any
+change requests modifying the system of record that do not have a change record. A change record is comprised of two
+differing commits that indicate a change is needed.
+
 ## Getting started
 
 To get started with IAMbic, head on over to [Install and Configure](/getting_started/install_and_configure).
