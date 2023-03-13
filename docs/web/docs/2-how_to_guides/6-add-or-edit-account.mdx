@@ -16,13 +16,13 @@ When you add an account through the wizard, in addition to updating your config,
 
 ### What happens when my templates are synced?
 When you add an account, any templates that apply to the new account are created on the account.
-The exception to this is if the resource already exists on the account.
+The exception to this is if the resource already exists on the account or `iambic_managed` is not set to `read_and_write`.
 
 For example, if you have a template that creates the IAM role `engineering` in all accounts, that role will be created on the new account.
 However, if the `engineering` role already exists on the new account, it will not be overwritten.
 If another you have another IAM role template called `qa-intern` to be deployed in all accounts, and it does not exist on the new account, it will be created.
 
-After templates are applied to the new account, IAMbic will run an import to pull in all resources unique to that account.
+After templates are applied to the new account, IAMbic will run an import to pull in all resources unique to that account if `iambic_managed` is not set to `disabled`.
 
 ## Updating an account
 > NOTE: An AWS account assigned to an AWS organization CANNOT be updated through the wizard.
@@ -33,7 +33,7 @@ When you add an account through the wizard, in addition to updating your config,
 
 ### What happens when my templates are synced?
 
-When you update an account through the wizard, in addition to updating your config, your templates will be synced.
+When you update an account through the wizard, in addition to updating your config, your templates will be synced  if `iambic_managed` is not set to `disabled` for the account.
 
 Updating an account is much more straightforward than adding an account.
 Once the config has been updated, IAMbic will run an import to refresh the representation of the resources for the account.
