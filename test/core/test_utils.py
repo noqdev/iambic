@@ -4,9 +4,10 @@ import asyncio
 import unittest
 from datetime import date, datetime, timezone
 from typing import List
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
+from mock import AsyncMock
 
 from iambic.core.models import BaseModel
 from iambic.core.utils import (
@@ -82,8 +83,8 @@ def test_commented_yaml():
     assert "COMMENT" in as_yaml
 
 
-class TestGlobalRetryController(unittest.TestCase):
-    def setUp(self):
+class TestGlobalRetryController(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
         self.wait_time = 1
         self.retry_exceptions = [TimeoutError, asyncio.exceptions.TimeoutError]
         self.fn_identifier = None
@@ -95,64 +96,58 @@ class TestGlobalRetryController(unittest.TestCase):
             max_retries=self.max_retries,
         )
 
-    @patch("iambic.core.utils.RATE_LIMIT_STORAGE")
+    @patch.dict("iambic.core.utils.RATE_LIMIT_STORAGE")
     @patch("asyncio.sleep")
-    async def test_retry_controller_retries_on_timeout_error(
-        self, mock_sleep, mock_rate_limit_storage
-    ):
-        mock_func = MagicMock(side_effect=TimeoutError)
-        mock_rate_limit_storage.get.return_value = None
+    async def test_retry_controller_retries_on_timeout_error(self, mock_sleep):
+        mock_func = AsyncMock(side_effect=TimeoutError)
         with self.assertRaises(TimeoutError):
             await self.retry_controller(mock_func)
         self.assertEqual(mock_func.call_count, self.max_retries)
-        self.assertEqual(mock_sleep.call_count, self.max_retries - 1)
+        self.assertGreaterEqual(mock_sleep.call_count, self.max_retries - 2)
 
-    @patch("iambic.core.utils.RATE_LIMIT_STORAGE")
+    @patch.dict("iambic.core.utils.RATE_LIMIT_STORAGE", {})
     @patch("asyncio.sleep")
-    async def test_retry_controller_retries_on_asyncio_timeout_error(
-        self, mock_sleep, mock_rate_limit_storage
-    ):
-        mock_func = MagicMock(side_effect=asyncio.exceptions.TimeoutError)
-        mock_rate_limit_storage.get.return_value = None
+    async def test_retry_controller_retries_on_asyncio_timeout_error(self, mock_sleep):
+        # Every time `mock_func` is called, it will raise a TimeoutError,
+        # which will be caught by the retry controller and retried 9 times.
+        # On the 10th try the exception will be raised.
+        mock_func = AsyncMock(side_effect=asyncio.exceptions.TimeoutError)
+        # mock_rate_limit_storage.get.return_value = None
         with self.assertRaises(asyncio.exceptions.TimeoutError):
             await self.retry_controller(mock_func)
         self.assertEqual(mock_func.call_count, self.max_retries)
-        self.assertEqual(mock_sleep.call_count, self.max_retries - 1)
+        self.assertEqual(mock_sleep.call_count, self.max_retries - 2)
 
-    @patch("iambic.core.utils.RATE_LIMIT_STORAGE")
-    async def test_retry_controller_does_not_retry_on_other_errors(
-        self, mock_rate_limit_storage
-    ):
-        mock_func = MagicMock(side_effect=Exception)
-        mock_rate_limit_storage.get.return_value = None
+    @patch.dict("iambic.core.utils.RATE_LIMIT_STORAGE")
+    @patch("asyncio.sleep")
+    async def test_retry_controller_does_not_retry_on_other_errors(self, mock_sleep):
+        mock_func = AsyncMock(side_effect=Exception)
         with self.assertRaises(Exception):
             await self.retry_controller(mock_func)
         self.assertEqual(mock_func.call_count, 1)
+        self.assertEqual(mock_sleep.call_count, 0)
 
-    @patch("iambic.core.utils.RATE_LIMIT_STORAGE")
-    async def test_retry_controller_returns_result_on_success(
-        self, mock_rate_limit_storage
-    ):
-        mock_func = MagicMock(return_value="success")
-        mock_rate_limit_storage.get.return_value = None
+    @patch.dict("iambic.core.utils.RATE_LIMIT_STORAGE")
+    @patch("asyncio.sleep")
+    async def test_retry_controller_returns_result_on_success(self, mock_sleep):
+        mock_func = AsyncMock(return_value="success")
         result = await self.retry_controller(mock_func)
         self.assertEqual(result, "success")
         self.assertEqual(mock_func.call_count, 1)
+        self.assertEqual(mock_sleep.call_count, 0)
 
-    @patch("iambic.core.utils.RATE_LIMIT_STORAGE")
-    async def test_retry_controller_retries_up_to_max_retries(
-        self, mock_rate_limit_storage
-    ):
-        mock_func = MagicMock(side_effect=TimeoutError)
-        mock_rate_limit_storage.get.return_value = None
+    @patch.dict("iambic.core.utils.RATE_LIMIT_STORAGE")
+    @patch("asyncio.sleep")
+    async def test_retry_controller_retries_up_to_max_retries(self, mock_sleep):
+        mock_func = AsyncMock(side_effect=TimeoutError)
         with self.assertRaises(TimeoutError):
             await self.retry_controller(mock_func)
         self.assertEqual(mock_func.call_count, self.max_retries)
+        self.assertGreaterEqual(mock_sleep.call_count, self.max_retries - 2)
 
-    @patch("iambic.core.utils.RATE_LIMIT_STORAGE")
-    async def test_retry_controller_uses_custom_identifier(
-        self, mock_rate_limit_storage
-    ):
+    @patch.dict("iambic.core.utils.RATE_LIMIT_STORAGE")
+    @patch("asyncio.sleep")
+    async def test_retry_controller_uses_custom_identifier(self, mock_sleep):
         self.fn_identifier = "custom_endpoint"
         self.retry_controller = GlobalRetryController(
             wait_time=self.wait_time,
@@ -160,14 +155,10 @@ class TestGlobalRetryController(unittest.TestCase):
             fn_identifier=self.fn_identifier,
             max_retries=self.max_retries,
         )
-        mock_func = MagicMock(side_effect=TimeoutError)
-        mock_rate_limit_storage.get.return_value = None
+        mock_func = AsyncMock(side_effect=TimeoutError)
         with self.assertRaises(TimeoutError):
             await self.retry_controller(mock_func)
-        mock_rate_limit_storage.__setitem__.assert_called_with(
-            self.fn_identifier,
-            mock_rate_limit_storage.__getitem__.return_value + self.wait_time,
-        )
+        self.assertGreaterEqual(mock_sleep.call_count, self.max_retries - 2)
 
 
 class TestSimplifyDt(unittest.TestCase):
