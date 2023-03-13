@@ -6,7 +6,6 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import aiofiles
-
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
@@ -32,7 +31,11 @@ from iambic.plugins.v0_1_0.aws.iam.group.utils import (
     list_groups,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
-from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3_resp
+from iambic.plugins.v0_1_0.aws.utils import (
+    calculate_import_preference,
+    get_aws_account_map,
+    normalize_boto3_resp,
+)
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -216,6 +219,11 @@ async def create_templated_group(  # noqa: C901
         config.min_accounts_required_for_wildcard_included_accounts
     )
 
+    # calculate preference based on existing template
+    prefer_templatized = calculate_import_preference(
+        existing_template_map.get(group_name)
+    )
+
     # Generate the params used for attribute creation
     group_template_params = {"identifier": group_name}
     group_template_properties = {"group_name": group_name}
@@ -272,12 +280,20 @@ async def create_templated_group(  # noqa: C901
 
     if managed_policy_resources:
         group_template_properties["managed_policies"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, managed_policy_resources, False
+            aws_account_map,
+            num_of_accounts,
+            managed_policy_resources,
+            False,
+            prefer_templatized=prefer_templatized,
         )
 
     if inline_policy_document_resources:
         group_template_properties["inline_policies"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, inline_policy_document_resources, False
+            aws_account_map,
+            num_of_accounts,
+            inline_policy_document_resources,
+            False,
+            prefer_templatized=prefer_templatized,
         )
 
     file_path = get_templated_group_file_path(

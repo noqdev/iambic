@@ -7,7 +7,6 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Union
 
 import aiofiles
-
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
@@ -32,7 +31,11 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
     get_permission_set_users_and_groups,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
-from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3_resp
+from iambic.plugins.v0_1_0.aws.utils import (
+    calculate_import_preference,
+    get_aws_account_map,
+    normalize_boto3_resp,
+)
 
 # TODO: Update all grouping functions to support org grouping once multiple orgs with IdentityCenter is functional
 # TODO: Update partial import to support permission set only being deleted on a single org
@@ -153,6 +156,11 @@ async def create_templated_permission_set(  # noqa: C901
             account_id_to_permissionn_set_map[
                 permission_set_ref["account_id"]
             ] = normalize_boto3_resp(content_dict)
+
+    # calculate preference based on existing template
+    prefer_templatized = calculate_import_preference(
+        existing_template_map.get(permission_set_name)
+    )
 
     # Generate the params used for attribute creation
     template_params = {"identifier": permission_set_name, "access_rules": []}
@@ -294,7 +302,10 @@ async def create_templated_permission_set(  # noqa: C901
 
     if permissions_boundary_resources:
         template_properties["permissions_boundary"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, permissions_boundary_resources
+            aws_account_map,
+            num_of_accounts,
+            permissions_boundary_resources,
+            prefer_templatized=prefer_templatized,
         )
 
     if description_resources:
@@ -304,7 +315,11 @@ async def create_templated_permission_set(  # noqa: C901
 
     if managed_policy_resources:
         template_properties["managed_policies"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, managed_policy_resources, False
+            aws_account_map,
+            num_of_accounts,
+            managed_policy_resources,
+            False,
+            prefer_templatized=prefer_templatized,
         )
 
     if customer_managed_policy_ref_resources:
@@ -315,16 +330,21 @@ async def create_templated_permission_set(  # noqa: C901
             num_of_accounts,
             customer_managed_policy_ref_resources,
             False,
+            prefer_templatized=prefer_templatized,
         )
 
     if tag_resources:
         template_properties["tags"] = await group_dict_attribute(
-            aws_account_map, num_of_accounts, tag_resources, False
+            aws_account_map,
+            num_of_accounts,
+            tag_resources,
+            False,
+            prefer_templatized=prefer_templatized,
         )
 
     if inline_policy_resources:
         template_properties["inline_policy"] = json.loads(
-            await group_int_or_str_attribute(
+            await group_int_or_str_attribute(  # hm... other (role, user) inline policies use group_dict_attribute, not sure the reason
                 aws_account_map,
                 num_of_accounts,
                 inline_policy_resources,

@@ -193,7 +193,9 @@ async def base_group_str_attribute(
 
 
 async def base_group_dict_attribute(
-    aws_account_map: dict[str, AWSAccount], account_resources: list[dict]
+    aws_account_map: dict[str, AWSAccount],
+    account_resources: list[dict],
+    prefer_templatized=False,
 ) -> list[dict]:
     """Groups an attribute that is a dict or list of dicts with matching aws_accounts
 
@@ -308,10 +310,15 @@ async def base_group_dict_attribute(
             elif len(resource_hashes) == 1:
                 resource_hash = resource_hashes[0]
             else:
-                # Take priority over raw output
-                resource_hash = [
-                    rv for rv in resource_hashes if "{{" not in str(hash_map[rv])
-                ][0]
+                if prefer_templatized:
+                    resource_hash = resource_hashes[
+                        -1
+                    ]  # take the last one because it's the templatized version
+                else:
+                    # Take priority over raw output
+                    resource_hash = [
+                        rv for rv in resource_hashes if "{{" not in str(hash_map[rv])
+                    ][0]
 
             grouped_resource_map[resource_hash] = {
                 "resource_val": hash_map[resource_hash],
@@ -408,6 +415,7 @@ async def group_dict_attribute(
     number_of_accounts_resource_on: int,
     account_resources: list[dict],
     is_dict_attr: bool = True,
+    prefer_templatized: bool = False,
 ) -> Union[dict, list[dict]]:
     """Groups an attribute by aws_accounts, formats the attribute and normalizes the included aws_accounts.
 
@@ -423,7 +431,13 @@ async def group_dict_attribute(
     grouped_attributes = await set_included_accounts_for_grouped_attribute(
         aws_account_map,
         number_of_accounts_resource_on,
-        (await base_group_dict_attribute(aws_account_map, account_resources)),
+        (
+            await base_group_dict_attribute(
+                aws_account_map,
+                account_resources,
+                prefer_templatized=prefer_templatized,
+            )
+        ),
     )
 
     if len(grouped_attributes) == 1 and is_dict_attr:
@@ -885,6 +899,7 @@ def merge_model(
                     if isinstance(new_value, str):
                         _cls = type(inner_element)
                         new_value = [_cls.new_instance_from_string(new_value)]
+                        value_as_list = True  # because cast it into a list
 
                     new_value = merge_access_model_list(
                         new_value, existing_value, all_provider_children

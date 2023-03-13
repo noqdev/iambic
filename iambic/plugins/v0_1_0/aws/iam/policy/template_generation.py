@@ -28,7 +28,11 @@ from iambic.plugins.v0_1_0.aws.iam.policy.utils import (
     list_managed_policies,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
-from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, normalize_boto3_resp
+from iambic.plugins.v0_1_0.aws.utils import (
+    calculate_import_preference,
+    get_aws_account_map,
+    normalize_boto3_resp,
+)
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -193,6 +197,11 @@ async def create_templated_managed_policy(  # noqa: C901
                 managed_policy_ref["account_id"]
             ] = normalize_boto3_resp(content_dict)
 
+    # calculate preference based on existing template
+    prefer_templatized = calculate_import_preference(
+        existing_template_map.get(managed_policy_name)
+    )
+
     # Generate the params used for attribute creation
     template_properties = {"policy_name": managed_policy_name}
 
@@ -248,7 +257,11 @@ async def create_templated_managed_policy(  # noqa: C901
         template_properties["path"] = path
 
     template_properties["policy_document"] = await group_dict_attribute(
-        aws_account_map, num_of_accounts, policy_document_resources, True
+        aws_account_map,
+        num_of_accounts,
+        policy_document_resources,
+        True,
+        prefer_templatized=prefer_templatized,
     )
 
     if description_resources:
@@ -258,7 +271,11 @@ async def create_templated_managed_policy(  # noqa: C901
 
     if tag_resources:
         tags = await group_dict_attribute(
-            aws_account_map, num_of_accounts, tag_resources, True
+            aws_account_map,
+            num_of_accounts,
+            tag_resources,
+            True,
+            prefer_templatized=prefer_templatized,
         )
         if isinstance(tags, dict):
             tags = [tags]
