@@ -2,9 +2,11 @@
 slug: /
 title: Overview
 ---
+
 # What is IAMbic?
 
-IAMbic shifts cloud permissions left. IAMbic is like Terraform, but for distributed Cloud IAM.
+IAMbic shifts cloud permissions left by solving the distributed permissions nightmare across multi-cloud environments.
+You can think of IAMbic like Terraform, but specifically designed for distributed Cloud IAM.
 
 Imagine that you're a cloud administrator, cloud security engineer, or site reliability engineer for a
 company with a large, multi-account footprint across
@@ -12,8 +14,11 @@ AWS, GCP, or Azure. You have a lot of different teams across different departmen
 to different resources on these accounts. You're responsible for managing their permissions and access.
 
 You've shifted left, and you're using a mixture of Terraform, CloudFormation, and ClickOps© to manage your infrastructure.
-This approach is great for developers, who review and approve eachothers changes. But for you and your security and compliance teams,
-it's a nightmare. You've lost track of all the different ways that permissions are managed across your organization,
+This approach is great for developers, who review and approve each others' changes. But for you and your security and compliance teams,
+it's a nightmare. Developers are being granted excessive permissions, making production changes that no one saw coming,
+which is causing accidental breakage left and right. It is also drastically increasing the risk and scope of a potential security breach.
+
+You've lost track of all the different ways that permissions are managed across your organization,
 and it's hard to know who has access to what without logging in to multiple systems. You're constantly having to chase down permissions requests,
 and you're constantly having to audit your environment to make sure that everything is secure.
 

@@ -1,4 +1,4 @@
-# IAMbic: Distributed Permissions Management as Code
+# IAMbic: Cloud IAM as Code
 
 "IAMbic is like Terraform, but for distributed Cloud IAM"
 
