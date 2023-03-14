@@ -154,7 +154,7 @@ async def gather_templates(repo_dir: str, template_type: str = None) -> list[str
 
     file_paths = await gather_limit(
         *[file_regex_search(fp, regex_pattern) for fp in file_paths],
-        limit=10,
+        limit=int(os.environ.get("IAMBIC_GATHER_TEMPLATES_LIMIT", 10)),
     )
     return [fp for fp in file_paths if fp]
 
