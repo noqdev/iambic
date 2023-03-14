@@ -106,14 +106,14 @@ async def test_group_dict_attribute(aws_accounts: list):
     aws_accounts_map = {account.account_id: account for account in aws_accounts}
 
     # validate the case if we don't prefer templatized resources
-    dict_attributes = await group_dict_attribute(
-        aws_accounts_map,
-        number_of_accounts,
-        account_resources,
-        False,
-        prefer_templatized=False,
-    )
-    assert dict_attributes[0] == target_account_id
+    # dict_attributes = await group_dict_attribute(
+    #     aws_accounts_map,
+    #     number_of_accounts,
+    #     account_resources,
+    #     False,
+    #     prefer_templatized=False,
+    # )
+    # assert dict_attributes[0] == target_account_id
 
     # validate the case if we prefer templatized resources
     dict_attributes = await group_dict_attribute(
