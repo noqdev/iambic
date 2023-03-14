@@ -184,3 +184,43 @@ class TestSimplifyDt(unittest.TestCase):
         input_value = "not a date"
         expected_result = input_value
         self.assertEqual(simplify_dt(input_value), expected_result)
+
+
+@pytest.mark.asyncio
+async def test_gather_templates(tmpdir):
+    from iambic.core.utils import gather_templates
+
+    # Create a test directory structure
+    templates_dir = tmpdir.mkdir("templates")
+    sub_dir1 = templates_dir.mkdir("sub_dir1")
+    sub_dir2 = templates_dir.mkdir("sub_dir2")
+    file1 = templates_dir.join("file1.yml")
+    file1.write("template_type: NOQ::type1\n")
+    file2 = sub_dir1.join("file2.yaml")
+    file2.write("template_type: NOQ::type2\n")
+    file3 = sub_dir2.join("file3.yml")
+    file3.write("template_type: NOQ::type1\n")
+    file4 = sub_dir2.join("file4.yaml")
+    file4.write("template_type: not_noq\n")
+
+    # Test the function
+    result = await gather_templates(str(templates_dir), "type1")
+    assert set(result) == {
+        str(file1),
+        str(file3),
+    }
+
+    result = await gather_templates(str(templates_dir), "type2")
+    assert set(result) == {
+        str(file2),
+    }
+
+    result = await gather_templates(str(templates_dir), "type3")
+    assert set(result) == set()
+
+    result = await gather_templates(str(templates_dir))
+    assert set(result) == {
+        str(file1),
+        str(file2),
+        str(file3),
+    }
