@@ -15,11 +15,11 @@ from typing import TYPE_CHECKING, Any, Coroutine, Optional, Union
 from urllib.parse import unquote_plus
 
 import aiofiles
-import aioitertools.asyncio
 from asgiref.sync import sync_to_async
 from ruamel.yaml import YAML
 
 from iambic.core import noq_json as json
+from iambic.core.aio_utils import gather_limit
 from iambic.core.context import ExecutionContext
 from iambic.core.exceptions import RateLimitException
 from iambic.core.iambic_enum import IambicManaged
@@ -152,7 +152,7 @@ async def gather_templates(repo_dir: str, template_type: str = None) -> list[str
     file_paths += glob.glob(f"{repo_dir}/**/*.yml", recursive=True)
     file_paths += glob.glob(f"{repo_dir}*.yml", recursive=True)
 
-    file_paths = await aioitertools.asyncio.gather(
+    file_paths = await gather_limit(
         *[file_regex_search(fp, regex_pattern) for fp in file_paths],
         limit=10,
     )
