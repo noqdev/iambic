@@ -11,6 +11,14 @@ from iambic.plugins.v0_1_0.aws.iam.role.template_generation import create_templa
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
 
+def get_aws_account_map(aws_accounts: list[AWSAccount]) -> dict[str, AWSAccount]:
+    account_map = {}
+    for account in aws_accounts:
+        account_map[account.account_name] = account
+        account_map[account.account_id] = account
+    return account_map
+
+
 @pytest.fixture
 def test_role():
     test_role_name = "test_role"
@@ -21,6 +29,18 @@ def test_role():
         properties={"role_name": test_role_name},
     )
     return test_role
+
+
+@pytest.fixture
+def test_account():
+    return AWSAccount(account_id="123456789011", account_name="dev", assume_role_arn="")
+
+
+@pytest.fixture
+def test_account_2():
+    return AWSAccount(
+        account_id="123456789012", account_name="dev_2", assume_role_arn=""
+    )
 
 
 @pytest.fixture
@@ -43,16 +63,12 @@ def mock_write():
 async def test_create_template_role(
     test_config, test_role, mock_account_id_to_role_map, mock_write
 ):
+    test_role_name = "test_role"
     test_account_id = "123456789012"
     test_account = AWSAccount(
         account_id=test_account_id, account_name="dev", assume_role_arn=""
     )
-    test_aws_account_map = {
-        test_account.account_name: test_account,
-        test_account.account_id: test_account,
-    }
-    test_role_name = "test_role"
-    test_role_dir = ""
+    test_aws_account_map = get_aws_account_map([test_account])
     test_role_ref = test_role.properties.dict()
     test_role_ref["account_id"] = "123456789012"
     test_role_refs = [test_role_ref]
@@ -62,7 +78,7 @@ async def test_create_template_role(
         test_aws_account_map,
         test_role_name,
         test_role_refs,
-        test_role_dir,
+        "",
         test_existing_template_map,
         test_config.aws,
     )
@@ -72,9 +88,9 @@ async def test_create_template_role(
     test_existing_template_map = {test_role_name: test_role}
     output_role = await create_templated_role(
         test_aws_account_map,
-        test_role_name,
+        "test_role",
         test_role_refs,
-        test_role_dir,
+        "",
         test_existing_template_map,
         test_config.aws,
     )
@@ -83,22 +99,14 @@ async def test_create_template_role(
 
 @pytest.mark.asyncio
 async def test_merge_template_role_with_explicit_exclude(
-    test_config, test_role, mock_account_id_to_role_map, mock_write
+    test_config,
+    test_role,
+    test_account,
+    test_account_2,
+    mock_account_id_to_role_map,
+    mock_write,
 ):
-    test_account = AWSAccount(
-        account_id="123456789011", account_name="dev", assume_role_arn=""
-    )
-    test_account_2 = AWSAccount(
-        account_id="123456789012", account_name="dev_2", assume_role_arn=""
-    )
-    test_aws_account_map = {
-        test_account.account_name: test_account,
-        test_account.account_id: test_account,
-        test_account_2.account_name: test_account_2,
-        test_account_2.account_id: test_account_2,
-    }
-    test_role_name = "test_role"
-    test_role_dir = ""
+    test_aws_account_map = get_aws_account_map([test_account, test_account_2])
     test_role_ref = test_role.properties.dict()
     test_role_ref["account_id"] = test_account.account_id
     test_role_refs = [test_role_ref]
@@ -106,9 +114,9 @@ async def test_merge_template_role_with_explicit_exclude(
 
     initial_role = await create_templated_role(
         test_aws_account_map,
-        test_role_name,
+        "test_role",
         test_role_refs,
-        test_role_dir,
+        "",
         test_existing_template_map,
         test_config.aws,
     )
@@ -119,9 +127,9 @@ async def test_merge_template_role_with_explicit_exclude(
     ]
     updated_role = await create_templated_role(
         test_aws_account_map,
-        test_role_name,
+        "test_role",
         test_role_refs,
-        test_role_dir,
+        "",
         test_existing_template_map,
         test_config.aws,
     )
@@ -137,27 +145,18 @@ async def test_merge_template_role_with_explicit_exclude(
 
 @pytest.mark.asyncio
 async def test_merge_template_role_with_wildcard_exclude(
-    test_config, test_role, mock_account_id_to_role_map, mock_write
+    test_config,
+    test_role,
+    test_account,
+    test_account_2,
+    mock_account_id_to_role_map,
+    mock_write,
 ):
     """
     Check that the wildcard for included account is preserved when merging
     Also confirm the now excluded account is explicitly added to excluded accounts
     """
-
-    test_account = AWSAccount(
-        account_id="123456789011", account_name="dev", assume_role_arn=""
-    )
-    test_account_2 = AWSAccount(
-        account_id="123456789012", account_name="dev_2", assume_role_arn=""
-    )
-    test_aws_account_map = {
-        test_account.account_name: test_account,
-        test_account.account_id: test_account,
-        test_account_2.account_name: test_account_2,
-        test_account_2.account_id: test_account_2,
-    }
-    test_role_name = "test_role"
-    test_role_dir = ""
+    test_aws_account_map = get_aws_account_map([test_account, test_account_2])
     test_role_ref = test_role.properties.dict()
     test_role_ref["account_id"] = test_account.account_id
     test_role_refs = [test_role_ref]
@@ -165,9 +164,9 @@ async def test_merge_template_role_with_wildcard_exclude(
 
     initial_role = await create_templated_role(
         test_aws_account_map,
-        test_role_name,
+        "test_role",
         test_role_refs,
-        test_role_dir,
+        "",
         test_existing_template_map,
         test_config.aws,
     )
@@ -175,9 +174,9 @@ async def test_merge_template_role_with_wildcard_exclude(
     initial_role.included_accounts = ["dev*"]
     updated_role = await create_templated_role(
         test_aws_account_map,
-        test_role_name,
+        "test_role",
         test_role_refs,
-        test_role_dir,
+        "",
         test_existing_template_map,
         test_config.aws,
     )
@@ -193,26 +192,17 @@ async def test_merge_template_role_with_wildcard_exclude(
 
 @pytest.mark.asyncio
 async def test_merge_template_role_with_wildcard_catch_include(
-    test_config, test_role, mock_account_id_to_role_map, mock_write
+    test_config,
+    test_role,
+    test_account,
+    test_account_2,
+    mock_account_id_to_role_map,
+    mock_write,
 ):
     """
     Check that an account that hits on a wildcard for included account is not explicitly added to included accounts
     """
-
-    test_account = AWSAccount(
-        account_id="123456789011", account_name="dev", assume_role_arn=""
-    )
-    test_account_2 = AWSAccount(
-        account_id="123456789012", account_name="dev_2", assume_role_arn=""
-    )
-    test_aws_account_map = {
-        test_account.account_name: test_account,
-        test_account.account_id: test_account,
-        test_account_2.account_name: test_account_2,
-        test_account_2.account_id: test_account_2,
-    }
-    test_role_name = "test_role"
-    test_role_dir = ""
+    test_aws_account_map = get_aws_account_map([test_account, test_account_2])
     test_role_ref = test_role.properties.dict()
     test_role_ref["account_id"] = test_account.account_id
     test_role_refs = [test_role_ref]
@@ -220,9 +210,9 @@ async def test_merge_template_role_with_wildcard_catch_include(
 
     initial_role = await create_templated_role(
         test_aws_account_map,
-        test_role_name,
+        "test_role",
         test_role_refs,
-        test_role_dir,
+        "",
         test_existing_template_map,
         test_config.aws,
     )
@@ -230,9 +220,9 @@ async def test_merge_template_role_with_wildcard_catch_include(
     initial_role.included_accounts = ["dev*"]
     updated_role = await create_templated_role(
         test_aws_account_map,
-        test_role_name,
+        "test_role",
         test_role_refs,
-        test_role_dir,
+        "",
         test_existing_template_map,
         test_config.aws,
     )
@@ -265,8 +255,6 @@ async def test_merge_template_role_with_new_include_account(
         test_account_2.account_name: test_account_2,
         test_account_2.account_id: test_account_2,
     }
-    test_role_name = "test_role"
-    test_role_dir = ""
     test_role_ref = test_role.properties.dict()
     test_role_ref["account_id"] = test_account.account_id
     test_role_refs = [test_role_ref]
@@ -274,9 +262,9 @@ async def test_merge_template_role_with_new_include_account(
 
     initial_role = await create_templated_role(
         test_aws_account_map,
-        test_role_name,
+        "test_role",
         test_role_refs,
-        test_role_dir,
+        "",
         test_existing_template_map,
         test_config.aws,
     )
@@ -284,9 +272,9 @@ async def test_merge_template_role_with_new_include_account(
     initial_role.included_accounts = ["dev_*"]
     updated_role = await create_templated_role(
         test_aws_account_map,
-        test_role_name,
+        "test_role",
         test_role_refs,
-        test_role_dir,
+        "",
         test_existing_template_map,
         test_config.aws,
     )
@@ -305,27 +293,18 @@ async def test_merge_template_role_with_new_include_account(
 
 @pytest.mark.asyncio
 async def test_merge_template_role_with_wildcard_move_from_exclude(
-    test_config, test_role, mock_account_id_to_role_map, mock_write
+    test_config,
+    test_role,
+    test_account,
+    test_account_2,
+    mock_account_id_to_role_map,
+    mock_write,
 ):
     """
     Check that the wildcard for included account is preserved when merging
     Also confirm the previously excluded account has been removed from excluded accounts
     """
-
-    test_account = AWSAccount(
-        account_id="123456789011", account_name="dev", assume_role_arn=""
-    )
-    test_account_2 = AWSAccount(
-        account_id="123456789012", account_name="dev_2", assume_role_arn=""
-    )
-    test_aws_account_map = {
-        test_account.account_name: test_account,
-        test_account.account_id: test_account,
-        test_account_2.account_name: test_account_2,
-        test_account_2.account_id: test_account_2,
-    }
-    test_role_name = "test_role"
-    test_role_dir = ""
+    test_aws_account_map = get_aws_account_map([test_account, test_account_2])
     test_role_ref = test_role.properties.dict()
     test_role_ref["account_id"] = test_account.account_id
     test_role_refs = [test_role_ref]
@@ -333,9 +312,9 @@ async def test_merge_template_role_with_wildcard_move_from_exclude(
 
     initial_role = await create_templated_role(
         test_aws_account_map,
-        test_role_name,
+        "test_role",
         test_role_refs,
-        test_role_dir,
+        "",
         test_existing_template_map,
         test_config.aws,
     )
@@ -344,9 +323,9 @@ async def test_merge_template_role_with_wildcard_move_from_exclude(
     initial_role.excluded_accounts = [test_account_2.account_name]
     updated_role = await create_templated_role(
         test_aws_account_map,
-        test_role_name,
+        "test_role",
         test_role_refs,
-        test_role_dir,
+        "",
         test_existing_template_map,
         test_config.aws,
     )
@@ -365,22 +344,14 @@ async def test_merge_template_role_with_wildcard_move_from_exclude(
 
 @pytest.mark.asyncio
 async def test_merge_template_role_with_explicit_exclude_on_policy(
-    test_config, test_role, mock_account_id_to_role_map, mock_write
+    test_config,
+    test_role,
+    test_account,
+    test_account_2,
+    mock_account_id_to_role_map,
+    mock_write,
 ):
-    test_account = AWSAccount(
-        account_id="123456789011", account_name="dev", assume_role_arn=""
-    )
-    test_account_2 = AWSAccount(
-        account_id="123456789012", account_name="dev_2", assume_role_arn=""
-    )
-    test_aws_account_map = {
-        test_account.account_name: test_account,
-        test_account.account_id: test_account,
-        test_account_2.account_name: test_account_2,
-        test_account_2.account_id: test_account_2,
-    }
-    test_role_name = "test_role"
-    test_role_dir = ""
+    test_aws_account_map = get_aws_account_map([test_account, test_account_2])
     test_role_ref = test_role.properties.dict()
     inline_policies = [
         {
@@ -408,9 +379,9 @@ async def test_merge_template_role_with_explicit_exclude_on_policy(
 
     initial_role = await create_templated_role(
         test_aws_account_map,
-        test_role_name,
+        "test_role",
         test_role_refs,
-        test_role_dir,
+        "",
         test_existing_template_map,
         test_config.aws,
     )
@@ -422,9 +393,9 @@ async def test_merge_template_role_with_explicit_exclude_on_policy(
     initial_role.properties.inline_policies = inline_policies
     updated_role = await create_templated_role(
         test_aws_account_map,
-        test_role_name,
+        "test_role",
         test_role_refs,
-        test_role_dir,
+        "",
         test_existing_template_map,
         test_config.aws,
     )
@@ -450,22 +421,14 @@ async def test_merge_template_role_with_explicit_exclude_on_policy(
 
 @pytest.mark.asyncio
 async def test_merge_template_role_with_removed_policy(
-    test_config, test_role, mock_account_id_to_role_map, mock_write
+    test_config,
+    test_role,
+    test_account,
+    test_account_2,
+    mock_account_id_to_role_map,
+    mock_write,
 ):
-    test_account = AWSAccount(
-        account_id="123456789011", account_name="dev", assume_role_arn=""
-    )
-    test_account_2 = AWSAccount(
-        account_id="123456789012", account_name="dev_2", assume_role_arn=""
-    )
-    test_aws_account_map = {
-        test_account.account_name: test_account,
-        test_account.account_id: test_account,
-        test_account_2.account_name: test_account_2,
-        test_account_2.account_id: test_account_2,
-    }
-    test_role_name = "test_role"
-    test_role_dir = ""
+    test_aws_account_map = get_aws_account_map([test_account, test_account_2])
     test_role_ref = test_role.properties.dict()
     inline_policies = [
         {
@@ -493,9 +456,9 @@ async def test_merge_template_role_with_removed_policy(
 
     initial_role = await create_templated_role(
         test_aws_account_map,
-        test_role_name,
+        "test_role",
         test_role_refs,
-        test_role_dir,
+        "",
         test_existing_template_map,
         test_config.aws,
     )
@@ -507,9 +470,9 @@ async def test_merge_template_role_with_removed_policy(
     initial_role.properties.inline_policies = inline_policies
     updated_role = await create_templated_role(
         test_aws_account_map,
-        test_role_name,
+        "test_role",
         test_role_refs,
-        test_role_dir,
+        "",
         test_existing_template_map,
         test_config.aws,
     )

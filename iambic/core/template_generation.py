@@ -350,7 +350,7 @@ async def set_included_accounts_for_grouped_attribute(
                     aws_account_map[rv["account_id"]].account_name
                     for rv in resource_vals
                 ]
-            grouped_attribute[k] = sorted(set(included_accounts))
+            grouped_attribute[k] = included_accounts
 
         return grouped_attribute
 
@@ -366,9 +366,7 @@ async def set_included_accounts_for_grouped_attribute(
                     aws_account_map[rv].account_name
                     for rv in grouped_attribute[elem]["included_accounts"]
                 ]
-                grouped_attribute[elem]["included_accounts"] = sorted(
-                    set(included_accounts)
-                )
+                grouped_attribute[elem]["included_accounts"] = included_accounts
 
         return grouped_attribute
 
@@ -446,7 +444,7 @@ async def group_dict_attribute(
         attr_val = grouped_attributes[0]["resource_val"]
         included_accounts = grouped_attributes[0]["included_accounts"]
         if included_accounts != ["*"]:
-            attr_val["included_accounts"] = sorted(set(included_accounts))
+            attr_val["included_accounts"] = included_accounts
 
         return attr_val
 
@@ -454,7 +452,7 @@ async def group_dict_attribute(
         attr_val = grouped_attr["resource_val"]
         included_accounts = grouped_attr["included_accounts"]
         if included_accounts != ["*"]:
-            attr_val["included_accounts"] = sorted(set(included_accounts))
+            attr_val["included_accounts"] = included_accounts
 
         response.append(attr_val)
 
@@ -524,16 +522,16 @@ def sync_access_model_scope(
     source_access_model: AccessModelMixin, destination_access_model: AccessModelMixin
 ) -> tuple[AccessModelMixin, AccessModelMixin]:
     destination_access_model.set_included_children(
-        sorted(set(source_access_model.included_children))
+        list(sorted(set(source_access_model.included_children)))
     )
     destination_access_model.set_excluded_children(
-        sorted(set(source_access_model.excluded_children))
+        list(sorted(set(source_access_model.excluded_children)))
     )
     destination_access_model.set_included_parents(
-        sorted(set(source_access_model.included_parents))
+        list(sorted(set(source_access_model.included_parents)))
     )
     destination_access_model.set_excluded_parents(
-        sorted(set(source_access_model.excluded_parents))
+        list(sorted(set(source_access_model.excluded_parents)))
     )
     return source_access_model, destination_access_model
 
