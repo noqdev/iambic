@@ -37,8 +37,17 @@ Resources:
                   - organizations:list*
                   - iam:*
                   - sso:*
-                  - secretsmanager:CreateSecret
                 Resource:
                   - '*'
+              - Effect: Allow
+                Action:
+                  - secretsmanager:CreateSecret
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:describesecret
+                  - secretsmanager:listsecrets
+                  - secretsmanager:listsecretversionids
+                  - secretsmanager:PutSecretValue
+                Resource:
+                  - 'arn:aws:secretsmanager:*:*:secret:iambic-config-secrets-*'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/ReadOnlyAccess'
