@@ -46,6 +46,22 @@ class AWSConfig(BaseModel):
             raise ValueError("Only one AWS Organization is supported at this time.")
         return organizations
 
+    @validator("accounts", allow_reuse=True)
+    def validate_unique_accounts(cls, accounts):
+        account_ids = set()
+        account_names = set()
+        for account in accounts:
+            if account.account_id in account_ids:
+                raise ValueError(f"duplicate account_id found: {account.account_id}")
+            account_ids.add(account.account_id)
+
+            if account.account_name in account_names:
+                raise ValueError(
+                    f"duplicate account_name found: {account.account_name}"
+                )
+            account_names.add(account.account_name)
+        return accounts
+
     @property
     def hub_role_arn(self):
         if self.organizations:
