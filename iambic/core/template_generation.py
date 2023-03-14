@@ -91,6 +91,7 @@ async def base_group_str_attribute(
 
     """
     Create map with different representations of a resource value for each account
+    (Note that we now only keep the post-templatized version)
 
     The purpose is to add the 2 ways look-ups are done and maintain o(1) performance.
     The resource_val to the corresponding list element in account_resources[elem]["resources"]
@@ -110,19 +111,21 @@ async def base_group_str_attribute(
             resource_val = resource["resource_val"]
             templatized_resource_val = templatize_resource(aws_account, resource_val)
 
+            # note about the decision we only kept the post-templatized version
+            # we aggressively templatized the incoming information.
+            # a note for future reader: if you attempt to conditional decide
+            # to templatize or not, you have to be careful regarding greedy
+            # algorithm that does not arrive at the same termination state.
+            # Concretely, if a literal can both be repeated across accounts
+            # or templatized across accounts, greedy algorithm may reach
+            # different states.
+
             account_resources[account_resource_elem]["resource_val_map"][
-                resource_val
+                templatized_resource_val
             ] = resource_elem
             account_resources[account_resource_elem]["elem_resource_val_map"][
                 resource_elem
-            ] = [resource_val]
-            if templatized_resource_val != resource_val:
-                account_resources[account_resource_elem]["resource_val_map"][
-                    templatized_resource_val
-                ] = resource_elem
-                account_resources[account_resource_elem]["elem_resource_val_map"][
-                    resource_elem
-                ].append(templatized_resource_val)
+            ] = [templatized_resource_val]
 
     grouped_resource_map = defaultdict(
         list
