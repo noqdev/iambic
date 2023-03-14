@@ -350,7 +350,7 @@ async def set_included_accounts_for_grouped_attribute(
                     aws_account_map[rv["account_id"]].account_name
                     for rv in resource_vals
                 ]
-            grouped_attribute[k] = included_accounts
+            grouped_attribute[k] = sorted(set(included_accounts))
 
         return grouped_attribute
 
@@ -366,7 +366,9 @@ async def set_included_accounts_for_grouped_attribute(
                     aws_account_map[rv].account_name
                     for rv in grouped_attribute[elem]["included_accounts"]
                 ]
-                grouped_attribute[elem]["included_accounts"] = included_accounts
+                grouped_attribute[elem]["included_accounts"] = sorted(
+                    set(included_accounts)
+                )
 
         return grouped_attribute
 
@@ -444,7 +446,7 @@ async def group_dict_attribute(
         attr_val = grouped_attributes[0]["resource_val"]
         included_accounts = grouped_attributes[0]["included_accounts"]
         if included_accounts != ["*"]:
-            attr_val["included_accounts"] = included_accounts
+            attr_val["included_accounts"] = sorted(set(included_accounts))
 
         return attr_val
 
@@ -452,7 +454,7 @@ async def group_dict_attribute(
         attr_val = grouped_attr["resource_val"]
         included_accounts = grouped_attr["included_accounts"]
         if included_accounts != ["*"]:
-            attr_val["included_accounts"] = included_accounts
+            attr_val["included_accounts"] = sorted(set(included_accounts))
 
         response.append(attr_val)
 
@@ -522,16 +524,16 @@ def sync_access_model_scope(
     source_access_model: AccessModelMixin, destination_access_model: AccessModelMixin
 ) -> tuple[AccessModelMixin, AccessModelMixin]:
     destination_access_model.set_included_children(
-        sorted(source_access_model.included_children)
+        sorted(set(source_access_model.included_children))
     )
     destination_access_model.set_excluded_children(
-        sorted(source_access_model.excluded_children)
+        sorted(set(source_access_model.excluded_children))
     )
     destination_access_model.set_included_parents(
-        sorted(source_access_model.included_parents)
+        sorted(set(source_access_model.included_parents))
     )
     destination_access_model.set_excluded_parents(
-        sorted(source_access_model.excluded_parents)
+        sorted(set(source_access_model.excluded_parents))
     )
     return source_access_model, destination_access_model
 
@@ -604,7 +606,19 @@ def update_access_attributes(
                     existing_model.included_children.append(child.preferred_identifier)
 
             if not evaluated_on_new_model and currently_evaluated:
-                existing_model.excluded_children.append(child.preferred_identifier)
+                # If the child was explicitly defined in included_children then remove it
+                #   because it is no longer included.
+                # If it is defined as part of a wildcard
+                #   then we need to preserve the rule but add it to excluded children.
+                included_children = [
+                    ic
+                    for ic in existing_model.included_children
+                    if ic not in child.all_identifiers
+                ]
+                if included_children != existing_model.included_children:
+                    existing_model.set_included_children(included_children)
+                else:
+                    existing_model.excluded_children.append(child.preferred_identifier)
 
     existing_model, new_model = sync_access_model_scope(existing_model, new_model)
     return new_model, existing_model

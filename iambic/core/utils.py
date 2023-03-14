@@ -441,8 +441,11 @@ def apply_to_provider(resource, provider_details, context: ExecutionContext) -> 
 
 def is_regex_match(regex, test_string):
     if "*" in regex:
+        # Normalize user created regex to python regex
+        # Example, dev-* to dev-.* to prevent re.match return True for eval on dev
+        regex = regex.replace(".*", "*").replace("*", ".*")
         try:
-            return re.match(regex.lower(), test_string)
+            return bool(re.match(regex.lower(), test_string))
         except re.error:
             return regex.lower() == test_string.lower()
     else:
