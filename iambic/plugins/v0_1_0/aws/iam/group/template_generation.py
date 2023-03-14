@@ -6,6 +6,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import aiofiles
+
 from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
@@ -17,7 +18,7 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import GroupMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.group.models import (
     AWS_IAM_GROUP_TEMPLATE_TYPE,
@@ -34,7 +35,6 @@ from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
-    normalize_boto3_resp,
 )
 
 if TYPE_CHECKING:
@@ -198,7 +198,7 @@ async def _account_id_to_group_map(group_refs):
         async with aiofiles.open(group_ref["path"], mode="r") as f:
             content_dict = json.loads(await f.read())
 
-            account_id_to_group_map[group_ref["account_id"]] = normalize_boto3_resp(
+            account_id_to_group_map[group_ref["account_id"]] = normalize_dict_keys(
                 content_dict
             )
     return account_id_to_group_map

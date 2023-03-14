@@ -1,97 +1,113 @@
 from __future__ import annotations
 
-import json
 import os
 from typing import TYPE_CHECKING
 
+from iambic.core import noq_json as json
+from iambic.core.logger import log
+from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import (
-    create_or_update_template as common_create_or_update_template,
+    create_or_update_template,
+    delete_orphaned_templates,
+    get_existing_template_map,
 )
-from iambic.core.template_generation import get_existing_template_map
 from iambic.plugins.v0_1_0.azure_ad.group.models import (
     AZURE_AD_GROUP_TEMPLATE_TYPE,
-    AzureADGroupTemplate,
-    AzureADGroupTemplateProperties,
+    GroupTemplate,
+    GroupTemplateProperties,
 )
 from iambic.plugins.v0_1_0.azure_ad.group.utils import list_all_groups
-from iambic.plugins.v0_1_0.azure_ad.models import Group
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.azure_ad.iambic_plugin import (
-        AzureADConfig,
-        AzureADOrganization,
-    )
+    from iambic.plugins.v0_1_0.azure_ad.iambic_plugin import AzureADConfig
 
 
-def get_group_dir(base_dir: str, idp_name: str) -> str:
-    return str(os.path.join(base_dir, "resources", "azure_ad", idp_name, "groups"))
+def get_resource_dir_args() -> list:
+    return ["groups"]
 
 
-def get_templated_resource_file_path(
-    resource_dir: str,
-    resource_name: str,
-) -> str:
-    unwanted_chars = ["}}_", "}}", ".", "-", " "]
-    resource_name = resource_name.replace("{{", "").lower()
-    for unwanted_char in unwanted_chars:
-        resource_name = resource_name.replace(unwanted_char, "_")
-
-    return str(os.path.join(resource_dir, f"{resource_name}.yaml"))
+def get_response_dir(exe_message: ExecutionMessage) -> str:
+    return exe_message.get_directory(*get_resource_dir_args(), "templates")
 
 
 async def update_or_create_group_template(
-    group: Group, existing_template_map: dict, group_dir: str
-):
+    discovered_template: GroupTemplate, existing_template_map: dict
+) -> GroupTemplate:
     """
-    Update or create an AzureADGroupTemplate object from the provided Group object.
+    Update or create an GroupTemplate object from the provided Group object.
 
     Args:
-        group (Group): The Group object to generate the template from.
+        discovered_template (Group): The Group template generated from the Azure AD cloud response.
         existing_template_map (dict): Existing IAMbic Azure AD group templates.
-        group_dir (str): The default directory to store the template in.
     """
-    properties = AzureADGroupTemplateProperties(
-        group_id=group.group_id,
-        idp_name=group.idp_name,
-        display_name=group.display_name,
-        description=group.description,
-        mail_nickname=group.mail_nickname,
-        security_enabled=group.security_enabled,
-        members=group.members,
-    )
 
-    file_path = get_templated_resource_file_path(group_dir, group.display_name)
-    AzureADGroupTemplate.update_forward_refs()
-
-    common_create_or_update_template(
-        file_path,
+    return create_or_update_template(
+        discovered_template.file_path,
         existing_template_map,
-        group.group_id,
-        AzureADGroupTemplate,
+        discovered_template.resource_id,
+        GroupTemplate,
         {},
-        properties,
+        discovered_template.properties,
         [],
     )
 
 
+async def collect_org_groups(exe_message: ExecutionMessage, config: AzureADConfig):
+    assert exe_message.provider_id
+    base_path = get_response_dir(exe_message)
+    azure_organization = config.get_organization(exe_message.provider_id)
+    log.info(
+        "Beginning to retrieve Azure AD groups.", organization=exe_message.provider_id
+    )
+
+    groups = await list_all_groups(azure_organization)
+    for group in groups:
+        azure_group = GroupTemplate(
+            file_path="unset",
+            properties=GroupTemplateProperties(
+                name=group.name,
+                owner=group.owner,
+                group_id=group.group_id,
+                idp_name=azure_organization.idp_name,
+                description=group.description,
+                members=[json.loads(m.json()) for m in group.members],
+            ),
+        )
+        azure_group.file_path = os.path.join(base_path, f"{group.name}.yaml")
+        azure_group.write()
+
+    log.info(
+        "Finished retrieving Azure AD groups.",
+        azure_org=exe_message.provider_id,
+        group_count=len(groups),
+    )
+
+
 async def generate_group_templates(
-    config: AzureADConfig, output_dir: str, azure_ad_organization: AzureADOrganization
+    exe_message: ExecutionMessage, output_dir: str, detect_messages: list = None
 ):
-    groups = await list_all_groups(azure_ad_organization)
+    """List all groups in the domain, along with members and settings"""
     base_path = os.path.expanduser(output_dir)
     existing_template_map = await get_existing_template_map(
         base_path, AZURE_AD_GROUP_TEMPLATE_TYPE
     )
-    group_dir = get_group_dir(base_path, azure_ad_organization.idp_name)
+    all_resource_ids = set()
 
+    log.info("Updating and creating Azure AD group templates.")
+
+    groups = await exe_message.get_sub_exe_files(
+        *get_resource_dir_args(), "templates", file_name_and_extension="**.yaml"
+    )
     # Update or create templates
-    for azure_ad_group in groups:
-        await update_or_create_group_template(
-            azure_ad_group, existing_template_map, group_dir
+    for group in groups:
+        group = GroupTemplate(file_path="unset", **group)
+        group.set_default_file_path(output_dir)
+        resource_template = await update_or_create_group_template(
+            group, existing_template_map
         )
+        all_resource_ids.add(resource_template.resource_id)
 
     # Delete templates that no longer exist
-    discovered_group_ids = [g.group_id for g in groups]
-    for group_id, template in existing_template_map.items():
-        if group_id not in discovered_group_ids:
-            template.delete()
+    delete_orphaned_templates(list(existing_template_map.values()), all_resource_ids)
+
+    log.info("Finish updating and creating Azure AD group templates.")

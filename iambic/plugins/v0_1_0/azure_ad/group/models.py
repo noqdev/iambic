@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from itertools import chain
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, Union
 
-from pydantic import Field
-
-from iambic.core.context import ExecutionContext
+from iambic.core.context import ExecutionContext, ctx
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -18,51 +17,25 @@ from iambic.core.models import (
     ProposedChangeType,
     TemplateChangeDetails,
 )
+from iambic.core.utils import normalize_dict_keys
 from iambic.plugins.v0_1_0.azure_ad.group.utils import (
     create_group,
+    delete_group,
     get_group,
-    maybe_delete_group,
-    update_group_description,
+    update_group_attributes,
     update_group_members,
-    update_group_name,
 )
-from iambic.plugins.v0_1_0.azure_ad.models import UserStatus
+from iambic.plugins.v0_1_0.azure_ad.user.models import User, UserSimple
+from pydantic import Field
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.azure_ad.iambic_plugin import (
-        AzureADConfig,
-        AzureADOrganization,
-    )
+    from iambic.plugins.v0_1_0.azure_ad.iambic_plugin import AzureADConfig
+    from iambic.plugins.v0_1_0.azure_ad.models import AzureADOrganization
 
 AZURE_AD_GROUP_TEMPLATE_TYPE = "NOQ::AzureAD::Group"
 
 
-class UserSimple(BaseModel, ExpiryModel):
-    username: str
-    status: Optional[UserStatus] = UserStatus.active
-
-    @property
-    def resource_type(self) -> str:
-        return "azure_ad:user"
-
-    @property
-    def resource_id(self) -> str:
-        return self.username
-
-
-class User(UserSimple):
-    idp_name: str
-    user_id: Optional[str]
-    domain: Optional[str]
-    fullname: Optional[str]
-    created: Optional[str]
-    updated: Optional[str]
-    groups: Optional[List[str]]
-    background_check_status: Optional[bool]
-    extra: Any = Field(None, description=("Extra attributes to store"))
-
-
-class AzureADGroupTemplateProperties(ExpiryModel, BaseModel):
+class GroupTemplateProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the group")
     owner: Optional[str] = Field(None, description="Owner of the group")
     idp_name: str = Field(
@@ -85,9 +58,9 @@ class AzureADGroupTemplateProperties(ExpiryModel, BaseModel):
         return self.group_id
 
 
-class AzureADGroupTemplate(BaseTemplate, ExpiryModel):
+class GroupTemplate(BaseTemplate, ExpiryModel):
     template_type = AZURE_AD_GROUP_TEMPLATE_TYPE
-    properties: AzureADGroupTemplateProperties = Field(
+    properties: GroupTemplateProperties = Field(
         ..., description="Properties for the Azure AD Group"
     )
 
@@ -174,13 +147,13 @@ class AzureADGroupTemplate(BaseTemplate, ExpiryModel):
             organization=str(self.properties.idp_name),
         )
 
-        current_group: Optional[AzureADGroup] = await get_group(
-            self.properties.group_id, self.properties.name, azure_ad_organization
+        cloud_group: Optional[Group] = await get_group(
+            azure_ad_organization, self.properties.group_id, self.properties.name
         )
-        if current_group:
-            change_details.current_value = current_group
+        if cloud_group:
+            change_details.current_value = cloud_group
 
-        group_exists = bool(current_group)
+        group_exists = bool(cloud_group)
         tasks = []
 
         await self.remove_expired_resources(context)
@@ -202,61 +175,53 @@ class AzureADGroupTemplate(BaseTemplate, ExpiryModel):
             log_str = f"{log_str} Creating resource..."
             log.info(log_str, **log_params)
 
-            current_group: AzureADGroup = await create_group(
+            cloud_group: Group = await create_group(
                 group_name=self.properties.name,
                 idp_name=self.properties.idp_name,
                 description=self.properties.description,
                 azure_ad_organization=azure_ad_organization,
-                context=context,
             )
-            if current_group:
-                change_details.current_value = current_group
+            if cloud_group:
+                change_details.current_value = cloud_group
 
-        # TODO: Support group expansion
-        tasks.extend(
-            [
-                update_group_name(
-                    current_group,
-                    self.properties.name,
-                    azure_ad_organization,
-                    log_params,
-                    context,
-                ),
-                update_group_description(
-                    current_group,
-                    self.properties.description,
-                    azure_ad_organization,
-                    log_params,
-                    context,
-                ),
-                update_group_members(
-                    current_group,
-                    [
-                        member
-                        for member in self.properties.members
-                        if not member.deleted
-                    ],
-                    azure_ad_organization,
-                    log_params,
-                    context,
-                ),
-                maybe_delete_group(
-                    self.deleted,
-                    current_group,
-                    azure_ad_organization,
-                    log_params,
-                    context,
-                ),
-            ]
-        )
-
-        changes_made = await asyncio.gather(*tasks)
-        if any(changes_made):
+        if self.deleted:
             change_details.proposed_changes.extend(
-                list(chain.from_iterable(changes_made))
+                await delete_group(
+                    azure_ad_organization,
+                    cloud_group,
+                    log_params,
+                )
+            )
+        else:
+            # TODO: Support group expansion
+            tasks.extend(
+                [
+                    update_group_attributes(
+                        azure_ad_organization,
+                        self.properties,
+                        cloud_group,
+                        log_params,
+                    ),
+                    update_group_members(
+                        azure_ad_organization,
+                        cloud_group,
+                        [
+                            member
+                            for member in self.properties.members
+                            if not member.deleted
+                        ],
+                        log_params,
+                    ),
+                ]
             )
 
-        if context.execute:
+            changes_made = await asyncio.gather(*tasks)
+            if any(changes_made):
+                change_details.proposed_changes.extend(
+                    list(chain.from_iterable(changes_made))
+                )
+
+        if ctx.execute:
             log.debug(
                 "Successfully finished execution for resource",
                 changes_made=bool(change_details.proposed_changes),
@@ -274,3 +239,88 @@ class AzureADGroupTemplate(BaseTemplate, ExpiryModel):
             )
 
         return change_details
+
+    def set_default_file_path(self, repo_dir: str):
+        file_name = f"{self.properties.name}.yaml"
+        self.file_path = os.path.expanduser(
+            os.path.join(
+                repo_dir,
+                f"resources/azure_ad/groups/{self.properties.idp_name}/{file_name}",
+            )
+        )
+
+
+class GroupAttributes(BaseModel):
+    requestable: bool = Field(
+        False, description="Whether end-users can request access to group"
+    )
+    manager_approval_required: bool = Field(
+        False, description="Whether a manager needs to approve access to the group"
+    )
+    approval_chain: List[Union[User, str]] = Field(
+        [],
+        description="A list of users or groups that need to approve access to the group",
+    )
+    self_approval_groups: List[str] = Field(
+        [],
+        description=(
+            "If the user is a member of a self-approval group, their request to the group "
+            "will be automatically approved"
+        ),
+    )
+    allow_bulk_add_and_remove: bool = Field(
+        True,
+        description=(
+            "Controls whether administrators can automatically approve access to the group"
+        ),
+    )
+    background_check_required: bool = Field(
+        False,
+        description=("Whether a background check is required to be added to the group"),
+    )
+    allow_contractors: bool = Field(
+        False,
+        description=("Whether contractors are allowed to be members of the group"),
+    )
+    allow_third_party: bool = Field(
+        False,
+        description=(
+            "Whether third-party users are allowed to be a member of the group"
+        ),
+    )
+    emails_to_notify_on_new_members: List[str] = Field(
+        [],
+        description=(
+            "A list of e-mail addresses to notify when new users are added to the group."
+        ),
+    )
+
+
+class Group(BaseModel):
+    name: str = Field(..., description="Name of the group")
+    owner: Optional[str] = Field(None, description="Owner of the group")
+    tenant_id: str = Field(
+        ...,
+        description="ID of the tenant's identity provider that's associated with the group",
+    )
+    group_id: Optional[str] = Field(
+        ...,
+        description="Unique Group ID for the group. Usually it's {tenant-id}-{name}",
+    )
+    description: Optional[str] = Field(None, description="Description of the group")
+    members: List[User] = Field([], description="Users in the group")
+
+    @property
+    def resource_type(self) -> str:
+        return "azure_ad:group"
+
+    @classmethod
+    def from_azure_response(cls, azure_response: dict):
+        azure_response = normalize_dict_keys(azure_response)
+        return cls(
+            group_id=azure_response["id"],
+            name=azure_response["display_name"],
+            tenant_id="?",
+            description=azure_response["description"],
+            members=[],
+        )

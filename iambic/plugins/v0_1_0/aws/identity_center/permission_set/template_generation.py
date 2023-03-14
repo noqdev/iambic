@@ -19,7 +19,7 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import PermissionSetMessageDetails
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
@@ -35,7 +35,6 @@ from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
-    normalize_boto3_resp,
 )
 
 # TODO: Update all grouping functions to support org grouping once multiple orgs with IdentityCenter is functional
@@ -156,7 +155,7 @@ async def create_templated_permission_set(  # noqa: C901
             content_dict = json.loads(await f.read())
             account_id_to_permissionn_set_map[
                 permission_set_ref["account_id"]
-            ] = normalize_boto3_resp(content_dict)
+            ] = normalize_dict_keys(content_dict)
 
     # calculate preference based on existing template
     prefer_templatized = calculate_import_preference(

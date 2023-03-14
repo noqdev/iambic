@@ -100,26 +100,26 @@ class Config(BaseTemplate):
     )
     plugins: Optional[list[PluginDefinition]] = Field(
         default=[
-            # PluginDefinition(
-            #     type=PluginType.DIRECTORY_PATH,
-            #     location=aws.__path__[0],
-            #     version=PLUGIN_VERSION,
-            # ),
-            # PluginDefinition(
-            #     type=PluginType.DIRECTORY_PATH,
-            #     location=google_workspace.__path__[0],
-            #     version=PLUGIN_VERSION,
-            # ),
-            # PluginDefinition(
-            #     type=PluginType.DIRECTORY_PATH,
-            #     location=okta.__path__[0],
-            #     version=PLUGIN_VERSION,
-            # ),
-            # PluginDefinition(
-            #     type=PluginType.DIRECTORY_PATH,
-            #     location=iambic.plugins.v0_1_0.github.__path__[0],
-            #     version=PLUGIN_VERSION,
-            # ),
+            PluginDefinition(
+                type=PluginType.DIRECTORY_PATH,
+                location=aws.__path__[0],
+                version=PLUGIN_VERSION,
+            ),
+            PluginDefinition(
+                type=PluginType.DIRECTORY_PATH,
+                location=google_workspace.__path__[0],
+                version=PLUGIN_VERSION,
+            ),
+            PluginDefinition(
+                type=PluginType.DIRECTORY_PATH,
+                location=okta.__path__[0],
+                version=PLUGIN_VERSION,
+            ),
+            PluginDefinition(
+                type=PluginType.DIRECTORY_PATH,
+                location=iambic.plugins.v0_1_0.github.__path__[0],
+                version=PLUGIN_VERSION,
+            ),
             PluginDefinition(
                 type=PluginType.DIRECTORY_PATH,
                 location=azure_ad.__path__[0],

@@ -27,11 +27,6 @@ import aiofiles
 import dateparser
 from deepdiff.model import PrettyOrderedSet
 from git import Repo
-from jinja2 import BaseLoader, Environment
-from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, root_validator, validate_model, validator
-from pydantic.fields import ModelField
-
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import Command, ExecutionStatus, IambicManaged
 from iambic.core.logger import log
@@ -46,6 +41,10 @@ from iambic.core.utils import (
     transform_comments,
     yaml,
 )
+from jinja2 import BaseLoader, Environment
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Field, root_validator, validate_model, validator
+from pydantic.fields import ModelField
 
 if TYPE_CHECKING:
     from iambic.config.dynamic_config import Config

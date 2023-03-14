@@ -38,7 +38,20 @@ Resources:
                   - iam:*
                   - sso:*
                   - secretsmanager:CreateSecret
+                  - secretsmanager:PutSecretValue
                 Resource:
                   - '*'
+        - PolicyName: read_secret
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:describesecret
+                  - secretsmanager:listsecrets
+                  - secretsmanager:listsecretversionids
+                Resource:
+                  - arn:aws:secretsmanager:*:*:secret:iambic-config-secrets-*
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/ReadOnlyAccess'

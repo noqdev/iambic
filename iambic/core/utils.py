@@ -16,12 +16,13 @@ from urllib.parse import unquote_plus
 
 import aiofiles
 from asgiref.sync import sync_to_async
+from ruamel.yaml import YAML
+
 from iambic.core import noq_json as json
 from iambic.core.context import ExecutionContext
 from iambic.core.exceptions import RateLimitException
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
-from ruamel.yaml import YAML
 
 if TYPE_CHECKING:
     from iambic.core.models import ProposedChange
@@ -606,3 +607,32 @@ def simplify_dt(_dt: Union[datetime, date]) -> str:
     else:
         dt_str += " UTC"
     return dt_str
+
+
+def normalize_dict_keys(
+    obj, case_convention=camel_to_snake, skip_formatting_keys: list = None
+):
+    if not skip_formatting_keys:
+        skip_formatting_keys = ["condition"]
+    if isinstance(obj, dict):
+        new_obj = dict()
+        for k, v in obj.items():
+            k = case_convention(k)
+            if isinstance(v, list):
+                new_obj[k] = [
+                    normalize_dict_keys(x, case_convention, skip_formatting_keys)
+                    for x in v
+                ]
+            else:
+                new_obj[k] = (
+                    normalize_dict_keys(v, case_convention, skip_formatting_keys)
+                    if k not in skip_formatting_keys
+                    else v
+                )
+        return new_obj
+    elif isinstance(obj, list):
+        return [
+            normalize_dict_keys(x, case_convention, skip_formatting_keys) for x in obj
+        ]
+    else:
+        return obj

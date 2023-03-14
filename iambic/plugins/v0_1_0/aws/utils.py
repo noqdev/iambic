@@ -11,7 +11,7 @@ from botocore.exceptions import ClientError, NoCredentialsError
 
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
-from iambic.core.utils import aio_wrapper, camel_to_snake
+from iambic.core.utils import aio_wrapper
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -165,25 +165,6 @@ class RegionName(Enum):
     ap_northeast_2 = "ap-northeast-2"
     sa_east_1 = "sa-east-1"
     # cn_north_1 = "cn-north-1"
-
-
-def normalize_boto3_resp(obj):
-    skip_formatting_for = ["condition"]
-    if isinstance(obj, dict):
-        new_obj = dict()
-        for k, v in obj.items():
-            k = camel_to_snake(k)
-            if isinstance(v, list):
-                new_obj[k] = [normalize_boto3_resp(x) for x in v]
-            else:
-                new_obj[k] = (
-                    normalize_boto3_resp(v) if k not in skip_formatting_for else v
-                )
-        return new_obj
-    elif isinstance(obj, list):
-        return [normalize_boto3_resp(x) for x in obj]
-    else:
-        return obj
 
 
 def is_valid_account_id(account_id: str):

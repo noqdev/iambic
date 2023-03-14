@@ -18,7 +18,7 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import UserMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.user.models import (
     AWS_IAM_USER_TEMPLATE_TYPE,
@@ -37,7 +37,6 @@ from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
-    normalize_boto3_resp,
 )
 
 if TYPE_CHECKING:
@@ -216,7 +215,7 @@ async def _account_id_to_user_map(user_refs):
     for user_ref in user_refs:
         async with aiofiles.open(user_ref["path"], mode="r") as f:
             content_dict = json.loads(await f.read())
-            account_id_to_user_map[user_ref["account_id"]] = normalize_boto3_resp(
+            account_id_to_user_map[user_ref["account_id"]] = normalize_dict_keys(
                 content_dict
             )
     return account_id_to_user_map

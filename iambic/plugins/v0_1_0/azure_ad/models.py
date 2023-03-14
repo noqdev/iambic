@@ -1,105 +1,101 @@
 from __future__ import annotations
 
-from enum import Enum
-from typing import Any, List, Optional, Union
+import asyncio
+from typing import Any, Union
 
-from pydantic import Field
+import aiohttp
+import msal
+from pydantic import BaseModel
 
-from iambic.core.models import BaseModel, ExpiryModel
-
-
-class IdentityProvider(BaseModel):
-    name: str
+from iambic.core.iambic_enum import IambicManaged
 
 
-class UserStatus(Enum):
-    active = "active"
-    provisioned = "provisioned"
-    deprovisioned = "deprovisioned"
-
-
-class User(BaseModel, ExpiryModel):
+class AzureADOrganization(BaseModel):
     idp_name: str
-    username: str
-    user_id: Optional[str]
-    domain: Optional[str]
-    fullname: Optional[str]
-    status: Optional[UserStatus]
-    created: Optional[str]
-    updated: Optional[str]
-    groups: Optional[List[str]]
-    extra: Any = Field(None, description=("Extra attributes to store"))
-    profile: dict[str, Any]
+    tenant_id: str
+    client_id: str
+    client_secret: str
+    request_timeout: int = 60
+    client: Any = None
+    access_token: str = ""
+    iambic_managed: IambicManaged = IambicManaged.DISABLED
 
-    @property
-    def resource_type(self) -> str:
-        return "azure_ad:user"
+    class Config:
+        arbitrary_types_allowed = True
 
-    @property
-    def resource_id(self) -> str:
-        return self.username
+    async def set_azure_access_token(self):
+        if not self.access_token:
+            # initialize the client here
+            self.client = msal.ConfidentialClientApplication(
+                self.client_id,
+                authority=f"https://login.microsoftonline.com/{self.tenant_id}",
+                client_credential=self.client_secret,
+            )
+            token_result = self.client.acquire_token_for_client(
+                ["https://graph.microsoft.com/.default"]
+            )
+            if "access_token" in token_result:
+                self.access_token = token_result["access_token"]
+            else:
+                raise Exception("Access token was not successfully acquired")
+        return self.access_token
 
+    async def _make_request(
+        self, request_type: str, endpoint: str, **kwargs
+    ) -> Union[dict, list, None]:
+        await self.set_azure_access_token()
 
-class GroupAttributes(BaseModel):
-    requestable: bool = Field(
-        False, description="Whether end-users can request access to group"
-    )
-    manager_approval_required: bool = Field(
-        False, description="Whether a manager needs to approve access to the group"
-    )
-    approval_chain: List[Union[User, str]] = Field(
-        [],
-        description="A list of users or groups that need to approve access to the group",
-    )
-    self_approval_groups: List[str] = Field(
-        [],
-        description=(
-            "If the user is a member of a self-approval group, their request to the group "
-            "will be automatically approved"
-        ),
-    )
-    allow_bulk_add_and_remove: bool = Field(
-        True,
-        description=(
-            "Controls whether administrators can automatically approve access to the group"
-        ),
-    )
-    background_check_required: bool = Field(
-        False,
-        description=("Whether a background check is required to be added to the group"),
-    )
-    allow_contractors: bool = Field(
-        False,
-        description=("Whether contractors are allowed to be members of the group"),
-    )
-    allow_third_party: bool = Field(
-        False,
-        description=(
-            "Whether third-party users are allowed to be a member of the group"
-        ),
-    )
-    emails_to_notify_on_new_members: List[str] = Field(
-        [],
-        description=(
-            "A list of e-mail addresses to notify when new users are added to the group."
-        ),
-    )
+        response = []
+        is_list = bool(request_type == "list")
+        if is_list:
+            request_type = "get"
 
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                "Authorization": f"Bearer {self.access_token}",
+                "Content-Type": "application/json",
+            }
+            url = f"https://graph.microsoft.com/v1.0/{endpoint}"
+            while url:
+                async with getattr(session, request_type)(
+                    url, headers=headers, **kwargs
+                ) as resp:
+                    if resp.status == 429:
+                        # Handle rate limit exceeded error
+                        retry_after = int(resp.headers.get("Retry-After", "1"))
+                        await asyncio.sleep(retry_after)
+                        continue
 
-class Group(BaseModel):
-    name: str = Field(..., description="Name of the group")
-    owner: Optional[str] = Field(None, description="Owner of the group")
-    tenant_id: str = Field(
-        ...,
-        description="ID of the tenant's identity provider that's associated with the group",
-    )
-    group_id: Optional[str] = Field(
-        ...,
-        description="Unique Group ID for the group. Usually it's {tenant-id}-{name}",
-    )
-    description: Optional[str] = Field(None, description="Description of the group")
-    members: List[User] = Field([], description="Users in the group")
+                    resp.raise_for_status()
 
-    @property
-    def resource_type(self) -> str:
-        return "azure_ad:group"
+                    try:
+                        data = await resp.json()
+                    except aiohttp.ContentTypeError:
+                        return
+
+                    if is_list:
+                        response.extend(data["value"])
+                        if "@odata.nextLink" in data:
+                            url = data["@odata.nextLink"]
+                            kwargs.pop(
+                                "params", None
+                            )  # Clear params since they only apply to the first page
+                        else:
+                            return response
+                    else:
+                        return data
+
+    async def post(self, endpoint, **kwargs):
+        return await self._make_request("post", endpoint, **kwargs)
+
+    async def get(self, endpoint, **kwargs):
+        return await self._make_request("get", endpoint, **kwargs)
+
+    async def list(self, endpoint, **kwargs):
+        return await self._make_request("list", endpoint, **kwargs)
+
+    async def patch(self, endpoint, **kwargs):
+        return await self._make_request("patch", endpoint, **kwargs)
+
+    async def delete(self, endpoint, **kwargs):
+        return await self._make_request("delete", endpoint, **kwargs)
