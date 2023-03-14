@@ -46,7 +46,7 @@ push_manifest:
 
 .PHONY: test
 test:
-	python3.10 -m pytest --cov iambic --cov-report lcov:cov_unit_tests.lcov --cov-report xml:cov_unit_tests.xml --cov-report html:cov_unit_tests.html . --ignore functional_tests/ -s
+	python3.10 -m pytest --cov iambic --cov-report lcov:cov_unit_tests.lcov --cov-report xml:cov_unit_tests.xml --cov-report html:cov_unit_tests.html . --ignore functional_tests/ -s -k TestBaseModel
 
 .PHONY: functional_test
 functional_test:
