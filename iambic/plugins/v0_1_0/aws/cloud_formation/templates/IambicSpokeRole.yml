@@ -46,6 +46,7 @@ Resources:
                   - secretsmanager:describesecret
                   - secretsmanager:listsecrets
                   - secretsmanager:listsecretversionids
+                  - secretsmanager:PutSecretValue
                 Resource:
                   - 'arn:aws:secretsmanager:*:*:secret:iambic-config-secrets-*'
       ManagedPolicyArns:
