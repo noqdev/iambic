@@ -7,4 +7,10 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "python.formatting.provider": "black",
+    "coverage-gutters.coverageFileNames": [
+        "cov_unit_tests.xml",
+        "cov_functional_tests.xml"
+    ],
+    "coverage-gutters.showGutterCoverage ": false,
+    "coverage-gutters.showLineCoverage": true,
 }
