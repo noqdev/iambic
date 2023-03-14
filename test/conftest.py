@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import pathlib
 
 import pytest
 import yaml
@@ -128,7 +129,13 @@ def test_config_path_one_extends(fs):
 
 
 @pytest.fixture(scope="function")
-def test_config(fs, test_config_path_two_accounts_plus_org):
+def test_config_plugins_available(fs):
+    my_path = pathlib.Path(__file__).parent.absolute()
+    fs.add_real_directory(my_path.parent.joinpath("iambic", "plugins"))
+
+
+@pytest.fixture(scope="function")
+def test_config(fs, test_config_plugins_available, test_config_path_two_accounts_plus_org):
     config_path = test_config_path_two_accounts_plus_org
     base_config = Config(version=CURRENT_IAMBIC_VERSION, file_path=config_path)
     all_plugins = load_plugins(base_config.plugins)
