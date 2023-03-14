@@ -1,6 +1,6 @@
 # IAMbic: Cloud IAM as Code
 
-"IAMbic is like Terraform, but for distributed Cloud IAM"
+"IAMbic: the Terraform of Cloud IAM"
 
 IAMbic is a multi-cloud identity and access management (IAM) control plane that centralizes and organizes the tracking and management of cloud access and permissions. With IAMbic, teams can track historical changes to cloud identities and permissions over time, as well as manage changes to identities, access rules, and permissions. IAMbic facilitates the granting of temporary or emergency access for end-users while minimizing the associated risks, overhead, and latency involved in permissions management.
 
@@ -14,7 +14,7 @@ Learn more at [https://www.iambic.org](https://www.iambic.org).
 - **Always Updated Source of Truth**: Cloud Permissions and entitlements at scale have gotten out of hand. Compliance, Security, and Ops *need* a central repository to reason about and manage human and cloud identities. IAMbic's open and human readable format enable you to create an permissions infrastructure that works seamlessly with your existing infrastructure-as-code solutions, such as Terraform.
 - **Extendable**: IAMbic offers a robust plugin architecture, enabling development of internal plugins and plugins for different cloud providers.
 - **Auditable**: IAMbic provides a complete record of when entitlement changes happened within your environment, whether they happened through IAMbic, IaC, or ClickOps.
-- **Developer-friendly Workflow**: The source of truth in IAMbic is based in Git. Developers, Cloud Operations, Security, and Compliance teams are free to use existing tools at their disposal.
+- **Developer-friendly Workflow**: The source of truth in IAMbic is stored in Git, fully under your control. Developers, Cloud Operations, Security, and Compliance teams are free to use their favorite tools.
 - **Custom Template Parameters**: Stuck looking at CloudTrail logs having to context switch to discover which account arn:aws:iam::874326598251:role/administrator belongs to? No more! Specify variables such as `{{account_name}}` anywhere within
 a template and IAMbic will automatically perform the substitution. For example, `role_name: {{account_name}}_administrator` would result in a role name of `prod_administrator` if deployed to the `prod` account.
 
@@ -31,7 +31,7 @@ This section provides a sneak peak at the power of IAMbic.
 This is a simple example of a Cloudwatch role with a static
 set of permissions across three accounts. The name of the role is dynamically
 generated on each of the accounts it is applied to. This template would
-result in the creation of three roles: dev_cloudwatch,
+result in the creation of three roles: "dev_cloudwatch",
 "staging_cloudwatch", and "prod_cloudwatch" on the respective AWS accounts.
 
 ```yaml

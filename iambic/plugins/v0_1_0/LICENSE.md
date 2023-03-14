@@ -1,4 +1,4 @@
-All files under the `iambic/plugins` directory are licensed under the Apache License, Version 2.0. The full text of the license is included below.
+All files under the `iambic/plugins` directory in this repository are licensed under the Apache License, Version 2.0. The full text of the license is included below.
 
                                  Apache License
                            Version 2.0, January 2004
