@@ -2,7 +2,7 @@ name: Run Iambic Expire
 on:
   workflow_dispatch:
   schedule:
-    - cron:  '5 * * * *' # every every hour at minute 5
+    - cron:  '5 * * * *' # every hour at minute 5
 
 
 jobs:
