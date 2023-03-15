@@ -8,19 +8,18 @@ Learn more at [https://www.iambic.org](https://www.iambic.org).
 
 ## Key Features
 
-- **[Multi-Cloud](https://iambic.org/getting_started/)**: No more juggling between multiple cloud UIs. Manage your cloud identities across AWS, Okta, Google Workspace, and other cloud platforms in the future in one simple human-readable format.
-- **[Dynamic AWS Permissions](https://iambic.org/getting_started/aws#31---create-dynamic-iam-role-policies-that-vary-per-account)**: Stop wasting time bootstrapping IAM "in a unique way" for each of your accounts. IAMbic provides a multi-account template structure designed to make multi-account AWS easier. IAMbic's template structure supports different permission levels, access rules, and expirations based on the AWS account the identity will be deployed to. IAMbic also groups similar identities across accounts in a single template, calling out any differences by account.
-- **[Temporary Access, Permissions, and Identities](https://iambic.org/getting_started/aws#32---create-temporary-expiring-iam-permissions)**: IAMbic enables teams to declaratively define when a resource, cloud permission, or access rule will expire. Relative expiration dates are supported, and are automatically converted into absolute dates once the change is merged in. IAMbic provides GitHub Actions that automatically remove expired identities, access, and permissions.
-- **Always Updated Source of Truth**: Cloud Permissions and entitlements at scale have gotten out of hand. Compliance, Security, and Ops *need* a central repository to reason about and manage human and cloud identities. IAMbic's open and human readable format enable you to create an permissions infrastructure that works seamlessly with your existing infrastructure-as-code solutions, such as Terraform.
-- **Extendable**: IAMbic offers a robust plugin architecture, enabling development of internal plugins and plugins for different cloud providers.
-- **Auditable**: IAMbic provides a complete record of when entitlement changes happened within your environment, whether they happened through IAMbic, IaC, or ClickOps.
-- **Developer-friendly Workflow**: The source of truth in IAMbic is stored in Git, fully under your control. Developers, Cloud Operations, Security, and Compliance teams are free to use their favorite tools.
-- **Custom Template Parameters**: Stuck looking at CloudTrail logs having to context switch to discover which account arn:aws:iam::874326598251:role/administrator belongs to? No more! Specify variables such as `{{account_name}}` anywhere within
-a template and IAMbic will automatically perform the substitution. For example, `role_name: {{account_name}}_administrator` would result in a role name of `prod_administrator` if deployed to the `prod` account.
+- **GitOps-driven Cloud IAM (IAMOps)**: Manage cloud identities and permissions in a human-readable format with your favorite tools.
+- **[Multi-Cloud](https://iambic.org/getting_started/)**: Consolidate cloud identity management across AWS, Okta, Google Workspace, and future platforms into a single as-code location.
+- **[Dynamic AWS Permissions](https://iambic.org/getting_started/aws#31---create-dynamic-iam-role-policies-that-vary-per-account)**: Simplify multi-account AWS management with flexible templates, allowing multi-account roles to have different permissions and access rules on different accounts.
+- **[Temporary Access, Permissions, and Identities](https://iambic.org/getting_started/aws#32---create-temporary-expiring-iam-permissions)**: Declaratively define and automate expiration dates for resources, permissions, and access rules.
+- **Centralized Source of Truth**: IAMbic keeps Git updated with the latest, complete state of your cloud environment, providing a usable artifact for auditing and compliance.
+- **Extendable**: Benefit from a robust plugin architecture for maintaining identity, permissions, and entitlement changes across different clouds and applications.
+- **Auditable**: Git history provides a complete audit trail of all changes to IAM policies, permissions, and access rules, with context on who made the changes.
+- **Custom Template Parameters**: Streamline account management with auto-substituting variables.
 
 ## Getting Started
 
-Please follow our [quick-start guide](http://iambic.org/getting_started/) to get up and running with IAMbic.
+Dive into IAMbic with our [quick-start guide](http://iambic.org/getting_started/) and explore powerful template examples for AWS Multi-Account Roles, Dynamic Permissions, Okta Applications and Group Assignments, and Google Group Assignments.
 
 ### Template Examples
 
