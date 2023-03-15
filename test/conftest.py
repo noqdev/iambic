@@ -6,9 +6,9 @@ import os
 import pathlib
 
 import boto3
-from moto import mock_secretsmanager
 import pytest
 import yaml
+from moto import mock_secretsmanager
 
 from iambic.config.dynamic_config import (
     CURRENT_IAMBIC_VERSION,
@@ -38,6 +38,7 @@ def aws_accounts():
         AWSAccount(account_id="123456789019", account_name="test"),
     ]
 
+
 @pytest.fixture(scope="session")
 def prevent_aws_real_mutants():
     os.environ["AWS_ACCESS_KEY_ID"] = "test"
@@ -45,13 +46,17 @@ def prevent_aws_real_mutants():
     os.environ["AWS_DEFAULT_REGION"] = "us-west-2"
     os.environ["AWS_SESSION_TOKEN"] = "test"
     os.environ["AWS_SECURITY_TOKEN"] = "test"
+    os.environ.pop("AWS_PROFILE", None)
+
 
 @pytest.fixture(scope="function")
 def test_config_path_two_accounts_plus_org(tmp_path):
     config_file_path = tmp_path / "iambic/configuration.yaml"
     os.makedirs(tmp_path / "iambic", exist_ok=True)
     with open(config_file_path, "w") as f:
-        yaml.dump(yaml.load("""
+        yaml.dump(
+            yaml.load(
+                """
             template_type: NOQ::Core::Config
             version: '1'
             aws:
@@ -120,7 +125,11 @@ def test_config_path_two_accounts_plus_org(tmp_path):
                 - arn:aws:sqs:us-east-1:123456789010:IAMbicChangeDetectionQueue
             core:
             minimum_ulimit: 64000
-""", Loader=yaml.Loader), f)
+""",
+                Loader=yaml.Loader,
+            ),
+            f,
+        )
     return config_file_path
 
 
@@ -129,36 +138,41 @@ def test_config_path_one_extends(tmp_path):
     extends_config_file_path = tmp_path / "iambic/extends_secretsmanager.yaml"
     os.makedirs(tmp_path / "iambic", exist_ok=True)
     with open(extends_config_file_path, "w") as f:
-        yaml.dump({
-            "extends": [
-                {
-                    "assume_role_arn": "arn:aws:iam::123456789012:role/IambicSpokeRole",
-                    "key": "AWS_SECRETS_MANAGER",
-                    "value": "arn:aws:secretsmanager:us-west-2:123456789012:secret:iambic-config-secrets-9fae9066-5599-473f-b364-63fa0240b6f7"
-                }
-            ]
-        }, f)
+        yaml.dump(
+            {
+                "extends": [
+                    {
+                        "assume_role_arn": "arn:aws:iam::123456789012:role/IambicSpokeRole",
+                        "key": "AWS_SECRETS_MANAGER",
+                        "value": "arn:aws:secretsmanager:us-west-2:123456789012:secret:iambic-config-secrets-9fae9066-5599-473f-b364-63fa0240b6f7",
+                    }
+                ]
+            },
+            f,
+        )
     return extends_config_file_path
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def secrets_setup(prevent_aws_real_mutants):
     with mock_secretsmanager():
         secretmgr = boto3.client("secretsmanager", region_name="us-west-2")
         secretmgr.create_secret(
             Name="arn:aws:secretsmanager:us-west-2:123456789012:secret:iambic-config-secrets-9fae9066-5599-473f-b364-63fa0240b6f7",
-            SecretString=json.dumps({
-                "secrets": {
-                    "git": {
-                        "repositories": [
-                            {
-                                "name": "test-iambic",
-                                "url": "file:///iambic/git",
-                            }
-                        ]
+            SecretString=json.dumps(
+                {
+                    "secrets": {
+                        "git": {
+                            "repositories": [
+                                {
+                                    "name": "test-iambic",
+                                    "url": "file:///iambic/git",
+                                }
+                            ]
+                        }
                     }
                 }
-            })
+            ),
         )
         yield secretmgr
 
@@ -183,7 +197,6 @@ def test_config(test_config_path_two_accounts_plus_org):
         plugin_instances=all_plugins,
         aws=AWSConfig(
             region_name="us-west-2",
-
         ),
     )
 
