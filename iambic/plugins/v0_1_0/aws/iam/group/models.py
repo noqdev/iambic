@@ -79,6 +79,7 @@ class GroupProperties(BaseModel):
 
 class GroupTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_GROUP_TEMPLATE_TYPE
+    owner: Optional[str] = Field(None, description="Owner of the group")
     properties: GroupProperties = Field(
         description="Properties of the group",
     )

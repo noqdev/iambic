@@ -74,7 +74,6 @@ class RoleProperties(BaseModel):
         "",
         description="Description of the role",
     )
-    owner: Optional[str] = None
     max_session_duration: Optional[Union[int, list[MaxSessionDuration]]] = 3600
     path: Optional[Union[str, list[Path]]] = "/"
     permissions_boundary: Optional[
@@ -167,6 +166,7 @@ class RoleProperties(BaseModel):
 
 class RoleTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_ROLE_TEMPLATE_TYPE
+    owner: Optional[str] = Field(None, description="Owner of the role")
     properties: RoleProperties = Field(
         description="Properties of the role",
     )

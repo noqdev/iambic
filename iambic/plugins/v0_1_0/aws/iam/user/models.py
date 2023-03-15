@@ -4,6 +4,8 @@ import asyncio
 from typing import Callable, Optional, Union
 
 import botocore
+from pydantic import Field, validator
+
 from iambic.core.context import ExecutionContext, ctx
 from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
@@ -27,7 +29,6 @@ from iambic.plugins.v0_1_0.aws.iam.user.utils import (
 )
 from iambic.plugins.v0_1_0.aws.models import AccessModel, AWSAccount, AWSTemplate, Tag
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
-from pydantic import Field, validator
 
 AWS_IAM_USER_TEMPLATE_TYPE = "NOQ::AWS::IAM::User"
 
@@ -48,7 +49,6 @@ class UserProperties(BaseModel):
     user_name: str = Field(
         description="Name of the user",
     )
-    owner: Optional[str] = None
     path: Optional[Union[str, list[Path]]] = "/"
     permissions_boundary: Optional[
         Union[None, PermissionBoundary, list[PermissionBoundary]]

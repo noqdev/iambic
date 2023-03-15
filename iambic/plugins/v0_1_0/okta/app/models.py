@@ -5,8 +5,6 @@ import os.path
 from itertools import chain
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from pydantic import Field, validator
-
 from iambic.core.context import ExecutionContext, ctx
 from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
@@ -26,6 +24,7 @@ from iambic.plugins.v0_1_0.okta.app.utils import (
     update_app_name,
 )
 from iambic.plugins.v0_1_0.okta.models import App, Assignment, Status
+from pydantic import Field, validator
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
@@ -36,7 +35,6 @@ OKTA_APP_TEMPLATE_TYPE = "NOQ::Okta::App"
 
 class OktaAppTemplateProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the app")
-    owner: Optional[str] = Field(None, description="Owner of the app")
     status: Optional[Status] = Field(None, description="Status of the app")
     idp_name: str = Field(
         ...,
@@ -69,6 +67,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
     properties: OktaAppTemplateProperties = Field(
         ..., description="Properties for the Okta App"
     )
+    owner: Optional[str] = Field(None, description="Owner of the app")
 
     async def apply(
         self, config: OktaConfig, context: ExecutionContext

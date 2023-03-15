@@ -4,13 +4,12 @@ import json
 import traceback
 from typing import Union
 
-from pydantic import ValidationError
-from ruamel.yaml.scanner import ScannerError
-
 from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate
 from iambic.core.utils import transform_comments, yaml
+from pydantic import ValidationError
+from ruamel.yaml.scanner import ScannerError
 
 
 # line number is zero-th based

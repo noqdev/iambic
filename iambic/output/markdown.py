@@ -3,11 +3,6 @@ from __future__ import annotations
 import pathlib
 from typing import Any, Dict, List, Set
 
-from jinja2 import Environment, FileSystemLoader
-from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field
-from recursive_diff import recursive_diff
-
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -15,6 +10,10 @@ from iambic.core.models import (
     ProposedChangeType,
     TemplateChangeDetails,
 )
+from jinja2 import Environment, FileSystemLoader
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Field
+from recursive_diff import recursive_diff
 
 
 class ProposedChangeDiff(ProposedChange):
