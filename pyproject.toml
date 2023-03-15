@@ -65,6 +65,5 @@ types-ujson = "^5.7.0.0"
 mock = "^5.0.1"
 pytest-mock-generator = "^1.2.0"
 pycryptodome = "^3.17"
-pyfakefs = "^5.1.0"
 moto = {extras = ["all"], version = "^4.1.4"}
 dateparser = "^1.1.7"

@@ -2218,18 +2218,6 @@ files = [
 dev = ["Sphinx", "black", "build", "coverage", "docformatter", "flake8", "flake8-black", "flake8-bugbear", "flake8-isort", "importlib-metadata (<5)", "invoke", "isort", "pylint", "pytest", "pytest-cov", "sphinx-rtd-theme", "tox", "twine", "wheel"]
 
 [[package]]
-name = "pyfakefs"
-version = "5.1.0"
-description = "pyfakefs implements a fake file system that mocks the Python file system modules."
-category = "dev"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "pyfakefs-5.1.0-py3-none-any.whl", hash = "sha256:e6f34a8224b41f1b1ab25aa8d430121dac42e3c6e981e01eae76b3343fba47d0"},
-    {file = "pyfakefs-5.1.0.tar.gz", hash = "sha256:316c6026640d14a6b4fbde71fd9674576d1b5710deda8fabde8aad51d785dbc3"},
-]
-
-[[package]]
 name = "pyflakes"
 version = "2.5.0"
 description = "passive checker of Python programs"
@@ -3645,4 +3633,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "0e82de81438970ac2b7b7675af2249ac55f325b7f0b3684a5635236514c7f44d"
+content-hash = "2fd4533ae3989dabbd5881bf1028183ad42bc46dad98fb38544df63c3cf7bdf4"

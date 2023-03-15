@@ -23,7 +23,7 @@ from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import boto3_retry
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def aws_accounts():
     return [
         AWSAccount(account_id="123456789010", account_name="dev1"),
@@ -38,7 +38,7 @@ def aws_accounts():
         AWSAccount(account_id="123456789019", account_name="test"),
     ]
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def prevent_aws_real_mutants():
     os.environ["AWS_ACCESS_KEY_ID"] = "test"
     os.environ["AWS_SECRET_ACCESS_KEY"] = "test"
@@ -47,9 +47,9 @@ def prevent_aws_real_mutants():
     os.environ["AWS_SECURITY_TOKEN"] = "test"
 
 @pytest.fixture(scope="function")
-def test_config_path_two_accounts_plus_org(fs):
-    config_file_path = "/iambic/configuration.yaml"
-    fs.create_file(config_file_path)
+def test_config_path_two_accounts_plus_org(tmp_path):
+    config_file_path = tmp_path / "iambic/configuration.yaml"
+    os.makedirs(tmp_path / "iambic", exist_ok=True)
     with open(config_file_path, "w") as f:
         yaml.dump(yaml.load("""
             template_type: NOQ::Core::Config
@@ -125,9 +125,9 @@ def test_config_path_two_accounts_plus_org(fs):
 
 
 @pytest.fixture(scope="function")
-def test_config_path_one_extends(fs):
-    extends_config_file_path = "/iambic/extends_secretsmanager.yaml"
-    fs.create_file(extends_config_file_path)
+def test_config_path_one_extends(tmp_path):
+    extends_config_file_path = tmp_path / "iambic/extends_secretsmanager.yaml"
+    os.makedirs(tmp_path / "iambic", exist_ok=True)
     with open(extends_config_file_path, "w") as f:
         yaml.dump({
             "extends": [
@@ -141,18 +141,12 @@ def test_config_path_one_extends(fs):
     return extends_config_file_path
 
 
-@pytest.fixture(scope="function")
-def test_config_plugins_available(fs):
-    my_path = pathlib.Path(__file__).parent.absolute()
-    fs.add_real_directory(my_path.parent.joinpath("iambic", "plugins"))
-
-
-@pytest.fixture(scope="function")
-def secrets_setup(fs, prevent_aws_real_mutants):
+@pytest.fixture(scope="session")
+def secrets_setup(prevent_aws_real_mutants):
     with mock_secretsmanager():
-        secretmgr = boto3.resource("secretsmanager", region_name="us-west-2")
+        secretmgr = boto3.client("secretsmanager", region_name="us-west-2")
         secretmgr.create_secret(
-            Name="iambic-config-secrets-9fae9066-5599-473f-b364-63fa0240b6f7",
+            Name="arn:aws:secretsmanager:us-west-2:123456789012:secret:iambic-config-secrets-9fae9066-5599-473f-b364-63fa0240b6f7",
             SecretString=json.dumps({
                 "secrets": {
                     "git": {
@@ -170,8 +164,8 @@ def secrets_setup(fs, prevent_aws_real_mutants):
 
 
 @pytest.fixture(scope="function")
-def test_config(fs, test_config_plugins_available, test_config_path_two_accounts_plus_org):
-    config_path = test_config_path_two_accounts_plus_org
+def test_config(test_config_path_two_accounts_plus_org):
+    config_path = str(test_config_path_two_accounts_plus_org)
     base_config = Config(version=CURRENT_IAMBIC_VERSION, file_path=config_path)
     all_plugins = load_plugins(base_config.plugins)
     config_fields = {}
@@ -187,7 +181,10 @@ def test_config(fs, test_config_plugins_available, test_config_path_two_accounts
         file_path=config_path,
         plugins=base_config.plugins,
         plugin_instances=all_plugins,
-        aws=AWSConfig(),
+        aws=AWSConfig(
+            region_name="us-west-2",
+
+        ),
     )
 
     TEMPLATES.set_templates(
@@ -198,3 +195,12 @@ def test_config(fs, test_config_plugins_available, test_config_path_two_accounts
         )
     )
     return config
+
+
+@pytest.fixture(scope="function")
+def mock_aws_account_rw_secretsmanager_session(test_config):
+    test_config.aws = AWSAccount(
+        account_id="123456789012",
+        account_name="test",
+        iambic_managed="read_and_write",
+    )
