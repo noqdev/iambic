@@ -5,6 +5,8 @@ ARG FUNCTION_DIR="/app"
 
 WORKDIR ${FUNCTION_DIR}
 
+RUN mkdir -p ${FUNCTION_DIR}/iambic
+
 # build the dependencies first to reuse the layer more often
 COPY --chown=iambic:iambic poetry.lock ${FUNCTION_DIR}/poetry.lock
 COPY --chown=iambic:iambic pyproject.toml ${FUNCTION_DIR}/pyproject.toml
