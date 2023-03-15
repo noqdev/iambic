@@ -3,12 +3,11 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.template_generation import merge_model
 from iambic.plugins.v0_1_0.aws.iam.role.models import RoleTemplate
 from iambic.plugins.v0_1_0.aws.iam.role.template_generation import create_templated_role
-from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.models import AWSAccount, Description
 
 
 def get_aws_account_map(aws_accounts: list[AWSAccount]) -> dict[str, AWSAccount]:
@@ -233,6 +232,86 @@ async def test_merge_template_role_with_wildcard_catch_include(
         updated_role, initial_role, [test_account, test_account_2]
     )
     assert merged_model.included_accounts == initial_role.included_accounts
+
+
+@pytest.mark.asyncio
+async def test_noop_merge_template_role_with_non_standard_account_name(
+    test_config,
+    test_role,
+    test_account,
+    test_account_2,
+    mock_account_id_to_role_map,
+    mock_write,
+):
+    """
+    Check that an account that hits on a wildcard for included account is not explicitly added to included accounts
+    """
+    non_standard_account = AWSAccount(
+        account_id="123456789013",
+        account_name="@!#!@#)(%*#R)QWITFGO)FG+=0984",
+        assume_role_arn="",
+    )
+    test_aws_account_map = get_aws_account_map(
+        [test_account, test_account_2, non_standard_account]
+    )
+    test_role_ref = test_role.properties.dict()
+    test_role_ref["account_id"] = test_account.account_id
+    test_role_refs = [test_role_ref]
+    test_existing_template_map = {}
+    description = Description(
+        description="test the weird account name",
+        included_accounts=[non_standard_account.account_name],
+    )
+    initial_role = await create_templated_role(
+        test_aws_account_map,
+        "test_role",
+        test_role_refs,
+        "",
+        test_existing_template_map,
+        test_config.aws,
+    )
+    initial_role.iambic_managed = IambicManaged.READ_AND_WRITE
+    initial_role.included_accounts = ["*"]
+    initial_role.properties.description = [
+        description,
+        Description(
+            description="with a couple normal ones", included_accounts=["dev*"]
+        ),
+    ]
+    imported_role = await create_templated_role(
+        test_aws_account_map,
+        "test_role",
+        test_role_refs,
+        "",
+        test_existing_template_map,
+        test_config.aws,
+    )
+    imported_role.iambic_managed = IambicManaged.READ_AND_WRITE
+    imported_role.included_accounts = ["*"]
+
+    # Using the explicit account names in the list of included accounts to emulate the value generated on import
+    imported_role.properties.description = [
+        description,
+        Description(
+            description="with a couple normal ones",
+            included_accounts=[test_account.account_name, test_account_2.account_name],
+        ),
+    ]
+
+    merged_model = merge_model(
+        imported_role,
+        initial_role,
+        [test_account, test_account_2, non_standard_account],
+    )
+    assert isinstance(merged_model.properties.description, list)
+    assert len(merged_model.properties.description) == 2
+    assert (
+        merged_model.properties.description[0].description
+        == "test the weird account name"
+    )
+    assert merged_model.properties.description[0].included_accounts == [
+        non_standard_account.account_name
+    ]
 
 
 @pytest.mark.asyncio

@@ -4,7 +4,6 @@ import tempfile
 from unittest.mock import PropertyMock, call, patch
 
 import pytest
-
 from iambic.plugins.v0_1_0.github.github import (  # prepare_local_repo,
     BODY_MAX_LENGTH,
     MERGEABLE_STATE_BLOCKED,

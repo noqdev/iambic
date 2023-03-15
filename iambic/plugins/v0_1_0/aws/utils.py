@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Optional, Union
 
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
-
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.utils import aio_wrapper, camel_to_snake

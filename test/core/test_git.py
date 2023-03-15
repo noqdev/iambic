@@ -6,8 +6,9 @@ import shutil
 import tempfile
 
 import git
-import iambic.plugins.v0_1_0.example
 import pytest
+
+import iambic.plugins.v0_1_0.example
 from iambic.config.dynamic_config import load_config
 from iambic.core.git import (
     GitDiff,

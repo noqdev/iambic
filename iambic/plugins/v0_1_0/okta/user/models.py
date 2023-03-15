@@ -5,8 +5,6 @@ import os
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Optional
 
-from pydantic import Field
-
 from iambic.core.context import ExecutionContext, ctx
 from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
@@ -28,6 +26,7 @@ from iambic.plugins.v0_1_0.okta.user.utils import (
     update_user_profile,
     update_user_status,
 )
+from pydantic import Field
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization

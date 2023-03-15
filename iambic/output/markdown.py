@@ -1,9 +1,7 @@
+from __future__ import annotations
+
 import pathlib
 from typing import Any, Dict, List, Set
-
-from jinja2 import Environment, FileSystemLoader
-from pydantic import BaseModel as PydanticBaseModel, Field
-from recursive_diff import recursive_diff
 
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -12,7 +10,10 @@ from iambic.core.models import (
     ProposedChangeType,
     TemplateChangeDetails,
 )
-from iambic.core.utils import yaml
+from jinja2 import Environment, FileSystemLoader
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Field
+from recursive_diff import recursive_diff
 
 
 class ProposedChangeDiff(ProposedChange):
@@ -34,10 +35,17 @@ class ApplicableChange(PydanticBaseModel):
     def __hash__(self):
         return hash((self.resource_id, self.resource_type))
 
-    def __init__(self, change: ProposedChange, template_change: TemplateChangeDetails, **data: Any) -> None:
-        super().__init__(change=ProposedChangeDiff(change), template_change=template_change, **data)
+    def __init__(
+        self,
+        change: ProposedChange,
+        template_change: TemplateChangeDetails,
+        **data: Any,
+    ) -> None:
+        super().__init__(
+            change=ProposedChangeDiff(change), template_change=template_change, **data
+        )
         self.template_name = pathlib.Path(template_change.template_path).name
-    
+
 
 class AccountSummary(PydanticBaseModel):
     account: str = Field(default="NONE")
@@ -46,7 +54,9 @@ class AccountSummary(PydanticBaseModel):
     changes: List[ProposedChange] = Field(default=[])
 
     @classmethod
-    def compile(cls, account: str, count: int, changes: List[ProposedChange], **data: Any) -> None:
+    def compile(
+        cls, account: str, count: int, changes: List[ProposedChange], **data: Any
+    ) -> None:
         instance = cls()
         instance.account = account
         instance.count = count
@@ -66,21 +76,35 @@ class TemplateSummary(PydanticBaseModel):
         return hash(self.template_path)
 
     @classmethod
-    def compile(cls, template_path: str, template_name: str, count: int, changes: List[ProposedChange], **data: Any) -> None:
+    def compile(
+        cls,
+        template_path: str,
+        template_name: str,
+        count: int,
+        changes: List[ProposedChange],
+        **data: Any,
+    ) -> None:
         instance = cls()
         instance.template_path = template_path
         instance.template_name = template_name
         instance.count = count
         instance.num_accounts = len(set([x.account for x in changes]))
-        instance.accounts = [AccountSummary.compile(
-            account=change.account,
-            count=len(changes),
-            changes=[x for x in changes if x.account == change.account],
-        ) for change in changes]
+        instance.accounts = [
+            AccountSummary.compile(
+                account=change.account,
+                count=len(changes),
+                changes=[x for x in changes if x.account == change.account],
+            )
+            for change in changes
+        ]
         return instance
 
 
-def get_applicable_changes(template_changes: List[TemplateChangeDetails], proposed_change_type: str, attribute: str = "proposed_changes") -> Any:
+def get_applicable_changes(
+    template_changes: List[TemplateChangeDetails],
+    proposed_change_type: str,
+    attribute: str = "proposed_changes",
+) -> Any:
     """Compile applicable changes as a list of ApplicableChange objects.
 
     :param template_changes: list of TemplateChangeDetails objects
@@ -88,7 +112,12 @@ def get_applicable_changes(template_changes: List[TemplateChangeDetails], propos
     :param attribute: str. is either "proposed_changes" or "exceptions_seen"
     :return: set of ApplicableChange
     """
-    def _get_annotated_change(change: ProposedChange, template_change: TemplateChangeDetails, account: str = "NONE") -> ApplicableChange:
+
+    def _get_annotated_change(
+        change: ProposedChange,
+        template_change: TemplateChangeDetails,
+        account: str = "NONE",
+    ) -> ApplicableChange:
         return ApplicableChange(
             account=account,
             change=change,
@@ -104,11 +133,17 @@ def get_applicable_changes(template_changes: List[TemplateChangeDetails], propos
                 # If proposed change is a list of AccountChangeDetails, we need to iterate through those
                 for account_change in proposed_change.proposed_changes:
                     if account_change.change_type.value == proposed_change_type:
-                        applicable_changes.add(_get_annotated_change(account_change, template_change, proposed_change.account))
+                        applicable_changes.add(
+                            _get_annotated_change(
+                                account_change, template_change, proposed_change.account
+                            )
+                        )
             else:
                 if proposed_change.change_type.value == proposed_change_type:
                     # If proposed change is a single change, we can just append it
-                    applicable_changes.add(_get_annotated_change(proposed_change, template_change))
+                    applicable_changes.add(
+                        _get_annotated_change(proposed_change, template_change)
+                    )
 
     return set(applicable_changes)  # collapse across accounts and no accounts
 
@@ -120,23 +155,38 @@ class ActionSummary(PydanticBaseModel):
     templates: List[TemplateSummary] = Field(default=[])
 
     @classmethod
-    def compile_proposed_changes(cls, template_changes: List[TemplateChangeDetails], proposed_change_type: str) -> Any:
+    def compile_proposed_changes(
+        cls, template_changes: List[TemplateChangeDetails], proposed_change_type: str
+    ) -> Any:
         """Compile a list of TemplateChangeDetails into a list of TemplateSummary objects.
 
         :param resources_changes: list of TemplateChangeDetails objects
         :returns: None
         """
-        applicable_changes = get_applicable_changes(template_changes, proposed_change_type, attribute="proposed_changes")
+        applicable_changes = get_applicable_changes(
+            template_changes, proposed_change_type, attribute="proposed_changes"
+        )
         log.debug(f"Found {len(applicable_changes)} applicable changes")
 
-        instance = cls(action=proposed_change_type, count=len(applicable_changes), templates=[])
-        templates = set([
-            TemplateSummary.compile(
-                template_path=x.template_change.template_path,
-                template_name=x.template_name,
-                count=1,
-                changes=[y for y in applicable_changes if y.template_change.template_path == x.template_change.template_path],
-            ) for x in applicable_changes])
+        instance = cls(
+            action=proposed_change_type, count=len(applicable_changes), templates=[]
+        )
+        templates = set(
+            [
+                TemplateSummary.compile(
+                    template_path=x.template_change.template_path,
+                    template_name=x.template_name,
+                    count=1,
+                    changes=[
+                        y
+                        for y in applicable_changes
+                        if y.template_change.template_path
+                        == x.template_change.template_path
+                    ],
+                )
+                for x in applicable_changes
+            ]
+        )
         instance.templates = templates
         instance.num_templates = len(templates)
 
@@ -150,18 +200,36 @@ class ExceptionSummary(PydanticBaseModel):
     templates: List[TemplateSummary] = Field(default=[])
 
     @classmethod
-    def compile_exceptions_seen(cls, template_changes: List[TemplateChangeDetails], proposed_change_type: str) -> Any:
-        exceptions = get_applicable_changes(template_changes, proposed_change_type, attribute="exceptions_seen")
+    def compile_exceptions_seen(
+        cls, template_changes: List[TemplateChangeDetails], proposed_change_type: str
+    ) -> Any:
+        exceptions = get_applicable_changes(
+            template_changes, proposed_change_type, attribute="exceptions_seen"
+        )
         log.debug(f"Found {len(exceptions)} exceptions")
 
-        instance = cls(action=proposed_change_type, count=len(exceptions), num_templates=0, templates=[])
-        templates = set([
-            TemplateSummary.compile(
-                template_path=x.template_change.template_path,
-                template_name=x.template_name,
-                count=1,
-                changes=[y for y in exceptions if y.template_change.template_path == x.template_change.template_path],
-            ) for x in exceptions])
+        instance = cls(
+            action=proposed_change_type,
+            count=len(exceptions),
+            num_templates=0,
+            templates=[],
+        )
+        templates = set(
+            [
+                TemplateSummary.compile(
+                    template_path=x.template_change.template_path,
+                    template_name=x.template_name,
+                    count=1,
+                    changes=[
+                        y
+                        for y in exceptions
+                        if y.template_change.template_path
+                        == x.template_change.template_path
+                    ],
+                )
+                for x in exceptions
+            ]
+        )
         instance.templates = templates
         instance.num_templates = len(templates)
 
@@ -179,12 +247,29 @@ class ActionSummaries(PydanticBaseModel):
     @classmethod
     def compile(cls, changes: List[TemplateChangeDetails]):
         instance = cls()
-        instance.action_summaries = [ ActionSummary.compile_proposed_changes(changes, x) for x in list([e.value for e in ProposedChangeType]) ]
-        instance.num_actions = sum([1 for x in instance.action_summaries if x.count > 0])
-        instance.num_templates = sum([len(x.templates) for x in instance.action_summaries])
-        accounts = set([g.account for y in instance.action_summaries for z in y.templates for g in z.accounts])
+        instance.action_summaries = [
+            ActionSummary.compile_proposed_changes(changes, x)
+            for x in list([e.value for e in ProposedChangeType])
+        ]
+        instance.num_actions = sum(
+            [1 for x in instance.action_summaries if x.count > 0]
+        )
+        instance.num_templates = sum(
+            [len(x.templates) for x in instance.action_summaries]
+        )
+        accounts = set(
+            [
+                g.account
+                for y in instance.action_summaries
+                for z in y.templates
+                for g in z.accounts
+            ]
+        )
         instance.num_accounts = len(accounts)
-        instance.exceptions = [ ExceptionSummary.compile_exceptions_seen(changes, x) for x in list([e.value for e in ProposedChangeType]) ]
+        instance.exceptions = [
+            ExceptionSummary.compile_exceptions_seen(changes, x)
+            for x in list([e.value for e in ProposedChangeType])
+        ]
         instance.num_exceptions = sum([1 for x in instance.exceptions if x.count > 0])
         return instance
 
@@ -218,6 +303,6 @@ def get_template_data(resources_changes: List[TemplateChangeDetails]) -> Dict[st
 def gh_render_resource_changes(resource_changes: List[TemplateChangeDetails]):
     template_data = get_template_data(resource_changes)
     my_path = pathlib.Path(__file__).parent.absolute()
-    env = Environment(loader=FileSystemLoader(my_path / 'templates'))
+    env = Environment(loader=FileSystemLoader(my_path / "templates"))
     template = env.get_template("github_summary.jinja2")
     return template.render(iambic=template_data)

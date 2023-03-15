@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pydantic import Field
-
 from iambic.core.context import ExecutionContext
 from iambic.core.models import (
     BaseModel,
@@ -11,6 +9,7 @@ from iambic.core.models import (
     ExpiryModel,
     TemplateChangeDetails,
 )
+from pydantic import Field
 
 EXAMPLE_LOCAL_DATABASE_TEMPLATE_TYPE = "NOQ::Example::LocalDatabase"
 

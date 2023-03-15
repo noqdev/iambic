@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 from typing import Optional
 
+from pydantic import BaseModel, Field, validator
+
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.aws.handlers import (
@@ -21,7 +23,6 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetTemplate,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount, AWSOrganization
-from pydantic import BaseModel, Field, validator
 
 
 class AWSConfig(BaseModel):
