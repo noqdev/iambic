@@ -716,7 +716,16 @@ def merge_access_model_list(
             if new_model_index < len(existing_list):
                 existing_model = existing_list[new_model_index]
                 merged_list.append(
-                    merge_model(new_model, existing_model, all_provider_children)
+                    # it's important NOT to have merge_model handle update_access_attribute
+                    # because it knows synching between existing and incoming. In this portion
+                    # of merge_access_model_list, merge_access_model_list is driving everything
+                    # about access model
+                    merge_model(
+                        new_model,
+                        existing_model,
+                        all_provider_children,
+                        should_update_access_attributes=False,
+                    ),
                 )
             else:
                 merged_list.append(new_model)
@@ -835,6 +844,7 @@ def merge_model(
     new_model: BaseModel,
     existing_model: BaseModel,
     all_provider_children: list[ProviderChild],
+    should_update_access_attributes=True,
 ) -> Union[BaseModel, list[BaseModel], None]:
     """
     Update the metadata of the new IAMbic model using the existing model.
@@ -866,8 +876,10 @@ def merge_model(
     iambic_fields = existing_model.metadata_iambic_fields
     field_names = new_model.__fields__.keys()
 
-    if isinstance(merged_model, AccessModelMixin) and isinstance(
-        new_model, AccessModelMixin
+    if (
+        isinstance(merged_model, AccessModelMixin)
+        and isinstance(new_model, AccessModelMixin)
+        and should_update_access_attributes
     ):
         """
         If the field is a list of objects that inherit from AccessModel:
