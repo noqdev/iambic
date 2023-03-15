@@ -3,21 +3,6 @@ FROM public.ecr.aws/iambic/iambic_container_base:1.0
 ARG FUNCTION_DIR="/app"
 
 
-# build docs first, since it is least likely to change
-
-RUN mkdir -p ${FUNCTION_DIR}/iambic \
- && curl -sL https://dl.yarnpkg.com/rpm/yarn.repo -o /etc/yum.repos.d/yarn.repo \
- && yum install nodejs npm yarn -y
-
-COPY --chown=iambic:iambic docs/ ${FUNCTION_DIR}/docs
-
-WORKDIR ${FUNCTION_DIR}/docs/web
-
-RUN yarn \
- && yarn install --frozen-lockfile
-
-RUN yarn cache clean
-
 WORKDIR ${FUNCTION_DIR}
 
 # build the dependencies first to reuse the layer more often
