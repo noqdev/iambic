@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+
 from iambic.core.models import TemplateChangeDetails
 from iambic.core.utils import yaml
 from iambic.output.markdown import (

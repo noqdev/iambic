@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 import pytest
+
 from iambic.plugins.v0_1_0.aws.iam.user.utils import list_users
 
 

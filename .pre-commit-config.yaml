@@ -11,16 +11,16 @@ repos:
     - id: debug-statements
     - id: check-yaml
       args: [--allow-multiple-documents, --unsafe]
+
+- repo: https://github.com/timothycrosley/isort
+  rev: "5.12.0" # Use the revision sha / tag you want to point at
+  hooks:
+    - id: isort
+      pass_filenames: true
+      args: ["--profile", "black", "iambic"]
+
 - repo: local
   hooks:
-  - id: isort
-    name: isort
-    stages: [commit]
-    language: system
-    entry: poetry run isort
-    types: [python]
-    args: ["--profile", "black"]
-
   - id: black
     name: black
     stages: [commit]

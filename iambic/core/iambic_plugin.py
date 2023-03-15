@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 from typing import Any, Optional
 
-from iambic.core.context import ctx
-from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
+
+from iambic.core.context import ctx
+from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
 
 
 async def default_apply_callable(

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Optional
 
+from pydantic import Field, constr
+
 from iambic.core.models import ExpiryModel
 from iambic.plugins.v0_1_0.aws.models import ARN_RE, AccessModel
-from pydantic import Field, constr
 
 
 class Path(AccessModel):
