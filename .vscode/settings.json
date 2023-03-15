@@ -12,4 +12,10 @@
         "-p",
         "*_test.py"
     ],
+    "coverage-gutters.coverageFileNames": [
+        "cov_unit_tests.xml"
+    ],
+    "coverage-gutters.coverageBaseDir": ".",
+    "coverage-gutters.showGutterCoverage": false,
+    "coverage-gutters.showLineCoverage": true
 }
