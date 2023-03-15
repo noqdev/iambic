@@ -2,9 +2,7 @@
 
 "IAMbic: the Terraform of Cloud IAM"
 
-IAMbic is a multi-cloud identity and access management (IAM) control plane that centralizes and organizes the tracking and management of cloud access and permissions. With IAMbic, teams can track historical changes to cloud identities and permissions over time, as well as manage changes to identities, access rules, and permissions. IAMbic facilitates the granting of temporary or emergency access for end-users while minimizing the associated risks, overhead, and latency involved in permissions management.
-
-Learn more at [https://www.iambic.org](https://www.iambic.org).
+IAMbic is a multi-cloud identity and access management (IAM) control plane that centralizes and streamlines cloud access and permissions management. Discover more at [https://www.iambic.org](https://www.iambic.org).
 
 ## Key Features
 
