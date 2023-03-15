@@ -91,6 +91,7 @@ async def base_group_str_attribute(
 
     """
     Create map with different representations of a resource value for each account
+    (Note that we now only keep the post-templatized version)
 
     The purpose is to add the 2 ways look-ups are done and maintain o(1) performance.
     The resource_val to the corresponding list element in account_resources[elem]["resources"]
@@ -110,19 +111,21 @@ async def base_group_str_attribute(
             resource_val = resource["resource_val"]
             templatized_resource_val = templatize_resource(aws_account, resource_val)
 
+            # note about the decision we only kept the post-templatized version
+            # we aggressively templatized the incoming information.
+            # a note for future reader: if you attempt to conditional decide
+            # to templatize or not, you have to be careful regarding greedy
+            # algorithm that does not arrive at the same termination state.
+            # Concretely, if a literal can both be repeated across accounts
+            # or templatized across accounts, greedy algorithm may reach
+            # different states.
+
             account_resources[account_resource_elem]["resource_val_map"][
-                resource_val
+                templatized_resource_val
             ] = resource_elem
             account_resources[account_resource_elem]["elem_resource_val_map"][
                 resource_elem
-            ] = [resource_val]
-            if templatized_resource_val != resource_val:
-                account_resources[account_resource_elem]["resource_val_map"][
-                    templatized_resource_val
-                ] = resource_elem
-                account_resources[account_resource_elem]["elem_resource_val_map"][
-                    resource_elem
-                ].append(templatized_resource_val)
+            ] = [templatized_resource_val]
 
     grouped_resource_map = defaultdict(
         list
@@ -195,7 +198,7 @@ async def base_group_str_attribute(
 async def base_group_dict_attribute(
     aws_account_map: dict[str, AWSAccount],
     account_resources: list[dict],
-    prefer_templatized=False,
+    prefer_templatized=False,  # clarification that this keyword parameter has no impact at the moment
 ) -> list[dict]:
     """Groups an attribute that is a dict or list of dicts with matching aws_accounts
 
@@ -310,15 +313,17 @@ async def base_group_dict_attribute(
             elif len(resource_hashes) == 1:
                 resource_hash = resource_hashes[0]
             else:
-                if prefer_templatized:
-                    resource_hash = resource_hashes[
-                        -1
-                    ]  # take the last one because it's the templatized version
-                else:
-                    # Take priority over raw output
-                    resource_hash = [
-                        rv for rv in resource_hashes if "{{" not in str(hash_map[rv])
-                    ][0]
+                # note about the decision we prefer post-templatized version
+                # we aggressively templatized the incoming information.
+                # a note for future reader: if you attempt to conditional decide
+                # to templatize or not, you have to be careful regarding greedy
+                # algorithm that does not arrive at the same termination state.
+                # Concretely, if a literal can both be repeated across accounts
+                # or templatized across accounts, greedy algorithm may reach
+                # different states.
+                resource_hash = resource_hashes[
+                    -1
+                ]  # take the last one because it's the templatized version
 
             grouped_resource_map[resource_hash] = {
                 "resource_val": hash_map[resource_hash],
@@ -522,16 +527,16 @@ def sync_access_model_scope(
     source_access_model: AccessModelMixin, destination_access_model: AccessModelMixin
 ) -> tuple[AccessModelMixin, AccessModelMixin]:
     destination_access_model.set_included_children(
-        sorted(source_access_model.included_children)
+        list(sorted(set(source_access_model.included_children)))
     )
     destination_access_model.set_excluded_children(
-        sorted(source_access_model.excluded_children)
+        list(sorted(set(source_access_model.excluded_children)))
     )
     destination_access_model.set_included_parents(
-        sorted(source_access_model.included_parents)
+        list(sorted(set(source_access_model.included_parents)))
     )
     destination_access_model.set_excluded_parents(
-        sorted(source_access_model.excluded_parents)
+        list(sorted(set(source_access_model.excluded_parents)))
     )
     return source_access_model, destination_access_model
 
@@ -604,7 +609,19 @@ def update_access_attributes(
                     existing_model.included_children.append(child.preferred_identifier)
 
             if not evaluated_on_new_model and currently_evaluated:
-                existing_model.excluded_children.append(child.preferred_identifier)
+                # If the child was explicitly defined in included_children then remove it
+                #   because it is no longer included.
+                # If it is defined as part of a wildcard
+                #   then we need to preserve the rule but add it to excluded children.
+                included_children = [
+                    ic
+                    for ic in existing_model.included_children
+                    if ic not in child.all_identifiers
+                ]
+                if included_children != existing_model.included_children:
+                    existing_model.set_included_children(included_children)
+                else:
+                    existing_model.excluded_children.append(child.preferred_identifier)
 
     existing_model, new_model = sync_access_model_scope(existing_model, new_model)
     return new_model, existing_model
