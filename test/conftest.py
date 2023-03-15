@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import itertools
 import json
+import os
 import pathlib
 
+import boto3
 from moto import mock_secretsmanager
 import pytest
 import yaml
@@ -35,6 +37,14 @@ def aws_accounts():
         AWSAccount(account_id="123456789018", account_name="prod3"),
         AWSAccount(account_id="123456789019", account_name="test"),
     ]
+
+@pytest.fixture(scope="function")
+def prevent_aws_real_mutants():
+    os.environ["AWS_ACCESS_KEY_ID"] = "test"
+    os.environ["AWS_SECRET_ACCESS_KEY"] = "test"
+    os.environ["AWS_DEFAULT_REGION"] = "us-west-2"
+    os.environ["AWS_SESSION_TOKEN"] = "test"
+    os.environ["AWS_SECURITY_TOKEN"] = "test"
 
 @pytest.fixture(scope="function")
 def test_config_path_two_accounts_plus_org(fs):
@@ -138,10 +148,10 @@ def test_config_plugins_available(fs):
 
 
 @pytest.fixture(scope="function")
-def secretsmanager(fs):
+def secrets_setup(fs, prevent_aws_real_mutants):
     with mock_secretsmanager():
-        secretsmanager = boto3_retry.client("secretsmanager", region_name="us-west-2")
-        secretsmanager.create_secret(
+        secretmgr = boto3.resource("secretsmanager", region_name="us-west-2")
+        secretmgr.create_secret(
             Name="iambic-config-secrets-9fae9066-5599-473f-b364-63fa0240b6f7",
             SecretString=json.dumps({
                 "secrets": {
@@ -156,7 +166,7 @@ def secretsmanager(fs):
                 }
             })
         )
-        yield secretsmanager
+        yield secretmgr
 
 
 @pytest.fixture(scope="function")

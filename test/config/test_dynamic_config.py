@@ -20,12 +20,11 @@ async def test_set_config_secrets_with_local_file(fs, test_config, test_config_p
 
 
 @pytest.mark.asyncio
-async def test_set_config_secrets_with_secret_in_secrets_manager(fs, test_config, test_config_path_one_extends, secretsmanager):
-
+async def test_set_config_secrets_with_secret_in_secrets_manager(fs, test_config, test_config_path_one_extends, secrets_setup):
     test_config.extends = [
         ExtendsConfig(
             key=ExtendsConfigKey.AWS_SECRETS_MANAGER,
-            value=test_config_path_one_extends,
+            value="arn:aws:secretsmanager:us-west-2:123456789012:secret:iambic-config-secrets-9fae9066-5599-473f-b364-63fa0240b6f7",
         )
     ]
     await test_config.set_config_secrets()
