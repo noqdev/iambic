@@ -1,13 +1,14 @@
+from __future__ import annotations
+
 import pytest
-from iambic.output.markdown import (
-  ActionSummaries,
-  get_template_data,
-  gh_render_resource_changes,
-)
 
-from iambic.core.utils import yaml
 from iambic.core.models import TemplateChangeDetails
-
+from iambic.core.utils import yaml
+from iambic.output.markdown import (
+    ActionSummaries,
+    get_template_data,
+    gh_render_resource_changes,
+)
 
 template_yaml = """  - resource_id: prod_iambic_test_role
     resource_type: aws:iam:role
@@ -415,22 +416,41 @@ def get_templates_mixed():
     return [TemplateChangeDetails.parse_obj(x) for x in yaml.load(template_yaml)]
 
 
-@pytest.mark.parametrize("template_change_details, expected_output", [
-    (get_templates_mixed(), ActionSummaries(num_accounts=10, num_actions=1, num_templates=2)),
-])
-def test_get_template_data(template_change_details: list[TemplateChangeDetails], expected_output: ActionSummaries):
+@pytest.mark.parametrize(
+    "template_change_details, expected_output",
+    [
+        (
+            get_templates_mixed(),
+            ActionSummaries(num_accounts=10, num_actions=1, num_templates=2),
+        ),
+    ],
+)
+def test_get_template_data(
+    template_change_details: list[TemplateChangeDetails],
+    expected_output: ActionSummaries,
+):
     template_data = get_template_data(template_change_details)
     assert template_data.num_accounts == expected_output.num_accounts
     assert template_data.num_actions == expected_output.num_actions
     assert template_data.num_templates == expected_output.num_templates
 
 
-@pytest.mark.parametrize("template_change_details, expected_output", [
-    (get_templates_mixed(), ActionSummaries(num_accounts=10, num_actions=1, num_templates=2)),
-])
-def test_gh_render_resource_changes(template_change_details: list[TemplateChangeDetails], expected_output: ActionSummaries):
+@pytest.mark.parametrize(
+    "template_change_details, expected_output",
+    [
+        (
+            get_templates_mixed(),
+            ActionSummaries(num_accounts=10, num_actions=1, num_templates=2),
+        ),
+    ],
+)
+def test_gh_render_resource_changes(
+    template_change_details: list[TemplateChangeDetails],
+    expected_output: ActionSummaries,
+):
     rendered_markdown = gh_render_resource_changes(template_change_details)
     import time
+
     with open(f"test_render_resource_changes-{time.time()}.md", "w") as f:
         f.write(rendered_markdown)
     assert rendered_markdown != ""

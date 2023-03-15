@@ -5,6 +5,8 @@ import json
 from typing import Callable, Optional, Union
 
 import botocore
+from pydantic import Field, validator
+
 from iambic.core.context import ExecutionContext, ctx
 from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
@@ -42,7 +44,6 @@ from iambic.plugins.v0_1_0.aws.models import (
     Tag,
 )
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
-from pydantic import Field, validator
 
 AWS_IAM_ROLE_TEMPLATE_TYPE = "NOQ::AWS::IAM::Role"
 

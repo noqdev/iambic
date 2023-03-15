@@ -19,7 +19,7 @@ repos:
     language: system
     entry: poetry run isort
     types: [python]
-    args: ["--profile", "black"]
+    args: ["--profile", "black", "-p", "iambic"]
 
   - id: black
     name: black

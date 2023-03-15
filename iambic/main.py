@@ -338,7 +338,10 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
 def config_discovery(repo_dir: str):
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
-    asyncio.run(config.run_discover_upstream_config_changes(repo_dir))
+    exe_message = ExecutionMessage(
+        execution_id=str(uuid.uuid4()), command=Command.CONFIG_DISCOVERY
+    )
+    asyncio.run(config.run_discover_upstream_config_changes(exe_message, repo_dir))
 
 
 @cli.command(name="import")
@@ -355,10 +358,10 @@ def import_(repo_dir: str):
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
     check_and_update_resource_limit(config)
-    execution_message = ExecutionMessage(
+    exe_message = ExecutionMessage(
         execution_id=str(uuid.uuid4()), command=Command.IMPORT
     )
-    asyncio.run(config.run_import(execution_message, repo_dir))
+    asyncio.run(config.run_import(exe_message, repo_dir))
 
 
 @cli.command()

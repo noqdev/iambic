@@ -929,6 +929,8 @@ def merge_model(
                         _cls = type(inner_element)
                         new_value = [_cls.new_instance_from_string(new_value)]
                         value_as_list = True  # because cast it into a list
+                    elif not isinstance(new_value, list):
+                        new_value = [new_value]
 
                     new_value = merge_access_model_list(
                         new_value, existing_value, all_provider_children

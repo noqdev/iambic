@@ -444,17 +444,20 @@ def apply_to_provider(resource, provider_details, context: ExecutionContext) -> 
 
 
 def is_regex_match(regex, test_string):
+    regex = regex.lower()
+    test_string = test_string.lower()
+
     if "*" in regex:
         # Normalize user created regex to python regex
         # Example, dev-* to dev-.* to prevent re.match return True for eval on dev
-        regex = regex.replace(".*", "*").replace("*", ".*")
         try:
-            return bool(re.match(regex.lower(), test_string))
+            sanitized_regex = regex.replace(".*", "*").replace("*", ".*")
+            return bool(re.match(sanitized_regex, test_string))
         except re.error:
-            return regex.lower() == test_string.lower()
+            return regex == test_string
     else:
         # it is not an actual regex string, just string comparison
-        return regex.lower() == test_string.lower()
+        return regex == test_string
 
 
 def get_provider_value(matching_values: list, identifiers: set[str]):

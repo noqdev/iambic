@@ -5,6 +5,8 @@ import traceback
 from typing import Optional
 
 import pytest
+from pydantic import ValidationError
+
 from iambic.core.models import ProviderChild
 from iambic.core.template_generation import merge_access_model_list
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
@@ -13,7 +15,6 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     PermissionSetAccess,
 )
 from iambic.plugins.v0_1_0.aws.models import Description
-from pydantic import ValidationError
 
 
 def test_description_validation_with_default_being_none():

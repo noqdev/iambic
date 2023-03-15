@@ -7,6 +7,7 @@ from functional_tests.aws.managed_policy.utils import (
     generate_managed_policy_template_from_base,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core import noq_json as json
 from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.models import Tag
