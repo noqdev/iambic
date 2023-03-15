@@ -13,7 +13,8 @@ IAMbic is a multi-cloud identity and access management (IAM) control plane that 
 - **Centralized Source of Truth**: IAMbic keeps Git updated with the latest, complete state of your cloud environment, providing a usable artifact for auditing and compliance.
 - **Extendable**: Benefit from a robust plugin architecture for maintaining identity, permissions, and entitlement changes across different clouds and applications.
 - **Auditable**: Git history provides a complete audit trail of all changes to IAM policies, permissions, and access rules, with context on who made the changes.
-- **Custom Template Parameters**: Streamline account management with auto-substituting variables.
+- **Custom Template Parameters**: Streamline account management with auto-substituting variables in templates, such as account names, account IDs, and more.
+- **Configuration Round-Trip**: Easily import and convert existing cloud configurations into IAMbic's format, simplifying the onboarding process.
 
 ## Getting Started
 

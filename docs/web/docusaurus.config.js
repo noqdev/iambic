@@ -137,7 +137,7 @@ const config = {
         },
       ],
     ],
-    scripts: ["https://iambic.org/scripts/scripts.js"]
+    scripts: ["/scripts/scripts.js"]
 };
 
 module.exports = config;

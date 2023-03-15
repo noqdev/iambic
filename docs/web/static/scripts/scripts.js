@@ -34,9 +34,26 @@ function replaceString(str, input_field, default_value) {
 function getElementValue(id) {
     var element = document.getElementById(id);
     if (element) {
-        return element.value;
+        return element.innerHTML;
     }
     return null;
 }
 
+function createLabel3(id, text) {
+    var label = document.createElement('label');
+    label.setAttribute('for', id);
+    label.innerHTML = text;
+    return label;
+}
 
+function escapeHtml3(html) {
+    const textNode = document.createTextNode(html);
+    const div = document.createElement('div');
+    div.appendChild(textNode);
+    return div.innerHTML;
+  }
+
+
+  function createLabel2(id, content) {
+    return `<label id="${id}">${content}</label>`;
+  }
