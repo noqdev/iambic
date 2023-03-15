@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import itertools
+import json
 import pathlib
 
+from moto import mock_secretsmanager
 import pytest
 import yaml
 
@@ -16,6 +18,7 @@ from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.utils import boto3_retry
 
 
 @pytest.fixture(scope="function")
@@ -132,6 +135,28 @@ def test_config_path_one_extends(fs):
 def test_config_plugins_available(fs):
     my_path = pathlib.Path(__file__).parent.absolute()
     fs.add_real_directory(my_path.parent.joinpath("iambic", "plugins"))
+
+
+@pytest.fixture(scope="function")
+def secretsmanager(fs):
+    with mock_secretsmanager():
+        secretsmanager = boto3_retry.client("secretsmanager", region_name="us-west-2")
+        secretsmanager.create_secret(
+            Name="iambic-config-secrets-9fae9066-5599-473f-b364-63fa0240b6f7",
+            SecretString=json.dumps({
+                "secrets": {
+                    "git": {
+                        "repositories": [
+                            {
+                                "name": "test-iambic",
+                                "url": "file:///iambic/git",
+                            }
+                        ]
+                    }
+                }
+            })
+        )
+        yield secretsmanager
 
 
 @pytest.fixture(scope="function")
