@@ -4,6 +4,7 @@ import itertools
 from typing import Union
 
 import pytest
+from pydantic import Extra
 
 from iambic.core.models import AccessModelMixin, BaseModel
 from iambic.core.template_generation import (
@@ -64,6 +65,7 @@ class SampleModel(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+        extra = Extra.forbid
 
     @property
     def resource_type(self):

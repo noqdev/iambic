@@ -5,7 +5,6 @@ import functools
 from typing import TYPE_CHECKING, List
 
 import okta.models as models
-
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
@@ -170,11 +169,8 @@ async def list_all_apps(okta_organization: OktaOrganization) -> List[App]:
             id=app_raw.id,
             idp_name=okta_organization.idp_name,
             name=app_raw.label,
-            app_id=app_raw.id,
-            attributes=dict(),
             status=app_raw.status,
             extra=dict(
-                okta_app_id=app_raw.id,
                 created=app_raw.created,
             ),
         )

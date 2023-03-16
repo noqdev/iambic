@@ -163,6 +163,7 @@ class App(BaseModel, ExpiryModel):
     profile_mappings: list[AppProfileMapping] = Field(
         [], description="Profile mappings"
     )
+    extra: Any = Field(None, description=("Extra attributes to store"))
 
     @property
     def resource_type(self) -> str:

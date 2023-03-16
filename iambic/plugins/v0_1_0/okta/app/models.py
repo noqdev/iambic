@@ -56,7 +56,7 @@ class OktaAppTemplateProperties(ExpiryModel, BaseModel):
 
     @property
     def resource_id(self) -> str:
-        return self.app_id
+        return self.id
 
     @validator("assignments")
     def sort_groups(cls, v: list[Assignment]):
@@ -272,7 +272,6 @@ async def get_app_template(okta_app) -> OktaAppTemplate:
             idp_name=okta_app.idp_name,
             id=okta_app.id,
             file_path="{}.yaml".format(okta_app.name),
-            attributes=dict(),
             assignments=okta_app.assignments,
         ),
     )
