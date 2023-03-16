@@ -227,7 +227,10 @@ async def test_merge_template_role_with_wildcard_catch_include(
         test_config.aws,
     )
     updated_role.iambic_managed = IambicManaged.READ_AND_WRITE
-    updated_role.included_accounts = [test_account, test_account_2]
+    updated_role.included_accounts = [
+        test_account.account_name,
+        test_account_2.account_name,
+    ]
 
     merged_model = merge_model(
         updated_role, initial_role, [test_account, test_account_2]
@@ -313,6 +316,114 @@ async def test_noop_merge_template_role_with_non_standard_account_name(
     assert merged_model.properties.description[0].included_accounts == [
         non_standard_account.account_name
     ]
+
+
+@pytest.mark.asyncio
+async def test_merge_template_role_with_excluded_accounts_rule_preservation(
+    test_config,
+    test_role,
+    test_account,
+    test_account_2,
+    mock_account_id_to_role_map,
+    mock_write,
+):
+    """
+    Check that an excluded account rule with a wildcard is preserved
+    """
+    test_account_3 = AWSAccount(
+        account_id="123456789013",
+        account_name="prod",
+        assume_role_arn="",
+    )
+    account_list = [test_account, test_account_2, test_account_3]
+    test_aws_account_map = get_aws_account_map(account_list)
+    test_role_ref = test_role.properties.dict()
+    test_role_ref["account_id"] = test_account.account_id
+    test_role_refs = [test_role_ref]
+    test_existing_template_map = {}
+    initial_role = await create_templated_role(
+        test_aws_account_map,
+        "test_role",
+        test_role_refs,
+        "",
+        test_existing_template_map,
+        test_config.aws,
+    )
+    initial_role.iambic_managed = IambicManaged.READ_AND_WRITE
+    initial_role.included_accounts = ["prod*"]
+    initial_role.excluded_accounts = ["dev*"]
+    imported_role = await create_templated_role(
+        test_aws_account_map,
+        "test_role",
+        test_role_refs,
+        "",
+        test_existing_template_map,
+        test_config.aws,
+    )
+    imported_role.iambic_managed = IambicManaged.READ_AND_WRITE
+    imported_role.included_accounts = [
+        test_account.account_name,
+        test_account_3.account_name,
+    ]
+
+    merged_model = merge_model(imported_role, initial_role, account_list)
+    assert "prod*" in merged_model.included_accounts
+    assert "dev*" in merged_model.excluded_accounts
+    assert test_account.account_name in merged_model.included_accounts
+
+
+@pytest.mark.asyncio
+async def test_merge_template_role_with_wildcard_include_and_excluded_accounts_rule_preservation(
+    test_config,
+    test_role,
+    test_account,
+    test_account_2,
+    mock_account_id_to_role_map,
+    mock_write,
+):
+    """
+    Check that an excluded account rule with a wildcard is preserved
+    """
+    test_account_3 = AWSAccount(
+        account_id="123456789013",
+        account_name="prod",
+        assume_role_arn="",
+    )
+    account_list = [test_account, test_account_2, test_account_3]
+    test_aws_account_map = get_aws_account_map(account_list)
+    test_role_ref = test_role.properties.dict()
+    test_role_ref["account_id"] = test_account.account_id
+    test_role_refs = [test_role_ref]
+    test_existing_template_map = {}
+    initial_role = await create_templated_role(
+        test_aws_account_map,
+        "test_role",
+        test_role_refs,
+        "",
+        test_existing_template_map,
+        test_config.aws,
+    )
+    initial_role.iambic_managed = IambicManaged.READ_AND_WRITE
+    initial_role.included_accounts = ["*"]
+    initial_role.excluded_accounts = ["dev*"]
+    imported_role = await create_templated_role(
+        test_aws_account_map,
+        "test_role",
+        test_role_refs,
+        "",
+        test_existing_template_map,
+        test_config.aws,
+    )
+    imported_role.iambic_managed = IambicManaged.READ_AND_WRITE
+    imported_role.included_accounts = [
+        test_account.account_name,
+        test_account_3.account_name,
+    ]
+
+    merged_model = merge_model(imported_role, initial_role, account_list)
+    assert "*" in merged_model.included_accounts
+    assert "dev*" in merged_model.excluded_accounts
+    assert test_account.account_name in merged_model.included_accounts
 
 
 @pytest.mark.asyncio
