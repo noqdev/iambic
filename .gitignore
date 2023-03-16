@@ -137,3 +137,4 @@ proposed_changes.yaml
 # terraform things
 deployment/github_app/.terraform/
 deployment/github_app/terraform.tfstate*
+test_render_resource_changes*.md
