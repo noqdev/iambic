@@ -422,9 +422,9 @@ async def collect_aws_users(
     set_user_resource_groups_semaphore = NoqSemaphore(set_user_resource_groups, 30)
     set_user_resource_tags_semaphore = NoqSemaphore(set_user_resource_tags, 50)
 
-    log.info("Generating AWS user templates.")
     log.info(
-        "Beginning to retrieve AWS IAM Users.", accounts=list(aws_account_map.keys())
+        "Generating AWS user templates. Beginning to retrieve AWS IAM Users.",
+        accounts=list(aws_account_map.keys()),
     )
 
     if detect_messages:
@@ -505,15 +505,21 @@ async def collect_aws_users(
                 }
             )
 
-    log.info("Setting inline policies in user templates")
+    log.info(
+        "Setting inline policies in user templates",
+        accounts=list(aws_account_map.keys()),
+    )
     await set_user_resource_inline_policies_semaphore.process(messages)
-    log.info("Setting managed policies in user templates")
+    log.info(
+        "Setting managed policies in user templates",
+        accounts=list(aws_account_map.keys()),
+    )
     await set_user_resource_managed_policies_semaphore.process(messages)
-    log.info("Setting groups in user templates")
+    log.info("Setting groups in user templates", accounts=list(aws_account_map.keys()))
     await set_user_resource_groups_semaphore.process(messages)
-    log.info("Setting tags in user templates")
+    log.info("Setting tags in user templates", accounts=list(aws_account_map.keys()))
     await set_user_resource_tags_semaphore.process(messages)
-    log.info("Finished retrieving user details")
+    log.info("Finished retrieving user details", accounts=list(aws_account_map.keys()))
 
     account_user_output = json.dumps(account_users)
     with open(
