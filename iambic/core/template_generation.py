@@ -570,15 +570,6 @@ def update_access_attributes(
     if "*" in new_model.included_children:
         new_model, existing_model = sync_access_model_scope(new_model, existing_model)
         return new_model, existing_model
-
-    if "*" in existing_model.included_children:
-        for child in all_provider_children:
-
-            if (
-                child.preferred_identifier not in new_model.included_children
-                and evaluate_on_provider(existing_model, child, ctx, False)
-            ):
-                existing_model.excluded_children.append(child.preferred_identifier)
     else:
         for child in all_provider_children:
             currently_evaluated = evaluate_on_provider(
