@@ -49,13 +49,13 @@ def init_writable_directory() -> None:
     # still use a docker container but still cannot write to anywhere but os temp dir
     if os.environ.get("AWS_LAMBDA_FUNCTION_NAME", False):
         temp_writable_directory = tempfile.mkdtemp(prefix="lambda")
+        log.info(
+            f"AWS_LAMBDA_FUNCTION_NAME is set, using {temp_writable_directory} as writable directory"
+        )
         __WRITABLE_DIRECTORY__ = pathlib.Path(temp_writable_directory)
 
     this_module = sys.modules[__name__]
     setattr(this_module, "__WRITABLE_DIRECTORY__", __WRITABLE_DIRECTORY__)
-
-
-init_writable_directory()
 
 
 def get_writable_directory() -> pathlib.Path:
