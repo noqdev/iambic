@@ -52,6 +52,8 @@ cryptography = "^39.0.1"
 recursive-diff = "^1.1.0"
 aws-error-utils = "^2.7.0"
 types-mock = "^5.0.0.5"
+ansicolors = "^1.1.8"
+rich = "^13.3.2"
 
 [tool.poetry.scripts]
 iambic = "iambic.main:cli"
