@@ -4,11 +4,9 @@ import pytest
 
 from iambic.core.models import TemplateChangeDetails
 from iambic.core.utils import yaml
-from iambic.output.markdown import (
-    ActionSummaries,
-    get_template_data,
-    gh_render_resource_changes,
-)
+from iambic.output.markdown import gh_render_resource_changes
+from iambic.output.models import ActionSummaries, get_template_data
+
 
 template_yaml = """  - resource_id: prod_iambic_test_role
     resource_type: aws:iam:role
