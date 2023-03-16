@@ -5,8 +5,9 @@ import os
 import shutil
 import tempfile
 
-import iambic.plugins.v0_1_0.example
 import pytest
+
+import iambic.plugins.v0_1_0.example
 from iambic.config.dynamic_config import load_config
 from iambic.core.utils import gather_templates
 from iambic.main import run_apply
