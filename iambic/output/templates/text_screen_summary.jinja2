@@ -1,0 +1,120 @@
+# IAMbic Summary
+## Change Detection
+* {{ iambic.num_actions }} distinct actions.
+* {{ iambic.num_templates }} templates with changes.
+* {{ iambic.num_accounts }} accounts affected.
+## Exceptions
+* {{ iambic.num_exceptions }} exceptions were recorded.
+
+{% if iambic.num_templates > 0 -%}
+
+# IAMbic Change Details
+
+{% for action_summary in iambic.action_summaries -%}
+{% if action_summary.num_templates > 0 -%}
+<details>
+<summary>Action: {{ action_summary.action }} (Number of Templates: {{ action_summary.num_templates }})</summary>
+    <blockquote>
+        {% for template in action_summary.templates -%}
+        {% if template.num_accounts -%}
+        <details>
+        <summary>Template: {{ template.template_name }} (Number of Accounts: {{ template.num_accounts }})</summary>
+            <blockquote>
+                {% for account in template.accounts -%}
+                {% if account.num_changes -%}
+                <details>
+                <summary>Account: {{ account.account }} (Number of Changes: {{ account.num_changes }})</summary>
+                    <blockquote>
+                        {% for change in account.changes -%}
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Resource ID</th>
+                                    <th>Resource Type</th>
+                                    <th>Change Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>{{ change.resource_id }}</td>
+                                    <td>{{ change.resource_type }}</td>
+                                    <td>{{ change.change.change_type.value }}</td>
+                                </tr>
+                                {% if change.diff -%}
+                                <tr>
+                                    <td colspan="100%">{{ change.diff }}</td>
+                                </tr>
+                                {% endif -%}
+                            </tbody>
+                        </table>
+                        {% endfor -%}
+                    </blockquote>
+                </details>
+                {% endif -%}
+                {% endfor -%}
+            </blockquote>
+        </details>
+        {% endif -%}
+        {% endfor -%}
+    </blockquote>
+</details>
+{% endif -%}
+{% endfor %}
+{% endif -%}
+
+
+{% if iambic.num_exceptions > 0 -%}
+
+# IAMbic Exceptions
+
+{% for exception in iambic.exceptions -%}
+{% if exception.num_templates > 0 -%}
+<details>
+<summary>Action: {{ exception.action }} (Number of Templates: {{ exception.num_templates }})</summary>
+    <blockquote>
+        {% for template in exception.templates -%}
+        {% if template.num_accounts -%}
+        <details>
+        <summary>Template: {{ template.template_name }} (Number of Accounts: {{ template.num_accounts }})</summary>
+            <blockquote>
+                {% for account in template.accounts -%}
+                {% if account.num_changes -%}
+                <details>
+                <summary>Account: {{ account.account }} (Number of Changes: {{ account.num_changes }})</summary>
+                    <blockquote>
+                        {% for change in account.changes -%}
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Resource ID</th>
+                                    <th>Resource Type</th>
+                                    <th>Change Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>{{ change.resource_id }}</td>
+                                    <td>{{ change.resource_type }}</td>
+                                    <td>{{ change.change.change_type.value }}</td>
+                                </tr>
+                                {% if change.diff -%}
+                                <tr>
+                                    <td colspan="100%">{{ change.diff }}</td>
+                                </tr>
+                                {% endif -%}
+                            </tbody>
+                        </table>
+                        {% endfor -%}
+                    </blockquote>
+                </details>
+                {% endif -%}
+                {% endfor -%}
+            </blockquote>
+        </details>
+        {% endif -%}
+        {% endfor -%}
+    </blockquote>
+</details>
+{% endif -%}
+{% endfor %}
+{% endif -%}

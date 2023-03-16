@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pathlib
-from typing import Any, List, Set
+from typing import Any, Dict, List, Set
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
