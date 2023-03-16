@@ -40,7 +40,29 @@ def aws_accounts():
 
 
 @pytest.fixture(scope="session")
-def prevent_aws_real_mutants():
+def prevent_aws_real_mutants(request):
+    def fin():
+        if current_aws_access_key_id:
+            os.environ["AWS_ACCESS_KEY_ID"] = current_aws_access_key_id
+        if current_aws_secret_access_key:
+            os.environ["AWS_SECRET_ACCESS_KEY"] = current_aws_secret_access_key
+        if current_aws_default_region:
+            os.environ["AWS_DEFAULT_REGION"] = current_aws_default_region
+        if current_aws_session_token:
+            os.environ["AWS_SESSION_TOKEN"] = current_aws_session_token
+        if current_aws_security_token:
+            os.environ["AWS_SECURITY_TOKEN"] = current_aws_security_token
+        if current_aws_profile:
+            os.environ["AWS_PROFILE"] = current_aws_profile   
+
+    request.addfinalizer(fin)
+    current_aws_access_key_id = os.environ.get("AWS_ACCESS_KEY_ID")
+    current_aws_secret_access_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
+    current_aws_default_region = os.environ.get("AWS_DEFAULT_REGION")
+    current_aws_session_token = os.environ.get("AWS_SESSION_TOKEN")
+    current_aws_security_token = os.environ.get("AWS_SECURITY_TOKEN")
+    current_aws_profile = os.environ.get("AWS_PROFILE")
+
     os.environ["AWS_ACCESS_KEY_ID"] = "test"
     os.environ["AWS_SECRET_ACCESS_KEY"] = "test"
     os.environ["AWS_DEFAULT_REGION"] = "us-west-2"
@@ -124,7 +146,7 @@ def test_config_path_two_accounts_plus_org(tmp_path):
             sqs_cloudtrail_changes_queues:
                 - arn:aws:sqs:us-east-1:123456789010:IAMbicChangeDetectionQueue
             core:
-            minimum_ulimit: 64000
+                minimum_ulimit: 64000
 """,
                 Loader=yaml.Loader,
             ),
