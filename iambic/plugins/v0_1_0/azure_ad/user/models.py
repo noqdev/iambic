@@ -27,8 +27,7 @@ class UserSimple(BaseModel, ExpiryModel):
         return self.username
 
 
-class User(BaseModel, ExpiryModel):
-    idp_name: str
+class UserTemplateProperties(BaseModel, ExpiryModel):
     username: str
     user_id: Optional[str]
     domain: Optional[str]
@@ -49,10 +48,9 @@ class User(BaseModel, ExpiryModel):
         return self.username
 
     @classmethod
-    def from_azure_response(cls, idp_name: str, azure_response: dict) -> User:
+    def from_azure_response(cls, azure_response: dict) -> UserTemplateProperties:
         azure_response = normalize_dict_keys(azure_response)
         return cls(
-            idp_name=idp_name,
             user_id=azure_response.get("id"),
             username=azure_response.get("user_principal_name"),
             profile={
