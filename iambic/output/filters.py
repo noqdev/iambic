@@ -12,12 +12,12 @@ from iambic.output.models import ActionSummary, ExceptionSummary
 console = Console()
 def rich_format(value: str, style_str: str) -> str:
     style = Style.parse(style_str)
-    return console.render_str(value, style)
+    return console.render_str(str(value), style=style)
 
 
 def rich_text(text: str, style_str: str) -> str:
     style = Style.parse(style_str)
-    return Text(text, style=style)
+    return Text(str(text), style=style)
 
 
 def rich_text_table(table_headers: List[str], table_data: List[List[str]]) -> str:
@@ -30,34 +30,34 @@ def rich_text_table(table_headers: List[str], table_data: List[List[str]]) -> st
 
 
 def rich_tree_summary(action_summary: ActionSummary):
-    action_summary_tree = Tree(action_summary.action_name, expanded=False)
+    action_summary_tree = Tree(action_summary.action, expanded=False)
     for template in action_summary.templates:
         template_tree = action_summary_tree.add(template.template_path, expanded=False)
         for account in template.accounts:
-            account_tree = template_tree.add(account.account_name, expanded=False)
+            account_tree = template_tree.add(account.account, expanded=False)
             for change in account.changes:
-                change_tree = account_tree.add(change.change_type, expanded=False)
+                change_tree = account_tree.add(change.change.change_type, expanded=False)
                 change_tree.add(change.resource_id)
                 change_tree.add(change.resource_type)
                 change_tree.add(change.change.change_type.value)
-                if change.diff:
-                    change_tree.add(change.diff)
+                if change.change.diff:
+                    change_tree.add(change.change.diff)
     return action_summary_tree
 
 
 def rich_tree_exception(exceptions: ExceptionSummary):
-    exception_tree = Tree(exceptions.action_name, expanded=False)
+    exception_tree = Tree(exceptions.action, expanded=False)
     for template in exceptions.templates:
         template_tree = exception_tree.add(template.template_path, expanded=False)
         for account in template.accounts:
-            account_tree = template_tree.add(account.account_name, expanded=False)
+            account_tree = template_tree.add(account.account, expanded=False)
             for change in account.changes:
-                change_tree = account_tree.add(change.change_type, expanded=False)
+                change_tree = account_tree.add(change.change.change_type, expanded=False)
                 change_tree.add(change.resource_id)
                 change_tree.add(change.resource_type)
                 change_tree.add(change.change.change_type.value)
-                if change.diff:
-                    change_tree.add(change.diff)
+                if change.change.diff:
+                    change_tree.add(change.change.diff)
     return exception_tree
 
 

@@ -16,7 +16,7 @@
 {% for action_summary in iambic.action_summaries -%}
 {% if action_summary.num_templates > 0 -%}
 
-{{ iambic.template_tree | rich_tree(action_summary.action) }}
+{{ action_summary | rich_tree_summary() }}
 
 {% endif -%}
 {% endfor %}
@@ -30,7 +30,7 @@
 {% for exception in iambic.exceptions -%}
 {% if exception.num_templates > 0 -%}
 
-{{ iambic.template_tree | rich_tree(exception) }}
+{{ exception | rich_tree_exception() }}
 
 {% endif -%}
 {% endfor %}

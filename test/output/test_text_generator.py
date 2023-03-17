@@ -6,6 +6,8 @@ from iambic.core.models import TemplateChangeDetails
 from iambic.output.text import screen_render_resource_changes
 from iambic.output.models import ActionSummaries
 
+from rich import print
+
 from . import get_templates_mixed
 
 
