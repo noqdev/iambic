@@ -35,29 +35,29 @@ async def test_import_google_resources():
     config = GoogleWorkspaceConfig(
         workspaces=[
             GoogleProject(
-                project_id="noq-ga",
+                project_id="example-ga",
                 project_name=None,
                 subjects=[
                     GoogleSubject(
-                        domain="noq.dev",
-                        service_account="google-groups-test@noq-ga.iam.gserviceaccount.com",
+                        domain="example.com",
+                        service_account="google-groups-test@example-ga.iam.gserviceaccount.com",
                     )
                 ],
                 type="service_account",
-                private_key_id="4d00322589a6eac6c9cb161e80f4f04efec63cac",
+                private_key_id="12345",
                 private_key=SecretStr("**********"),
-                client_email="google-groups-test@noq-ga.iam.gserviceaccount.com",
-                client_id="103950794488950248984",
+                client_email="google-groups-test@example-ga.iam.gserviceaccount.com",
+                client_id="12345",
                 auth_uri="https://accounts.google.com/o/oauth2/auth",
                 token_uri="https://oauth2.googleapis.com/token",
                 auth_provider_x509_cert_url="https://www.googleapis.com/oauth2/v1/certs",
-                client_x509_cert_url="https://www.googleapis.com/robot/v1/metadata/x509/google-groups-test%40noq-ga.iam.gserviceaccount.com",
+                client_x509_cert_url="https://www.googleapis.com/robot/v1/metadata/x509/google-groups-test%40example-ga.iam.gserviceaccount.com",
                 variables=[],
                 iambic_managed=IambicManaged.UNDEFINED,
             )
         ]
     )
-    base_output_dir = "../noq-templates-local"
+    base_output_dir = "../example-templates-local"
     messages = None
     remote_worker = None
 
