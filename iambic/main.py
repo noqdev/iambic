@@ -210,7 +210,8 @@ def apply(
         log.error("Invalid arguments", error=repr(err))
 
 
-def run_apply(config: Config, templates: list[str]):
+def run_apply(config: Config, templates: list[str]) -> list[TemplateChangeDetails]:
+    template_changes = []
     exe_message = ExecutionMessage(
         execution_id=str(uuid.uuid4()), command=Command.APPLY
     )
@@ -221,9 +222,10 @@ def run_apply(config: Config, templates: list[str]):
 
     if ctx.eval_only and template_changes and click.confirm("Proceed?"):
         ctx.eval_only = False
-        asyncio.run(config.run_apply(exe_message, templates))
+        template_changes = asyncio.run(config.run_apply(exe_message, templates))
     # This was here before, but I don't think it's needed. Leaving it here for now to see if anything breaks.
     # asyncio.run(config.run_detect_changes(repo_dir))
+    return template_changes
 
 
 def run_git_apply(
