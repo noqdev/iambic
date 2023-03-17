@@ -5,7 +5,6 @@ import functools
 from typing import TYPE_CHECKING, Any, List, Optional
 
 import okta.models as models
-
 from iambic.core.context import ExecutionContext
 from iambic.core.exceptions import RateLimitException
 from iambic.core.logger import log
@@ -347,65 +346,65 @@ async def update_user_status(
     return response
 
 
-async def update_user_attribute(
-    user: User,
-    new_value: str,
-    attribute_name: str,
-    okta_organization: OktaOrganization,
-    log_params: dict[str, str],
-    context: ExecutionContext,
-) -> List[ProposedChange]:
-    """
-    Update an attribute of a user in Okta.
+# async def update_user_attribute(
+#     user: User,
+#     new_value: str,
+#     attribute_name: str,
+#     okta_organization: OktaOrganization,
+#     log_params: dict[str, str],
+#     context: ExecutionContext,
+# ) -> List[ProposedChange]:
+#     """
+#     Update an attribute of a user in Okta.
 
-    Args:
-        user (User): The user to update the attribute of.
-        new_value (str): The new value for the attribute.
-        attribute_name (str): The name of the attribute to update.
-        okta_organization (OktaOrganization): The Okta organization to update the user in.
-        log_params (dict): Logging parameters.
-        context (ExecutionContext): The context object containing the execution flag.
+#     Args:
+#         user (User): The user to update the attribute of.
+#         new_value (str): The new value for the attribute.
+#         attribute_name (str): The name of the attribute to update.
+#         okta_organization (OktaOrganization): The Okta organization to update the user in.
+#         log_params (dict): Logging parameters.
+#         context (ExecutionContext): The context object containing the execution flag.
 
-    Returns:
-        List[ProposedChange]: A list of proposed changes to be applied.
-    """
-    response: list = []
-    if user.attributes[attribute_name] == new_value:
-        return response
-    response.append(
-        ProposedChange(
-            change_type=ProposedChangeType.UPDATE,
-            resource_id=user.user_id,
-            resource_type=user.resource_type,
-            attribute=attribute_name,
-            new_value=new_value,
-        )
-    )
-    user_profile = models.UserProfile({attribute_name: new_value})
-    user_model = models.User({"profile": user_profile})
-    if context.execute:
-        client = await okta_organization.get_okta_client()
-        async with GlobalRetryController(
-            fn_identifier="okta.update_user"
-        ) as retry_controller:
-            fn = functools.partial(client.update_user, user.user_id, user_model)
-            updated_user, _, err = await retry_controller(handle_okta_fn, fn)
-        if err:
-            raise Exception(f"Error updating user's {attribute_name}")
-        # TODO: Update
-        user = User(
-            idp_name=okta_organization.idp_name,
-            username=updated_user.profile.login,
-            email=updated_user.profile.email,
-            status=updated_user.status,
-            user_id=updated_user.id,
-            attributes=updated_user.profile,
-            extra=dict(
-                okta_user_id=updated_user.id,
-                created=updated_user.created,
-            ),
-        )
-    return response
+#     Returns:
+#         List[ProposedChange]: A list of proposed changes to be applied.
+#     """
+#     response: list = []
+#     if user.attributes[attribute_name] == new_value:
+#         return response
+#     response.append(
+#         ProposedChange(
+#             change_type=ProposedChangeType.UPDATE,
+#             resource_id=user.user_id,
+#             resource_type=user.resource_type,
+#             attribute=attribute_name,
+#             new_value=new_value,
+#         )
+#     )
+#     user_profile = models.UserProfile({attribute_name: new_value})
+#     user_model = models.User({"profile": user_profile})
+#     if context.execute:
+#         client = await okta_organization.get_okta_client()
+#         async with GlobalRetryController(
+#             fn_identifier="okta.update_user"
+#         ) as retry_controller:
+#             fn = functools.partial(client.update_user, user.user_id, user_model)
+#             updated_user, _, err = await retry_controller(handle_okta_fn, fn)
+#         if err:
+#             raise Exception(f"Error updating user's {attribute_name}")
+#         # TODO: Update
+#         user = User(
+#             idp_name=okta_organization.idp_name,
+#             username=updated_user.profile.login,
+#             email=updated_user.profile.email,
+#             status=updated_user.status,
+#             user_id=updated_user.id,
+#             attributes=updated_user.profile,
+#             extra=dict(
+#                 okta_user_id=updated_user.id,
+#                 created=updated_user.created,
+#             ),
+#         )
+#     return response
 
 
 async def maybe_deprovision_user(
@@ -465,147 +464,147 @@ async def maybe_deprovision_user(
     return response
 
 
-async def update_user_assignments(
-    user: User,
-    new_assignments: List[str],
-    okta_organization: OktaOrganization,
-    log_params: dict[str, str],
-    context: ExecutionContext,
-) -> List[ProposedChange]:
-    """
-    Update the user's app assignments in Okta.
+# async def update_user_assignments(
+#     user: User,
+#     new_assignments: List[str],
+#     okta_organization: OktaOrganization,
+#     log_params: dict[str, str],
+#     context: ExecutionContext,
+# ) -> List[ProposedChange]:
+#     """
+#     Update the user's app assignments in Okta.
 
-    Args:
-        user (User): The user to update the app assignments of.
-        new_assignments (List[str]): The new app assignments for the user.
-        okta_organization (OktaOrganization): The Okta organization to update the user's app assignments in.
-        log_params (dict): Logging parameters.
-        context (ExecutionContext): The context object containing the execution flag.
+#     Args:
+#         user (User): The user to update the app assignments of.
+#         new_assignments (List[str]): The new app assignments for the user.
+#         okta_organization (OktaOrganization): The Okta organization to update the user's app assignments in.
+#         log_params (dict): Logging parameters.
+#         context (ExecutionContext): The context object containing the execution flag.
 
-    Returns:
-        List[ProposedChange]: A list of proposed changes to be applied.
-    """
+#     Returns:
+#         List[ProposedChange]: A list of proposed changes to be applied.
+#     """
 
-    client = await okta_organization.get_okta_client()
-    response = []
-    current_assignments = [assignment.id for assignment in user.assignments]
-    desired_assignments = new_assignments
-    assignments_to_remove = [
-        assignment
-        for assignment in current_assignments
-        if assignment not in desired_assignments
-    ]
-    assignments_to_add = [
-        assignment
-        for assignment in desired_assignments
-        if assignment not in current_assignments
-    ]
+#     client = await okta_organization.get_okta_client()
+#     response = []
+#     current_assignments = [assignment.id for assignment in user.assignments]
+#     desired_assignments = new_assignments
+#     assignments_to_remove = [
+#         assignment
+#         for assignment in current_assignments
+#         if assignment not in desired_assignments
+#     ]
+#     assignments_to_add = [
+#         assignment
+#         for assignment in desired_assignments
+#         if assignment not in current_assignments
+#     ]
 
-    if assignments_to_remove:
-        response.append(
-            ProposedChange(
-                change_type=ProposedChangeType.DETACH,
-                resource_id=user.user_id,
-                resource_type=user.resource_type,
-                attribute="assignments",
-                change_summary={"AssignmentsToRemove": list(assignments_to_remove)},
-            )
-        )
+#     if assignments_to_remove:
+#         response.append(
+#             ProposedChange(
+#                 change_type=ProposedChangeType.DETACH,
+#                 resource_id=user.user_id,
+#                 resource_type=user.resource_type,
+#                 attribute="assignments",
+#                 change_summary={"AssignmentsToRemove": list(assignments_to_remove)},
+#             )
+#         )
 
-    if assignments_to_add:
-        response.append(
-            ProposedChange(
-                change_type=ProposedChangeType.ATTACH,
-                resource_id=user.user_id,
-                resource_type=user.resource_type,
-                attribute="assignments",
-                change_summary={"AssignmentsToAdd": list(assignments_to_add)},
-            )
-        )
+#     if assignments_to_add:
+#         response.append(
+#             ProposedChange(
+#                 change_type=ProposedChangeType.ATTACH,
+#                 resource_id=user.user_id,
+#                 resource_type=user.resource_type,
+#                 attribute="assignments",
+#                 change_summary={"AssignmentsToAdd": list(assignments_to_add)},
+#             )
+#         )
 
-    if context.execute:
-        for assignment in assignments_to_remove:
-            async with GlobalRetryController(
-                fn_identifier="okta.get_app"
-            ) as retry_controller:
-                fn = functools.partial(client.get_app, assignment)
-                app, _, err = await retry_controller(handle_okta_fn, fn)
-            if err:
-                log.error("Error retrieving app", app=assignment, **log_params)
-                continue
-            async with GlobalRetryController(
-                fn_identifier="okta.remove_user_from_app"
-            ) as retry_controller:
-                fn = functools.partial(
-                    client.remove_user_from_app, user.user_id, app.id
-                )
-                _, err = await retry_controller(handle_okta_fn, fn)
-            if err:
-                log.error(
-                    "Error removing user from app",
-                    user=user.username,
-                    app=app.label,
-                    **log_params,
-                )
-                continue
-        for assignment in assignments_to_add:
-            async with GlobalRetryController(
-                fn_identifier="okta.get_application_by_label"
-            ) as retry_controller:
-                fn = functools.partial(client.get_application_by_label, assignment)
-                app_id, _, err = await retry_controller(handle_okta_fn, fn)
-            if err:
-                log.error(
-                    "Error retrieving application",
-                    application=assignment,
-                    user=user.username,
-                    **log_params,
-                )
-                continue
-            async with GlobalRetryController(
-                fn_identifier="okta.assign_application_to_user"
-            ) as retry_controller:
-                fn = functools.partial(
-                    client.assign_application_to_user, user.user_id, app_id
-                )
-                _, err = await retry_controller(handle_okta_fn, fn)
-            if err:
-                log.error(
-                    "Error assigning application to user",
-                    user=user.username,
-                    application=assignment,
-                    **log_params,
-                )
-                continue
+#     if context.execute:
+#         for assignment in assignments_to_remove:
+#             async with GlobalRetryController(
+#                 fn_identifier="okta.get_app"
+#             ) as retry_controller:
+#                 fn = functools.partial(client.get_app, assignment)
+#                 app, _, err = await retry_controller(handle_okta_fn, fn)
+#             if err:
+#                 log.error("Error retrieving app", app=assignment, **log_params)
+#                 continue
+#             async with GlobalRetryController(
+#                 fn_identifier="okta.remove_user_from_app"
+#             ) as retry_controller:
+#                 fn = functools.partial(
+#                     client.remove_user_from_app, user.user_id, app.id
+#                 )
+#                 _, err = await retry_controller(handle_okta_fn, fn)
+#             if err:
+#                 log.error(
+#                     "Error removing user from app",
+#                     user=user.username,
+#                     app=app.label,
+#                     **log_params,
+#                 )
+#                 continue
+#         for assignment in assignments_to_add:
+#             async with GlobalRetryController(
+#                 fn_identifier="okta.get_application_by_label"
+#             ) as retry_controller:
+#                 fn = functools.partial(client.get_application_by_label, assignment)
+#                 app_id, _, err = await retry_controller(handle_okta_fn, fn)
+#             if err:
+#                 log.error(
+#                     "Error retrieving application",
+#                     application=assignment,
+#                     user=user.username,
+#                     **log_params,
+#                 )
+#                 continue
+#             async with GlobalRetryController(
+#                 fn_identifier="okta.assign_application_to_user"
+#             ) as retry_controller:
+#                 fn = functools.partial(
+#                     client.assign_application_to_user, user.user_id, app_id
+#                 )
+#                 _, err = await retry_controller(handle_okta_fn, fn)
+#             if err:
+#                 log.error(
+#                     "Error assigning application to user",
+#                     user=user.username,
+#                     application=assignment,
+#                     **log_params,
+#                 )
+#                 continue
 
-        for assignment in assignments_to_remove:
-            async with GlobalRetryController(
-                fn_identifier="okta.get_application_by_label"
-            ) as retry_controller:
-                fn = functools.partial(client.get_application_by_label, assignment)
-                app_id, _, err = await retry_controller(handle_okta_fn, fn)
-            if err:
-                log.error(
-                    "Error retrieving application",
-                    application=assignment,
-                    user=user.username,
-                    **log_params,
-                )
-                continue
-            async with GlobalRetryController(
-                fn_identifier="okta.deassign_application_from_user"
-            ) as retry_controller:
-                fn = functools.partial(
-                    client.deassign_application_from_user, user.user_id, app_id
-                )
-                _, err = await retry_controller(handle_okta_fn, fn)
-            if err:
-                log.error(
-                    "Error deassigning application from user",
-                    user=user.username,
-                    application=assignment,
-                    **log_params,
-                )
-                continue
+#         for assignment in assignments_to_remove:
+#             async with GlobalRetryController(
+#                 fn_identifier="okta.get_application_by_label"
+#             ) as retry_controller:
+#                 fn = functools.partial(client.get_application_by_label, assignment)
+#                 app_id, _, err = await retry_controller(handle_okta_fn, fn)
+#             if err:
+#                 log.error(
+#                     "Error retrieving application",
+#                     application=assignment,
+#                     user=user.username,
+#                     **log_params,
+#                 )
+#                 continue
+#             async with GlobalRetryController(
+#                 fn_identifier="okta.deassign_application_from_user"
+#             ) as retry_controller:
+#                 fn = functools.partial(
+#                     client.deassign_application_from_user, user.user_id, app_id
+#                 )
+#                 _, err = await retry_controller(handle_okta_fn, fn)
+#             if err:
+#                 log.error(
+#                     "Error deassigning application from user",
+#                     user=user.username,
+#                     application=assignment,
+#                     **log_params,
+#                 )
+#                 continue
 
-        return response
+#         return response
