@@ -1032,7 +1032,7 @@ class ConfigurationWizard:
     def configuration_wizard_aws_organizations(self):
         # Currently only 1 org per config is supported.
         if questionary.confirm(
-            "If you would like to use AWS Organizations, the IAMbic hub account you configured must be in the same "
+            "If you would like to use AWS Organizations, the IAMbic hub account you configured must be the same "
             "AWS account as your AWS Organization.\nIs this the case?"
         ).unsafe_ask():
             if self.config.aws and self.config.aws.organizations:

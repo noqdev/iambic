@@ -6,7 +6,7 @@ from itertools import chain
 from typing import Union
 
 from deepdiff import DeepDiff
-from iambic.core.context import ExecutionContext
+from iambic.core.context import ExecutionContext, ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper, plugin_apply_wrapper
@@ -165,7 +165,7 @@ async def apply_role_tags(
         tag["Key"] for tag in existing_tags if tag["Key"] not in template_tag_map.keys()
     ]:
         log_str = "Stale tags discovered."
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Removing tags..."
 
             async def untag_role():
@@ -202,7 +202,7 @@ async def apply_role_tags(
     if tags_to_apply:
         log_str = "New tags discovered in AWS."
 
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Adding tags..."
 
             async def tag_role():
@@ -237,7 +237,7 @@ async def apply_role_tags(
                 )
         log.info(log_str, tags=tags_to_apply, **log_params)
 
-    if tasks and context.execute:
+    if tasks and ctx.execute:
         results: list[list[ProposedChange]] = await asyncio.gather(
             *tasks, return_exceptions=True
         )
@@ -296,7 +296,7 @@ async def update_assume_role_policy(
                 )
             )
 
-        if context.execute:
+        if ctx.execute:
             boto_action = "Creating" if existing_policy_document else "Updating"
             log_str = f"{log_str} {boto_action} AssumeRolePolicyDocument..."
             await boto_crud_call(
@@ -338,7 +338,7 @@ async def apply_role_managed_policies(
                     attribute="managed_policies",
                 )
             )
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Attaching managed policies..."
             tasks = [
                 boto_crud_call(
@@ -366,7 +366,7 @@ async def apply_role_managed_policies(
                     attribute="managed_policies",
                 )
             )
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Detaching managed policies..."
             tasks.extend(
                 [
@@ -417,7 +417,7 @@ async def apply_role_permission_boundary(
         ]
         response.extend(proposed_changes)
 
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Attaching permission boundary..."
 
             tasks = [
@@ -450,7 +450,7 @@ async def apply_role_permission_boundary(
         ]
         response.extend(proposed_changes)
 
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Detaching permission boundary..."
 
             tasks.extend(
@@ -498,15 +498,15 @@ async def apply_role_inline_policies(
     for policy_name in existing_policy_map.keys():
         if not template_policy_map.get(policy_name):
             log_str = "Stale inline policies discovered."
-            if context.execute:
-                log_str = f"{log_str} Removing inline policy..."
-                response.append(
-                    ProposedChange(
-                        change_type=ProposedChangeType.DELETE,
-                        resource_id=policy_name,
-                        attribute="inline_policies",
-                    )
+            response.append(
+                ProposedChange(
+                    change_type=ProposedChangeType.DELETE,
+                    resource_id=policy_name,
+                    attribute="inline_policies",
                 )
+            )
+            if ctx.execute:
+                log_str = f"{log_str} Removing inline policy..."
                 tasks.append(
                     boto_crud_call(
                         iam_client.delete_role_policy,
@@ -561,7 +561,7 @@ async def apply_role_inline_policies(
                 )
 
             log_str = f"{resource_existence} inline policies discovered."
-            if context.execute and policy_document:
+            if ctx.execute and policy_document:
                 log_str = f"{log_str} {boto_action} inline policy..."
                 tasks.append(
                     boto_crud_call(
