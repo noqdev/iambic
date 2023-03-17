@@ -20,7 +20,7 @@ from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage, TemplateChangeDetails
 from iambic.core.parser import load_templates
-from iambic.core.utils import gather_templates, yaml
+from iambic.core.utils import exceptions_in_proposed_changes, gather_templates, yaml
 from iambic.request_handler.expire_resources import flag_expired_resources
 from iambic.request_handler.git_apply import apply_git_changes
 from iambic.request_handler.git_plan import plan_git_changes
@@ -31,10 +31,9 @@ os.environ.setdefault("IAMBIC_REPO_DIR", str(pathlib.Path.cwd()))
 
 
 def output_proposed_changes(
-    template_changes: list[TemplateChangeDetails], output_path: str = None
+    template_changes: list[TemplateChangeDetails],
+    output_path: str = "proposed_changes.yaml",
 ):
-    if output_path is None:
-        output_path = "proposed_changes.yaml"
     if template_changes:
         log.info(f"A detailed summary of changes has been saved to {output_path}")
 
@@ -44,6 +43,12 @@ def output_proposed_changes(
                     [template_change.dict() for template_change in template_changes],
                 )
             )
+
+    if exceptions_in_proposed_changes([change.dict() for change in template_changes]):
+        log.error(
+            "Exceptions encountered. Some operations failed. Please read proposed_changes for details."
+        )
+        raise SystemExit(1)
 
 
 @click.group()
@@ -245,15 +250,6 @@ def run_git_apply(
         )
     )
     output_proposed_changes(template_changes, output_path=output_path)
-    exceptions = [
-        change.exceptions_seen for change in template_changes if change.exceptions_seen
-    ]
-    # figure out a way to log the useful information
-    if exceptions:
-        log.error(
-            "exceptions encountered. some operations failed. read proposed_changes for details."
-        )
-        raise SystemExit(1)
 
 
 @cli.command()

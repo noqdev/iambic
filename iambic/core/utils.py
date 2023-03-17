@@ -182,11 +182,11 @@ class NoqSemaphore:
         """Makes a reusable semaphore that wraps a provided function.
         Useful for batch processing things that could be rate limited.
 
-        Example prints hello there 3 times in quick succession, waits 3 seconds then processes another 3:
+        Example logs hello there 3 times in quick succession, waits 3 seconds then processes another 3:
             from datetime import datetime
 
             async def hello_there():
-                print(f"Hello there - {datetime.utcnow()}")
+                log(f"Hello there - {datetime.utcnow()}")
                 await asyncio.sleep(3)
 
             hello_there_semaphore = NoqSemaphore(hello_there, 3)
@@ -642,3 +642,19 @@ def normalize_dict_keys(
         ]
     else:
         return obj
+
+
+def exceptions_in_proposed_changes(obj) -> bool:
+    if isinstance(obj, dict):
+        if "exceptions_seen" in obj:
+            return True
+
+        new_obj = dict()
+        for k, v in obj.items():
+            if isinstance(v, list):
+                new_obj[k] = any(exceptions_in_proposed_changes(x) for x in v)
+            elif isinstance(v, dict):
+                new_obj[k] = exceptions_in_proposed_changes(v)
+        return any(list(new_obj.values())) if new_obj else False
+    elif isinstance(obj, list):
+        return any(exceptions_in_proposed_changes(x) for x in obj)
