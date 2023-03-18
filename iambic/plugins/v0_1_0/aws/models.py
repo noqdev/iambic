@@ -242,6 +242,11 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
         return [region["RegionName"] for region in res["Regions"]]
 
 
+class OrganizationDetails(PydanticBaseModel):
+    region: RegionName = Field(RegionName.us_east_1)
+    service_control_policy_map: Optional[dict] = None
+
+
 class IdentityCenterDetails(PydanticBaseModel):
     region: RegionName = Field(RegionName.us_east_1)
     instance_arn: Optional[str] = None
@@ -281,6 +286,7 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
     )
     hub_session_info: Optional[dict] = None
     identity_center_details: Optional[Union[IdentityCenterDetails, None]] = None
+    organizations_details: Optional[Union[OrganizationDetails, None]] = None
     spoke_role_arn: str = Field(
         None,
         description="(Auto-populated) The role arn to assume into when making calls to the account",
@@ -345,7 +351,7 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
     ) -> None:
         if not self.organizations_details:
             return
-        region = self.organizations_details.region_name
+        region = self.organizations_details.region
         org_client = await self.get_boto3_client("organizations", region_name=region)
         if not set_organizations_map:
             return

@@ -4,7 +4,7 @@ import asyncio
 import itertools
 import os
 from collections import defaultdict
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import aiofiles
 
@@ -409,6 +409,8 @@ async def collect_aws_permission_sets(
         org_accounts=list(aws_account_map.keys()),
     )
 
+    # TODO: Start here.
+
     await asyncio.gather(
         *[account.set_identity_center_details() for account in identity_center_accounts]
     )
@@ -422,6 +424,8 @@ async def collect_aws_permission_sets(
                     [
                         aws_account.identity_center_details.permission_set_map.keys()
                         for aws_account in identity_center_accounts
+                        if aws_account.identity_center_details
+                        and aws_account.identity_center_details.permission_set_map
                     ]
                 )
             )
@@ -507,8 +511,10 @@ async def generate_aws_permission_set_templates(
     exe_message: ExecutionMessage,
     config: AWSConfig,
     base_output_dir: str,
-    detect_messages: list[PermissionSetMessageDetails] = None,
+    detect_messages: Optional[list[PermissionSetMessageDetails]] = None,
 ):
+    if not detect_messages:
+        detect_messages = []
     resource_dir = get_template_dir(base_output_dir)
     aws_account_map = await get_aws_account_map(config)
     existing_template_map = await get_existing_template_map(

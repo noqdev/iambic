@@ -50,6 +50,10 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
     generate_permission_set_map,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.organizations.service_control_policy.template_generation import (
+    collect_service_control_policies,
+    generate_service_control_policy_templates,
+)
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -243,11 +247,11 @@ async def import_organizations_resources(
     await config.set_organizations_details(exe_message.provider_id)
     await import_service_resources(
         exe_message,
-        identity_center_config,
+        organizations_config,
         base_output_dir,
-        "identity_center",
-        [collect_aws_permission_sets],
-        [generate_aws_permission_set_templates],
+        "organizations",
+        [collect_service_control_policies],
+        [generate_service_control_policy_templates],
         messages,
         remote_worker,
     )
@@ -300,43 +304,43 @@ async def import_aws_resources(
 ):
     tasks = []
 
-    if not exe_message.metadata or exe_message.metadata["service"] == "identity_center":
-        tasks.append(
-            import_identity_center_resources(
-                exe_message, config, base_output_dir, messages, remote_worker
-            )
-        )
+    # if not exe_message.metadata or exe_message.metadata["service"] == "identity_center":
+    #     tasks.append(
+    #         import_identity_center_resources(
+    #             exe_message, config, base_output_dir, messages, remote_worker
+    #         )
+    #     )
 
     if not exe_message.metadata or exe_message.metadata["service"] == "organizations":
         tasks.append(
-            import_organization_resources(
+            import_organizations_resources(
                 exe_message, config, base_output_dir, messages, remote_worker
             )
         )
 
-    if not exe_message.metadata or exe_message.metadata["service"] == "iam":
-        tasks.append(
-            import_service_resources(
-                exe_message,
-                config,
-                base_output_dir,
-                "iam",
-                [
-                    collect_aws_roles,
-                    collect_aws_groups,
-                    collect_aws_users,
-                    collect_aws_managed_policies,
-                ],
-                [
-                    generate_aws_role_templates,
-                    generate_aws_user_templates,
-                    generate_aws_group_templates,
-                    generate_aws_managed_policy_templates,
-                ],
-                messages,
-                remote_worker,
-            )
-        )
+    # if not exe_message.metadata or exe_message.metadata["service"] == "iam":
+    #     tasks.append(
+    #         import_service_resources(
+    #             exe_message,
+    #             config,
+    #             base_output_dir,
+    #             "iam",
+    #             [
+    #                 collect_aws_roles,
+    #                 collect_aws_groups,
+    #                 collect_aws_users,
+    #                 collect_aws_managed_policies,
+    #             ],
+    #             [
+    #                 generate_aws_role_templates,
+    #                 generate_aws_user_templates,
+    #                 generate_aws_group_templates,
+    #                 generate_aws_managed_policy_templates,
+    #             ],
+    #             messages,
+    #             remote_worker,
+    #         )
+    #     )
 
     await asyncio.gather(*tasks)
 
