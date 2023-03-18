@@ -21,7 +21,7 @@ from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage, TemplateChangeDetails
 from iambic.core.parser import load_templates
-from iambic.core.utils import gather_templates, yaml
+from iambic.core.utils import gather_templates, init_writable_directory, yaml
 from iambic.request_handler.expire_resources import flag_expired_resources
 from iambic.request_handler.git_apply import apply_git_changes
 from iambic.request_handler.git_plan import plan_git_changes
@@ -210,7 +210,8 @@ def apply(
         log.error("Invalid arguments", error=repr(err))
 
 
-def run_apply(config: Config, templates: list[str]):
+def run_apply(config: Config, templates: list[str]) -> list[TemplateChangeDetails]:
+    template_changes = []
     exe_message = ExecutionMessage(
         execution_id=str(uuid.uuid4()), command=Command.APPLY
     )
@@ -221,9 +222,10 @@ def run_apply(config: Config, templates: list[str]):
 
     if ctx.eval_only and template_changes and click.confirm("Proceed?"):
         ctx.eval_only = False
-        asyncio.run(config.run_apply(exe_message, templates))
+        template_changes = asyncio.run(config.run_apply(exe_message, templates))
     # This was here before, but I don't think it's needed. Leaving it here for now to see if anything breaks.
     # asyncio.run(config.run_detect_changes(repo_dir))
+    return template_changes
 
 
 def run_git_apply(
@@ -232,7 +234,7 @@ def run_git_apply(
     to_sha: str,
     repo_dir: str = str(pathlib.Path.cwd()),
     output_path: str = None,
-):
+) -> list[TemplateChangeDetails]:
     ctx.eval_only = False
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
 
@@ -255,6 +257,7 @@ def run_git_apply(
             "exceptions encountered. some operations failed. read proposed_changes for details."
         )
         raise SystemExit(1)
+    return template_changes
 
 
 @cli.command()
@@ -300,13 +303,14 @@ def plan(templates: list, plan_output: str, repo_dir: str, git_aware: bool):
 def run_git_plan(
     output_path: str,
     repo_dir: str = str(pathlib.Path.cwd()),
-):
+) -> list[TemplateChangeDetails]:
     ctx.eval_only = True
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
     check_and_update_resource_limit(config)
     template_changes = asyncio.run(plan_git_changes(config_path, repo_dir))
     output_proposed_changes(template_changes, output_path=output_path)
+    return template_changes
 
 
 def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
@@ -338,7 +342,10 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
 def config_discovery(repo_dir: str):
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
-    asyncio.run(config.run_discover_upstream_config_changes(repo_dir))
+    exe_message = ExecutionMessage(
+        execution_id=str(uuid.uuid4()), command=Command.CONFIG_DISCOVERY
+    )
+    asyncio.run(config.run_discover_upstream_config_changes(exe_message, repo_dir))
 
 
 @cli.command(name="import")
@@ -355,10 +362,10 @@ def import_(repo_dir: str):
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
     check_and_update_resource_limit(config)
-    execution_message = ExecutionMessage(
+    exe_message = ExecutionMessage(
         execution_id=str(uuid.uuid4()), command=Command.IMPORT
     )
-    asyncio.run(config.run_import(execution_message, repo_dir))
+    asyncio.run(config.run_import(exe_message, repo_dir))
 
 
 @cli.command()
@@ -423,4 +430,5 @@ def setup(repo_dir: str):
 
 
 if __name__ == "__main__":
+    init_writable_directory()
     cli()

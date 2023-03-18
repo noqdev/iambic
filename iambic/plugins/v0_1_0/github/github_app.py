@@ -14,10 +14,11 @@ from urllib.parse import urlparse
 import aiohttp
 import boto3
 import github
-import iambic.core.utils
-import iambic.plugins.v0_1_0.github.github
 import jwt
 from botocore.exceptions import ClientError
+
+import iambic.core.utils
+import iambic.plugins.v0_1_0.github.github
 
 # from iambic.core.git import get_remote_default_branch
 from iambic.core.logger import log
@@ -29,7 +30,6 @@ from iambic.plugins.v0_1_0.github.github import (
     handle_iambic_git_apply,
     handle_iambic_git_plan,
     iambic_app,
-    is_last_commit_relative_to_absolute_change,
 )
 
 # FIXME Lambda execution time is at most 15 minutes, and the Github installation token is at most
@@ -186,14 +186,19 @@ def handle_pull_request(
     pull_request_branch_name = pull_request.head.ref
 
     if action == "synchronize":
-        # check if the last log message is relative time -> absolute time
-        if is_last_commit_relative_to_absolute_change(
-            repo_url, pull_request_branch_name
+        commits: list[github.Commit.Commit] = list(pull_request.get_commits())
+        last_commit_message = commits[-1].commit.message
+        if (
+            last_commit_message
+            == iambic.plugins.v0_1_0.github.github.COMMIT_MESSAGE_FOR_GIT_APPLY_ABSOLUTE_TIME
         ):
             log.info(
                 "github_app ignore synchronize event since its likely triggered by itself"
             )
             return
+        else:
+            log_params = {"last_commit_message": last_commit_message}
+            log.info("last known commit message", **log_params)
 
     return handle_iambic_git_plan(
         None,

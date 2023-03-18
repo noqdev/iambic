@@ -8,6 +8,7 @@ from functional_tests.aws.group.utils import (
     group_full_import,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.event_bridge.models import GroupMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.group.models import GroupTemplate

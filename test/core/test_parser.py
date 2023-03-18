@@ -7,8 +7,9 @@ import sys
 import tempfile
 import traceback
 
-import iambic.plugins.v0_1_0.example
 import pytest
+
+import iambic.plugins.v0_1_0.example
 from iambic.config.dynamic_config import load_config
 from iambic.core.parser import load_templates
 
