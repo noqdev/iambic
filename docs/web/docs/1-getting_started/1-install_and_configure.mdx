@@ -6,9 +6,9 @@ toc_max_heading_level: 5
 
 ### Set up a Git repository
 
-You'll need to create a dedicated Git repository. If you're just trying out IAMbic, create a [local Git repository](/technical_reference/installation/local_git_repo).
+You'll need to create a dedicated Git repository. If you're just trying out IAMbic, create a [local Git repository](/reference/installation/local_git_repo).
 When you're ready to deploy IAMbic, create a [GitHub repository](https://docs.github.com/en/get-started/quickstart/create-a-repo).
-GitHub is preferable because Noq provides [GitHub workflows](/getting_started/github) that keep IAM entitlements updated within your repository.
+GitHub is preferable because Noq provides [GitHub workflows](/getting_started/github) that keep IAM identities and permissions updated within your repository.
 
 Now you are ready to use IAMbic.
 ```bash
@@ -45,14 +45,14 @@ curl https://iambic.org/scripts/install.sh | bash
 
 Note: we require sudo because we are installing the script `iambic` into `/usr/local/bin/` of your file system to ensure it is in your path.
 
-For detailed Docker setup instructions, please visit the [Install via Docker](/technical_reference/installation/install_iambic_via_docker) guide.
+For detailed Docker setup instructions, please visit the [Install via Docker](/reference/installation/install_iambic_via_docker) guide.
 
-You can also [install the wheel](/technical_reference/installation/install_iambic_via_python_wheel), or [install IAMbic locally](/technical_reference/installation/install_iambic_via_the_repo). <!-- #TODO why would I want these options? We need one liner each about what benefit they offer or about what circumstance might make me choose them. -->
+You can also [install the wheel](/reference/installation/install_iambic_via_python_wheel), or [install IAMbic locally](/reference/installation/install_iambic_via_the_repo). <!-- #TODO why would I want these options? We need one liner each about what benefit they offer or about what circumstance might make me choose them. -->
 
 ### Configuring IAMbic
 
 We recommend using an AWS IAM identity (user or role) with administrative privileges
-to use the Iambic Setup Wizard. Alternatively, you'll need the permissions specified [here](/technical_reference/aws_permissions_for_setup_wizard)
+to use the Iambic Setup Wizard. Alternatively, you'll need the permissions specified [here](/reference/aws_permissions_for_setup_wizard)
 in order to proceed..
 
 Run `iambic setup` command to launch the [Configuration Wizard](/how_to_guides/configure_iambic_with_wizard).

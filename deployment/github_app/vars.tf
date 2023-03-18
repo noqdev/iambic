@@ -9,14 +9,14 @@ variable "github_app_private_key_secret_id" {
   type        = string
   description = "AWS Secret ID that contains the Github App private key"
 
-  default = "dev/github-app-private-key"
+  default = "iambic/github-app-private-key"
 }
 
 variable "github_webhook_secret_secret_id" {
   type        = string
   description = "AWS Secret ID that contains the Github App webhook secret"
 
-  default = "dev/github-app-webhook-secret"
+  default = "iambic/github-app-webhook-secret"
 }
 
 variable "iambic_public_repo_url" {

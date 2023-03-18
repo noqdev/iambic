@@ -11,23 +11,22 @@ from pathlib import Path
 from typing import List, Optional, Union
 from uuid import uuid4
 
-import ujson as json
-from pydantic import BaseModel, Field
-from pydantic import create_model as create_pydantic_model
-
 import iambic.plugins.v0_1_0.github
+import ujson as json
 from iambic.core.context import ctx
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
 from iambic.core.utils import sort_dict, yaml
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, google_workspace, okta
+from pydantic import BaseModel, Field
+from pydantic import create_model as create_pydantic_model
 
 CURRENT_IAMBIC_VERSION = "1"
 
 
 class CoreConfig(BaseModel):
-    minimum_ulimit: int = 4096
+    minimum_ulimit: int = 64000
 
 
 class PluginType(Enum):
