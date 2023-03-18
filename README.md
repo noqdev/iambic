@@ -2,33 +2,29 @@
 
 "IAMbic: the Terraform of Cloud IAM"
 
-IAMbic is a multi-cloud identity and access management (IAM) control plane that centralizes and streamlines cloud access and permissions management. Discover more at [https://www.iambic.org](https://www.iambic.org).
+Easily manage and streamline cloud Identity and Access Management (IAM) with IAMbic, a multi-cloud IAM control plane. Discover more at [https://www.iambic.org](https://www.iambic.org).
 
 ## Key Features
 
-- **GitOps-driven Cloud IAM (IAMOps)**: Manage cloud identities and permissions in a human-readable format with your favorite tools.
-- **[Multi-Cloud](https://iambic.org/getting_started/)**: Consolidate cloud identity management across AWS, Okta, Google Workspace, and future platforms into a single as-code location.
+- **GitOps-driven Cloud IAM (IAMOps)**: Leverage GitOps-driven Cloud IAM with human-readable formats and your favorite tools.
+- **[Multi-Cloud](https://iambic.org/getting_started/)**: Unify cloud identity management for AWS, Okta, Google Workspace, and more.
 - **[Dynamic AWS Permissions](https://iambic.org/getting_started/aws#31---create-dynamic-iam-role-policies-that-vary-per-account)**: Simplify multi-account AWS management with flexible templates, allowing multi-account roles to have different permissions and access rules on different accounts.
 - **[Temporary Access, Permissions, and Identities](https://iambic.org/getting_started/aws#32---create-temporary-expiring-iam-permissions)**: Declaratively define and automate expiration dates for resources, permissions, and access rules.
-- **Centralized Source of Truth**: IAMbic keeps Git updated with the latest, complete state of your cloud environment, providing a usable artifact for auditing and compliance.
-- **Extendable**: Benefit from a robust plugin architecture for maintaining identity, permissions, and entitlement changes across different clouds and applications.
-- **Auditable**: Git history provides a complete audit trail of all changes to IAM policies, permissions, and access rules, with context on who made the changes.
-- **Custom Template Parameters**: Streamline account management with auto-substituting variables in templates, such as account names, account IDs, and more.
-- **Configuration Round-Trip**: Easily import and convert existing cloud configurations into IAMbic's format, simplifying the onboarding process.
+- **Centralized Management**: IAMbic keeps Git updated with the latest, complete state of your cloud environment, maintaining a single source of truth for auditing and compliance across multiple cloud providers in Git.
+- **Extendable**: Integrate with various clouds and applications through a powerful plugin architecture.
+- **Auditable**: Track changes to IAM policies, permissions, and rules with Git history. For AWS, IAmbic annotate out-of-band commits with details from CloudTrail.
 
 ## Getting Started
 
-Dive into IAMbic with our [quick-start guide](http://iambic.org/getting_started/) and explore powerful template examples for AWS Multi-Account Roles, Dynamic Permissions, Okta Applications and Group Assignments, and Google Group Assignments.
+Dive into IAMbic with our [quick-start guide](http://iambic.org/getting_started/) and explore powerful template examples for AWS Multi-Account Roles, Dynamic Permissions, Okta Applications and Group Assignments, and Google Group Assignments. We are rapidly expanding support for existing resources and cloud providers, so check back often!
 
 ### Template Examples
 
-This section provides a sneak peak at the power of IAMbic.
+Here are some examples showcasing IAMbic's capabilities:
 
 #### AWS Multi-Account Cloudwatch Role
 
-This is a simple example of a Cloudwatch role with a static
-set of permissions across three accounts. The name of the role is dynamically
-generated on each of the accounts it is applied to. This template would
+Create a Cloudwatch role with static permissions across three accounts, dynamically generating role names based on the account the role is deployed to. This template would
 result in the creation of three roles: "dev_cloudwatch",
 "staging_cloudwatch", and "prod_cloudwatch" on the respective AWS accounts.
 
@@ -76,7 +72,7 @@ properties:
 
 ### AWS Dynamic Permissions
 
-This template is a little more complex. It shows a BackendDeveloperRole that has varying degrees of permissions depending on the environment:
+Create a BackendDeveloperRole with varying permissions based on the AWS account:
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
@@ -131,6 +127,8 @@ properties:
 
 ### Okta Application Assignments
 
+Manage Okta application assignments, including expiration dates for specific users:
+
 ```yaml
 template_type: NOQ::Okta::App
 properties:
@@ -145,6 +143,8 @@ properties:
 ```
 
 ### Okta Group Assignments
+
+Easily manage Okta group assignments with expiration dates for members:
 
 ```yaml
 template_type: NOQ::Okta::Group
@@ -163,6 +163,8 @@ properties:
 ### Okta User Attributes (TODO)
 
 ### Google Group Assignments
+
+Manage Google Workspace group assignments, including temporary access for external users:
 
 ```yaml
 template_type: NOQ::GoogleWorkspace::Group
