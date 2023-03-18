@@ -16,6 +16,13 @@ class ManagedPolicyMessageDetails(PydanticBaseModel):
     delete: bool
 
 
+class SCPMessageDetails(PydanticBaseModel):
+    account_id: str
+    policy_id: str
+    policy_name: str
+    delete: bool
+
+
 class RoleMessageDetails(PydanticBaseModel):
     account_id: str
     role_name: str

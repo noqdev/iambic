@@ -23,6 +23,9 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetTemplate,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount, AWSOrganization
+from iambic.plugins.v0_1_0.aws.organizations.service_control_policy.models import (
+    ServiceControlPolicyTemplate,
+)
 
 
 class AWSConfig(BaseModel):
@@ -74,6 +77,20 @@ class AWSConfig(BaseModel):
                 if account.hub_role_arn
             ][0]
 
+    async def set_organizations_details(self, account_id: str = None):
+        if self.accounts:
+            if account_id:
+                account: AWSAccount = next(
+                    account
+                    for account in self.accounts
+                    if account.account_id == account_id
+                )
+                await account.set_organizations_details()
+            else:
+                await asyncio.gather(
+                    *[account.set_organizations_details() for account in self.accounts]
+                )
+
     async def set_identity_center_details(self, account_id: str = None):
         if self.accounts:
             if account_id:
@@ -115,5 +132,6 @@ IAMBIC_PLUGIN = ProviderPlugin(
         RoleTemplate,
         UserTemplate,
         ManagedPolicyTemplate,
+        ServiceControlPolicyTemplate,
     ],
 )

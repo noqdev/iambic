@@ -215,6 +215,44 @@ async def import_service_resources(
         )
 
 
+async def import_organizations_resources(
+    exe_message: ExecutionMessage,
+    config: AWSConfig,
+    base_output_dir: str,
+    messages: list = None,
+    remote_worker=None,
+):
+    organizations_config = config.copy()
+    organizations_config.accounts = [
+        account
+        for account in config.accounts
+        if account.identity_center_details
+        and account.iambic_managed != IambicManaged.DISABLED
+    ]
+    organizations_config_accounts = [
+        account.account_id for account in organizations_config.accounts
+    ]
+    if not organizations_config_accounts:
+        return
+    elif (
+        exe_message.provider_id
+        and exe_message.provider_id not in organizations_config_accounts
+    ):
+        return
+
+    await config.set_organizations_details(exe_message.provider_id)
+    await import_service_resources(
+        exe_message,
+        identity_center_config,
+        base_output_dir,
+        "identity_center",
+        [collect_aws_permission_sets],
+        [generate_aws_permission_set_templates],
+        messages,
+        remote_worker,
+    )
+
+
 async def import_identity_center_resources(
     exe_message: ExecutionMessage,
     config: AWSConfig,
@@ -265,6 +303,13 @@ async def import_aws_resources(
     if not exe_message.metadata or exe_message.metadata["service"] == "identity_center":
         tasks.append(
             import_identity_center_resources(
+                exe_message, config, base_output_dir, messages, remote_worker
+            )
+        )
+
+    if not exe_message.metadata or exe_message.metadata["service"] == "organizations":
+        tasks.append(
+            import_organization_resources(
                 exe_message, config, base_output_dir, messages, remote_worker
             )
         )

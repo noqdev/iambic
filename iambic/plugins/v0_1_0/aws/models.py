@@ -36,6 +36,7 @@ from iambic.plugins.v0_1_0.aws.utils import (
     create_assume_role_session,
     get_current_role_arn,
     legacy_paginated_search,
+    paginated_search,
     set_org_account_variables,
 )
 
@@ -338,6 +339,51 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
                 return session
 
         return session
+
+    async def set_organizations_details(
+        self, set_organizations_map: bool = True
+    ) -> None:
+        if not self.organizations_details:
+            return
+        region = self.organizations_details.region_name
+        org_client = await self.get_boto3_client("organizations", region_name=region)
+        if not set_organizations_map:
+            return
+
+        async def describe_scp_policy(policy_id: str, org_client):
+            return await boto_crud_call(org_client.describe_policy, PolicyId=policy_id)
+
+        async def list_targets_for_scp(policy_id: str, org_client):
+            targets_for_scp_response = await paginated_search(
+                org_client.list_targets_for_policy, PolicyId=policy_id
+            )
+            print("here")
+
+        async def list_tags_for_scp(policy_id: str, org_client):
+            tags_for_scp_response = await paginated_search(
+                org_client.list_tags_for_resource, ResourceId=policy_id
+            )
+            print("here")
+
+        scps_response = await paginated_search(
+            org_client.list_targets_for_policy, Filter="SERVICE_CONTROL_POLICY"
+        )
+
+        scps = scps_response["Policies"]
+
+        scp_policies = await asyncio.gather(
+            *[describe_scp_policy(scp["Id"], org_client) for scp in scps]
+        )
+
+        scp_targets = await asyncio.gather(
+            *[list_targets_for_scp(scp["Id"], org_client) for scp in scps]
+        )
+
+        scp_tags = await asyncio.gather(
+            *[list_tags_for_scp(scp["Id"], org_client) for scp in scps]
+        )
+
+        print("here")
 
     async def set_identity_center_details(
         self, set_identity_center_map: bool = True
