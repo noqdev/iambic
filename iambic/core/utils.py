@@ -646,7 +646,7 @@ def normalize_dict_keys(
 
 def exceptions_in_proposed_changes(obj) -> bool:
     if isinstance(obj, dict):
-        if "exceptions_seen" in obj:
+        if obj.get("exceptions_seen"):
             return True
 
         new_obj = dict()

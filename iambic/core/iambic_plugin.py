@@ -30,7 +30,7 @@ async def default_apply_callable(
     return [
         template_change
         for template_change in template_changes
-        if template_change.proposed_changes
+        if template_change.proposed_changes or template_change.exceptions_seen
     ]
 
 

@@ -312,6 +312,13 @@ class AccountChangeDetails(PydanticBaseModel):
     proposed_changes: list[ProposedChange] = Field(default=[])
     exceptions_seen: list[ProposedChange] = Field(default=[])
 
+    def extend_changes(self, changes: list[ProposedChange]):
+        for change in changes:
+            if change.exceptions_seen:
+                self.exceptions_seen.append(change)
+            else:
+                self.proposed_changes.append(change)
+
 
 class TemplateChangeDetails(PydanticBaseModel):
     resource_id: str
@@ -326,6 +333,15 @@ class TemplateChangeDetails(PydanticBaseModel):
     class Config:
         json_encoders = {PrettyOrderedSet: list}
 
+    def extend_changes(self, changes: list[ProposedChange]):
+        for change in changes:
+            if change.exceptions_seen:
+                self.exceptions_seen.append(change)
+            elif isinstance(change, AccountChangeDetails) and change.proposed_changes:
+                self.proposed_changes.append(change)
+            elif isinstance(change, ProposedChange):
+                self.proposed_changes.append(change)
+
     def dict(
         self,
         *,
@@ -333,7 +349,7 @@ class TemplateChangeDetails(PydanticBaseModel):
         exclude: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
         by_alias: bool = False,
         skip_defaults: Optional[bool] = None,
-        exclude_unset: bool = True,
+        exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = True,
     ) -> Dict[str, Any]:  # noqa
