@@ -221,7 +221,7 @@ class Config(BaseTemplate):
                 task_message.provider_type = plugin.config_name
                 tasks.append(
                     plugin.async_import_callable(
-                        exe_message, self.get_config_plugin(plugin), output_dir
+                        task_message, self.get_config_plugin(plugin), output_dir
                     )
                 )
 

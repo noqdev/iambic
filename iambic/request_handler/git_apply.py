@@ -5,6 +5,7 @@ import os.path
 import uuid
 
 from git import Repo
+
 from iambic.config.dynamic_config import load_config
 from iambic.core.context import ExecutionContext, ctx
 from iambic.core.git import (

@@ -17,6 +17,9 @@ import boto3
 import questionary
 from aws_error_utils.aws_error_utils import errors
 from botocore.exceptions import ClientError, NoCredentialsError
+from pydantic.json import pydantic_encoder
+from pydantic.types import SecretStr
+
 from iambic.config.dynamic_config import (
     CURRENT_IAMBIC_VERSION,
     Config,
@@ -75,8 +78,6 @@ from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import (
 )
 from iambic.plugins.v0_1_0.okta.handlers import import_okta_resources
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
-from pydantic.json import pydantic_encoder
-from pydantic.types import SecretStr
 
 CUSTOM_AUTO_COMPLETE_STYLE = questionary.Style(
     [

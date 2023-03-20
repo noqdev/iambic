@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
+
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
-from pydantic import ValidationError
 
 
 def test_unique_account_id():

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from pydantic import BaseModel, Field
+
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.github.handlers import import_github_resources, load
-from pydantic import BaseModel, Field
 
 
 class GithubConfig(BaseModel):

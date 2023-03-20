@@ -6,6 +6,7 @@ from itertools import chain
 from typing import Union
 
 from deepdiff import DeepDiff
+
 from iambic.core.context import ExecutionContext, ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
