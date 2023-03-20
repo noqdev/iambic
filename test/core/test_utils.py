@@ -7,6 +7,8 @@ from typing import List
 from unittest.mock import patch
 
 import pytest
+from mock import AsyncMock
+
 from iambic.core.models import BaseModel
 from iambic.core.utils import (
     GlobalRetryController,
@@ -16,7 +18,6 @@ from iambic.core.utils import (
     transform_comments,
     yaml,
 )
-from mock import AsyncMock
 
 
 @pytest.mark.parametrize(
