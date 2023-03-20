@@ -56,7 +56,7 @@ cryptography = "^39.0.1"
 recursive-diff = "^1.1.0"
 aws-error-utils = "^2.7.0"
 types-mock = "^5.0.0.5"
-openssl = "openssl>22.1.0"
+pyopenssl = "^23.0.0"
 
 [tool.poetry.scripts]
 iambic = "iambic.main:cli"
