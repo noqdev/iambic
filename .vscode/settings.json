@@ -6,6 +6,13 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "python.formatting.provider": "black",
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./iambic",
+        "-p",
+        "*_test.py"
+    ],
     "coverage-gutters.coverageFileNames": [
         "cov_unit_tests.xml"
     ],

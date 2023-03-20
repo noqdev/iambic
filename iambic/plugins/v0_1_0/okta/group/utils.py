@@ -5,7 +5,6 @@ import functools
 from typing import TYPE_CHECKING, List, Optional
 
 import okta.models as models
-
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
@@ -155,8 +154,11 @@ async def list_all_groups(okta_organization: OktaOrganization) -> List[Group]:
         groups.append(next_groups)
 
     if not groups:
+        log.info(
+            "No groups found in Okta Organization",
+            okta_organization=okta_organization.idp_name,
+        )
         return []
-
     tasks = []
     for group_raw in groups:
         group = Group(
