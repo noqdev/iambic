@@ -2,6 +2,8 @@
 title: AWS
 ---
 
+import AsciinemaWidget from '../../src/components/AsciinemaWidget';
+
 In this tutorial, you will configure IAMbic to manage IAM for an AWS account or multiple accounts in an AWS organization.
 You will then practice using IAMbic to to create, manipulate, and expire a test group. These are the steps you will complete:
 
@@ -76,6 +78,11 @@ Run the following command to import resources from your AWS account(s):
 iambic import
 ```
 
+Here is a recording of a typical import process:
+
+<AsciinemaWidget src="/recordings/iambic_import.cast" rows={30} idleTimeLimit={3} preload={true} />
+
+
 Once the import has successfully finished, your repository should have a folder structure, with YAML templates nested under each directory structure. It should resemble the following:
 
 ```bash
@@ -108,10 +115,10 @@ Grab your favorite code editor, have your Git repo handy, and let's get to work.
 
 ```bash
 # Create a directory in your iambic-templates repo
-mkdir -p resources/aws/roles/
+mkdir -p resources/aws/roles/all_accounts
 
 # Open the config.yaml file with your favorite editor, and save the template you crafted above
-code resources/aws/roles/iambic_test_role.yaml
+code resources/aws/roles/all_accounts/iambic_test_role.yaml
 ```
 
 Next, we'll create a multi-account role template. An example template is below; it can be used as-is, or modified. Take the contents of this template and write it to the iambic_test_role.yaml file we're editing.
@@ -157,7 +164,10 @@ iambic apply resources/aws/roles/all_accounts/iambic_test_role.yaml
 ```
 
 If all went according to plan, you should now have a new role across all of the accounts you've defined, or the accounts we've detected in AWS Organizations.
-<!-- #TODO what if all did not go according to plan?? -->
+
+Here is a recording of a typical apply process:
+
+<AsciinemaWidget src="/recordings/iambic_apply_static_aws_role.cast" rows={30} idleTimeLimit={3} preload={true} />
 
 ### 3.1 - Create dynamic IAM role policies that vary per account
 

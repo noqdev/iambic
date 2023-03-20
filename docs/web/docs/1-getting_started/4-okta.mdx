@@ -120,9 +120,10 @@ As a reminder and in case you did not export the bash variables in the `Prerequi
 cat <<EOF > config/secrets.yaml
 secrets:
   okta:
-    - idp_name: $OKTA_ORG_NAME
-      org_url: $OKTA_DOMAIN
-      api_token: $OKTA_API_TOKEN
+    organizations:
+      - idp_name: $OKTA_ORG_NAME
+        org_url: $OKTA_DOMAIN
+        api_token: $OKTA_API_TOKEN
 EOF
 ```
 

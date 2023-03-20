@@ -11,16 +11,17 @@ from pathlib import Path
 from typing import List, Optional, Union
 from uuid import uuid4
 
-import iambic.plugins.v0_1_0.github
 import ujson as json
+from pydantic import BaseModel, Field
+from pydantic import create_model as create_pydantic_model
+
+import iambic.plugins.v0_1_0.github
 from iambic.core.context import ctx
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
 from iambic.core.utils import sort_dict, yaml
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, google_workspace, okta
-from pydantic import BaseModel, Field
-from pydantic import create_model as create_pydantic_model
 
 CURRENT_IAMBIC_VERSION = "1"
 
@@ -487,7 +488,7 @@ async def process_config(
     if configure_plugins:
         log.info("Setting config metadata...")
         await config.configure_plugins()
-        log.info("Config loaded successfully...")
+        log.info("Plugins loaded successfully...")
 
     TEMPLATES.set_templates(
         list(
