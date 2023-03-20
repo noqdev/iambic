@@ -45,7 +45,7 @@ VOLUME [ "/templates" ]
 
 WORKDIR ${FUNCTION_DIR}
 
-ENV PYTHONPATH=${PYTHONPATH}:${FUNCTION_DIR}/.local/lib/python3.11/site-packages
+ENV PYTHONPATH=${FUNCTION_DIR}/iambic:/usr/local/lib/python3.11/site-packages
 ENV IAMBIC_WEB_APP_DIR=${FUNCTION_DIR}/docs/web
 ENV IAMBIC_DOCKER_CONTAINER=1
 
