@@ -5,6 +5,7 @@ import functools
 from typing import TYPE_CHECKING, List, Optional
 
 import okta.models as models
+
 from iambic.core.context import ExecutionContext
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
@@ -102,6 +103,8 @@ async def list_group_users(group: Group, okta_organization: OktaOrganization) ->
         users.append(next_users)
 
     if not users:
+        # if there is really no users, we need to update our local knowledge of membership
+        group.members = []
         return group
 
     users_to_return = []
