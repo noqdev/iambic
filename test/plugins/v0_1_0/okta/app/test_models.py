@@ -1,18 +1,21 @@
 from __future__ import annotations
+
 import os
 import shutil
 import tempfile
+from test.plugins.v0_1_0.okta.app.test_utils import mock_application
+from test.plugins.v0_1_0.okta.test_utils import mock_okta_organization
 
 import pytest
+
 from iambic.core.context import ExecutionContext
 from iambic.core.models import ProposedChangeType
-
-from iambic.plugins.v0_1_0.okta.app.models import OktaAppTemplate, OktaAppTemplateProperties
+from iambic.plugins.v0_1_0.okta.app.models import (
+    OktaAppTemplate,
+    OktaAppTemplateProperties,
+)
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
 from iambic.plugins.v0_1_0.okta.models import App, Assignment, Group
-
-from test.plugins.v0_1_0.okta.test_utils import mock_okta_organization
-from test.plugins.v0_1_0.okta.app.test_utils import mock_application
 
 
 def test_members_sorting():
@@ -65,7 +68,10 @@ def mock_fs():
 
 @pytest.mark.asyncio
 async def test_apply_app_assignment(
-    mock_fs: tuple[str, str], mock_application: tuple[OktaOrganization, Group | None, App]  # noqa: F811 # intentional for mocks
+    mock_fs: tuple[str, str],
+    mock_application: tuple[
+        OktaOrganization, Group | None, App
+    ],  # noqa: F811 # intentional for mocks
 ):
     test_template_path, temp_templates_directory = mock_fs
     okta_organization, okta_group, okta_app, _ = mock_application
@@ -76,9 +82,7 @@ async def test_apply_app_assignment(
         idp_name=okta_app.idp_name,
         assignments=[Assignment(group=okta_group.name)],
     )
-    template = OktaAppTemplate(
-        file_path=test_template_path, properties=app_properties
-    )
+    template = OktaAppTemplate(file_path=test_template_path, properties=app_properties)
     template.write()
     okta_config = OktaConfig(organizations=[okta_organization])
     context = ExecutionContext()

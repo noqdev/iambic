@@ -1,16 +1,19 @@
 from __future__ import annotations
+
 import os
 import shutil
 import tempfile
+from test.plugins.v0_1_0.okta.test_utils import mock_okta_organization
 
 import pytest
+
 from iambic.core.context import ExecutionContext
 from iambic.core.models import ProposedChangeType
-
-from iambic.plugins.v0_1_0.okta.group.models import OktaGroupTemplate, OktaGroupTemplateProperties
+from iambic.plugins.v0_1_0.okta.group.models import (
+    OktaGroupTemplate,
+    OktaGroupTemplateProperties,
+)
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig
-
-from test.plugins.v0_1_0.okta.test_utils import mock_okta_organization
 
 
 def test_members_sorting():

@@ -1,24 +1,32 @@
 import asyncio
-from iambic.core.models import ProposedChangeType
-from iambic.plugins.v0_1_0.okta.app.utils import get_app, list_all_apps, list_app_group_assignments, list_app_user_assignments, maybe_delete_app, update_app_assignments, update_app_name
-from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
+from test.plugins.v0_1_0.okta.test_utils import mock_okta_organization
 
+import okta.models
 import pytest
 
 from iambic.core.context import ExecutionContext
-from iambic.plugins.v0_1_0.okta.group.utils import (
-    create_group,
+from iambic.core.models import ProposedChangeType
+from iambic.plugins.v0_1_0.okta.app.utils import (
+    get_app,
+    list_all_apps,
+    list_app_group_assignments,
+    list_app_user_assignments,
+    maybe_delete_app,
+    update_app_assignments,
+    update_app_name,
 )
-
-import okta.models
+from iambic.plugins.v0_1_0.okta.group.utils import create_group
+from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
 from iambic.plugins.v0_1_0.okta.models import App, Assignment, Group
-from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate, OktaUserTemplateProperties
+from iambic.plugins.v0_1_0.okta.user.models import (
+    OktaUserTemplate,
+    OktaUserTemplateProperties,
+)
 from iambic.plugins.v0_1_0.okta.user.utils import create_user
 
-from test.plugins.v0_1_0.okta.test_utils import mock_okta_organization
 
 @pytest.fixture
-def mock_application(mock_okta_organization : OktaOrganization):
+def mock_application(mock_okta_organization: OktaOrganization):
 
     # Have to create group before getting it
     group_name = "example_groupname"
@@ -26,9 +34,9 @@ def mock_application(mock_okta_organization : OktaOrganization):
     description = "example description"
     context = ExecutionContext()
     context.eval_only = False
-    okta_group = asyncio.run(create_group(
-        group_name, idp_name, description, mock_okta_organization, context
-    ))
+    okta_group = asyncio.run(
+        create_group(group_name, idp_name, description, mock_okta_organization, context)
+    )
 
     # Have to create user before getting it
     username = "example_username"
@@ -56,27 +64,34 @@ def mock_application(mock_okta_organization : OktaOrganization):
 
     yield mock_okta_organization, okta_group, okta_app, okta_user
 
+
 @pytest.mark.asyncio
-async def test_list_app_group_assignments_with_zero_assignment(mock_application: tuple[OktaOrganization, Group | None, App]):
+async def test_list_app_group_assignments_with_zero_assignment(
+    mock_application: tuple[OktaOrganization, Group | None, App]
+):
     okta_organization, _, okta_app, _ = mock_application
     group_assignment = await list_app_group_assignments(okta_organization, okta_app)
     assert len(group_assignment["group_assignments"]) == 0
 
 
 @pytest.mark.asyncio
-async def test_list_app_group_assignments_with_one_assignment(mock_application: tuple[OktaOrganization, Group | None, App]):
+async def test_list_app_group_assignments_with_one_assignment(
+    mock_application: tuple[OktaOrganization, Group | None, App]
+):
     okta_organization, okta_group, okta_app, _ = mock_application
 
     # assign group to app
     new_assignments = [Assignment(group=okta_group.name)]
     context = ExecutionContext()
     context.eval_only = False
-    proposed_changes = await update_app_assignments(okta_app, new_assignments, okta_organization, {}, context)
+    proposed_changes = await update_app_assignments(
+        okta_app, new_assignments, okta_organization, {}, context
+    )
     assert len(proposed_changes) > 0
 
     group_assignment = await list_app_group_assignments(okta_organization, okta_app)
     assert len(group_assignment["group_assignments"]) == 1
-    assign_group_name =  group_assignment["group_assignments"][0]
+    assign_group_name = group_assignment["group_assignments"][0]
     assert assign_group_name == okta_group.name
 
     okta_app = await get_app(okta_organization, str(okta_app.id))
@@ -86,31 +101,39 @@ async def test_list_app_group_assignments_with_one_assignment(mock_application: 
     new_assignments = []
     context = ExecutionContext()
     context.eval_only = False
-    proposed_changes = await update_app_assignments(okta_app, new_assignments, okta_organization, {}, context)
+    proposed_changes = await update_app_assignments(
+        okta_app, new_assignments, okta_organization, {}, context
+    )
     assert len(proposed_changes) > 0
 
 
 @pytest.mark.asyncio
-async def test_list_app_user_assignments_with_zero_assignment(mock_application: tuple[OktaOrganization, Group | None, App]):
+async def test_list_app_user_assignments_with_zero_assignment(
+    mock_application: tuple[OktaOrganization, Group | None, App]
+):
     okta_organization, _, okta_app, _ = mock_application
     user_assignment = await list_app_user_assignments(okta_organization, okta_app)
     assert len(user_assignment["user_assignments"]) == 0
 
 
 @pytest.mark.asyncio
-async def test_list_app_user_assignments_with_one_assignment(mock_application: tuple[OktaOrganization, Group | None, App]):
+async def test_list_app_user_assignments_with_one_assignment(
+    mock_application: tuple[OktaOrganization, Group | None, App]
+):
     okta_organization, _, okta_app, okta_user = mock_application
 
     # assign user to app
     new_assignments = [Assignment(user=okta_user.username)]
     context = ExecutionContext()
     context.eval_only = False
-    proposed_changes = await update_app_assignments(okta_app, new_assignments, okta_organization, {}, context)
+    proposed_changes = await update_app_assignments(
+        okta_app, new_assignments, okta_organization, {}, context
+    )
     assert len(proposed_changes) > 0
 
     user_assignment = await list_app_user_assignments(okta_organization, okta_app)
     assert len(user_assignment["user_assignments"]) == 1
-    assign_login =  user_assignment["user_assignments"][0]
+    assign_login = user_assignment["user_assignments"][0]
     assert assign_login == okta_user.username
 
     okta_app = await get_app(okta_organization, str(okta_app.id))
@@ -120,12 +143,16 @@ async def test_list_app_user_assignments_with_one_assignment(mock_application: t
     new_assignments = []
     context = ExecutionContext()
     context.eval_only = False
-    proposed_changes = await update_app_assignments(okta_app, new_assignments, okta_organization, {}, context)
+    proposed_changes = await update_app_assignments(
+        okta_app, new_assignments, okta_organization, {}, context
+    )
     assert len(proposed_changes) > 0
 
 
 @pytest.mark.asyncio
-async def test_list_all_apps(mock_application: tuple[OktaOrganization, Group | None, App]):
+async def test_list_all_apps(
+    mock_application: tuple[OktaOrganization, Group | None, App]
+):
     okta_organization, _, okta_app, _ = mock_application
     apps = await list_all_apps(okta_organization)
     assert len(apps) == 1
@@ -133,7 +160,9 @@ async def test_list_all_apps(mock_application: tuple[OktaOrganization, Group | N
 
 
 @pytest.mark.asyncio
-async def test_update_app_name(mock_application: tuple[OktaOrganization, Group | None, App]):
+async def test_update_app_name(
+    mock_application: tuple[OktaOrganization, Group | None, App]
+):
     okta_organization, _, okta_app, _ = mock_application
     new_app_name = "new application name"
     context = ExecutionContext()
@@ -144,10 +173,14 @@ async def test_update_app_name(mock_application: tuple[OktaOrganization, Group |
 
 
 @pytest.mark.asyncio
-async def test_maybe_delete_app(mock_application: tuple[OktaOrganization, Group | None, App]):
+async def test_maybe_delete_app(
+    mock_application: tuple[OktaOrganization, Group | None, App]
+):
     okta_organization, _, okta_app, _ = mock_application
     new_app_name = "new application name"
     context = ExecutionContext()
     context.eval_only = False
-    proposed_changes = await maybe_delete_app(True, okta_app, okta_organization, {}, context)
+    proposed_changes = await maybe_delete_app(
+        True, okta_app, okta_organization, {}, context
+    )
     assert proposed_changes[0].change_type == ProposedChangeType.DELETE

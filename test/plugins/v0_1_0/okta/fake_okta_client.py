@@ -169,7 +169,7 @@ class FakeOktaClient:
             self.groupname_to_group[new_group_name] = group
             return (group, ResponseDetails(status=200, headers={}), defaultdict(list))
 
-    async def get_group(self, group_id : int):
+    async def get_group(self, group_id: int):
         if f"{group_id}" in self.group_id_to_group:
             group = self.group_id_to_group[f"{group_id}"]
             return (group, ResponseDetails(status=200, headers={}), defaultdict(list))
@@ -235,7 +235,11 @@ class FakeOktaClient:
             return (app, ResponseDetails(status=200, headers={}), defaultdict(list))
 
     async def list_applications(self):
-        return (self.app_id_to_application.values(), ResponseDetails(status=200, headers={}), defaultdict(list))
+        return (
+            self.app_id_to_application.values(),
+            ResponseDetails(status=200, headers={}),
+            defaultdict(list),
+        )
 
     async def get_application(self, app_id):
         if app_id in self.app_id_to_application:
@@ -250,10 +254,10 @@ class FakeOktaClient:
                 response,
                 OktaAPIError("https//example.okta.com/", response, error_dict),
             )
-        
-    async def update_application(self, app_id, app_model : okta.models.Application):
+
+    async def update_application(self, app_id, app_model: okta.models.Application):
         if app_id in self.app_id_to_application:
-            app : okta.models.Application = self.app_id_to_application[app_id]
+            app: okta.models.Application = self.app_id_to_application[app_id]
             old_name = app.name
             del self.app_name_to_application[old_name]
             app.name = app_model.name
@@ -273,7 +277,7 @@ class FakeOktaClient:
     async def delete_app(self, input_app_id: int):
         app_id = f"{input_app_id}"
         if app_id in self.app_id_to_application:
-            app : okta.models.Application = self.app_id_to_application[app_id]
+            app: okta.models.Application = self.app_id_to_application[app_id]
             old_name = app.name
             del self.app_name_to_application[old_name]
             del self.app_id_to_application[app_id]
@@ -288,19 +292,29 @@ class FakeOktaClient:
                 OktaAPIError("https//example.okta.com/", response, error_dict),
             )
 
-    async def assign_user_to_application(self, app_id, app_user : okta.models.AppUser):
+    async def assign_user_to_application(self, app_id, app_user: okta.models.AppUser):
         user_id = f"{app_user.id}"
         self.app_id_to_user_ids[app_id].add(user_id)
-        return self.user_id_to_user[user_id], ResponseDetails(status=200, headers={}), defaultdict(list)
-    
+        return (
+            self.user_id_to_user[user_id],
+            ResponseDetails(status=200, headers={}),
+            defaultdict(list),
+        )
+
     async def delete_application_user(self, app_id, user_id: int):
         user_id = f"{user_id}"
         self.app_id_to_user_ids[app_id].remove(user_id)
         return ResponseDetails(status=200, headers={}), defaultdict(list)
-    
-    async def create_application_group_assignment(self, app_id, group_id, group_assignment: okta.models.ApplicationGroupAssignment):
+
+    async def create_application_group_assignment(
+        self, app_id, group_id, group_assignment: okta.models.ApplicationGroupAssignment
+    ):
         self.app_id_to_group_ids[app_id].add(f"{group_id}")
-        return group_assignment, ResponseDetails(status=200, headers={}), defaultdict(list)
+        return (
+            group_assignment,
+            ResponseDetails(status=200, headers={}),
+            defaultdict(list),
+        )
 
     async def delete_application_group_assignment(self, app_id, group_id):
         self.app_id_to_group_ids[app_id].add(f"{group_id}")
@@ -312,30 +326,34 @@ class FakeOktaClient:
             users_ids = self.app_id_to_user_ids[app_id]
             users_from_user_assignments = set()
             for user_id in users_ids:
-                user : okta.models.User = self.user_id_to_user[user_id]
+                user: okta.models.User = self.user_id_to_user[user_id]
                 users_from_user_assignments.add(user.profile.login)
             groups_ids = self.app_id_to_group_ids[app_id]
             users_from_groups = set()
             for group_id in groups_ids:
-                user_ids : set = self.group_id_to_user_ids[group_id]
+                user_ids: set = self.group_id_to_user_ids[group_id]
                 for user_id in user_ids:
-                    user : okta.models.User = self.user_id_to_user[user_id]
+                    user: okta.models.User = self.user_id_to_user[user_id]
                     users_from_groups.add(user.profile.login)
 
             # first app the groups because we have to set app group scope
             user_app_assignments = []
-            for user_login in (users_from_groups - users_from_user_assignments):
-                user : okta.models.User = self.username_to_user[user_login]
+            for user_login in users_from_groups - users_from_user_assignments:
+                user: okta.models.User = self.username_to_user[user_login]
                 user_app_assignment = okta.models.AppUser(user.as_dict())
                 user_app_assignment.scope = "GROUP"
                 user_app_assignments.append(user_app_assignment)
 
             for user_login in users_from_user_assignments:
-                user : okta.models.User = self.username_to_user[user_login]
+                user: okta.models.User = self.username_to_user[user_login]
                 user_app_assignment = okta.models.AppUser(user.as_dict())
                 user_app_assignments.append(user_app_assignment)
 
-            return (user_app_assignments, ResponseDetails(status=200, headers={}), defaultdict(list))
+            return (
+                user_app_assignments,
+                ResponseDetails(status=200, headers={}),
+                defaultdict(list),
+            )
         else:
             error_dict = defaultdict(list)
             error_dict["errorCode"] = "E0000007"
@@ -345,17 +363,23 @@ class FakeOktaClient:
                 response,
                 OktaAPIError("https//example.okta.com/", response, error_dict),
             )
-        
+
     async def list_application_group_assignments(self, app_id):
         if app_id in self.app_id_to_application:
             app = self.app_id_to_application[app_id]
             groups_ids = self.app_id_to_group_ids[app_id]
             group_assignments = []
             for group_id in groups_ids:
-                group : okta.models.Group = self.group_id_to_group[group_id]
-                group_assignments.append(okta.models.ApplicationGroupAssignment(group.as_dict()))
+                group: okta.models.Group = self.group_id_to_group[group_id]
+                group_assignments.append(
+                    okta.models.ApplicationGroupAssignment(group.as_dict())
+                )
 
-            return (group_assignments, ResponseDetails(status=200, headers={}), defaultdict(list))
+            return (
+                group_assignments,
+                ResponseDetails(status=200, headers={}),
+                defaultdict(list),
+            )
         else:
             error_dict = defaultdict(list)
             error_dict["errorCode"] = "E0000007"
