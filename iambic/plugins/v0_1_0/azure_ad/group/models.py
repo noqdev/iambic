@@ -1,53 +1,52 @@
 from __future__ import annotations
 
 import asyncio
-import os
 from itertools import chain
-from typing import TYPE_CHECKING, Any, List, Optional, Union
+from typing import Any, List, Optional
+
+from aiohttp import ClientResponseError
+from pydantic import Field
 
 from iambic.core.context import ExecutionContext, ctx
-from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
     BaseModel,
-    BaseTemplate,
     ExpiryModel,
     ProposedChange,
     ProposedChangeType,
-    TemplateChangeDetails,
 )
 from iambic.core.utils import normalize_dict_keys
-from iambic.plugins.v0_1_0.azure_ad.group.utils import (
-    create_group,
-    delete_group,
-    get_group,
-    update_group_attributes,
-    update_group_members,
-)
-from iambic.plugins.v0_1_0.azure_ad.user.models import User, UserSimple
-from pydantic import Field
-
-if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.azure_ad.iambic_plugin import AzureADConfig
-    from iambic.plugins.v0_1_0.azure_ad.models import AzureADOrganization
+from iambic.plugins.v0_1_0.azure_ad.models import AzureADOrganization, AzureADTemplate
+from iambic.plugins.v0_1_0.azure_ad.user.models import UserSimple
 
 AZURE_AD_GROUP_TEMPLATE_TYPE = "NOQ::AzureAD::Group"
 
 
 class GroupTemplateProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the group")
-    owner: Optional[str] = Field(None, description="Owner of the group")
-    idp_name: str = Field(
-        ...,
-        description="Name of the identity provider that's associated with the group",
-    )
-    group_id: str = Field(
-        "", description="Unique Group ID for the group. Usually it's {idp-name}-{name}"
+    mail_nickname: str = Field(..., description="Mail nickname of the group")
+    group_id: Optional[str] = Field(
+        None,
+        description="Unique Group ID for the group. Usually it's {idp-name}-{name}",
     )
     description: Optional[str] = Field("", description="Description of the group")
-    extra: Any = Field(None, description=("Extra attributes to store"))
-    members: List[UserSimple] = Field([], description="Users in the group")
+    group_types: Optional[list[str]] = Field(
+        [], description="Specifies the group type and its membership."
+    )
+    mail: Optional[str] = Field(description="Email address of the group")
+    mail_enabled: Optional[bool] = False
+    security_enabled: Optional[bool] = True
+    extra: Optional[Any] = Field(None, description="Extra attributes to store")
+    is_assignable_to_role: Optional[bool] = Field(
+        description="Indicates whether this group can be assigned to an Azure Active Directory role or not."
+    )
+    membership_rule: Optional[str] = Field(
+        description="The rule that determines members for this group if the group is a dynamic group."
+    )
+    members: Optional[List[UserSimple]] = Field(
+        [], description="A list of users in the group"
+    )
 
     @property
     def resource_type(self) -> str:
@@ -55,67 +54,27 @@ class GroupTemplateProperties(ExpiryModel, BaseModel):
 
     @property
     def resource_id(self) -> str:
-        return self.group_id
+        return self.mail or self.name
+
+    @classmethod
+    def from_azure_response(cls, azure_response: dict):
+        azure_response = normalize_dict_keys(azure_response)
+        group_id = azure_response.pop("id")
+        name = azure_response.pop("display_name")
+        return cls(
+            group_id=group_id,
+            name=name,
+            members=[],
+            **azure_response,
+        )
 
 
-class GroupTemplate(BaseTemplate, ExpiryModel):
+class GroupTemplate(ExpiryModel, AzureADTemplate):
     template_type = AZURE_AD_GROUP_TEMPLATE_TYPE
+    owner: Optional[str] = Field(None, description="Owner of the group")
     properties: GroupTemplateProperties = Field(
         ..., description="Properties for the Azure AD Group"
     )
-
-    async def apply(
-        self, config: AzureADConfig, context: ExecutionContext
-    ) -> TemplateChangeDetails:
-        tasks = []
-        template_changes = TemplateChangeDetails(
-            resource_id=self.properties.group_id,
-            resource_type=self.template_type,
-            template_path=self.file_path,
-        )
-        log_params = dict(
-            resource_type=self.resource_type,
-            resource_name=self.properties.name,
-        )
-
-        if self.iambic_managed == IambicManaged.IMPORT_ONLY:
-            log_str = "Resource is marked as import only."
-            log.info(log_str, **log_params)
-            template_changes.proposed_changes = []
-            return template_changes
-
-        for azure_ad_organization in config.organizations:
-            if context.execute:
-                log_str = "Applying changes to resource."
-            else:
-                log_str = "Detecting changes for resource."
-            log.info(log_str, idp_name=azure_ad_organization.idp_name, **log_params)
-            tasks.append(self._apply_to_account(azure_ad_organization, context))
-
-        account_changes = await asyncio.gather(*tasks)
-        template_changes.proposed_changes = [
-            account_change
-            for account_change in account_changes
-            if any(account_change.proposed_changes)
-        ]
-        if account_changes and context.execute:
-            log.info(
-                "Successfully applied resource changes to all Azure AD organizations.",
-                **log_params,
-            )
-        elif account_changes:
-            log.info(
-                "Successfully detected required resource changes on all Azure AD organizations.",
-                **log_params,
-            )
-        else:
-            log.debug("No changes detected for resource on any account.", **log_params)
-
-        return template_changes
-
-    @property
-    def resource_id(self) -> str:
-        return self.properties.group_id
 
     @property
     def resource_type(self) -> str:
@@ -133,25 +92,56 @@ class GroupTemplate(BaseTemplate, ExpiryModel):
     async def _apply_to_account(
         self, azure_ad_organization: AzureADOrganization, context: ExecutionContext
     ) -> AccountChangeDetails:
-        proposed_group = self.apply_resource_dict(azure_ad_organization, context)
+        from iambic.plugins.v0_1_0.azure_ad.group.utils import (
+            create_group,
+            delete_group,
+            get_group,
+            update_group_attributes,
+            update_group_members,
+        )
+
         change_details = AccountChangeDetails(
-            account=self.properties.idp_name,
-            resource_id=self.properties.group_id,
-            new_value=proposed_group,
+            account=self.idp_name,
+            resource_id=self.resource_id,
+            new_value=self.properties.dict(
+                exclude={"metadata_commented_dict", "deleted"}, exclude_none=True
+            ),
             proposed_changes=[],
         )
+        cloud_group = None
 
         log_params = dict(
-            resource_type=self.properties.resource_type,
-            resource_id=self.properties.name,
-            organization=str(self.properties.idp_name),
+            resource_type=self.resource_type,
+            resource_id=self.resource_id,
+            organization=str(self.idp_name),
         )
 
-        cloud_group: Optional[Group] = await get_group(
-            azure_ad_organization, self.properties.group_id, self.properties.name
-        )
-        if cloud_group:
-            change_details.current_value = cloud_group
+        if self.properties.group_id and not self.deleted:
+            try:
+                cloud_group: Optional[GroupTemplateProperties] = await get_group(
+                    azure_ad_organization,
+                    self.properties.group_id,
+                    self.properties.name,
+                )
+                change_details.current_value = cloud_group
+            except ClientResponseError as err:
+                if err.status == 404:
+                    err = f"Group not found in Azure AD where id={self.properties.user_id}"
+                    log.exception(
+                        "Invalid group_id provided. Group not found in Azure AD.",
+                        **log_params,
+                    )
+                change_details.extend_changes(
+                    [
+                        ProposedChange(
+                            change_type=ProposedChangeType.UPDATE,
+                            resource_id=self.resource_id,
+                            resource_type=self.resource_type,
+                            exceptions_seen=[str(err)],
+                        )
+                    ]
+                )
+                return change_details
 
         group_exists = bool(cloud_group)
         tasks = []
@@ -159,14 +149,16 @@ class GroupTemplate(BaseTemplate, ExpiryModel):
         await self.remove_expired_resources(context)
 
         if not group_exists and not self.deleted:
-            change_details.proposed_changes.append(
-                ProposedChange(
-                    change_type=ProposedChangeType.CREATE,
-                    resource_id=self.properties.group_id,
-                    resource_type=self.properties.resource_type,
-                )
-            )
             log_str = "New resource found in code."
+            change_details.extend_changes(
+                [
+                    ProposedChange(
+                        change_type=ProposedChangeType.CREATE,
+                        resource_id=self.resource_id,
+                        resource_type=self.resource_type,
+                    )
+                ]
+            )
             if not context.execute:
                 log.info(log_str, **log_params)
                 # Exit now because apply functions won't work if resource doesn't exist
@@ -175,25 +167,36 @@ class GroupTemplate(BaseTemplate, ExpiryModel):
             log_str = f"{log_str} Creating resource..."
             log.info(log_str, **log_params)
 
-            cloud_group: Group = await create_group(
-                group_name=self.properties.name,
-                idp_name=self.properties.idp_name,
-                description=self.properties.description,
-                azure_ad_organization=azure_ad_organization,
-            )
-            if cloud_group:
-                change_details.current_value = cloud_group
+            try:
+                cloud_group: GroupTemplateProperties = await create_group(
+                    azure_ad_organization=azure_ad_organization,
+                    group_name=self.properties.name,
+                    description=self.properties.description,
+                    mail_enabled=self.properties.mail_enabled,
+                    mail_nickname=self.properties.mail_nickname,
+                    security_enabled=self.properties.security_enabled,
+                    group_types=self.properties.group_types,
+                )
+                self.properties.group_id = cloud_group.group_id
+            except ClientResponseError as err:
+                log.exception(
+                    "Failed to create user in Azure AD",
+                    **log_params,
+                )
+                proposed_change = change_details.proposed_changes.pop(-1)
+                proposed_change.exceptions_seen.append(str(err))
+                change_details.extend_changes([proposed_change])
+                return change_details
 
         if self.deleted:
-            change_details.proposed_changes.extend(
+            change_details.extend_changes(
                 await delete_group(
                     azure_ad_organization,
-                    cloud_group,
+                    self.properties,
                     log_params,
                 )
             )
         else:
-            # TODO: Support group expansion
             tasks.extend(
                 [
                     update_group_attributes(
@@ -215,13 +218,11 @@ class GroupTemplate(BaseTemplate, ExpiryModel):
                 ]
             )
 
-            changes_made = await asyncio.gather(*tasks)
+            changes_made = await asyncio.gather(*tasks, return_exceptions=True)
             if any(changes_made):
-                change_details.proposed_changes.extend(
-                    list(chain.from_iterable(changes_made))
-                )
+                change_details.extend_changes(list(chain.from_iterable(changes_made)))
 
-        if ctx.execute:
+        if ctx.execute and not change_details.exceptions_seen:
             log.debug(
                 "Successfully finished execution for resource",
                 changes_made=bool(change_details.proposed_changes),
@@ -231,6 +232,12 @@ class GroupTemplate(BaseTemplate, ExpiryModel):
             if self.deleted:
                 self.delete()
             self.write()
+        elif change_details.exceptions_seen:
+            cmd_verb = "apply" if ctx.execute else "scan for"
+            log.error(
+                f"Failed to successfully {cmd_verb} resource changes",
+                **log_params,
+            )
         else:
             log.debug(
                 "Successfully finished scanning for drift for resource",
@@ -239,88 +246,3 @@ class GroupTemplate(BaseTemplate, ExpiryModel):
             )
 
         return change_details
-
-    def set_default_file_path(self, repo_dir: str):
-        file_name = f"{self.properties.name}.yaml"
-        self.file_path = os.path.expanduser(
-            os.path.join(
-                repo_dir,
-                f"resources/azure_ad/groups/{self.properties.idp_name}/{file_name}",
-            )
-        )
-
-
-class GroupAttributes(BaseModel):
-    requestable: bool = Field(
-        False, description="Whether end-users can request access to group"
-    )
-    manager_approval_required: bool = Field(
-        False, description="Whether a manager needs to approve access to the group"
-    )
-    approval_chain: List[Union[User, str]] = Field(
-        [],
-        description="A list of users or groups that need to approve access to the group",
-    )
-    self_approval_groups: List[str] = Field(
-        [],
-        description=(
-            "If the user is a member of a self-approval group, their request to the group "
-            "will be automatically approved"
-        ),
-    )
-    allow_bulk_add_and_remove: bool = Field(
-        True,
-        description=(
-            "Controls whether administrators can automatically approve access to the group"
-        ),
-    )
-    background_check_required: bool = Field(
-        False,
-        description=("Whether a background check is required to be added to the group"),
-    )
-    allow_contractors: bool = Field(
-        False,
-        description=("Whether contractors are allowed to be members of the group"),
-    )
-    allow_third_party: bool = Field(
-        False,
-        description=(
-            "Whether third-party users are allowed to be a member of the group"
-        ),
-    )
-    emails_to_notify_on_new_members: List[str] = Field(
-        [],
-        description=(
-            "A list of e-mail addresses to notify when new users are added to the group."
-        ),
-    )
-
-
-class Group(BaseModel):
-    name: str = Field(..., description="Name of the group")
-    owner: Optional[str] = Field(None, description="Owner of the group")
-    tenant_id: str = Field(
-        ...,
-        description="ID of the tenant's identity provider that's associated with the group",
-    )
-    group_id: Optional[str] = Field(
-        ...,
-        description="Unique Group ID for the group. Usually it's {tenant-id}-{name}",
-    )
-    description: Optional[str] = Field(None, description="Description of the group")
-    members: List[User] = Field([], description="Users in the group")
-
-    @property
-    def resource_type(self) -> str:
-        return "azure_ad:group"
-
-    @classmethod
-    def from_azure_response(cls, azure_response: dict):
-        azure_response = normalize_dict_keys(azure_response)
-        return cls(
-            group_id=azure_response["id"],
-            name=azure_response["display_name"],
-            tenant_id="?",
-            description=azure_response["description"],
-            members=[],
-        )

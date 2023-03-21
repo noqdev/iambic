@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
-from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import (
@@ -14,16 +13,15 @@ from iambic.core.template_generation import (
 from iambic.plugins.v0_1_0.azure_ad.group.models import (
     AZURE_AD_GROUP_TEMPLATE_TYPE,
     GroupTemplate,
-    GroupTemplateProperties,
 )
-from iambic.plugins.v0_1_0.azure_ad.group.utils import list_all_groups
+from iambic.plugins.v0_1_0.azure_ad.group.utils import list_groups
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.azure_ad.iambic_plugin import AzureADConfig
 
 
 def get_resource_dir_args() -> list:
-    return ["groups"]
+    return ["group"]
 
 
 def get_response_dir(exe_message: ExecutionMessage) -> str:
@@ -46,7 +44,7 @@ async def update_or_create_group_template(
         existing_template_map,
         discovered_template.resource_id,
         GroupTemplate,
-        {},
+        {"idp_name": discovered_template.idp_name},
         discovered_template.properties,
         [],
     )
@@ -60,18 +58,12 @@ async def collect_org_groups(exe_message: ExecutionMessage, config: AzureADConfi
         "Beginning to retrieve Azure AD groups.", organization=exe_message.provider_id
     )
 
-    groups = await list_all_groups(azure_organization)
+    groups = await list_groups(azure_organization)
     for group in groups:
         azure_group = GroupTemplate(
             file_path="unset",
-            properties=GroupTemplateProperties(
-                name=group.name,
-                owner=group.owner,
-                group_id=group.group_id,
-                idp_name=azure_organization.idp_name,
-                description=group.description,
-                members=[json.loads(m.json()) for m in group.members],
-            ),
+            idp_name=azure_organization.idp_name,
+            properties=group,
         )
         azure_group.file_path = os.path.join(base_path, f"{group.name}.yaml")
         azure_group.write()
@@ -86,7 +78,7 @@ async def collect_org_groups(exe_message: ExecutionMessage, config: AzureADConfi
 async def generate_group_templates(
     exe_message: ExecutionMessage, output_dir: str, detect_messages: list = None
 ):
-    """List all groups in the domain, along with members and settings"""
+    """Create the templates for all collected groups in the domain"""
     base_path = os.path.expanduser(output_dir)
     existing_template_map = await get_existing_template_map(
         base_path, AZURE_AD_GROUP_TEMPLATE_TYPE
@@ -101,7 +93,7 @@ async def generate_group_templates(
     # Update or create templates
     for group in groups:
         group = GroupTemplate(file_path="unset", **group)
-        group.set_default_file_path(output_dir)
+        group.set_default_file_path(output_dir, group.properties.name)
         resource_template = await update_or_create_group_template(
             group, existing_template_map
         )
@@ -110,4 +102,4 @@ async def generate_group_templates(
     # Delete templates that no longer exist
     delete_orphaned_templates(list(existing_template_map.values()), all_resource_ids)
 
-    log.info("Finish updating and creating Azure AD group templates.")
+    log.info("Finished updating and creating Azure AD group templates.")
