@@ -401,14 +401,7 @@ def handle_iambic_git_apply(
         )
         copy_data_to_data_directory()
 
-        for i in range(5):
-            pull_request = templates_repo.get_pull(pull_number)
-            if pull_request.mergeable_state != MERGEABLE_STATE_CLEAN:
-                log.info("PR not merge-able yet, sleep for 5 seconds")
-                time.sleep(5)
-
-        pull_request = templates_repo.get_pull(pull_number)
-        pull_request.merge(sha=merge_sha)
+        maybe_merge(templates_repo, pull_number, merge_sha)
         return HandleIssueCommentReturnCode.MERGED
 
     except Exception as e:
@@ -420,6 +413,34 @@ def handle_iambic_git_apply(
             )
         )
         raise e
+
+
+def maybe_merge(
+    templates_repo: github.Repo,
+    # pull_request: PullRequest,
+    pull_number: int,
+    merge_sha: str,
+    max_attempts: int = 5,
+    sleep_interval: float = 5,
+):
+    """Attempts to merge the PR at specific sha, this function will retry a few times because
+    desired sha maybe not available yet"""
+    attempts = 0
+    merge_status = None
+    last_known_traceback = None
+    while attempts < max_attempts:
+        pull_request = templates_repo.get_pull(pull_number)
+        try:
+            merge_status = pull_request.merge(sha=merge_sha)
+            break
+        except github.GithubException:
+            last_known_traceback = traceback.format_exc()
+            attempts += 1
+            time.sleep(sleep_interval)
+    if merge_status is None:
+        raise RuntimeError(
+            f"Fail to merge PR. Target sha is {merge_sha}. last_known_trace_back is {last_known_traceback}"
+        )
 
 
 def _post_artifact_to_companion_repository(
