@@ -19,36 +19,33 @@ RUN adduser --system --user-group --home ${FUNCTION_DIR} iambic \
 
 RUN touch ${FUNCTION_DIR}/iambic/__init__.py
 
-RUN pip install poetry setuptools pip --upgrade \
- && poetry install \
- && poetry build \
- && pip install awslambdaric
+RUN /usr/local/bin/pip3 install poetry setuptools pip --upgrade \
+ && /usr/local/bin/poetry install \
+ && /usr/local/bin/poetry build \
+ && /usr/local/bin/pip3 install awslambdaric
 
-RUN pip install ${FUNCTION_DIR}/dist/*.whl
+RUN /usr/local/bin/pip3 install ${FUNCTION_DIR}/dist/*.whl
 
 
 # build the iambic package last
 COPY --chown=iambic:iambic iambic/ ${FUNCTION_DIR}/iambic
 
-RUN poetry install \
- && poetry build
+RUN /usr/local/bin/poetry install \
+ && /usr/local/bin/poetry build
 
-RUN pip uninstall iambic -y
-RUN pip install ${FUNCTION_DIR}/dist/iambic*.whl \
+RUN /usr/local/bin/pip3 uninstall iambic-core -y
+RUN /usr/local/bin/pip3 install ${FUNCTION_DIR}/dist/iambic*.whl \
  && rm -rf ${FUNCTION_DIR}/dist
 
 ENV IAMBIC_REPO_DIR /templates
 
 VOLUME [ "/templates" ]
 
-
-
 WORKDIR ${FUNCTION_DIR}
 
-ENV PYTHONPATH=${PYTHONPATH}:${FUNCTION_DIR}/.local/lib/python3.11/site-packages
 ENV IAMBIC_WEB_APP_DIR=${FUNCTION_DIR}/docs/web
 ENV IAMBIC_DOCKER_CONTAINER=1
 
 USER iambic:iambic
 
-ENTRYPOINT [ "python", "-m", "iambic.main" ]
+ENTRYPOINT [ "/usr/local/bin/python3", "-m", "iambic.main" ]
