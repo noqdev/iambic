@@ -3,12 +3,11 @@ from __future__ import annotations
 import itertools
 import json
 import os
-import pathlib
 
 import boto3
 import pytest
 import yaml
-from moto import mock_secretsmanager
+from moto import mock_s3, mock_secretsmanager
 
 from iambic.config.dynamic_config import (
     CURRENT_IAMBIC_VERSION,
@@ -20,7 +19,6 @@ from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
-from iambic.plugins.v0_1_0.aws.utils import boto3_retry
 
 
 @pytest.fixture(scope="session")
@@ -53,7 +51,7 @@ def prevent_aws_real_mutants(request):
         if current_aws_security_token:
             os.environ["AWS_SECURITY_TOKEN"] = current_aws_security_token
         if current_aws_profile:
-            os.environ["AWS_PROFILE"] = current_aws_profile   
+            os.environ["AWS_PROFILE"] = current_aws_profile
 
     request.addfinalizer(fin)
     current_aws_access_key_id = os.environ.get("AWS_ACCESS_KEY_ID")
@@ -173,6 +171,16 @@ def test_config_path_one_extends(tmp_path):
             f,
         )
     return extends_config_file_path
+
+
+@pytest.fixture(autouse=True, scope="session")
+def s3(prevent_aws_real_mutants):
+    """Mocked S3 Fixture."""
+    with mock_s3():
+        yield boto3.client(
+            "s3",
+            region_name="us-west-2",
+        )
 
 
 @pytest.fixture(scope="session", autouse=True)
