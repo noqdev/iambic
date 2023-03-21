@@ -1,4 +1,6 @@
-from test.plugins.v0_1_0.okta.test_utils import mock_okta_organization
+from test.plugins.v0_1_0.okta.test_utils import (  # noqa: F401 # intentional for mocks
+    mock_okta_organization,
+)
 
 import pytest
 
@@ -23,13 +25,17 @@ from iambic.plugins.v0_1_0.okta.user.utils import create_user
 
 
 @pytest.mark.asyncio
-async def test_list_all_users_with_no_users(mock_okta_organization):
+async def test_list_all_users_with_no_users(
+    mock_okta_organization,  # noqa: F811 # intentional for mocks
+):
     okta_users = await list_all_users(mock_okta_organization)
     assert okta_users == []
 
 
 @pytest.mark.asyncio
-async def test_list_all_users_with_users(mock_okta_organization):
+async def test_list_all_users_with_users(
+    mock_okta_organization,  # noqa: F811 # intentional for mocks
+):
 
     # Have to create user before getting it
     username = "example_username"
@@ -50,7 +56,9 @@ async def test_list_all_users_with_users(mock_okta_organization):
 
 
 @pytest.mark.asyncio
-async def test_create_group(mock_okta_organization):
+async def test_create_group(
+    mock_okta_organization,  # noqa: F811 # intentional for mocks
+):
 
     # Have to create user before getting it
     group_name = "example_groupname"
@@ -72,7 +80,9 @@ async def test_create_group(mock_okta_organization):
 
 
 @pytest.mark.asyncio
-async def test_update_group_members(mock_okta_organization):
+async def test_update_group_members(
+    mock_okta_organization,  # noqa: F811 # intentional for mocks
+):
 
     # Have to create group before getting it
     group_name = "example_groupname"
@@ -119,7 +129,7 @@ async def test_update_group_members(mock_okta_organization):
 
 
 @pytest.mark.asyncio
-async def test_get_group(mock_okta_organization):
+async def test_get_group(mock_okta_organization):  # noqa: F811 # intentional for mocks
 
     # Have to create group before getting it
     group_name = "example_groupname"
@@ -140,7 +150,9 @@ async def test_get_group(mock_okta_organization):
 
 
 @pytest.mark.asyncio
-async def test_update_group_name(mock_okta_organization):
+async def test_update_group_name(
+    mock_okta_organization,  # noqa: F811 # intentional for mocks
+):
 
     # Have to create group before getting it
     group_name = "example_groupname"
@@ -169,7 +181,9 @@ async def test_update_group_name(mock_okta_organization):
 
 
 @pytest.mark.asyncio
-async def test_update_group_description(mock_okta_organization):
+async def test_update_group_description(
+    mock_okta_organization,  # noqa: F811 # intentional for mocks
+):
 
     # Have to create group before getting it
     group_name = "example_groupname"
@@ -198,7 +212,9 @@ async def test_update_group_description(mock_okta_organization):
 
 
 @pytest.mark.asyncio
-async def test_maybe_delete_group(mock_okta_organization):
+async def test_maybe_delete_group(
+    mock_okta_organization,  # noqa: F811 # intentional for mocks
+):
 
     # Have to create group before getting it
     group_name = "example_groupname"
@@ -212,7 +228,6 @@ async def test_maybe_delete_group(mock_okta_organization):
     okta_group = await list_group_users(okta_group, mock_okta_organization)
     assert len(okta_group.members) == 0
 
-    new_group_description = "new description"
     context = ExecutionContext()
     context.eval_only = False
     proposed_changes = await maybe_delete_group(
@@ -227,7 +242,9 @@ async def test_maybe_delete_group(mock_okta_organization):
 
 
 @pytest.mark.asyncio
-async def test_list_all_group(mock_okta_organization):
+async def test_list_all_group(
+    mock_okta_organization,  # noqa: F811 # intentional for mocks
+):
 
     # Have to create group before getting it
     group_name = "example_groupname"

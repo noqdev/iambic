@@ -1,7 +1,9 @@
 import os
 import shutil
 import tempfile
-from test.plugins.v0_1_0.okta.test_utils import mock_okta_organization
+from test.plugins.v0_1_0.okta.test_utils import (  # noqa: F401 # intentional for mocks
+    mock_okta_organization,
+)
 
 import pytest
 import yaml
@@ -10,7 +12,6 @@ import iambic.core.utils
 from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
-from iambic.plugins.v0_1_0.okta.app.models import OktaAppTemplate
 from iambic.plugins.v0_1_0.okta.group.models import OktaGroupTemplate
 from iambic.plugins.v0_1_0.okta.group.template_generation import (
     collect_org_groups,

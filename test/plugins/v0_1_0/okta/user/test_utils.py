@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from collections import defaultdict, namedtuple
-from test.plugins.v0_1_0.okta.test_utils import mock_okta_organization
+from test.plugins.v0_1_0.okta.test_utils import (  # noqa: F401 # intentional for mocks
+    mock_okta_organization,
+)
 
 import okta.models
 import pytest
@@ -14,7 +15,7 @@ from iambic.plugins.v0_1_0.okta.user.models import (
     OktaUserTemplate,
     OktaUserTemplateProperties,
 )
-from iambic.plugins.v0_1_0.okta.user.utils import (  # update_user_attribute,
+from iambic.plugins.v0_1_0.okta.user.utils import (
     change_user_status,
     create_user,
     get_user,
@@ -24,7 +25,9 @@ from iambic.plugins.v0_1_0.okta.user.utils import (  # update_user_attribute,
 
 
 @pytest.mark.asyncio
-async def test_get_user_by_username(mock_okta_organization: OktaOrganization):
+async def test_get_user_by_username(
+    mock_okta_organization: OktaOrganization,  # noqa: F811 # intentional for mocks
+):
 
     # Have to create user before getting it
     username = "example_username"
@@ -43,7 +46,9 @@ async def test_get_user_by_username(mock_okta_organization: OktaOrganization):
 
 
 @pytest.mark.asyncio
-async def test_get_user_by_user_id(mock_okta_organization: OktaOrganization):
+async def test_get_user_by_user_id(
+    mock_okta_organization: OktaOrganization,  # noqa: F811 # intentional for mocks
+):
 
     # Have to create user before getting it
     username = "example_username"
@@ -62,7 +67,9 @@ async def test_get_user_by_user_id(mock_okta_organization: OktaOrganization):
 
 
 @pytest.mark.asyncio
-async def test_create_user(mock_okta_organization: OktaOrganization):
+async def test_create_user(
+    mock_okta_organization: OktaOrganization,  # noqa: F811 # intentional for mocks
+):
     username = "example_username"
     idp_name = "example.org"
     user_properties = OktaUserTemplateProperties(
@@ -76,7 +83,9 @@ async def test_create_user(mock_okta_organization: OktaOrganization):
 
 
 @pytest.mark.asyncio
-async def test_change_user_status(mock_okta_organization: OktaOrganization):
+async def test_change_user_status(
+    mock_okta_organization: OktaOrganization,  # noqa: F811 # intentional for mocks
+):
 
     # Have to create user before getting it
     username = "example_username"
@@ -110,7 +119,9 @@ async def test_change_user_status(mock_okta_organization: OktaOrganization):
 
 
 @pytest.mark.asyncio
-async def test_update_user_profile(mock_okta_organization: OktaOrganization):
+async def test_update_user_profile(
+    mock_okta_organization: OktaOrganization,  # noqa: F811 # intentional for mocks
+):
 
     # Have to create user before getting it
     username = "example_username"
@@ -150,7 +161,9 @@ async def test_update_user_profile(mock_okta_organization: OktaOrganization):
 
 
 @pytest.mark.asyncio
-async def test_maybe_deprovision_user(mock_okta_organization: OktaOrganization):
+async def test_maybe_deprovision_user(
+    mock_okta_organization: OktaOrganization,  # noqa: F811 # intentional for mocks
+):
 
     # Have to create user before getting it
     username = "example_username"

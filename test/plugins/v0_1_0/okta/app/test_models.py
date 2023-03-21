@@ -3,8 +3,12 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
-from test.plugins.v0_1_0.okta.app.test_utils import mock_application
-from test.plugins.v0_1_0.okta.test_utils import mock_okta_organization
+from test.plugins.v0_1_0.okta.app.test_utils import (  # noqa: F401 # intentional for mocks
+    mock_application,
+)
+from test.plugins.v0_1_0.okta.test_utils import (  # noqa: F401 # intentional for mocks
+    mock_okta_organization,
+)
 
 import pytest
 
@@ -69,13 +73,12 @@ def mock_fs():
 @pytest.mark.asyncio
 async def test_apply_app_assignment(
     mock_fs: tuple[str, str],
-    mock_application: tuple[
+    mock_application: tuple[  # noqa: F811 # intentional for mocks
         OktaOrganization, Group | None, App
     ],  # noqa: F811 # intentional for mocks
 ):
     test_template_path, temp_templates_directory = mock_fs
     okta_organization, okta_group, okta_app, _ = mock_application
-    idp_name = "example.org"
     app_properties = OktaAppTemplateProperties(
         id=okta_app.id,
         name=okta_app.name,

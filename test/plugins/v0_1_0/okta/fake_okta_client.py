@@ -1,4 +1,4 @@
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 
 import okta.models
 from okta.errors.okta_api_error import OktaAPIError
@@ -149,8 +149,6 @@ class FakeOktaClient:
             return (ResponseDetails(status=200, headers={}), defaultdict(list))
 
     async def update_group(self, group_id, group_model: okta.models.Group):
-        groupname = group_model.profile.name
-
         if group_id not in self.group_id_to_group:
             error_dict = defaultdict(list)
             error_dict["errorCode"] = "E0000007"
@@ -162,8 +160,8 @@ class FakeOktaClient:
             )
         else:
             group = self.group_id_to_group[group_id]
-            group.id = self.group_auto_increment_id
             old_group_name = group.profile.name
+            del self.groupname_to_group[old_group_name]
             group.profile = group_model.profile
             new_group_name = group.profile.name
             self.groupname_to_group[new_group_name] = group
@@ -322,7 +320,6 @@ class FakeOktaClient:
 
     async def list_application_users(self, app_id):
         if app_id in self.app_id_to_application:
-            app = self.app_id_to_application[app_id]
             users_ids = self.app_id_to_user_ids[app_id]
             users_from_user_assignments = set()
             for user_id in users_ids:
@@ -366,7 +363,6 @@ class FakeOktaClient:
 
     async def list_application_group_assignments(self, app_id):
         if app_id in self.app_id_to_application:
-            app = self.app_id_to_application[app_id]
             groups_ids = self.app_id_to_group_ids[app_id]
             group_assignments = []
             for group_id in groups_ids:

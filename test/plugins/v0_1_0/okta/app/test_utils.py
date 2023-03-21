@@ -1,5 +1,7 @@
 import asyncio
-from test.plugins.v0_1_0.okta.test_utils import mock_okta_organization
+from test.plugins.v0_1_0.okta.test_utils import (  # noqa: F401 # intentional for mocks
+    mock_okta_organization,
+)
 
 import okta.models
 import pytest
@@ -26,7 +28,9 @@ from iambic.plugins.v0_1_0.okta.user.utils import create_user
 
 
 @pytest.fixture
-def mock_application(mock_okta_organization: OktaOrganization):
+def mock_application(
+    mock_okta_organization: OktaOrganization,  # noqa: F811 # intentional for mocks
+):
 
     # Have to create group before getting it
     group_name = "example_groupname"
@@ -177,7 +181,6 @@ async def test_maybe_delete_app(
     mock_application: tuple[OktaOrganization, Group | None, App]
 ):
     okta_organization, _, okta_app, _ = mock_application
-    new_app_name = "new application name"
     context = ExecutionContext()
     context.eval_only = False
     proposed_changes = await maybe_delete_app(

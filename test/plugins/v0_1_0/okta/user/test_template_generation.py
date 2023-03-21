@@ -1,7 +1,9 @@
 import os
 import shutil
 import tempfile
-from test.plugins.v0_1_0.okta.test_utils import mock_okta_organization
+from test.plugins.v0_1_0.okta.test_utils import (  # noqa: F401 # intentional for mocks
+    mock_okta_organization,
+)
 
 import pytest
 import yaml
