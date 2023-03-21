@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict, namedtuple
+from test.plugins.v0_1_0.okta.fake_okta_client import FakeOktaClient
 
 import okta.models
 import pytest
@@ -9,7 +10,20 @@ from okta.errors.okta_api_error import OktaAPIError
 
 from iambic.core.exceptions import RateLimitException
 from iambic.plugins.v0_1_0.okta.exceptions import UserProfileNotUpdatableYet
+from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
 from iambic.plugins.v0_1_0.okta.utils import generate_user_profile, handle_okta_fn
+
+
+@pytest.fixture
+def mock_okta_organization() -> OktaOrganization:
+    idp_name = "example.org"
+    okta_organization = OktaOrganization(
+        idp_name=idp_name,
+        org_url="https://example.org.okta.com/",
+        api_token="fake_token",
+    )
+    okta_organization.client = FakeOktaClient()
+    return okta_organization
 
 
 @pytest.mark.asyncio
