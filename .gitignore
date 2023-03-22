@@ -138,3 +138,4 @@ proposed_changes.yaml
 deployment/github_app/.terraform/
 deployment/github_app/terraform.tfstate*
 test_render_resource_changes*.md
+cov_unit_tests.xml

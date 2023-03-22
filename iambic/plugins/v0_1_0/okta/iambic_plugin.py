@@ -28,7 +28,7 @@ class OktaOrganization(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    async def get_okta_client(self):
+    async def get_okta_client(self) -> OktaClient:
         if not self.client:
             self.client = OktaClient(
                 {

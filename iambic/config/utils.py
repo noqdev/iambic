@@ -15,7 +15,7 @@ async def resolve_config_template_path(repo_dir: str) -> pathlib.Path:
     config_template_file_path = await gather_templates(repo_dir, "Core::Config")
     if len(config_template_file_path) == 0:
         raise RuntimeError(
-            f"Unable to discover iambic Configuration in {repo_dir}. "
+            f"Unable to discover IAMbic Configuration in {repo_dir}. "
             "Create a configuration with the `NOQ::Core::Config` template type. "
             "You can run `iambic setup` to generate a configuration."
         )
@@ -31,7 +31,7 @@ async def resolve_config_template_path(repo_dir: str) -> pathlib.Path:
 
 def check_and_update_resource_limit(config: Config):
     soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
-    minimum_ulimit = 4096
+    minimum_ulimit = 64000
     if config.core:
         minimum_ulimit = config.core.minimum_ulimit
     if soft_limit < minimum_ulimit:

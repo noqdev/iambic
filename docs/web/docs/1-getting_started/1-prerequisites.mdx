@@ -1,0 +1,35 @@
+---
+title: Prerequisites
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+Before getting started with IAMbic, make sure you have the following prerequisites
+installed on your system.
+
+
+## Operating system
+
+Mac, Linux, or Windows Subsystem for Linux (WSL)
+
+## Git
+
+1. Follow the instructions on the [Git website](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) to download and install Git on your operating system.
+
+## Python
+
+Python is required if you want to run IAMbic on your local machine, instead
+of in a Docker container. This is the recommended way to run IAMbic.
+
+1. Install Python 3.9+ ([Download Python](https://www.python.org/downloads/))
+
+## Docker
+
+Docker is only needed if you want to run IAMbic in a container.
+
+1. Docker ([Install Docker](https://docs.docker.com/get-docker/))
+1. Confirm Docker is installed properly:
+
+```bash
+docker run --rm busybox true
+```
