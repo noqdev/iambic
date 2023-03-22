@@ -11,7 +11,7 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, constr, validator
 from ruamel.yaml import YAML, yaml_object
 
-from iambic.core.context import ExecutionContext
+from iambic.core.context import ctx
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -684,14 +684,10 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
 class AWSTemplate(BaseTemplate, ExpiryModel):
     identifier: str
 
-    async def _apply_to_account(
-        self, aws_account: AWSAccount, context: ExecutionContext
-    ) -> AccountChangeDetails:
+    async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
         raise NotImplementedError
 
-    async def apply(
-        self, config: AWSConfig, context: ExecutionContext
-    ) -> TemplateChangeDetails:
+    async def apply(self, config: AWSConfig) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
             resource_id=self.resource_id,
@@ -702,13 +698,13 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
             resource_type=self.resource_type, resource_id=self.resource_id
         )
         for account in config.accounts:
-            if evaluate_on_provider(self, account, context):
-                if context.execute:
+            if evaluate_on_provider(self, account):
+                if ctx.execute:
                     log_str = "Applying changes to resource."
                 else:
                     log_str = "Detecting changes for resource."
                 log.info(log_str, account=str(account), **log_params)
-                tasks.append(self._apply_to_account(account, context))
+                tasks.append(self._apply_to_account(account))
 
         account_changes: list[AccountChangeDetails] = await asyncio.gather(*tasks)
         template_changes.proposed_changes = [
@@ -725,12 +721,12 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
 
         proposed_changes = [x for x in account_changes if x.proposed_changes]
 
-        if proposed_changes and context.execute:
+        if proposed_changes and ctx.execute:
             log.info(
                 "Successfully applied all or some resource changes to all aws_accounts. Any unapplied resources will have an accompanying error message.",
                 **log_params,
             )
-        elif proposed_changes and not context.execute:
+        elif proposed_changes and not ctx.execute:
             log.info(
                 "Successfully detected all or some required resource changes on all aws_accounts. Any unapplied resources will have an accompanying error message.",
                 **log_params,

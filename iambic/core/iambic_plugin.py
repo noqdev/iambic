@@ -6,7 +6,6 @@ from typing import Any, Optional
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
 
-from iambic.core.context import ctx
 from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
 
 
@@ -25,7 +24,7 @@ async def default_apply_callable(
     :param remote_worker: The remote worker to use for applying templates.
     """
     template_changes = await asyncio.gather(
-        *[template.apply(config, ctx) for template in templates]
+        *[template.apply(config) for template in templates]
     )
 
     return [

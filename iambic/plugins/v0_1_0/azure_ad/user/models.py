@@ -9,7 +9,7 @@ from typing import Optional, Union
 from aiohttp import ClientResponseError
 from pydantic import Field
 
-from iambic.core.context import ExecutionContext, ctx
+from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -116,7 +116,7 @@ class UserTemplate(ExpiryModel, AzureADTemplate):
         return "azure_ad:user"
 
     async def _apply_to_account(
-        self, azure_ad_organization: AzureADOrganization, context: ExecutionContext
+        self, azure_ad_organization: AzureADOrganization
     ) -> AccountChangeDetails:
         from iambic.plugins.v0_1_0.azure_ad.user.utils import (
             create_user,
@@ -173,7 +173,7 @@ class UserTemplate(ExpiryModel, AzureADTemplate):
         user_exists = bool(cloud_user)
         tasks = []
 
-        await self.remove_expired_resources(context)
+        await self.remove_expired_resources()
 
         if not user_exists and not self.deleted:
             log_str = "New resource found in code."
@@ -186,7 +186,7 @@ class UserTemplate(ExpiryModel, AzureADTemplate):
                     )
                 ]
             )
-            if not context.execute:
+            if not ctx.execute:
                 log.info(log_str, **log_params)
                 # Exit now because apply functions won't work if resource doesn't exist
                 return change_details

@@ -20,7 +20,6 @@ from ruamel.yaml import YAML
 
 from iambic.core import noq_json as json
 from iambic.core.aio_utils import gather_limit
-from iambic.core.context import ExecutionContext
 from iambic.core.exceptions import RateLimitException
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -36,7 +35,6 @@ __WRITABLE_DIRECTORY__ = pathlib.Path.home()
 
 
 def init_writable_directory() -> None:
-
     # use during development
     __WRITABLE_DIRECTORY__ = pathlib.Path.home()
 
@@ -323,7 +321,6 @@ def sort_dict(original, prioritize=None):
 
 
 def transform_comments(yaml_dict):
-
     comment_dict = {}
     yaml_dict["metadata_commented_dict"] = comment_dict
     for key, comment in yaml_dict.ca.items.items():
@@ -363,7 +360,6 @@ yaml.width = 4096
 def evaluate_on_provider(
     resource,
     provider_details,
-    context: ExecutionContext,
     exclude_import_only: bool = True,
 ) -> bool:
     """
@@ -377,7 +373,6 @@ def evaluate_on_provider(
     Args:
     - resource: The resource to be evaluated.
     - provider_details: The provider details to use for the evaluation.
-    - context (ExecutionContext): The execution context for the evaluation.
     - exclude_import_only (bool, optional): A flag indicating whether to exclude resources that are marked as
         import-only. Default is True.
 
@@ -436,11 +431,11 @@ def evaluate_on_provider(
     return False
 
 
-def apply_to_provider(resource, provider_details, context: ExecutionContext) -> bool:
+def apply_to_provider(resource, provider_details) -> bool:
     if hasattr(resource, "deleted") and resource.deleted:
         return False
 
-    return evaluate_on_provider(resource, provider_details, context)
+    return evaluate_on_provider(resource, provider_details)
 
 
 def is_regex_match(regex, test_string):

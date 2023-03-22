@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import shutil
 import tempfile
@@ -9,7 +11,6 @@ import pytest
 import yaml
 
 import iambic.core.utils
-from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
@@ -66,9 +67,10 @@ async def test_collect_org_apps(
         profile={"login": username},
     )
     template = OktaUserTemplate(file_path="example", properties=user_properties)
-    context = ExecutionContext()
-    context.eval_only = False
-    okta_user = await create_user(template, mock_okta_organization, context)
+    okta_user = await create_user(
+        template,
+        mock_okta_organization,
+    )
 
     execution_id = "foo"
     exe_message = ExecutionMessage(

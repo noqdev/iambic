@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 from pydantic import Field, validator
 
-from iambic.core.context import ExecutionContext, ctx
+from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -104,9 +104,7 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
     owner: Optional[str] = Field(None, description="Owner of the group")
     properties: GroupTemplateProperties
 
-    def apply_resource_dict(
-        self, google_project: GoogleProject, context: ExecutionContext
-    ):
+    def apply_resource_dict(self, google_project: GoogleProject):
         return {
             "name": self.properties.name,
             "email": self.properties.email,
@@ -115,9 +113,9 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
         }
 
     async def _apply_to_account(
-        self, google_project: GoogleProject, context: ExecutionContext
+        self, google_project: GoogleProject
     ) -> AccountChangeDetails:
-        proposed_group = self.apply_resource_dict(google_project, context)
+        proposed_group = self.apply_resource_dict(google_project)
         change_details = AccountChangeDetails(
             account=self.properties.domain,
             resource_id=self.properties.email,
@@ -146,7 +144,7 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
 
         tasks = []
 
-        await self.remove_expired_resources(context)
+        await self.remove_expired_resources()
 
         if not group_exists:
             if self.deleted:
@@ -162,7 +160,7 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
                 )
             )
             log_str = "New resource found in code."
-            if not context.execute:
+            if not ctx.execute:
                 log.info(log_str, **log_params)
                 # Exit now because apply functions won't work if resource doesn't exist
                 return change_details
@@ -198,7 +196,6 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
                     current_group.properties.domain,
                     self.properties.domain,
                     log_params,
-                    context,
                 ),
                 update_group_email(
                     current_group.properties.email,
@@ -206,7 +203,6 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
                     self.properties.domain,
                     google_project,
                     log_params,
-                    context,
                 ),
                 update_group_name(
                     self.properties.email,
@@ -215,7 +211,6 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
                     self.properties.domain,
                     google_project,
                     log_params,
-                    context,
                 ),
                 update_group_description(
                     self.properties.email,
@@ -224,7 +219,6 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
                     self.properties.domain,
                     google_project,
                     log_params,
-                    context,
                 ),
                 update_group_members(
                     self.properties.email,
@@ -237,7 +231,6 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
                     self.properties.domain,
                     google_project,
                     log_params,
-                    context,
                 ),
             ]
         )
@@ -247,7 +240,6 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
             self,
             google_project,
             log_params,
-            context,
         )
         changes_made.extend(deletion_change)
         if any(changes_made):
@@ -255,7 +247,7 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
                 list(chain.from_iterable(changes_made))
             )
 
-        if context.execute:
+        if ctx.execute:
             log.debug(
                 "Successfully finished execution for resource",
                 changes_made=bool(change_details.proposed_changes),

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 from pydantic import Field, validator
 
-from iambic.core.context import ExecutionContext, ctx
+from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -70,9 +70,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
     )
     owner: Optional[str] = Field(None, description="Owner of the app")
 
-    async def apply(
-        self, config: OktaConfig, context: ExecutionContext
-    ) -> TemplateChangeDetails:
+    async def apply(self, config: OktaConfig) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
             resource_id=self.properties.id,
@@ -91,12 +89,12 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
             return template_changes
 
         for okta_organization in config.organizations:
-            if context.execute:
+            if ctx.execute:
                 log_str = "Applying changes to resource."
             else:
                 log_str = "Detecting changes for resource."
             log.info(log_str, idp_name=okta_organization.idp_name, **log_params)
-            tasks.append(self._apply_to_account(okta_organization, context))
+            tasks.append(self._apply_to_account(okta_organization))
 
         account_changes = await asyncio.gather(*tasks)
         template_changes.proposed_changes = [
@@ -107,7 +105,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
 
         proposed_changes = [x for x in account_changes if x.proposed_changes]
 
-        if proposed_changes and context.execute:
+        if proposed_changes and ctx.execute:
             log.info(
                 "Successfully applied all or some resource changes to all Okta organizations. Any unapplied resources will have an accompanying error message.",
                 **log_params,
@@ -139,11 +137,12 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
         )
 
     def apply_resource_dict(
-        self, okta_organization: OktaOrganization, context: ExecutionContext
+        self,
+        okta_organization: OktaOrganization,
     ):
         return {
             "name": self.properties.name,
-            "owner": self.properties.owner,
+            "owner": self.owner,
             "status": self.properties.status,
             "idp_name": self.properties.idp_name,
             "description": self.properties.description,
@@ -153,9 +152,10 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
         }
 
     async def _apply_to_account(
-        self, okta_organization: OktaOrganization, context: ExecutionContext
+        self,
+        okta_organization: OktaOrganization,
     ) -> AccountChangeDetails:
-        proposed_app = self.apply_resource_dict(okta_organization, context)
+        proposed_app = self.apply_resource_dict(okta_organization)
         change_details = AccountChangeDetails(
             account=self.properties.idp_name,
             resource_id=self.properties.id,
@@ -211,7 +211,6 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
                     self.properties.name,
                     okta_organization,
                     log_params,
-                    context,
                 ),
                 update_app_assignments(
                     current_app,
@@ -222,14 +221,12 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
                     ],
                     okta_organization,
                     log_params,
-                    context,
                 ),
                 maybe_delete_app(
                     self.deleted,
                     current_app,
                     okta_organization,
                     log_params,
-                    context,
                 ),
             ]
         )
@@ -240,7 +237,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
                 list(chain.from_iterable(changes_made))
             )
 
-        if context.execute:
+        if ctx.execute:
             log.debug(
                 "Successfully finished execution for resource",
                 changes_made=bool(change_details.proposed_changes),

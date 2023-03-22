@@ -32,7 +32,6 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, root_validator, validate_model, validator
 from pydantic.fields import ModelField
 
-from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import Command, ExecutionStatus, IambicManaged
 from iambic.core.logger import log
 from iambic.core.utils import (
@@ -56,7 +55,6 @@ if TYPE_CHECKING:
 
 
 class IambicPydanticBaseModel(PydanticBaseModel):
-
     metadata_iambic_fields = Field(
         set(), description="metadata for iambic", exclude=True
     )
@@ -142,7 +140,6 @@ class BaseModel(IambicPydanticBaseModel):
         aws_account: AWSAccount,
         attr: str,
         as_boto_dict: bool = True,
-        context: ExecutionContext = None,
     ):
         """
         Retrieve the value of an attribute for a specific AWS account.
@@ -150,7 +147,6 @@ class BaseModel(IambicPydanticBaseModel):
         :param aws_account: The AWSAccount object for which the attribute value should be retrieved.
         :param attr: The attribute name (supports nested attributes via dot notation, e.g., properties.tags).
         :param as_boto_dict: If True, the value will be transformed to a boto dictionary if applicable.
-        :param context: An optional ExecutionContext object.
         :return: The attribute value for the specified AWS account.
         """
         # Support for nested attributes via dot notation. Example: properties.tags
@@ -159,12 +155,12 @@ class BaseModel(IambicPydanticBaseModel):
             attr_val = getattr(attr_val, attr_key)
 
         if as_boto_dict and hasattr(attr_val, "_apply_resource_dict"):
-            return attr_val._apply_resource_dict(aws_account, context)
+            return attr_val._apply_resource_dict(aws_account)
         elif not isinstance(attr_val, list):
             return attr_val
 
         matching_definitions = [
-            val for val in attr_val if apply_to_provider(val, aws_account, context)
+            val for val in attr_val if apply_to_provider(val, aws_account)
         ]
         if len(matching_definitions) == 0:
             # Fallback to the default definition
@@ -176,7 +172,7 @@ class BaseModel(IambicPydanticBaseModel):
             return field.__fields__[split_key[-1]].default
         elif as_boto_dict:
             return [
-                match._apply_resource_dict(aws_account, context)
+                match._apply_resource_dict(aws_account)
                 if hasattr(match, "_apply_resource_dict")
                 else match
                 for match in matching_definitions
@@ -184,9 +180,7 @@ class BaseModel(IambicPydanticBaseModel):
         else:
             return matching_definitions
 
-    def _apply_resource_dict(
-        self, aws_account: AWSAccount = None, context: ExecutionContext = None
-    ) -> dict:
+    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
         exclude_keys = {
             "deleted",
             "expires_at",
@@ -208,7 +202,6 @@ class BaseModel(IambicPydanticBaseModel):
                 k: self.get_attribute_val_for_account(
                     aws_account,
                     f"properties.{k}" if has_properties else k,
-                    context=context,
                 )
                 for k in properties.__dict__.keys()
                 if k not in exclude_keys
@@ -223,10 +216,8 @@ class BaseModel(IambicPydanticBaseModel):
 
         return {self.case_convention(k): v for k, v in resource_dict.items()}
 
-    def apply_resource_dict(
-        self, aws_account: AWSAccount, context: ExecutionContext
-    ) -> dict:
-        response = self._apply_resource_dict(aws_account, context)
+    def apply_resource_dict(self, aws_account: AWSAccount) -> dict:
+        response = self._apply_resource_dict(aws_account)
         variables = {var.key: var.value for var in aws_account.variables}
         variables["account_id"] = aws_account.account_id
         variables["account_name"] = aws_account.account_name
@@ -241,7 +232,7 @@ class BaseModel(IambicPydanticBaseModel):
         data = rtemplate.render(**variables)
         return json.loads(data)
 
-    async def remove_expired_resources(self, context: ExecutionContext):
+    async def remove_expired_resources(self):
         # Look at current model and recurse through submodules to see if it is a subclass of ExpiryModel
         # If it is, then call the remove_expired_resources method
 
@@ -256,7 +247,7 @@ class BaseModel(IambicPydanticBaseModel):
             if isinstance(field_val, list):
                 await asyncio.gather(
                     *[
-                        elem.remove_expired_resources(context)
+                        elem.remove_expired_resources()
                         for elem in field_val
                         if isinstance(elem, BaseModel)
                     ]
@@ -272,7 +263,7 @@ class BaseModel(IambicPydanticBaseModel):
 
             else:
                 if isinstance(field_val, BaseModel):
-                    await field_val.remove_expired_resources(context)
+                    await field_val.remove_expired_resources()
                     if getattr(field_val, "deleted", None) is True:
                         setattr(self, field_name, None)
 
@@ -439,7 +430,6 @@ class AccessModelMixin:
         raise NotImplementedError
 
     def access_model_sort_weight(self):
-
         # we have to pay the price eo sort it before using the value
         # because the validators are only called during model creation
         # and others have may have mutate the list value
@@ -514,7 +504,6 @@ class BaseTemplate(
         return as_yaml
 
     def write(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
-
         # pay the cost of validating the models once more.
         self.validate_model_afterward()
 
@@ -538,9 +527,7 @@ class BaseTemplate(
             )
             os.remove(self.file_path)
 
-    async def apply(
-        self, config: Config, context: ExecutionContext
-    ) -> TemplateChangeDetails:
+    async def apply(self, config: Config) -> TemplateChangeDetails:
         raise NotImplementedError
 
     @classmethod

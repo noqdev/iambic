@@ -7,7 +7,7 @@ from typing import Any, List, Optional
 from aiohttp import ClientResponseError
 from pydantic import Field
 
-from iambic.core.context import ExecutionContext, ctx
+from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -80,9 +80,7 @@ class GroupTemplate(ExpiryModel, AzureADTemplate):
     def resource_type(self) -> str:
         return "azure_ad:group"
 
-    def apply_resource_dict(
-        self, azure_ad_organization: AzureADOrganization, context: ExecutionContext
-    ):
+    def apply_resource_dict(self, azure_ad_organization: AzureADOrganization):
         return {
             "name": self.properties.name,
             "description": self.properties.description,
@@ -90,7 +88,7 @@ class GroupTemplate(ExpiryModel, AzureADTemplate):
         }
 
     async def _apply_to_account(
-        self, azure_ad_organization: AzureADOrganization, context: ExecutionContext
+        self, azure_ad_organization: AzureADOrganization
     ) -> AccountChangeDetails:
         from iambic.plugins.v0_1_0.azure_ad.group.utils import (
             create_group,
@@ -146,7 +144,7 @@ class GroupTemplate(ExpiryModel, AzureADTemplate):
         group_exists = bool(cloud_group)
         tasks = []
 
-        await self.remove_expired_resources(context)
+        await self.remove_expired_resources()
 
         if not group_exists and not self.deleted:
             log_str = "New resource found in code."
@@ -159,7 +157,7 @@ class GroupTemplate(ExpiryModel, AzureADTemplate):
                     )
                 ]
             )
-            if not context.execute:
+            if not ctx.execute:
                 log.info(log_str, **log_params)
                 # Exit now because apply functions won't work if resource doesn't exist
                 return change_details

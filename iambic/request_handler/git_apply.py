@@ -7,7 +7,6 @@ import uuid
 from git import Repo
 
 from iambic.config.dynamic_config import load_config
-from iambic.core.context import ExecutionContext, ctx
 from iambic.core.git import (
     create_templates_for_deleted_files,
     create_templates_for_modified_files,
@@ -23,7 +22,6 @@ from iambic.request_handler.expire_resources import flag_expired_resources
 async def apply_git_changes(
     config_path: str,
     repo_dir: str,
-    context: ExecutionContext = None,
     allow_dirty: bool = False,
     from_sha: str = None,
     to_sha: str = None,
@@ -44,8 +42,6 @@ async def apply_git_changes(
     :param to_sha:
     :return:
     """
-    if context is None:
-        context = ctx
 
     config = await load_config(config_path)
     file_changes = await retrieve_git_changes(
@@ -103,7 +99,6 @@ async def apply_git_changes(
 def commit_deleted_templates(
     repo_dir: str, templates: list[BaseTemplate], details: list[TemplateChangeDetails]
 ):
-
     repo = Repo(repo_dir)
 
     # intended to delete
@@ -112,9 +107,7 @@ def commit_deleted_templates(
     }
 
     for template_detail in details:
-
         if template_detail.template_path in deleted_template_path_to_template:
-
             if template_detail.exceptions_seen:
                 log_params = {"path": template_detail.template_path}
                 log.error(

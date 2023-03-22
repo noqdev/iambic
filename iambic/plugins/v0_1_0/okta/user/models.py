@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import Field
 
-from iambic.core.context import ExecutionContext, ctx
+from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -78,7 +78,8 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
     )
 
     async def apply(
-        self, config: OktaConfig, context: ExecutionContext
+        self,
+        config: OktaConfig,
     ) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
@@ -98,12 +99,12 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
             return template_changes
 
         for okta_organization in config.organizations:
-            if context.execute:
+            if ctx.execute:
                 log_str = "Applying changes to resource."
             else:
                 log_str = "Detecting changes for resource."
             log.info(log_str, idp_name=okta_organization.idp_name, **log_params)
-            tasks.append(self._apply_to_account(okta_organization, context))
+            tasks.append(self._apply_to_account(okta_organization))
 
         account_changes = await asyncio.gather(*tasks)
         template_changes.proposed_changes = [
@@ -114,7 +115,7 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
 
         proposed_changes = [x for x in account_changes if x.proposed_changes]
 
-        if proposed_changes and context.execute:
+        if proposed_changes and ctx.execute:
             log.info(
                 "Successfully applied all or some resource changes to all Okta organizations. Any unapplied resources will have an accompanying error message.",
                 **log_params,
@@ -146,7 +147,8 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
         )
 
     def apply_resource_dict(
-        self, okta_organization: OktaOrganization, context: ExecutionContext
+        self,
+        okta_organization: OktaOrganization,
     ):
         return {
             "username": self.properties.username,
@@ -157,10 +159,9 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
     async def _apply_to_account(
         self,
         okta_organization: OktaOrganization,
-        context: ExecutionContext,
     ) -> AccountChangeDetails:
-        await self.remove_expired_resources(context)
-        proposed_user = self.apply_resource_dict(okta_organization, context)
+        await self.remove_expired_resources()
+        proposed_user = self.apply_resource_dict(okta_organization)
         change_details = AccountChangeDetails(
             account=self.properties.idp_name,
             resource_id=self.properties.username,
@@ -207,7 +208,7 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
                 )
             )
             log_str = "New resource found in code."
-            if not context.execute:
+            if not ctx.execute:
                 log.info(log_str, **log_params)
                 # Exit now because apply functions won't work if resource doesn't exist
                 return change_details
@@ -218,7 +219,6 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
             current_user: User = await create_user(
                 self,
                 okta_organization=okta_organization,
-                context=context,
             )
             if current_user:
                 change_details.current_value = current_user
@@ -242,7 +242,6 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
                     self.properties.status.value,
                     okta_organization,
                     log_params,
-                    context,
                 ),
                 update_user_profile(
                     self,
@@ -250,10 +249,12 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
                     self.properties.profile,
                     okta_organization,
                     log_params,
-                    context,
                 ),
                 maybe_deprovision_user(
-                    self.deleted, current_user, okta_organization, log_params, context
+                    self.deleted,
+                    current_user,
+                    okta_organization,
+                    log_params,
                 ),
             ]
         )
@@ -264,7 +265,7 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
                 list(chain.from_iterable(changes_made))
             )
 
-        if context.execute:
+        if ctx.execute:
             log.debug(
                 "Successfully finished execution for resource",
                 changes_made=bool(change_details.proposed_changes),

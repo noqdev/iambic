@@ -4,7 +4,7 @@ import asyncio
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from iambic.core.context import ExecutionContext
+from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -89,13 +89,10 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
     async def _apply_to_account(
         self,
         google_project: GoogleProject,
-        context: ExecutionContext,
     ) -> AccountChangeDetails:
         raise NotImplementedError
 
-    async def apply(
-        self, config: GoogleWorkspaceConfig, context: ExecutionContext
-    ) -> TemplateChangeDetails:
+    async def apply(self, config: GoogleWorkspaceConfig) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
             resource_id=self.properties.email,
@@ -107,12 +104,12 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
         )
         for account in config.workspaces:
             # if evaluate_on_google_account(self, account):
-            if context.execute:
+            if ctx.execute:
                 log_str = "Applying changes to resource."
             else:
                 log_str = "Detecting changes for resource."
             log.info(log_str, **log_params)
-            tasks.append(self._apply_to_account(account, context))
+            tasks.append(self._apply_to_account(account))
 
         account_changes = await asyncio.gather(*tasks)
         template_changes.proposed_changes = [
@@ -123,7 +120,7 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
 
         proposed_changes = [x for x in account_changes if x.proposed_changes]
 
-        if proposed_changes and context.execute:
+        if proposed_changes and ctx.execute:
             log.info(
                 "Successfully applied all or some resource changes to all Google projects. Any unapplied resources will have an accompanying error message.",
                 **log_params,

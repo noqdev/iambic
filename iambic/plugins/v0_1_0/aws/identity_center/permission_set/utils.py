@@ -7,7 +7,7 @@ from botocore.exceptions import ClientError
 from deepdiff import DeepDiff
 
 from iambic.core import noq_json as json
-from iambic.core.context import ExecutionContext
+from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper, async_batch_processor, plugin_apply_wrapper
@@ -202,7 +202,6 @@ async def apply_permission_set_aws_managed_policies(
     template_policy_arns: list[str],
     existing_policy_arns: list[str],
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     tasks = []
     response = []
@@ -224,7 +223,7 @@ async def apply_permission_set_aws_managed_policies(
                 )
             ]
             response.extend(proposed_changes)
-            if context.execute:
+            if ctx.execute:
                 log_str = f"{log_str} Attaching AWS managed policies..."
                 apply_awaitable = boto_crud_call(
                     identity_center_client.attach_managed_policy_to_permission_set,
@@ -252,7 +251,7 @@ async def apply_permission_set_aws_managed_policies(
                 )
             ]
             response.extend(proposed_changes)
-            if context.execute:
+            if ctx.execute:
                 log_str = f"{log_str} Detaching AWS managed policies..."
                 apply_awaitable = boto_crud_call(
                     identity_center_client.detach_managed_policy_from_permission_set,
@@ -291,7 +290,6 @@ async def apply_permission_set_customer_managed_policies(
     template_policies: list[dict],
     existing_policies: list[dict],
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     tasks = []
     response = []
@@ -326,7 +324,7 @@ async def apply_permission_set_customer_managed_policies(
                 )
             ]
             response.extend(proposed_changes)
-            if context.execute:
+            if ctx.execute:
                 log_str = f"{log_str} Attaching customer managed policies..."
                 apply_awaitable = boto_crud_call(
                     identity_center_client.attach_customer_managed_policy_reference_to_permission_set,
@@ -358,7 +356,7 @@ async def apply_permission_set_customer_managed_policies(
                 )
             ]
             response.extend(proposed_changes)
-            if context.execute:
+            if ctx.execute:
                 log_str = f"{log_str} Detaching customer managed policies..."
                 apply_awaitable = detach_customer_managed_policy_ref(
                     identity_center_client,
@@ -479,7 +477,6 @@ async def apply_account_assignments(
     template_assignments: list[dict],
     existing_assignments: list[dict],
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     """
     assignment objects = dict(
@@ -496,7 +493,6 @@ async def apply_account_assignments(
     template_assignments: list[dict]. This is the desired list of assignments from the template
     existing_assignments: list[dict]. These are the existing assignments from AWS
     log_params: dict
-    context: ExecutionContext
     """
     tasks = []
     response = []
@@ -522,7 +518,7 @@ async def apply_account_assignments(
                 )
             ]
             response.extend(proposed_changes)
-            if context.execute:
+            if ctx.execute:
                 log_str = f"{log_str} Removing account assignment..."
                 apply_awaitable = delete_account_assignment(
                     identity_center_client,
@@ -551,7 +547,7 @@ async def apply_account_assignments(
             response.extend(proposed_changes)
 
             log_str = "New account assignments discovered."
-            if context.execute:
+            if ctx.execute:
                 log_str = f"{log_str} Creating account assignment..."
                 apply_awaitable = create_account_assignment(
                     identity_center_client,
@@ -580,7 +576,6 @@ async def apply_permission_set_inline_policy(
     template_inline_policy: str,
     existing_inline_policy: str,
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     response = []
     policy_drift = None
@@ -621,7 +616,7 @@ async def apply_permission_set_inline_policy(
                 )
             )
 
-        if context.execute:
+        if ctx.execute:
             boto_action = "Creating" if not existing_inline_policy else "Updating"
             log_str = f"{log_str} {boto_action} InlinePolicyDocument..."
             await boto_crud_call(
@@ -640,7 +635,7 @@ async def apply_permission_set_inline_policy(
                 current_value=existing_inline_policy,
             )
         )
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Removing InlinePolicyDocument..."
             await boto_crud_call(
                 identity_center_client.delete_inline_policy_from_permission_set,
@@ -659,7 +654,6 @@ async def apply_permission_set_permission_boundary(
     template_permission_boundary: dict,
     existing_permission_boundary: dict,
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     response = []
     policy_drift = None
@@ -696,7 +690,7 @@ async def apply_permission_set_permission_boundary(
                 )
             )
 
-        if context.execute:
+        if ctx.execute:
             boto_action = "Creating" if not existing_permission_boundary else "Updating"
             log_str = f"{log_str} {boto_action} PermissionsBoundary..."
             await boto_crud_call(
@@ -716,7 +710,7 @@ async def apply_permission_set_permission_boundary(
             )
         )
 
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Deleting PermissionsBoundary..."
             await boto_crud_call(
                 identity_center_client.delete_permissions_boundary_from_permission_set,
@@ -735,7 +729,6 @@ async def apply_permission_set_tags(
     template_tags: list[dict],
     existing_tags: list[dict],
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     existing_tag_map = {tag["Key"]: tag.get("Value") for tag in existing_tags}
     template_tag_map = {tag["Key"]: tag.get("Value") for tag in template_tags}
@@ -759,7 +752,7 @@ async def apply_permission_set_tags(
             )
         ]
         response.extend(proposed_changes)
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Removing tags..."
             apply_awaitable = boto_crud_call(
                 identity_center_client.untag_resource,
@@ -782,7 +775,7 @@ async def apply_permission_set_tags(
         ]
         response.extend(proposed_changes)
 
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Adding tags..."
             apply_awaitable = boto_crud_call(
                 identity_center_client.tag_resource,

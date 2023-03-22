@@ -7,7 +7,7 @@ import unittest
 
 from mock import AsyncMock, MagicMock
 
-from iambic.core.context import ExecutionContext
+from iambic.core.context import ctx
 from iambic.core.models import ProposedChangeType, TemplateChangeDetails
 
 
@@ -60,18 +60,17 @@ class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
         ]
 
     async def test_apply_with_projects(self):
-        context = ExecutionContext()
-        context.eval_only = True
+        ctx.eval_only = True
         google_workspace_config = copy.deepcopy(self.google_workspace_config)
-        template_changes = await self.template.apply(google_workspace_config, context)
+        template_changes = await self.template.apply(google_workspace_config)
 
         self.assertIsInstance(template_changes, TemplateChangeDetails)
         self.assertEqual(template_changes.resource_id, "test@example.com")
         self.assertEqual(template_changes.resource_type, "google:group")
         self.assertEqual(template_changes.template_path, self.temp_file_path)
         self.assertEqual(len(template_changes.proposed_changes), 2)
-        context.eval_only = False
-        template_changes = await self.template.apply(google_workspace_config, context)
+        ctx.eval_only = False
+        template_changes = await self.template.apply(google_workspace_config)
         self.assertEqual(
             google_workspace_config.workspaces[
                 0
@@ -80,8 +79,7 @@ class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_apply_to_account_new_group(self):
-        context = ExecutionContext()
-        context.eval_only = True
+        ctx.eval_only = True
         # Set up mock for get_group function to return None (group doesn't exist)
         with unittest.mock.patch(
             "iambic.plugins.v0_1_0.google_workspace.group.models.get_group",
@@ -96,7 +94,7 @@ class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
             ) as mock_create_group:
                 # Call the _apply_to_account method
                 change_details = await self.template._apply_to_account(
-                    self.google_project1, context
+                    self.google_project1
                 )
 
                 # Test that the create_group function not called
@@ -115,10 +113,10 @@ class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
                     self.template.properties.resource_type,
                 )
 
-                context.eval_only = False
+                ctx.eval_only = False
 
                 change_details = await self.template._apply_to_account(
-                    self.google_project1, context
+                    self.google_project1
                 )
 
                 # Test that the create_group function was called

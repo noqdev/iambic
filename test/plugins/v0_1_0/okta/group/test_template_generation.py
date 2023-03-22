@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import shutil
 import tempfile
@@ -9,7 +11,6 @@ import pytest
 import yaml
 
 import iambic.core.utils
-from iambic.core.context import ExecutionContext
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
 from iambic.plugins.v0_1_0.okta.group.models import OktaGroupTemplate
@@ -56,14 +57,11 @@ async def test_collect_org_apps(
 
     group_name = "example_group"
     description = "example description"
-    context = ExecutionContext()
-    context.eval_only = False
     okta_group = await create_group(
         group_name,
         mock_okta_organization.idp_name,
         description,
         mock_okta_organization,
-        context,
     )
 
     okta_organization = mock_okta_organization
