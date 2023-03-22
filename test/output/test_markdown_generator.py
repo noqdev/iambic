@@ -16,6 +16,10 @@ from . import get_templates_mixed
             get_templates_mixed(),
             ActionSummaries(num_accounts=10, num_actions=1, num_templates=2),
         ),
+        (
+            get_update_template(),
+            ActionSummaries(num_accounts=1, num_actions=1, num_templates=1),
+        )
     ],
 )
 def test_get_template_data(
@@ -35,6 +39,10 @@ def test_get_template_data(
             get_templates_mixed(),
             ActionSummaries(num_accounts=10, num_actions=1, num_templates=2),
         ),
+        (
+            get_update_template(),
+            ActionSummaries(num_accounts=10, num_actions=1, num_templates=1),
+        )
     ],
 )
 def test_gh_render_resource_changes(
