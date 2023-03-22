@@ -2,6 +2,87 @@ from iambic.core.models import TemplateChangeDetails
 from iambic.core.utils import yaml
 
 
+update_template_yaml = """  - resource_id: t1000
+    resource_type: aws:iam:role
+    template_path: resources/aws/roles/demo-1/t1000.yaml
+    proposed_changes:
+      - account: demo-1 - (972417093400)
+        resource_id: t1000
+        current_value:
+          Path: /
+          RoleName: t1000
+          RoleId: AROA6E2ETJ4MF7DDR6RK6
+          Arn: arn:aws:iam::972417093400:role/t1000
+          CreateDate: '2021-10-18T21:04:09+00:00'
+          AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Principal:
+                  AWS: arn:aws:iam::694815895589:role/NoqCentralRole
+                Action:
+                  - sts:AssumeRole
+                  - sts:TagSession
+              - Effect: Allow
+                Principal:
+                  AWS: arn:aws:iam::940552945933:role/NoqCentralRoleCorpNoqDev
+                Action:
+                  - sts:AssumeRole
+                  - sts:TagSession
+          Description: Allows EC2 instances to call AWS services on your behalf.
+          MaxSessionDuration: 3600
+          Tags:
+            - Key: noq-tra-active-users
+              Value: ''
+            - Key: noq-tra-supported-groups
+              Value: engineering@noq.dev
+            - Key: noq-authorized
+              Value: engineering_group@noq.dev
+          RoleLastUsed:
+            LastUsedDate: '2023-01-27T22:37:21+00:00'
+            Region: us-west-2
+          ManagedPolicies: []
+          InlinePolicies: []
+        new_value:
+          RoleName: t1000
+          Description: Allows EC2 instances to call AWS services on your behalf.
+          MaxSessionDuration: 3600
+          Path: /
+          Tags:
+            - Key: noq-authorized
+              Value: engineering_group@noq.dev
+            - Key: noq-tra-active-users
+              Value: ''
+            - Key: noq-tra-supported-groups
+              Value: engineering@noq.dev
+          ManagedPolicies: []
+          InlinePolicies:
+            - PolicyName: spoke-acct-policy
+          AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Principal:
+                  AWS: arn:aws:iam::694815895589:role/NoqCentralRole
+                Action:
+                  - sts:AssumeRole
+                  - sts:TagSession
+              - Effect: Allow
+                Principal:
+                  AWS: arn:aws:iam::940552945933:role/NoqCentralRoleCorpNoqDev
+                Action:
+                  - sts:AssumeRole
+                  - sts:TagSession
+        proposed_changes:
+          - change_type: Create
+            attribute: inline_policies
+            resource_id: spoke-acct-policy
+            new_value: {}
+        exceptions_seen: []
+    exceptions_seen: []
+"""
+
+
 template_yaml = """  - resource_id: prod_iambic_test_role
     resource_type: aws:iam:role
     template_path: resources/aws/iam/role/design-prod/iambic_test_role_prod.yaml
@@ -406,3 +487,6 @@ template_yaml = """  - resource_id: prod_iambic_test_role
 
 def get_templates_mixed():
     return [TemplateChangeDetails.parse_obj(x) for x in yaml.load(template_yaml)]
+
+def get_update_template():
+    return [TemplateChangeDetails.parse_obj(x) for x in yaml.load(update_template_yaml)]

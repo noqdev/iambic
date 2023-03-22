@@ -133,6 +133,8 @@ def get_applicable_changes(
                 # If proposed change is a list of AccountChangeDetails, we need to iterate through those
                 for account_change in proposed_change.proposed_changes:
                     if account_change.change_type.value == proposed_change_type:
+                        account_change.current_value = proposed_change.current_value
+                        account_change.new_value = proposed_change.new_value
                         applicable_changes.add(
                             _get_annotated_change(
                                 account_change, template_change, proposed_change.account
