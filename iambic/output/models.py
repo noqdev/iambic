@@ -23,7 +23,7 @@ class ProposedChangeDiff(ProposedChange):
     def __init__(self, proposed_change: ProposedChange) -> None:
         super().__init__(**proposed_change.dict())
         self.diff = list(diff(self.current_value, self.new_value))
-        self.diff_resolved = ["{x[0]}: {x[1]} -> {x[2]}" for x in self.diff]
+        self.diff_resolved = [f"{x[0]}: {x[1]} -> {x[2]}" for x in self.diff]
 
 
 class ApplicableChange(PydanticBaseModel):
