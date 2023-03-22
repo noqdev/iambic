@@ -229,5 +229,20 @@
             "console": "integratedTerminal",
             "justMyCode": false
         },
+        {
+            "name": "Iambic Docker GitHub App: awslambdaric",
+            "type": "python",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 56780
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "/app/"
+                }
+            ],
+        },
     ]
 }

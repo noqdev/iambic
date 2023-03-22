@@ -73,7 +73,8 @@ def run_handler(event=None, context=None):
     """
     if not context:
         context = {"command": "import"}
-    lambda_context = LambdaContext(**context)
+    if not isinstance(context, LambdaContext):
+        lambda_context = LambdaContext(**context)
 
     if lambda_context.command == LambdaCommand.run_import.value:
         config_path = asyncio.run(resolve_config_template_path(REPO_BASE_PATH))

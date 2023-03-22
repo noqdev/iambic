@@ -74,7 +74,7 @@ ENTRYPOINT [ "python", "-m", "awslambdaric" ]
 ######## ############################### ########################
 # Install Requirements
 # Install the functions dependencies
-RUN pip3 install poetry awslambdaric argh watchdog
+RUN pip3 install poetry awslambdaric argh watchdog debugpy
 WORKDIR ${FUNCTION_DIR}
 COPY pyproject.toml ${FUNCTION_DIR}
 # Do not create virtualenv

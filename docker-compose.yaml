@@ -10,16 +10,22 @@ services:
       - AWS_SESSION_TOKEN
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.awslambdaric
     image: iambic
     ports:
       - 9000:8080
+      - 56780:5678
     volumes:
       - ~/.aws:/root/.aws:cached
       - .:/app:cached
     entrypoint:
       - "/usr/bin/aws-lambda-rie"
       - "/usr/bin/python"
+      - "-m"
+      - "debugpy"
+      - "--listen"
+      - "0.0.0.0:5678"
+      - "--wait-for-client"
       - "-m"
       - "awslambdaric"
     command: "iambic.lambda.app.handler"
