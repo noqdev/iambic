@@ -125,7 +125,6 @@ def test_run_handler_with_bad_signature(mock_pull_request_webhook_lambda_event):
 def test_run_handler_with_unknown_event(
     skip_authentication, mock_github_cls, mock_unknown_webhook_lambda_event
 ):
-
     from iambic.plugins.v0_1_0.github.github_app import iambic_app
 
     output_path_before_lambda_call = getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH

@@ -36,7 +36,6 @@ __WRITABLE_DIRECTORY__ = pathlib.Path.home()
 
 
 def init_writable_directory() -> None:
-
     # use during development
     __WRITABLE_DIRECTORY__ = pathlib.Path.home()
 
@@ -186,7 +185,7 @@ class NoqSemaphore:
             from datetime import datetime
 
             async def hello_there():
-                log(f"Hello there - {datetime.utcnow()}")
+                log.info(f"Hello there - {datetime.utcnow()}")
                 await asyncio.sleep(3)
 
             hello_there_semaphore = NoqSemaphore(hello_there, 3)
@@ -323,7 +322,6 @@ def sort_dict(original, prioritize=None):
 
 
 def transform_comments(yaml_dict):
-
     comment_dict = {}
     yaml_dict["metadata_commented_dict"] = comment_dict
     for key, comment in yaml_dict.ca.items.items():

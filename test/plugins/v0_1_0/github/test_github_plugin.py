@@ -34,7 +34,6 @@ def example_test_filesystem():
     )
 
     try:
-
         os.makedirs(f"{temp_templates_directory}/{TEST_CONFIG_DIR}")
 
         with open(f"{temp_templates_directory}/{TEST_CONFIG_PATH}", "w") as f:

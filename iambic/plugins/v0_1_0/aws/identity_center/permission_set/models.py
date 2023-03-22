@@ -167,7 +167,6 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
 
     @validator("description")
     def validate_description(cls, v: Union[str, list[Description]]):
-
         # validation portion
         if isinstance(v, str) and not (1 <= len(v) <= 700):
             raise ValueError(

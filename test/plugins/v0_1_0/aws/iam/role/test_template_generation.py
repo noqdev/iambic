@@ -35,7 +35,6 @@ def test_calculate_import_preference():
 
 
 def test_merge_access_model_list_for_assume_role_policy_document(aws_accounts: list):
-
     existing_assume_role_policy = AssumeRolePolicyDocument()
     existing_assume_role_policy.included_accounts = [
         account.account_name for account in [aws_accounts[0], aws_accounts[1]]

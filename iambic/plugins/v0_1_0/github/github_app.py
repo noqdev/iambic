@@ -50,7 +50,6 @@ def format_github_url(repository_url: str, github_token: str) -> str:
 
 
 def get_app_bearer_token(private_key, app_id) -> str:
-
     payload = {
         # Issued at time
         "iat": int(time.time()),
@@ -171,7 +170,6 @@ def run_handler(event=None, context=None):
 def handle_pull_request(
     github_token: str, github_client: github.Github, webhook_payload: dict[str, Any]
 ) -> None:
-
     action = webhook_payload["action"]
     if action not in ["opened", "synchronize"]:
         return
@@ -216,7 +214,6 @@ def handle_pull_request(
 def handle_issue_comment(
     github_token: str, github_client: github.Github, webhook_payload: dict[str, Any]
 ) -> HandleIssueCommentReturnCode:
-
     action = webhook_payload["action"]
     if action != "created":
         return
@@ -269,7 +266,6 @@ def handle_issue_comment(
 def handle_workflow_run(
     github_token: str, github_client: github.Github, webhook_payload: dict[str, Any]
 ) -> None:
-
     action = webhook_payload["action"]
     if action != "requested":
         return

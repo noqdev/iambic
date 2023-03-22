@@ -31,7 +31,6 @@ from iambic.plugins.v0_1_0.okta.user.utils import create_user
 def mock_application(
     mock_okta_organization: OktaOrganization,  # noqa: F811 # intentional for mocks
 ):
-
     # Have to create group before getting it
     group_name = "example_groupname"
     idp_name = "example.org"

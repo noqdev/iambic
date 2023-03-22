@@ -33,7 +33,6 @@ class MaxSessionDuration(AccessModel):
 
 
 class PermissionBoundary(ExpiryModel, AccessModel):
-
     # alias allows easily deserialize from boto3 response
     policy_arn: constr(regex=ARN_RE) = Field(alias="permissions_boundary_arn")
 

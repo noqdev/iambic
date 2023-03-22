@@ -56,7 +56,6 @@ if TYPE_CHECKING:
 
 
 class IambicPydanticBaseModel(PydanticBaseModel):
-
     metadata_iambic_fields = Field(
         set(), description="metadata for iambic", exclude=True
     )
@@ -439,7 +438,6 @@ class AccessModelMixin:
         raise NotImplementedError
 
     def access_model_sort_weight(self):
-
         # we have to pay the price eo sort it before using the value
         # because the validators are only called during model creation
         # and others have may have mutate the list value
@@ -514,7 +512,6 @@ class BaseTemplate(
         return as_yaml
 
     def write(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
-
         # pay the cost of validating the models once more.
         self.validate_model_afterward()
 

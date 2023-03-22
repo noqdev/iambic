@@ -23,7 +23,6 @@ from iambic.plugins.v0_1_0.okta.models import App, Assignment, Group
 
 
 def test_members_sorting():
-
     assignments = [
         {"user": "user_1@example.org"},
         {"group": "group@example.org"},

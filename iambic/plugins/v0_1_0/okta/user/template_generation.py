@@ -32,7 +32,6 @@ def get_response_dir(exe_message: ExecutionMessage) -> str:
 async def update_or_create_user_template(
     discovered_template: OktaUserTemplate, existing_template_map: dict
 ) -> OktaUserTemplate:
-
     return create_or_update_template(
         discovered_template.file_path,
         existing_template_map,

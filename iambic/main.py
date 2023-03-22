@@ -21,7 +21,12 @@ from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage, TemplateChangeDetails
 from iambic.core.parser import load_templates
-from iambic.core.utils import exceptions_in_proposed_changes, init_writable_directory, gather_templates, yaml
+from iambic.core.utils import (
+    exceptions_in_proposed_changes,
+    gather_templates,
+    init_writable_directory,
+    yaml,
+)
 from iambic.request_handler.expire_resources import flag_expired_resources
 from iambic.request_handler.git_apply import apply_git_changes
 from iambic.request_handler.git_plan import plan_git_changes

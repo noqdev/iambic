@@ -144,7 +144,6 @@ async def update_user_attributes(
     for attr, value in cloud_user.dict(
         exclude_none=False, exclude={"user_id", "fullname"}
     ).items():
-
         if (template_value := getattr(template_user, attr)) != value:
             response.append(
                 ProposedChange(
@@ -163,10 +162,17 @@ async def update_user_attributes(
             patch_request[attr] = template_value
 
     if ctx.execute and patch_request:
-        await azure_ad_organization.patch(
-            f"users/{cloud_user.user_id}",
-            json=patch_request,
-        )
+        try:
+            await azure_ad_organization.patch(
+                f"users/{cloud_user.user_id}",
+                json=patch_request,
+            )
+        except ClientResponseError as err:
+            log.exception(
+                "Failed to update user in Azure AD",
+                **log_params,
+            )
+            response[0].exceptions_seen = [str(err)]
 
     return response
 
