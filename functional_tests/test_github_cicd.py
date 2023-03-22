@@ -10,9 +10,9 @@ import time
 
 import boto3.session
 import pytest
-from functional_tests.conftest import all_config
 from github import Github
 
+from functional_tests.conftest import all_config
 from iambic.config.dynamic_config import Config, load_config
 from iambic.core.git import clone_git_repo
 from iambic.core.logger import log
@@ -167,7 +167,6 @@ def prepare_template_repo(github_token: str, temp_templates_directory: str):
 # the "iambic apply" command on the PR. If the flow is successful, the PR
 # will be merged and we will check the workflow to be completed state.
 def test_github_cicd(filesystem, generate_templates_fixture, build_push_container):
-
     temp_config_filename, temp_templates_directory, config = filesystem
 
     github_token = get_github_token(config)
@@ -308,7 +307,6 @@ def test_github_cicd(filesystem, generate_templates_fixture, build_push_containe
 
 
 def test_github_import(filesystem, generate_templates_fixture, build_push_container):
-
     temp_config_filename, temp_templates_directory, config = filesystem
 
     github_token = get_github_token(config)
@@ -337,7 +335,6 @@ def test_github_import(filesystem, generate_templates_fixture, build_push_contai
 
 
 def test_github_detect(filesystem, generate_templates_fixture, build_push_container):
-
     temp_config_filename, temp_templates_directory, config = filesystem
 
     github_token = get_github_token(config)
@@ -465,7 +462,6 @@ def test_github_expire_base(
     verify_func_before_action,
     verify_func_after_action,
 ):
-
     temp_config_filename, temp_templates_directory, config = filesystem
 
     github_token = get_github_token(config)

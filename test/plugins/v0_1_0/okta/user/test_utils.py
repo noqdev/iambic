@@ -4,10 +4,10 @@ from test.plugins.v0_1_0.okta.test_utils import (  # noqa: F401 # intentional fo
     mock_okta_organization,
 )
 
+import okta.models
 import pytest
 
 import iambic.plugins.v0_1_0.okta.models
-import okta.models
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
 from iambic.plugins.v0_1_0.okta.user.models import (
@@ -55,14 +55,11 @@ async def test_get_user_by_user_id(
         username=username, idp_name=idp_name, profile={"login": username}
     )
     template = OktaUserTemplate(file_path="example", properties=user_properties)
-    okta_user = await create_user(
-        template,
-        mock_okta_organization,
-    )
+    init_okta_user = await create_user(template, mock_okta_organization)
 
     # Test the get_user method
-    okta_user = await get_user(username, okta_user.user_id, mock_okta_organization)
-    assert okta_user.user_id == okta_user.user_id
+    okta_user = await get_user(username, init_okta_user.user_id, mock_okta_organization)
+    assert init_okta_user.user_id == okta_user.user_id
 
 
 @pytest.mark.asyncio

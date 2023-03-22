@@ -33,7 +33,6 @@ def get_response_dir(exe_message: ExecutionMessage) -> str:
 async def update_or_create_group_template(
     discovered_template: OktaGroupTemplate, existing_template_map: dict
 ) -> OktaGroupTemplate:
-
     return create_or_update_template(
         discovered_template.file_path,
         existing_template_map,

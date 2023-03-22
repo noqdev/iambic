@@ -184,7 +184,7 @@ class NoqSemaphore:
             from datetime import datetime
 
             async def hello_there():
-                log(f"Hello there - {datetime.utcnow()}")
+                log.info(f"Hello there - {datetime.utcnow()}")
                 await asyncio.sleep(3)
 
             hello_there_semaphore = NoqSemaphore(hello_there, 3)

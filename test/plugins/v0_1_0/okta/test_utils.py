@@ -28,7 +28,6 @@ def mock_okta_organization() -> OktaOrganization:
 
 @pytest.mark.asyncio
 async def test_generate_user_profile():
-
     user = okta.models.User()
     user.profile = okta.models.user_profile.UserProfile()
     user.profile.login = "example_user"
@@ -96,7 +95,6 @@ async def test_handle_okta_fn_user_not_provisioned():
 
 @pytest.mark.asyncio
 async def test_handle_okta_fn_generic_json_error():
-
     json_error_string = json.dumps({"errorCode": "E0000047"})
 
     async def sample_fn(*args, **kwargs):

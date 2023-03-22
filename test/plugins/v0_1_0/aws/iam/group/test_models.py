@@ -4,7 +4,6 @@ from iambic.plugins.v0_1_0.aws.iam.group.models import GroupProperties
 
 
 def test_user_path_validation():
-
     path = [
         {"included_accounts": ["account_1", "account_2"], "file_path": "/engineering"},
         {"included_accounts": ["account_3"], "file_path": "/finance"},

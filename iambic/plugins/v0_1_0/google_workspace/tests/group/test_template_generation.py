@@ -111,7 +111,6 @@ class TestGenerateGroupTemplates(IsolatedAsyncioTestCase):
         ) as mock_update_or_create_group_template, patch(
             "iambic.plugins.v0_1_0.google_workspace.group.template_generation.delete_orphaned_templates"
         ) as mock_delete_orphaned_templates:
-
             mock_update_or_create_group_template.return_value = group_template
             await generate_group_templates(
                 self.exe_message,

@@ -56,7 +56,6 @@ def test_merge_policy_document_without_sid(aws_accounts):
 
 
 def test_policy_path_validation():
-
     path = [
         {"included_accounts": ["account_1", "account_2"], "file_path": "/engineering"},
         {"included_accounts": ["account_3"], "file_path": "/finance"},
@@ -76,7 +75,6 @@ def test_policy_path_validation():
 
 
 def test_description_validation():
-
     description = [
         {"included_accounts": ["account_1", "account_2"], "description": "foo"},
         {"included_accounts": ["account_3"], "description": "bar"},
@@ -96,7 +94,6 @@ def test_description_validation():
 
 
 def test_policy_document_validation():
-
     policy_document = [
         {"included_accounts": ["account_1", "account_2"], "policy_document": {}},
         {"included_accounts": ["account_3"], "policy_document": {}},
@@ -116,7 +113,6 @@ def test_policy_document_validation():
 
 
 def test_role_properties_validation():
-
     tags_1 = [
         {"key": "apple", "value": "red", "included_accounts": ["ses"]},
         {"key": "apple", "value": "yellow", "included_accounts": ["development"]},

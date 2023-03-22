@@ -90,7 +90,6 @@ async def update_or_create_group_template(
     existing_template_map: dict,
     group_dir: str,
 ) -> GroupTemplate:
-
     discovered_group_template.file_path = get_templated_resource_file_path(
         group_dir,
         discovered_group_template.properties.email,
