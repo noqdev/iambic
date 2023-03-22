@@ -50,8 +50,4 @@ def test_gh_render_resource_changes(
     expected_output: ActionSummaries,
 ):
     rendered_markdown = gh_render_resource_changes(template_change_details)
-    import time
-
-    with open(f"test_render_resource_changes-{time.time()}.md", "w") as f:
-        f.write(rendered_markdown)
     assert rendered_markdown != ""

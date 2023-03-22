@@ -38,7 +38,6 @@ def test_screen_render_resource_changes(
 ):
     rendered_text = screen_render_resource_changes(template_change_details)
     output = rendered_text
-    print(output)
     for expected_output in expected_outputs:
         assert expected_output in output
 

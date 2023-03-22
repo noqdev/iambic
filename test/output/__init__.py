@@ -77,6 +77,7 @@ update_template_yaml = """  - resource_id: t1000
           - change_type: Create
             attribute: inline_policies
             resource_id: spoke-acct-policy
+            resource_type: aws:iam:role
             new_value: {}
         exceptions_seen: []
     exceptions_seen: []
