@@ -8,7 +8,6 @@ from functional_tests.aws.managed_policy.utils import (
     managed_policy_full_import,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.event_bridge.models import ManagedPolicyMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyTemplate
 
@@ -26,7 +25,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
     async def test_update_managed_policy_attribute(self):
         initial_description = "This was created by a functional test."
@@ -39,7 +38,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
         self.template.write()
 
         self.template.properties.description = updated_description
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
         file_sys_template = ManagedPolicyTemplate.load(self.template.file_path)
         self.assertEqual(file_sys_template.properties.description, initial_description)
@@ -97,7 +96,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
         self.assertNotIn(deleted_account, file_sys_template.excluded_accounts)
 
         # Create the policy on all accounts except 1
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
         # Refresh the template
         await managed_policy_full_import(

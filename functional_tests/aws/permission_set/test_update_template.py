@@ -9,7 +9,6 @@ from functional_tests.aws.permission_set.utils import (
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core import noq_json as json
-from iambic.core.context import ctx
 
 
 class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
@@ -20,7 +19,7 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
                 IAMBIC_TEST_DETAILS.template_dir_path
             )
         )
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
         sleep(5)
         asyncio.run(
             IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
@@ -33,11 +32,11 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
             IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
         )
         cls.template.deleted = True
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
 
     async def test_update_description(self):
         self.template.properties.description = "Updated description"
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
         await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
 
         self.assertEqual(
@@ -58,7 +57,7 @@ class UpdatePermissionSetTestCaseWithBadInput(IsolatedAsyncioTestCase):
                 IAMBIC_TEST_DETAILS.template_dir_path
             )
         )
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
         sleep(5)
         asyncio.run(
             IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
@@ -71,12 +70,12 @@ class UpdatePermissionSetTestCaseWithBadInput(IsolatedAsyncioTestCase):
             IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
         )
         cls.template.deleted = True
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
 
     async def test_update_description(self):
         self.template.properties.description = ""  # this does not trigger error because default validation only happens during creation
         template_change_details = await self.template.apply(
-            IAMBIC_TEST_DETAILS.config.aws, ctx
+            IAMBIC_TEST_DETAILS.config.aws
         )
         self.assertEqual(
             len(template_change_details.exceptions_seen),

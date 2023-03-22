@@ -8,7 +8,6 @@ from functional_tests.aws.user.utils import (
     user_full_import,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.event_bridge.models import UserMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.user.models import UserTemplate
 
@@ -25,7 +24,7 @@ class PartialImportUserTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
     async def test_delete_user_template(self):
         included_account = self.all_account_ids[0]
@@ -61,7 +60,7 @@ class PartialImportUserTestCase(IsolatedAsyncioTestCase):
         self.assertNotIn(deleted_account, file_sys_template.excluded_accounts)
 
         # Create the policy on all accounts except 1
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
         await user_full_import(
             [
                 UserMessageDetails(

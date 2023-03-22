@@ -8,8 +8,6 @@ from functional_tests.aws.group.utils import (
     group_full_import,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
-from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.event_bridge.models import GroupMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.group.models import GroupTemplate
 
@@ -26,7 +24,7 @@ class PartialImportGroupTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
     async def test_delete_group_template(self):
         included_account = self.all_account_ids[0]
@@ -62,7 +60,7 @@ class PartialImportGroupTestCase(IsolatedAsyncioTestCase):
         self.assertNotIn(deleted_account, file_sys_template.excluded_accounts)
 
         # Create the policy on all accounts except 1
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
         # Refresh the template
         await group_full_import(

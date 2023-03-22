@@ -8,7 +8,6 @@ from functional_tests.aws.role.utils import (
     role_full_import,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.event_bridge.models import RoleMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.role.models import RoleTemplate
 
@@ -25,7 +24,7 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
     async def test_update_role_attribute(self):
         initial_description = "This was created by a functional test."
@@ -43,7 +42,7 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
         file_sys_template = RoleTemplate.load(self.template.file_path)
         self.assertEqual(file_sys_template.properties.description, initial_description)
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
         await role_full_import(
             [
@@ -92,7 +91,7 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
         self.assertNotIn(deleted_account, file_sys_template.excluded_accounts)
 
         # Create the policy on all accounts except 1
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
         await role_full_import(
             [

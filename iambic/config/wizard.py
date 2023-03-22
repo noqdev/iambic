@@ -705,7 +705,9 @@ class ConfigurationWizard:
 
         self.config.write()
         role_template.write(exclude_unset=False)
-        await role_template.apply(self.config.aws, ctx)
+        await role_template.apply(
+            self.config.aws,
+        )
 
     def configuration_wizard_aws_account_add(self):  # noqa: C901
         if not self.has_cf_permissions:
