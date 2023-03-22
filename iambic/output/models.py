@@ -21,7 +21,7 @@ class ProposedChangeDiff(ProposedChange):
 
     def __init__(self, proposed_change: ProposedChange) -> None:
         super().__init__(**proposed_change.dict())
-        self.diff = "\n".join(list(recursive_diff(self.current_value, self.new_value)))
+        self.diff = list(recursive_diff(self.current_value, self.new_value))
 
 
 class ApplicableChange(PydanticBaseModel):

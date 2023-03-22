@@ -22,6 +22,7 @@ from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage, TemplateChangeDetails
 from iambic.core.parser import load_templates
 from iambic.core.utils import gather_templates, init_writable_directory, yaml
+from iambic.output.text import file_render_resource_changes
 from iambic.request_handler.expire_resources import flag_expired_resources
 from iambic.request_handler.git_apply import apply_git_changes
 from iambic.request_handler.git_plan import plan_git_changes
@@ -35,16 +36,10 @@ def output_proposed_changes(
     template_changes: list[TemplateChangeDetails], output_path: str = None
 ):
     if output_path is None:
-        output_path = "proposed_changes.yaml"
+        output_path = "proposed_changes.txt"
     if template_changes:
         log.info(f"A detailed summary of changes has been saved to {output_path}")
-
-        with open(output_path, "w") as f:
-            f.write(
-                yaml.dump(
-                    [template_change.dict() for template_change in template_changes],
-                )
-            )
+        file_render_resource_changes(output_path, template_changes)
 
 
 @click.group()
