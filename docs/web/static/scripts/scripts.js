@@ -6,12 +6,12 @@ function getGitOrganizationLink(org) {
     return "https://github.com/organizations/" + org + "/settings/apps"
 }
 
-function updateText(input_field, output_field) {
+
+function updateText(output_field, inputValue, isLink = false) {
     // return if either field is null
-    if (!input_field || !output_field) {
+    if (!output_field) {
         return;
     }
-    var inputValue = input_field.value;
     if (inputValue == null) {
         // handle the null value
         return;
@@ -20,8 +20,9 @@ function updateText(input_field, output_field) {
     outputFields.forEach(function(output) {
         output.innerHTML = inputValue;
     });
-    var githubAnchorLink = getGitOrganizationLink(inputValue)
-    updateAnchorTagHref(elementIds.gitHubOrgAnchorTag, githubAnchorLink)
+    if (isLink) {
+        updateAnchorTagHref(elementIds.gitHubOrgAnchorTag, inputValue)
+    }
 }
 
 function updateAnchorTagHref(elementId, link) {
