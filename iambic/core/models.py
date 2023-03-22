@@ -606,7 +606,7 @@ class ExpiryModel(IambicPydanticBaseModel):
 
 
 class ExecutionMessage(PydanticBaseModel):
-    execution_id: str
+    execution_id: str = Field(..., description="A unique identifier for the execution")
     command: Command
     parent_command: Optional[Command]
     provider_type: Optional[str]
