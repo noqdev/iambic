@@ -2,39 +2,108 @@
 title: Deploy on GitHub
 ---
 
-TODO: Remove CodeBlockWithLabel before merging
-
 ### Configuring GitHub to work with IAMbic
 These steps will ensure GitHub is confgured properly to work with IAMbic.
 
+<!--
+
+This is experimental, WIP code.
+
 To makes these commands easier to copy and paste, we recommend filling out the following variables:
 
-GitHub Organization: <input type="text" id="inputGithubOrg" defaultValue="noqdev" onInput={() => updateText(document.getElementById('inputGithubOrg'), 'outputGithubOrg')}/>
+GitHub Organization: <input
+type="text"
+id="inputGithubOrg"
+defaultValue="exampleOrg"
+onInput={(e) => {
+  updateText('outputGithubOrg', e.target.value)
+  updateText('outputGithubOrgLink', getGitOrganizationLink(e.target.value), true)
+  }
+}
+/>
 
-IAMbic AWS Hub Account Name: <input type="text" id="inputAWSHubAccount" defaultValue="aws_hub_account" onInput={() => updateText(document.getElementById('inputAWSHubAccount'), 'outputAWSHubAccount')}/>
-
+IAMbic AWS Hub Account Name: <input
+type="text"
+id="inputAWSHubAccount"
+defaultValue="aws_hub_account" onInput={(e) => {
+  updateText('outputAWSHubAccount', e.target.value)
+  }
+}
+/>
 
 import CodeBlockWithLabel from '@site/src/components/CodeBlockWithLabel';
+
+<div>
+  GitHub Organization:
+  <input
+    type="text"
+    id="inputGithubOrg"
+    defaultValue="exampleOrg"
+    onInput={(e) => {
+      updateText('outputGithubOrg', e.target.value);
+      updateText('outputGithubOrgLink', getGitOrganizationLink(e.target.value), true);
+    }}
+  />
+</div>
+
+<div>
+  IAMbic AWS Hub Account Name:
+  <input
+    type="text"
+    id="inputAWSHubAccount"
+    defaultValue="aws_hub_account"
+    onInput={(e) => {
+      updateText('outputAWSHubAccount', e.target.value);
+    }}
+  />
+</div>
+
+<CodeBlockWithLabel
+  code={`template_type: NOQ::AWS::IAM::Role
+included_accounts:
+  - {outputAWSHubAccount}
+  - {aws_account_1_label}
+  - {aws_account_2_label}
+...`}
+  language="language-yaml"
+  labels={[
+    { id: 'outputAWSHubAccount', content: 'AWS Hub Account' },
+    { id: 'aws_account_1_label', content: 'AWS Account 1' },
+    { id: 'aws_account_2_label', content: 'AWS Account 2' },
+  ]}
+/>
+
+
+
+
+ - import CodeBlockWithLabel from '@site/src/components/CodeBlockWithLabel';
 
 Pre CodeBlockWithLabel
 
 <CodeBlockWithLabel
   code={`template_type: NOQ::AWS::IAM::Role
 included_accounts:
-  - {label}
+  - {outputAWSHubAccount}
+  - {aws_account_1_label}
+  - {aws_account_2_label}
 ...`}
   language="language-yaml"
-  labelId="outputAWSHubAccount"
-  labelContent="defaasdsault"
+  labels={[
+    { id: 'outputAWSHubAccount', content: 'AWS Hub Account' },
+    { id: 'aws_account_1_label', content: 'AWS Account 1' },
+    { id: 'aws_account_2_label', content: 'AWS Account 2' },
+  ]}
 />
 
 Post CodeBlockWithLabel
 
 Pre-link
 
-<a href={getGitOrganizationLink('noqdev')} target="_blank" id={elementIds.gitHubOrgAnchorTag}>github.com/organizations/<label id='outputGithubOrg'>noqdev</label>/settings/apps</a>
+<a href={getGitOrganizationLink('exampleOrg')} target="_blank" id={elementIds.gitHubOrgAnchorTag}><label id='outputGithubOrgLink'>{getGitOrganizationLink('exampleOrg')}</label></a>
 
 Post-Link
+
+-->
 
 
 ## Overview
@@ -69,8 +138,8 @@ permissions from your cloud provider(s).
 
 #### Configure your GitHub Repository to require approvals before merging
 
-1. Go to the GitHub repository you had created previously, "<label id={'outputGithubOrg'}>noqdev</label>/iambic-templates"
-2. Navigate to the "branches" settings page; the URL will look something like github.com/<label id={'outputGithubOrg'}>noqdev</label>/iambic-templates/settings/branches
+1. Go to the GitHub repository you had created previously, "ExampleOrg/iambic-templates"
+2. Navigate to the "branches" settings page; the URL will look something like github.com/ExampleOrg/iambic-templates/settings/branches
 3. Add a branch protection rule.
 4. Set the branch name pattern to `main`.
 5. Configure the options
@@ -86,7 +155,7 @@ By installing IAMbic GitHub App, the app can integrate the pull-request and merg
 
 ### Create a GitHub App in your organization
 
-1. Visit your Organization's GitHub App settings. (github.com/organizations/<label id={'outputGithubOrg'}>noqdev</label>/settings/apps)
+1. Visit your Organization's GitHub App settings. (github.com/organizations/ExampleOrg/settings/apps)
 2. Click "New GitHub App".
 3. Input `Iambic Integrations` for "GitHub App name".
 4. Input `https://iambic.org/` for "Homepage URL".
