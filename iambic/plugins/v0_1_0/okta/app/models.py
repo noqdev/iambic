@@ -143,7 +143,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
     ):
         return {
             "name": self.properties.name,
-            "owner": self.properties.owner,
+            "owner": self.owner,
             "status": self.properties.status,
             "idp_name": self.properties.idp_name,
             "description": self.properties.description,
