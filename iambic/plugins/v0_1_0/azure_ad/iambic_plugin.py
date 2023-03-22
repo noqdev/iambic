@@ -7,6 +7,7 @@ from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.azure_ad.group.models import GroupTemplate
 from iambic.plugins.v0_1_0.azure_ad.handlers import import_azure_ad_resources, load
 from iambic.plugins.v0_1_0.azure_ad.models import AzureADOrganization
+from iambic.plugins.v0_1_0.azure_ad.user.models import UserTemplate
 
 
 class AzureADConfig(BaseModel):
@@ -28,5 +29,5 @@ IAMBIC_PLUGIN = ProviderPlugin(
     async_import_callable=import_azure_ad_resources,
     async_load_callable=load,
     requires_secret=True,
-    templates=[GroupTemplate],
+    templates=[GroupTemplate, UserTemplate],
 )

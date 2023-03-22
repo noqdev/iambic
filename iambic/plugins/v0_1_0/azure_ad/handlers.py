@@ -11,6 +11,10 @@ from iambic.plugins.v0_1_0.azure_ad.group.template_generation import (
     collect_org_groups,
     generate_group_templates,
 )
+from iambic.plugins.v0_1_0.azure_ad.user.template_generation import (
+    collect_org_users,
+    generate_user_templates,
+)
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.azure_ad.iambic_plugin import AzureADConfig
@@ -44,6 +48,7 @@ async def import_azure_ad_resources(
         collector_tasks.extend(
             [
                 collect_org_groups(task_message, config),
+                collect_org_users(task_message, config),
             ]
         )
 
@@ -62,5 +67,6 @@ async def import_azure_ad_resources(
     if base_runner:
         generator_tasks = [
             generate_group_templates(exe_message, base_output_dir),
+            generate_user_templates(exe_message, base_output_dir),
         ]
         await asyncio.gather(*generator_tasks)
