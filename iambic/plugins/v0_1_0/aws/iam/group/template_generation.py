@@ -341,9 +341,9 @@ async def collect_aws_groups(
         set_group_resource_managed_policies, 30
     )
 
-    log.info("Generating AWS group templates.")
     log.info(
-        "Beginning to retrieve AWS IAM Groups.", accounts=list(aws_account_map.keys())
+        "Generating AWS group templates. Beginning to retrieve AWS IAM Groups.",
+        accounts=list(aws_account_map.keys()),
     )
 
     if detect_messages:
@@ -409,7 +409,10 @@ async def collect_aws_groups(
         )
 
     if not any(account_group["groups"] for account_group in account_groups):
-        log.info("No groups found in any AWS accounts.")
+        log.info(
+            "No groups found in any AWS accounts.",
+            accounts=list(aws_account_map.keys()),
+        )
         return
 
     messages = []
@@ -424,11 +427,17 @@ async def collect_aws_groups(
                 }
             )
 
-    log.info("Setting inline policies in group templates")
+    log.info(
+        "Setting inline policies in group templates",
+        accounts=list(aws_account_map.keys()),
+    )
     await set_group_resource_inline_policies_semaphore.process(messages)
-    log.info("Setting managed policies in group templates")
+    log.info(
+        "Setting managed policies in group templates",
+        accounts=list(aws_account_map.keys()),
+    )
     await set_group_resource_managed_policies_semaphore.process(messages)
-    log.info("Finished retrieving group details")
+    log.info("Finished retrieving group details", accounts=list(aws_account_map.keys()))
 
     account_group_output = json.dumps(account_groups)
     with open(

@@ -4,8 +4,13 @@ import datetime
 import os
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+from iambic.core.models import ProposedChangeType
 from iambic.core.parser import load_templates
 from iambic.main import run_apply
+from iambic.plugins.v0_1_0.google_workspace.group.models import (
+    GroupMember,
+    GroupTemplate,
+)
 
 
 def test_google():
@@ -35,8 +40,27 @@ properties:
     run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
 
     # Test Reading Template
-    group_template = load_templates([test_group_fp])[0]
+    group_template: GroupTemplate = load_templates([test_group_fp])[0]
     assert group_template.properties.members[2].email == "iambic_test_user_2@iambic.org"
+
+    # Test attach members
+    new_group_member = GroupMember(email="iambic_test_user_3@iambic.org")
+    group_template.properties.members.append(new_group_member)
+    group_template.write()
+    template_changes = run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
+    proposed_change = template_changes[0].proposed_changes[0].proposed_changes[0]
+    assert proposed_change.change_type == ProposedChangeType.ATTACH
+    assert proposed_change.resource_id == "iambic_test_group@iambic.org"
+    assert proposed_change.resource_type == "google:group:template"
+
+    # Test detach members
+    group_template.properties.members.remove(new_group_member)
+    group_template.write()
+    template_changes = run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
+    proposed_change = template_changes[0].proposed_changes[0].proposed_changes[0]
+    assert proposed_change.change_type == ProposedChangeType.DETACH
+    assert proposed_change.resource_id == "iambic_test_group@iambic.org"
+    assert proposed_change.resource_type == "google:group:template"
 
     # Expire `fakeuser@example.com`
     group_template.properties.members[2].expires_at = datetime.datetime.now(

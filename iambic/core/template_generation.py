@@ -91,6 +91,7 @@ async def base_group_str_attribute(
 
     """
     Create map with different representations of a resource value for each account
+    (Note that we now only keep the post-templatized version)
 
     The purpose is to add the 2 ways look-ups are done and maintain o(1) performance.
     The resource_val to the corresponding list element in account_resources[elem]["resources"]
@@ -110,19 +111,21 @@ async def base_group_str_attribute(
             resource_val = resource["resource_val"]
             templatized_resource_val = templatize_resource(aws_account, resource_val)
 
+            # note about the decision we only kept the post-templatized version
+            # we aggressively templatized the incoming information.
+            # a note for future reader: if you attempt to conditional decide
+            # to templatize or not, you have to be careful regarding greedy
+            # algorithm that does not arrive at the same termination state.
+            # Concretely, if a literal can both be repeated across accounts
+            # or templatized across accounts, greedy algorithm may reach
+            # different states.
+
             account_resources[account_resource_elem]["resource_val_map"][
-                resource_val
+                templatized_resource_val
             ] = resource_elem
             account_resources[account_resource_elem]["elem_resource_val_map"][
                 resource_elem
-            ] = [resource_val]
-            if templatized_resource_val != resource_val:
-                account_resources[account_resource_elem]["resource_val_map"][
-                    templatized_resource_val
-                ] = resource_elem
-                account_resources[account_resource_elem]["elem_resource_val_map"][
-                    resource_elem
-                ].append(templatized_resource_val)
+            ] = [templatized_resource_val]
 
     grouped_resource_map = defaultdict(
         list
@@ -195,7 +198,7 @@ async def base_group_str_attribute(
 async def base_group_dict_attribute(
     aws_account_map: dict[str, AWSAccount],
     account_resources: list[dict],
-    prefer_templatized=False,
+    prefer_templatized=False,  # clarification that this keyword parameter has no impact at the moment
 ) -> list[dict]:
     """Groups an attribute that is a dict or list of dicts with matching aws_accounts
 
@@ -310,15 +313,17 @@ async def base_group_dict_attribute(
             elif len(resource_hashes) == 1:
                 resource_hash = resource_hashes[0]
             else:
-                if prefer_templatized:
-                    resource_hash = resource_hashes[
-                        -1
-                    ]  # take the last one because it's the templatized version
-                else:
-                    # Take priority over raw output
-                    resource_hash = [
-                        rv for rv in resource_hashes if "{{" not in str(hash_map[rv])
-                    ][0]
+                # note about the decision we prefer post-templatized version
+                # we aggressively templatized the incoming information.
+                # a note for future reader: if you attempt to conditional decide
+                # to templatize or not, you have to be careful regarding greedy
+                # algorithm that does not arrive at the same termination state.
+                # Concretely, if a literal can both be repeated across accounts
+                # or templatized across accounts, greedy algorithm may reach
+                # different states.
+                resource_hash = resource_hashes[
+                    -1
+                ]  # take the last one because it's the templatized version
 
             grouped_resource_map[resource_hash] = {
                 "resource_val": hash_map[resource_hash],
@@ -565,15 +570,6 @@ def update_access_attributes(
     if "*" in new_model.included_children:
         new_model, existing_model = sync_access_model_scope(new_model, existing_model)
         return new_model, existing_model
-
-    if "*" in existing_model.included_children:
-        for child in all_provider_children:
-
-            if (
-                child.preferred_identifier not in new_model.included_children
-                and evaluate_on_provider(existing_model, child, ctx, False)
-            ):
-                existing_model.excluded_children.append(child.preferred_identifier)
     else:
         for child in all_provider_children:
             currently_evaluated = evaluate_on_provider(
@@ -711,7 +707,16 @@ def merge_access_model_list(
             if new_model_index < len(existing_list):
                 existing_model = existing_list[new_model_index]
                 merged_list.append(
-                    merge_model(new_model, existing_model, all_provider_children)
+                    # it's important NOT to have merge_model handle update_access_attribute
+                    # because it knows synching between existing and incoming. In this portion
+                    # of merge_access_model_list, merge_access_model_list is driving everything
+                    # about access model
+                    merge_model(
+                        new_model,
+                        existing_model,
+                        all_provider_children,
+                        should_update_access_attributes=False,
+                    ),
                 )
             else:
                 merged_list.append(new_model)
@@ -830,6 +835,7 @@ def merge_model(
     new_model: BaseModel,
     existing_model: BaseModel,
     all_provider_children: list[ProviderChild],
+    should_update_access_attributes=True,
 ) -> Union[BaseModel, list[BaseModel], None]:
     """
     Update the metadata of the new IAMbic model using the existing model.
@@ -861,8 +867,10 @@ def merge_model(
     iambic_fields = existing_model.metadata_iambic_fields
     field_names = new_model.__fields__.keys()
 
-    if isinstance(merged_model, AccessModelMixin) and isinstance(
-        new_model, AccessModelMixin
+    if (
+        isinstance(merged_model, AccessModelMixin)
+        and isinstance(new_model, AccessModelMixin)
+        and should_update_access_attributes
     ):
         """
         If the field is a list of objects that inherit from AccessModel:
@@ -912,6 +920,8 @@ def merge_model(
                         _cls = type(inner_element)
                         new_value = [_cls.new_instance_from_string(new_value)]
                         value_as_list = True  # because cast it into a list
+                    elif not isinstance(new_value, list):
+                        new_value = [new_value]
 
                     new_value = merge_access_model_list(
                         new_value, existing_value, all_provider_children

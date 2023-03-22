@@ -441,9 +441,9 @@ async def collect_aws_roles(
     )
     set_role_resource_tags_semaphore = NoqSemaphore(set_role_resource_tags, 45)
 
-    log.info("Generating AWS role templates.")
     log.info(
-        "Beginning to retrieve AWS IAM Roles.", accounts=list(aws_account_map.keys())
+        "Generating AWS role templates. Beginning to retrieve AWS IAM Roles.",
+        accounts=list(aws_account_map.keys()),
     )
 
     if detect_messages:
@@ -525,13 +525,19 @@ async def collect_aws_roles(
                 }
             )
 
-    log.info("Setting inline policies in role templates")
+    log.info(
+        "Setting inline policies in role templates",
+        accounts=list(aws_account_map.keys()),
+    )
     await set_role_resource_inline_policies_semaphore.process(messages)
-    log.info("Setting managed policies in role templates")
+    log.info(
+        "Setting managed policies in role templates",
+        accounts=list(aws_account_map.keys()),
+    )
     await set_role_resource_managed_policies_semaphore.process(messages)
-    log.info("Setting tags in role templates")
+    log.info("Setting tags in role templates", accounts=list(aws_account_map.keys()))
     await set_role_resource_tags_semaphore.process(messages)
-    log.info("Finished retrieving role details")
+    log.info("Finished retrieving role details", accounts=list(aws_account_map.keys()))
 
     account_role_output = json.dumps(account_roles)
     with open(

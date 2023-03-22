@@ -152,6 +152,8 @@ async def update_group_description(
     response.append(
         ProposedChange(
             change_type=ProposedChangeType.UPDATE,
+            resource_id=group_email,
+            resource_type="google:group:template",
             attribute="description",
             change_summary={
                 "current_description": current_description,
@@ -192,6 +194,8 @@ async def update_group_name(
     response.append(
         ProposedChange(
             change_type=ProposedChangeType.UPDATE,
+            resource_id=group_email,
+            resource_type="google:group:template",
             attribute="group_name",
             new_value=proposed_name,
         )
@@ -237,6 +241,8 @@ async def update_group_email(
     response.append(
         ProposedChange(
             change_type=ProposedChangeType.UPDATE,
+            resource_id=current_email,
+            resource_type="google:group:template",
             attribute="group_email",
             new_value=proposed_email,
         )
@@ -362,6 +368,8 @@ async def update_group_members(
         response.append(
             ProposedChange(
                 change_type=ProposedChangeType.DETACH,
+                resource_id=group_email,
+                resource_type="google:group:template",
                 attribute="users",
                 change_summary={
                     "UsersToRemove": [user.email for user in users_to_remove]
@@ -391,6 +399,8 @@ async def update_group_members(
         response.append(
             ProposedChange(
                 change_type=ProposedChangeType.ATTACH,
+                resource_id=group_email,
+                resource_type="google:group:template",
                 attribute="users",
                 change_summary={"UsersToAdd": [user.email for user in users_to_add]},
             )

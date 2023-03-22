@@ -98,6 +98,11 @@ class IambicPydanticBaseModel(PydanticBaseModel):
 
 
 class BaseModel(IambicPydanticBaseModel):
+    """
+    A base model class that provides additional helper methods and
+    configurations for other models used in IAMbic.
+    """
+
     @classmethod
     def update_forward_refs(cls, **kwargs):
         kwargs["Union"] = Union
@@ -139,6 +144,15 @@ class BaseModel(IambicPydanticBaseModel):
         as_boto_dict: bool = True,
         context: ExecutionContext = None,
     ):
+        """
+        Retrieve the value of an attribute for a specific AWS account.
+
+        :param aws_account: The AWSAccount object for which the attribute value should be retrieved.
+        :param attr: The attribute name (supports nested attributes via dot notation, e.g., properties.tags).
+        :param as_boto_dict: If True, the value will be transformed to a boto dictionary if applicable.
+        :param context: An optional ExecutionContext object.
+        :return: The attribute value for the specified AWS account.
+        """
         # Support for nested attributes via dot notation. Example: properties.tags
         attr_val = self
         for attr_key in attr.split("."):

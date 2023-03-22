@@ -148,7 +148,7 @@ class Tag(ExpiryModel, AccessModel):
 
     @property
     def resource_id(self):
-        return self.key
+        return f"{self.key}:{self.value}"
 
 
 class BaseAWSAccountAndOrgModel(PydanticBaseModel):

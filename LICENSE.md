@@ -1,3 +1,5 @@
+IAMbic is licensed with AGPLv3. IAMbic plugins (under iambic/plugins) are licensed under Apache License, Version 2.0.
+
                     GNU AFFERO GENERAL PUBLIC LICENSE
                        Version 3, 19 November 2007
 

@@ -2,10 +2,40 @@
 slug: /
 title: Overview
 ---
-# Introduction
-IAMbic is a multi-cloud identity and access management (IAM) control plane that allows you to view and manage your
+
+# What is IAMbic?
+
+IAMbic shifts cloud permissions left by solving the distributed permissions nightmare across multi-cloud environments.
+You can think of IAMbic like Terraform, but specifically designed for distributed Cloud IAM.
+
+Imagine that you're a cloud administrator, cloud security engineer, or site reliability engineer for a
+company with a large, multi-account footprint across
+AWS, GCP, or Azure. You have a lot of different teams across different departments that need access
+to different resources on these accounts. You're responsible for managing their permissions and access.
+
+You've shifted left, and you're using a mixture of Terraform, CloudFormation, and ClickOps© to manage your infrastructure.
+This approach is great for developers, who review and approve each others' changes. But for you and your security and compliance teams,
+it's a nightmare. Developers are being granted excessive permissions, making production changes that no one saw coming,
+which is causing accidental breakage left and right. It is also drastically increasing the risk and scope of a potential security breach.
+
+You've lost track of all the different ways that permissions are managed across your organization,
+and it's hard to know who has access to what without logging in to multiple systems. You're constantly having to chase down permissions requests,
+and you're constantly having to audit your environment to make sure that everything is secure.
+
+That's where IAMbic comes in. IAMbic imports your existing human identities, cloud identities,
+and permissions, using a human-readable syntax. You can manage your policies across all your cloud providers and services
+from a single codebase, making it easier to reason about and manage
+permissions and access controls across different teams and departments, along with dynamic naming and permissions depending on
+cloud account. You can also still leverage Infrastructure-as-Code and ClickOps, to have the best of both worlds. IAMbic will
+keep track of everything.
+
+IAMbic is a plugin-based multi-cloud identity and access management (IAM) control plane that allows you to view and manage your
 AWS cloud identities (IAM roles, and SSO permission sets), and your human identities from Okta and Google
-in a single location.
+in a single location. IAMbic will be extended to support additional cloud providers in the future, and we welcome contributions
+from the community.
+
+
+# How does it work?
 
 IAMbic creates a centralized, organized, complete copy of your human and cloud identities, principals, and permissions
 in version control and keeps this copy updated with any changes from your cloud environment.
@@ -17,9 +47,6 @@ IAMbic also lets you manage changes to your identities, access rules, and permis
 temporary access, group memberships, IAM permissions, and breakglass flows for end-users.
 With IAMbic, you have a single source of truth that ties together human identities, cloud identities,
 cloud permissions, and the relationships among them.
-
-The Noq Platform is built on top of IAMbic to provide user-friendly self-service request flows,
-access reviews, and unused permissions removal.
 
 ## Why IAMbic?
 
@@ -36,20 +63,25 @@ the volume of changes, access requests, and difficulties in auditing their syste
 decreased ability to respond to changing business needs and a decreased ability to secure their cloud
 environments.
 
-IAMbic's approach to regaining control over cloud entitlements and access management is to provide a system
+IAMbic's approach to regaining control over cloud permissions and access management is to provide a system
 of record that has the necessary depth into custom permission frameworks (i.e. The 7 layers and
 13,000 actions in AWS policy language) and breadth (i.e. downstream SaaS applications) to meet the
 needs of modern enterprises. This system of record, a modern cloud enterprise directory, combines
-records of SSO and cloud identity into one central location, as well as tracking all related entitlements
+records of SSO and cloud identity into one central location, as well as tracking all related permissions
 for those identities. This comprehensive record enables cross-account management, and provides a single
-source of truth for entitlements.
+source of truth for permissions.
 
 IAMbic intends to standardize the request workflow across the organization, enabling self-serve access
 requests in the developer workflow, and standardized request justification for various scenarios, such as
 break-glass access. Approvals for shared access are integrated into the Git workflow, providing a streamlined
-and efficient process for managing cloud entitlements.
+and efficient process for managing cloud permissions.
 
 ## What is the difference between IAMbic and Infrastructure-as-Code (IaC)?
+
+IAMbic is complementary to Infrastructure-as-Code (IaC). It's fine to operate with both in parallel, but we recommend
+not managing the same resources with both IAMbic and IaC. IAMbic will automatically capture changes made via IaC or other methods, and store
+them as commits in Git, giving you a clear timeline of when permissions were changed, what the changes were, and (in supported cases) who
+made the changes.
 
 Infrastructure-as-Code (IaC) is a way for developers to manage their infrastructure, but it comes with its own challenges.
 IaC promotes decentralization by project, meaning it's hard to get a full picture of your environment's existing configuration
@@ -57,18 +89,18 @@ in a single place. Additionally, as the complexity of IaC code and custom Terraf
 across multiple accounts and providers, the level of effort required for security practitioners to track the configuration
 goes up quickly. And finally, there can be a drift between the code and the actual state of your cloud environment, making IaC less of a useful artifact for understanding the current state of the cloud.
 
-That's where IAMbic comes in. IAMbic is designed specifically to help manage entitlements, and centralize them into a
-single Git repository in a human-readable format. IAMbic also includes Github actions that keep your entitlements
+That's where IAMbic comes in. IAMbic is designed specifically to help manage permissions, and centralize them into a
+single Git repository in a human-readable format. IAMbic also includes Github actions that keep your permissions
 updated with the actual state of your cloud environments and identity providers. This way, you can have a complete
-and current picture of your entitlements.
+and current picture of your permissions.
 
-IAMbic can take this a step further by letting you manage some or all of your entitlements, working seamlessly
+IAMbic can take this a step further by letting you manage some or all of your permissions, working seamlessly
 alongside your existing Infrastructure-as-Code or ClickOps workflows.
 The IAMbic format is designed to be simple and human-readable, making it easy for anyone to understand and make changes to your
-entitlements. And because IAMbic is stateless, you can make small changes quickly and easily.
+permissions. And because IAMbic is stateless, you can make small changes quickly and easily.
 
-In summary, while IaC is great for managing infrastructure, IAMbic is designed specifically to manage entitlements
-and provide a complete and mutable representation of your entitlements in one central location.
+In summary, while IaC is great for managing infrastructure, IAMbic is designed specifically to manage permissions
+and provide a complete and mutable representation of your permissions in one central location.
 
 ## Getting started
 

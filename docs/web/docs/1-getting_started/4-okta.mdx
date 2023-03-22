@@ -2,6 +2,8 @@
 title: Okta
 ---
 
+
+
 In this tutorial, you will configure IAMbic to manage an Okta Organization, and then
 practice using IAMbic to to create, manipulate, and expire a test group and test app assignment.
 
@@ -42,6 +44,16 @@ IdP Name: <input type="text" id="inputOktaIdpName" onInput={() => updateText(doc
 
 Okta API Token: <input type="text" id="inputOktaApiToken" value="s3cr3tOktaToken" onInput={() => updateText(document.getElementById('inputOktaApiToken'), 'outputOktaApiToken')} />
 -->
+
+<!-- TODO: Variables in code blocks: https://github.com/mdx-js/mdx/issues/1095#issuecomment-967511279 -->
+
+<!--  Email: <input type="text" id="inputOktaEmail" defaultValue="user@example.com" onInput={() => updateText(document.getElementById('inputOktaEmail'), 'outputOktaEmail')}/>  -->
+
+<!--  <label id={'outputOktaEmail'}>user@example.com</label> -->
+
+<!--   export const OktaEmail = () => <label id='outputOktaEmail'>user@example.com</label> -->
+
+<!--  <OktaEmail />  -->
 
 ```bash
 export EMAIL=<your_okta_email_address>
@@ -108,9 +120,10 @@ As a reminder and in case you did not export the bash variables in the `Prerequi
 cat <<EOF > config/secrets.yaml
 secrets:
   okta:
-    - idp_name: $OKTA_ORG_NAME
-      org_url: $OKTA_DOMAIN
-      api_token: $OKTA_API_TOKEN
+    organizations:
+      - idp_name: $OKTA_ORG_NAME
+        org_url: $OKTA_DOMAIN
+        api_token: $OKTA_API_TOKEN
 EOF
 ```
 
