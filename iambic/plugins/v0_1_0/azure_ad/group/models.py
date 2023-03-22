@@ -126,7 +126,7 @@ class GroupTemplate(ExpiryModel, AzureADTemplate):
                 change_details.current_value = cloud_group
             except ClientResponseError as err:
                 if err.status == 404:
-                    err = f"Group not found in Azure AD where id={self.properties.user_id}"
+                    err = f"Group not found in Azure AD where id={self.properties.group_id}"
                     log.exception(
                         "Invalid group_id provided. Group not found in Azure AD.",
                         **log_params,
