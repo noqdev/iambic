@@ -3,9 +3,9 @@ from __future__ import annotations
 import pathlib
 from typing import Any, Dict, List, Set
 
+from dictdiffer import diff
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
-from recursive_diff import recursive_diff
 
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -18,10 +18,12 @@ from iambic.core.models import (
 
 class ProposedChangeDiff(ProposedChange):
     diff: str = Field(default=None)
+    diff_resolved: str = Field(default=None)
 
     def __init__(self, proposed_change: ProposedChange) -> None:
         super().__init__(**proposed_change.dict())
-        self.diff = list(recursive_diff(self.current_value, self.new_value))
+        self.diff = list(diff(self.current_value, self.new_value))
+        self.diff_resolved = ["{x[0]}: {x[1]} -> {x[2]}" for x in self.diff]
 
 
 class ApplicableChange(PydanticBaseModel):

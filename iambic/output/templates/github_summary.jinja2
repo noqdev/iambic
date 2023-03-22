@@ -99,7 +99,7 @@
                                 </tr>
                                 {% if change.change.diff -%}
                                 <tr>
-                                    <td colspan="100%">{{ "* " + "<br/>* ".join(change.change.diff) }}</td>
+                                    <td colspan="100%">{{ "* " + "<br/>* ".join(change.change.diff_resolved) }}</td>
                                 </tr>
                                 {% endif -%}
                             </tbody>

@@ -39,7 +39,7 @@ def rich_tree_summary(action_summary: ActionSummary):
             for change in account.changes:
                 change_tree = account_tree.add(f"{change.change.resource_type} // {change.change.resource_id}", expanded=True)
                 if change.change.diff:
-                    change_tree.add("* " + "\n* ".join(change.change.diff))
+                    change_tree.add("* " + "\n* ".join(change.change.diff_resolved))
     console = Console(file=StringIO(), force_terminal=True)
     console.print(action_summary_tree)
     output = console.file.getvalue()
@@ -58,7 +58,7 @@ def rich_tree_exception(exceptions: ExceptionSummary):
                 change_tree.add(change.change.resource_type)
                 change_tree.add(str(change.change.change_type.value))
                 if change.change.diff:
-                    change_tree.add("* " + "\n* ".join(change.change.diff))
+                    change_tree.add("* " + "\n* ".join(change.change.diff_resolved))
     console = Console(file=StringIO(), force_terminal=True)
     console.print(exception_tree)
     output = console.file.getvalue()
