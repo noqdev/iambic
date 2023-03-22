@@ -164,6 +164,7 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
         change_details = AccountChangeDetails(
             account=self.properties.idp_name,
             resource_id=self.properties.username,
+            resource_type=self.properties.resource_type,
             new_value=proposed_user,
             proposed_changes=[],
         )

@@ -432,6 +432,7 @@ class AWSIdentityCenterPermissionSetTemplate(
             org_id=aws_account.org_id,
             account=str(aws_account),
             resource_id=name,
+            resource_type=self.resource_type,
             new_value=dict(
                 AccountAssignment=template_account_assignments,
                 **template_permission_set,

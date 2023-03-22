@@ -184,6 +184,7 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
         change_details = AccountChangeDetails(
             account=self.properties.idp_name,
             resource_id=self.properties.group_id,
+            resource_type=self.properties.resource_type,
             new_value=proposed_group,  # TODO fix
             proposed_changes=[],
         )

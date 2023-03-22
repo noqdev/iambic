@@ -344,6 +344,7 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
         account_change_details = AccountChangeDetails(
             account=str(aws_account),
             resource_id=policy_name,
+            resource_type=self.resource_type,
             new_value=dict(**account_policy),
             proposed_changes=[],
             exceptions_seen=[],
