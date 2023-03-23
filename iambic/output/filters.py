@@ -1,12 +1,10 @@
 from io import StringIO
 from typing import List
-from colors import color
 from rich.console import Console    
 from rich.style import Style
 from rich.text import Text
 from rich.table import Table
 from rich.tree import Tree
-from tabulate import tabulate
 from iambic.output.models import ActionSummary, ExceptionSummary
 
 

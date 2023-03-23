@@ -238,17 +238,16 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
                     log_params,
                     context,
                 ),
+                maybe_delete_group(
+                    self,
+                    google_project,
+                    log_params,
+                    context,
+                )
             ]
         )
 
         changes_made = await asyncio.gather(*tasks)
-        deletion_change = await maybe_delete_group(
-            self,
-            google_project,
-            log_params,
-            context,
-        )
-        changes_made.extend(deletion_change)
         if any(changes_made):
             change_details.proposed_changes.extend(
                 list(chain.from_iterable(changes_made))

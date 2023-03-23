@@ -51,9 +51,9 @@ properties:
     assert user_template.properties.profile["firstName"] == "TestNameChange"
 
     # set the template to import_only
-    proposed_changes_yaml_path = "{0}/proposed_changes.yaml".format(os.getcwd())
-    if os.path.isfile(proposed_changes_yaml_path):
-        os.remove(proposed_changes_yaml_path)
+    proposed_changes_path = "{0}/proposed_changes.txt".format(os.getcwd())
+    if os.path.isfile(proposed_changes_path):
+        os.remove(proposed_changes_path)
     else:
         assert (
             False  # Previous changes are not being written out to proposed_changes.yaml
@@ -63,8 +63,8 @@ properties:
     user_template.properties.profile["firstName"] = "shouldNotWork"
     user_template.write()
     run_apply(IAMBIC_TEST_DETAILS.config, [test_user_fp])
-    if os.path.isfile(proposed_changes_yaml_path):
-        assert os.path.getsize(proposed_changes_yaml_path) == 0
+    if os.path.isfile(proposed_changes_path):
+        assert os.path.getsize(proposed_changes_path) == 0
     else:
         # this is acceptable as well because there are no changes to be made.
         pass
