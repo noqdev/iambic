@@ -162,8 +162,8 @@ Iambic uses a YAML file to describe the desired state of an Okta Group. In this 
 Run the following set of commands from the root of your `iambic-templates` repository to create a new Okta Group template:
 
 ```bash
-mkdir -p okta/groups/$OKTA_IDP_NAME
-cat <<EOF > okta/groups/$OKTA_IDP_NAME/iambic-test-group.yaml
+mkdir -p resources/okta/group/$OKTA_IDP_NAME
+cat <<EOF > resources/okta/group/$OKTA_IDP_NAME/iambic-test-group.yaml
 template_type: NOQ::Okta::Group
 properties:
   name: iambic-test-group
@@ -184,7 +184,7 @@ In a production environment, this would be handled by a command issued on a Gith
 :::
 
 ```bash
-iambic apply okta/groups/$OKTA_IDP_NAME/iambic-test-group.yaml
+iambic apply resources/okta/group/$OKTA_IDP_NAME/iambic-test-group.yaml
 ```
 
 Confirm that the group has been created by running the following command and visiting the URL in your browser:
@@ -201,10 +201,11 @@ $ tree .
 ├── config
 │   ├── config.yaml
 │   └── secrets.yaml
-├── okta
-│   └── groups
-│       └── $OKTA_IDP_NAME
-│           ├── iambic-test-group.yaml
+├──resources
+    ├── okta
+    │   └── group
+    │       └── $OKTA_IDP_NAME
+    │           ├── iambic-test-group.yaml
 ```
 
 ### 4. Add a user to the group
@@ -215,7 +216,7 @@ In this section, we will add a user (`testuser@example.com`) to the group we cre
 Run the following command to replace the previous group you created with a new one that includes the new user:
 
 ```bash
-cat <<EOF > okta/groups/$OKTA_IDP_NAME/iambic-test-group.yaml
+cat <<EOF > resources/okta/group/$OKTA_IDP_NAME/iambic-test-group.yaml
 template_type: NOQ::Okta::Group
 properties:
   name: iambic-test-group
@@ -232,7 +233,7 @@ EOF
 Run the `apply` command to have IAMbic update the group:
 
 ```bash
-iambic apply okta/groups/$OKTA_DOMAIN/iambic-test-group.yaml
+iambic apply resources/okta/group/$OKTA_DOMAIN/iambic-test-group.yaml
 ```
 
 ### 5. Provide temporary ("break-glass") access to an Okta Group
@@ -250,7 +251,7 @@ If a timezone is provided, Iambic will use that timezone.
 :::
 
 ```bash
-cat <<EOF > okta/groups/$OKTA_IDP_NAME/iambic-test-group.yaml
+cat <<EOF > resources/okta/group/$OKTA_IDP_NAME/iambic-test-group.yaml
 template_type: NOQ::Okta::Group
 properties:
   name: iambic-test-group
@@ -263,7 +264,7 @@ EOF
 ```
 
 ```bash
-iambic apply okta/groups/$OKTA_IDP_NAME/iambic-test-group.yaml
+iambic apply resources/okta/group/$OKTA_IDP_NAME/iambic-test-group.yaml
 ```
 
 After applying the change, notice that the `expires_at` date in the template was converted from a relative expiration time ("in two minutes") to an absolute date (Example: "2021-05-20T15:00:00-04:00"). This allows Iambic to know exactly when the request should be expired.
@@ -277,7 +278,7 @@ echo https://$OKTA_DOMAIN/admin/groups
 After a couple of minutes, the request should expire. In a production deployment, this process would be automatic. But for the purposes of testing, you can manually expire the request by re-running the apply command after two minutes have passed:
 
 ```bash
-iambic apply okta/groups/$OKTA_IDP_NAME/iambic-test-group.yaml
+iambic apply resources/okta/group/$OKTA_IDP_NAME/iambic-test-group.yaml
 ```
 
 
