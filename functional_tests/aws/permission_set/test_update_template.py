@@ -67,15 +67,6 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
         await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
 
-        # self.assertEqual(
-        #     self.template.properties.description,
-        #     IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.permission_set_map[
-        #         self.template.identifier
-        #     ][
-        #         "Description"
-        #     ],
-        # )
-
         # test assignment
 
         identity_center_client = await IAMBIC_TEST_DETAILS.identity_center_account.get_boto3_client(
