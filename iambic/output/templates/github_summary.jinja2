@@ -97,9 +97,9 @@
                                     <td>{{ change.resource_type }}</td>
                                     <td>{{ change.change.change_type.value }}</td>
                                 </tr>
-                                {% if change.change.diff_resolved -%}
+                                {% if change.change.diff_plus_minus -%}
                                 <tr>
-                                    <td colspan="100%">{{ "* " + "<br/>* ".join(change.change.diff_resolved) }}</td>
+                                    <td colspan="100%">{{ change.change.diff_plus_minus }}</td>
                                 </tr>
                                 {% endif -%}
                             </tbody>

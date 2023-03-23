@@ -20,10 +20,45 @@ class ProposedChangeDiff(ProposedChange):
     diff: str = Field(default=None)
     diff_resolved: str = Field(default=None)
 
+    field_map = {
+        "inline_policies": "InlinePolicies",
+        "managed_policies": "ManagedPolicies",
+        "policy_document": "PolicyDocument",
+        "tags": "Tags",
+        "assume_role_policy_document": "AssumeRolePolicyDocument",
+        "permission_boundary": "PermissionBoundary",
+        "customer_managed_policies": "CustomerManagedPolicies",
+        "group_name": "GroupName",
+        "group_email": "GroupEmail",
+        "assignments": "Assignment",
+        "domain": "Domain",
+        "group": "Group",
+        "groups": "Group",
+        "users": "User",
+        "user": "User",
+
+    }
+
     def __init__(self, proposed_change: ProposedChange) -> None:
         super().__init__(**proposed_change.dict())
-        self.diff = list(diff(self.current_value, self.new_value))
-        self.diff_resolved = [f"{x[0]}: {x[1]} -> {x[2]}" for x in self.diff]
+        object_attribute = self.field_map.get(self.attribute, self.attribute)
+        if self.current_value is None:
+            self.current_value = {}
+        if self.new_value is None:
+            self.new_value = {}
+        self.diff = list(diff(self.current_value.get(object_attribute, {}), self.new_value.get(object_attribute, {})))
+        
+    @property
+    def diff_plus_minus(self) -> List[str]:
+        diff_plus_minus = ""
+        for x in self.diff:
+            if x[0] == "change":
+                diff_plus_minus += f"- {x[1]}\n+ {x[2]}\n"
+            elif x[0] == "add":
+                diff_plus_minus += f"+ {x[2]}\n"
+            elif x[0] == "remove":
+                diff_plus_minus += f"- {x[1]}\n"
+        return diff_plus_minus
 
 
 class ApplicableChange(PydanticBaseModel):
