@@ -9,6 +9,10 @@ from mock import AsyncMock, MagicMock
 
 from iambic.core.context import ExecutionContext
 from iambic.core.models import ProposedChangeType, TemplateChangeDetails
+from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import (
+    GoogleProject,
+    GoogleWorkspaceConfig,
+)
 
 
 class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
@@ -19,8 +23,8 @@ class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
             GroupTemplateProperties,
         )
 
-        self.google_workspace_config = MagicMock()
-        self.google_workspace_config.workspaces = []
+        workspaces = []
+        self.google_workspace_config = GoogleWorkspaceConfig(workspaces=workspaces)
         self.temp_dir = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp_dir.cleanup)
         self.temp_file_path = os.path.join(self.temp_dir.name, "test_path.yaml")
@@ -35,9 +39,48 @@ class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
                 members=[GroupMember(email="testuser@example.com")],
             ),
         )
+        self.template_2 = GroupTemplate(
+            template_type="google:group",
+            file_path=self.temp_file_path,
+            properties=GroupTemplateProperties(
+                name="test_group",
+                domain="example2.com",
+                email="test@example2.com",
+                description="test_description",
+                members=[GroupMember(email="testuser@example2.com")],
+            ),
+        )
 
-        self.google_project1 = MagicMock()
-        self.google_project2 = MagicMock()
+        self.google_project1 = GoogleProject(
+            project_id="google_project1",
+            subjects=[
+                {"domain": "example.com", "service_account": "google_project1_sa"}
+            ],
+            type="google",
+            private_key_id="google_project1_private_key_id",
+            private_key="google_project1_private_key",
+            client_email="google_project1_client_email",
+            client_id="google_project1_client_id",
+            auth_uri="google_project1_auth_uri",
+            token_uri="google_project1_token_uri",
+            auth_provider_x509_cert_url="google_project1_auth_provider_x509_cert_url",
+            client_x509_cert_url="google_project1_client_x509_cert_url",
+        )
+        self.google_project2 = GoogleProject(
+            project_id="google_project2",
+            subjects=[
+                {"domain": "example2.com", "service_account": "google_project2_sa"}
+            ],
+            type="google",
+            private_key_id="google_project2_private_key_id",
+            private_key="google_project2_private_key",
+            client_email="google_project2_client_email",
+            client_id="google_project2_client_id",
+            auth_uri="google_project2_auth_uri",
+            token_uri="google_project2_token_uri",
+            auth_provider_x509_cert_url="google_project2_auth_provider_x509_cert_url",
+            client_x509_cert_url="google_project2_client_x509_cert_url",
+        )
         mock_req = MagicMock()
         mock_req.execute = MagicMock(
             return_value={
@@ -48,11 +91,15 @@ class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
         )
         mock_service = MagicMock()
         mock_service.groups.return_value.get.return_value = mock_req
-        self.google_project1.get_service_connection = AsyncMock(
-            return_value=mock_service
+        object.__setattr__(
+            self.google_project1,
+            "get_service_connection",
+            AsyncMock(return_value=mock_service),
         )
-        self.google_project2.get_service_connection = AsyncMock(
-            return_value=mock_service
+        object.__setattr__(
+            self.google_project2,
+            "get_service_connection",
+            AsyncMock(return_value=mock_service),
         )
         self.google_workspace_config.workspaces = [
             self.google_project1,
@@ -69,14 +116,14 @@ class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(template_changes.resource_id, "test@example.com")
         self.assertEqual(template_changes.resource_type, "google:group")
         self.assertEqual(template_changes.template_path, self.temp_file_path)
-        self.assertEqual(len(template_changes.proposed_changes), 2)
+        self.assertEqual(len(template_changes.proposed_changes), 1)
         context.eval_only = False
         template_changes = await self.template.apply(google_workspace_config, context)
         self.assertEqual(
             google_workspace_config.workspaces[
                 0
             ].get_service_connection.return_value.groups.return_value.get.call_count,
-            4,
+            2,
         )
 
     async def test_apply_to_account_new_group(self):

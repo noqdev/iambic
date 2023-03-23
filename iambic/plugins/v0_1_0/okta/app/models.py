@@ -91,6 +91,8 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
             return template_changes
 
         for okta_organization in config.organizations:
+            if self.properties.idp_name != okta_organization.idp_name:
+                continue
             if context.execute:
                 log_str = "Applying changes to resource."
             else:
