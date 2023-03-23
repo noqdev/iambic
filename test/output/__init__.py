@@ -58,6 +58,29 @@ update_template_yaml = """  - resource_id: t1000
           ManagedPolicies: []
           InlinePolicies:
             - PolicyName: spoke-acct-policy
+              Statement:
+                - Effect: Allow
+                  Principal:
+                    AWS: arn:aws:iam::694815895589:role/NoqCentralRole
+                  Action:
+                    - s3:ListBucket
+                - Effect: Allow
+                  Principal:
+                    AWS: arn:aws:iam::694815895589:role/NoqCentralRole
+                  Action:
+                    - s3:CreateBucket
+            - PolicyName: spoke-acct-policy-333
+              Statement:
+                - Effect: Allow
+                  Principal:
+                    AWS: arn:aws:iam::694815895589:role/NoqCentralRole
+                  Action:
+                    - s3:DeleteBucket
+                - Effect: Allow
+                  Principal:
+                    AWS: arn:aws:iam::694815895589:role/NoqCentralRole
+                  Action:
+                    - s3:ListBucket
           AssumeRolePolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -77,7 +100,33 @@ update_template_yaml = """  - resource_id: t1000
           - change_type: Create
             attribute: inline_policies
             resource_id: spoke-acct-policy
-            new_value: {}
+            new_value:
+              Statement:
+                - Effect: Allow
+                  Principal:
+                    AWS: arn:aws:iam::694815895589:role/NoqCentralRole
+                  Action:
+                    - s3:ListBucket
+                - Effect: Allow
+                  Principal:
+                    AWS: arn:aws:iam::694815895589:role/NoqCentralRole
+                  Action:
+                    - s3:CreateBucket
+          - change_type: Create
+            attribute: inline_policies
+            resource_id: spoke-acct-policy-333
+            new_value:
+              Statement:
+                - Effect: Allow
+                  Principal:
+                    AWS: arn:aws:iam::694815895589:role/NoqCentralRole
+                  Action:
+                    - s3:DeleteBucket
+                - Effect: Allow
+                  Principal:
+                    AWS: arn:aws:iam::694815895589:role/NoqCentralRole
+                  Action:
+                    - s3:ListBucket
         exceptions_seen: []
     exceptions_seen: []
 """

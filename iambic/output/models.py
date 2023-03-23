@@ -14,6 +14,7 @@ from iambic.core.models import (
     ProposedChangeType,
     TemplateChangeDetails,
 )
+from iambic.core.utils import yaml
 
 
 class ProposedChangeDiff(ProposedChange):
@@ -46,18 +47,28 @@ class ProposedChangeDiff(ProposedChange):
             self.current_value = {}
         if self.new_value is None:
             self.new_value = {}
-        self.diff = list(diff(self.current_value.get(object_attribute, {}), self.new_value.get(object_attribute, {})))
+        self.diff = list(diff(self.current_value.get(object_attribute, {}), self.new_value))
         
     @property
     def diff_plus_minus(self) -> List[str]:
         diff_plus_minus = ""
         for x in self.diff:
+            label = self.attribute
             if x[0] == "change":
-                diff_plus_minus += f"- {x[1]}\n+ {x[2]}\n"
+                if isinstance(x[2], list) or isinstance(x[2], tuple):
+                    change_from = x[2][0]
+                    change_to = x[2][1]
+                else:
+                    change_from = x[2]
+                    change_to = x[2]
+                diff_plus_minus += f"\n(Remove) {label}: {yaml.dump(change_from)}\n(Add) {yaml.dump(change_to)}\n"
+                diff_plus_minus.rstrip('\n')
             elif x[0] == "add":
-                diff_plus_minus += f"+ {x[2]}\n"
+                diff_plus_minus += f"\n(Add) {label}: {yaml.dump(x[2])}\n"
+                diff_plus_minus.rstrip('\n')
             elif x[0] == "remove":
-                diff_plus_minus += f"- {x[1]}\n"
+                diff_plus_minus += f"\n(Remove) {label}: {yaml.dump(x[1])}\n"
+                diff_plus_minus.rstrip('\n')
         return diff_plus_minus
 
 
@@ -171,7 +182,6 @@ def get_applicable_changes(
                 for account_change in proposed_change.proposed_changes:
                     if account_change.change_type.value == proposed_change_type:
                         account_change.current_value = proposed_change.current_value
-                        account_change.new_value = proposed_change.new_value
                         applicable_changes.add(
                             _get_annotated_change(
                                 account_change, template_change, proposed_change.account
