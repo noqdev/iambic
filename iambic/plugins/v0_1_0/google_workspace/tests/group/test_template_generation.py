@@ -8,7 +8,9 @@ from pydantic import SecretStr
 
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.models import ExecutionMessage
-from iambic.plugins.v0_1_0.google_workspace.group.models import GroupTemplate
+from iambic.plugins.v0_1_0.google_workspace.group.models import (
+    GoogleWorkspaceGroupTemplate,
+)
 from iambic.plugins.v0_1_0.google_workspace.group.template_generation import (
     collect_project_groups,
     generate_domain_group_resource_files,
@@ -99,7 +101,9 @@ class TestGenerateGroupTemplates(IsolatedAsyncioTestCase):
             },
         ]
 
-        group_template = GroupTemplate(**groups[0], file_path="test_path.yaml")
+        group_template = GoogleWorkspaceGroupTemplate(
+            **groups[0], file_path="test_path.yaml"
+        )
 
         self.exe_message.get_sub_exe_files = AsyncMock(return_value=groups)
 
@@ -173,7 +177,7 @@ class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
         "iambic.plugins.v0_1_0.google_workspace.group.template_generation.list_groups"
     )
     @patch(
-        "iambic.plugins.v0_1_0.google_workspace.group.template_generation.GroupTemplate.write"
+        "iambic.plugins.v0_1_0.google_workspace.group.template_generation.AwsIamGroupTemplate.write"
     )
     async def test_generate_domain_group_resource_files(
         self, mock_group_write, mock_list_groups
@@ -187,7 +191,7 @@ class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
         project.project_id = "test_project_id"
         domain = "example.com"
 
-        group = GroupTemplate(
+        group = GoogleWorkspaceGroupTemplate(
             file_path="unset",
             resource_id="group1@example.com",
             resource_type="google:group:template",
@@ -209,7 +213,7 @@ class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
     async def test_update_or_create_group_template(self):
         existing_template_map = {}
         group_dir = "test_group_dir"
-        discovered_group_template = GroupTemplate(
+        discovered_group_template = GoogleWorkspaceGroupTemplate(
             file_path="unset",
             resource_id="group1@example.com",
             resource_type="google:group:template",
@@ -237,7 +241,7 @@ class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
                 discovered_group_template.file_path,
                 existing_template_map,
                 discovered_group_template.resource_id,
-                GroupTemplate,
+                GoogleWorkspaceGroupTemplate,
                 {},
                 discovered_group_template.properties,
                 [],

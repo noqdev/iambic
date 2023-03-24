@@ -207,7 +207,7 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
         return sorted_v
 
 
-class AWSIdentityCenterPermissionSetTemplate(
+class AwsIdentityCenterPermissionSetTemplate(
     AccessModelMixin, AWSTemplate, ExpiryModel
 ):
     template_type: str = AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE

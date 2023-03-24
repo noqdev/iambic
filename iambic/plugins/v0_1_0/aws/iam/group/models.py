@@ -77,7 +77,7 @@ class GroupProperties(BaseModel):
         return sorted_v
 
 
-class GroupTemplate(AWSTemplate, AccessModel):
+class AwsIamGroupTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_GROUP_TEMPLATE_TYPE
     properties: GroupProperties = Field(
         description="Properties of the group",

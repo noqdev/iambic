@@ -15,7 +15,7 @@ configurations for other models used in IAMbic.*
     - *string*
 - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
 - **`template_type`** *(string)*: Default: `"NOQ::Okta::App"`.
-- **`owner`** *(string)*: Owner of the app.
+- **`owner`** *(string)*
 - **`iambic_managed`**: Controls the directionality of Iambic changes. Default: `"undefined"`.
   - **All of**
     - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
@@ -51,6 +51,7 @@ configurations for other models used in IAMbic.
       - *string*
   - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
   - **`name`** *(string)*: Name of the app.
+  - **`owner`** *(string)*: Owner of the app.
   - **`status`**: Status of the app.
     - **All of**
       - : Refer to *[#/definitions/Status](#definitions/Status)*.

@@ -20,7 +20,7 @@ from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import merge_access_model_list
 from iambic.plugins.v0_1_0.aws.iam.policy.models import AssumeRolePolicyDocument
-from iambic.plugins.v0_1_0.aws.iam.role.models import RoleProperties, RoleTemplate
+from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate, RoleProperties
 from iambic.plugins.v0_1_0.aws.iam.role.template_generation import (
     calculate_import_preference,
     collect_aws_roles,
@@ -38,13 +38,13 @@ TEST_TEMPLATE_PATH = "resources/aws/iam/role/example_role.yaml"
 
 
 def test_calculate_import_preference():
-    template = RoleTemplate(
+    template = AwsIamRoleTemplate(
         file_path="foo", identifier="foo", properties=RoleProperties(role_name="foo")
     )
     templatized_preferrence = calculate_import_preference(template)
     assert templatized_preferrence is False  # because we are not using variables
 
-    template = RoleTemplate(
+    template = AwsIamRoleTemplate(
         file_path="foo",
         identifier="{{account_name}} admin",
         properties=RoleProperties(role_name="{{account_name}} admin"),
@@ -52,7 +52,7 @@ def test_calculate_import_preference():
     templatized_preferrence = calculate_import_preference(template)
     assert templatized_preferrence is True  # because we are using variables
 
-    template = RoleTemplate(
+    template = AwsIamRoleTemplate(
         file_path="foo",
         identifier="{{account_name}} admin",
         properties=RoleProperties(role_name="{{account_name}} admin"),

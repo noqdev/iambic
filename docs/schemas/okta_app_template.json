@@ -47,7 +47,6 @@
     },
     "owner": {
       "title": "Owner",
-      "description": "Owner of the app",
       "type": "string"
     },
     "iambic_managed": {
@@ -190,6 +189,11 @@
         "name": {
           "title": "Name",
           "description": "Name of the app",
+          "type": "string"
+        },
+        "owner": {
+          "title": "Owner",
+          "description": "Owner of the app",
           "type": "string"
         },
         "status": {

@@ -7,15 +7,17 @@ import jsonschema2md2
 from iambic.config.dynamic_config import Config, ExtendsConfig
 from iambic.core.models import Variable
 from iambic.core.utils import camel_to_snake
-from iambic.plugins.v0_1_0.aws.iam.group.models import GroupTemplate as AWSGroupTemplate
-from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyTemplate
-from iambic.plugins.v0_1_0.aws.iam.role.models import RoleTemplate
-from iambic.plugins.v0_1_0.aws.iam.user.models import UserTemplate as AWSUserTemplate
+from iambic.plugins.v0_1_0.aws.iam.group.models import AwsIamGroupTemplate
+from iambic.plugins.v0_1_0.aws.iam.policy.models import AwsIamManagedPolicyTemplate
+from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate
+from iambic.plugins.v0_1_0.aws.iam.user.models import AwsIamUserTemplate
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
-    AWSIdentityCenterPermissionSetTemplate,
+    AwsIdentityCenterPermissionSetTemplate,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount, AWSOrganization
-from iambic.plugins.v0_1_0.google_workspace.group.models import GroupTemplate
+from iambic.plugins.v0_1_0.google_workspace.group.models import (
+    GoogleWorkspaceGroupTemplate,
+)
 from iambic.plugins.v0_1_0.okta.app.models import OktaAppTemplate
 from iambic.plugins.v0_1_0.okta.group.models import OktaGroupTemplate
 from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate
@@ -43,13 +45,13 @@ def create_model_schemas(
 
 def generate_docs():
     aws_template_models = [
-        RoleTemplate,
-        ManagedPolicyTemplate,
-        AWSIdentityCenterPermissionSetTemplate,
-        AWSGroupTemplate,
-        AWSUserTemplate,
+        AwsIamRoleTemplate,
+        AwsIamManagedPolicyTemplate,
+        AwsIdentityCenterPermissionSetTemplate,
+        AwsIamGroupTemplate,
+        AwsIamUserTemplate,
     ]
-    google_template_models = [GroupTemplate]
+    google_template_models = [GoogleWorkspaceGroupTemplate]
     okta_template_models = [OktaGroupTemplate, OktaUserTemplate, OktaAppTemplate]
     config_models = [
         AWSAccount,

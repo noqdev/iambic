@@ -8,10 +8,9 @@ from functional_tests.aws.group.utils import (
     group_full_import,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
 from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.event_bridge.models import GroupMessageDetails
-from iambic.plugins.v0_1_0.aws.iam.group.models import GroupTemplate
+from iambic.plugins.v0_1_0.aws.iam.group.models import AwsIamGroupTemplate
 
 
 class PartialImportGroupTestCase(IsolatedAsyncioTestCase):
@@ -58,7 +57,7 @@ class PartialImportGroupTestCase(IsolatedAsyncioTestCase):
         self.template.excluded_accounts = [deleted_account]
 
         # Confirm the change is only in memory and not on the file system
-        file_sys_template = GroupTemplate.load(self.template.file_path)
+        file_sys_template = AwsIamGroupTemplate.load(self.template.file_path)
         self.assertNotIn(deleted_account, file_sys_template.excluded_accounts)
 
         # Create the policy on all accounts except 1
@@ -75,6 +74,6 @@ class PartialImportGroupTestCase(IsolatedAsyncioTestCase):
             ],
         )
 
-        file_sys_template = GroupTemplate.load(self.template.file_path)
+        file_sys_template = AwsIamGroupTemplate.load(self.template.file_path)
         self.assertEqual(file_sys_template.included_accounts, ["*"])
         self.assertEqual(file_sys_template.excluded_accounts, [deleted_account])

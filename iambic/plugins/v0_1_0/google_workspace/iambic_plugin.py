@@ -12,7 +12,9 @@ from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.models import Variable
 from iambic.core.utils import aio_wrapper
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
-from iambic.plugins.v0_1_0.google_workspace.group.models import GroupTemplate
+from iambic.plugins.v0_1_0.google_workspace.group.models import (
+    GoogleWorkspaceGroupTemplate,
+)
 from iambic.plugins.v0_1_0.google_workspace.handlers import (
     import_google_resources,
     load,
@@ -133,6 +135,6 @@ IAMBIC_PLUGIN = ProviderPlugin(
     async_import_callable=import_google_resources,
     async_load_callable=load,
     templates=[
-        GroupTemplate,
+        GoogleWorkspaceGroupTemplate,
     ],
 )
