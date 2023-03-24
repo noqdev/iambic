@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 def get_resource_dir_args() -> list:
-    return ["groups"]
+    return ["group"]
 
 
 def get_response_dir(exe_message: ExecutionMessage) -> str:

@@ -305,7 +305,7 @@ class ManagedPolicyProperties(BaseModel):
         return sorted_v
 
 
-class ManagedPolicyTemplate(AWSTemplate, AccessModel):
+class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
     template_type = AWS_MANAGED_POLICY_TEMPLATE_TYPE
     properties: ManagedPolicyProperties = Field(
         description="The properties of the managed policy",

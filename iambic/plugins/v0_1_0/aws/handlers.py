@@ -40,7 +40,7 @@ from iambic.plugins.v0_1_0.aws.iam.user.template_generation import (
     generate_aws_user_templates,
 )
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
-    AWSIdentityCenterPermissionSetTemplate,
+    AwsIdentityCenterPermissionSetTemplate,
 )
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation import (
     collect_aws_permission_sets,
@@ -122,7 +122,7 @@ async def apply(
     # TODO: Leverage remote_worker as part of a distributed execution
 
     if any(
-        isinstance(template, AWSIdentityCenterPermissionSetTemplate)
+        isinstance(template, AwsIdentityCenterPermissionSetTemplate)
         for template in templates
     ):
         await generate_permission_set_map(config.accounts, templates)

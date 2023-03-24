@@ -9,7 +9,7 @@ from functional_tests.aws.managed_policy.utils import (
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 
-from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyTemplate
+from iambic.plugins.v0_1_0.aws.iam.policy.models import AwsIamManagedPolicyTemplate
 from iambic.plugins.v0_1_0.aws.utils import remove_expired_resources
 
 
@@ -35,7 +35,7 @@ class ManagedPolicyExpirationTestCase(IsolatedAsyncioTestCase):
         ) - timedelta(days=1)
         self.template.write()
 
-        file_sys_template = ManagedPolicyTemplate.load(self.template.file_path)
+        file_sys_template = AwsIamManagedPolicyTemplate.load(self.template.file_path)
         self.assertEqual(
             len(file_sys_template.properties.policy_document.statement),
             expected_statement_count + 1,
@@ -47,7 +47,7 @@ class ManagedPolicyExpirationTestCase(IsolatedAsyncioTestCase):
         )
         self.template.write()
 
-        file_sys_template = ManagedPolicyTemplate.load(self.template.file_path)
+        file_sys_template = AwsIamManagedPolicyTemplate.load(self.template.file_path)
         self.assertEqual(
             len(file_sys_template.properties.policy_document.statement),
             expected_statement_count,

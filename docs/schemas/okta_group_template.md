@@ -1,0 +1,62 @@
+# OktaGroupTemplate
+
+*A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.*
+
+## Properties
+
+- **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+- **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+  - **Items**
+- **`expires_at`**: The date and time the resource will be/was set to deleted.
+  - **Any of**
+    - *string*
+    - *string*
+    - *string*
+- **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+- **`template_type`** *(string)*: Default: `"NOQ::Okta::Group"`.
+- **`owner`** *(string)*
+- **`iambic_managed`**: Controls the directionality of Iambic changes. Default: `"undefined"`.
+  - **All of**
+    - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
+- **`properties`**: Properties for the Okta Group.
+  - **All of**
+    - : Refer to *[#/definitions/OktaGroupTemplateProperties](#definitions/OktaGroupTemplateProperties)*.
+## Definitions
+
+- <a id="definitions/IambicManaged"></a>**`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+- <a id="definitions/UserStatus"></a>**`UserStatus`**: An enumeration. Must be one of: `["active", "provisioned", "deprovisioned", "recovery", "suspended", "staged", "locked_out", "password_expired"]`.
+- <a id="definitions/UserSimple"></a>**`UserSimple`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
+  - **`expires_at`**: The date and time the resource will be/was set to deleted.
+    - **Any of**
+      - *string*
+      - *string*
+      - *string*
+  - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+  - **`username`** *(string)*
+  - **`status`**: Default: `"active"`.
+    - **All of**
+      - : Refer to *[#/definitions/UserStatus](#definitions/UserStatus)*.
+- <a id="definitions/OktaGroupTemplateProperties"></a>**`OktaGroupTemplateProperties`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
+  - **`expires_at`**: The date and time the resource will be/was set to deleted.
+    - **Any of**
+      - *string*
+      - *string*
+      - *string*
+  - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+  - **`name`** *(string)*: Name of the group.
+  - **`owner`** *(string)*: Owner of the group.
+  - **`idp_name`** *(string)*: Name of the identity provider that's associated with the group.
+  - **`group_id`** *(string)*: Unique Group ID for the group. Usually it's {idp-name}-{name}. Default: `""`.
+  - **`description`** *(string)*: Description of the group. Default: `""`.
+  - **`extra`**: Extra attributes to store.
+  - **`members`** *(array)*: Users in the group. Default: `[]`.
+    - **Items**: Refer to *[#/definitions/UserSimple](#definitions/UserSimple)*.

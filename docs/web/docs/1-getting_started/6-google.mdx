@@ -123,8 +123,8 @@ From the base directory of your IAMbic templates repository, your directory stru
 tree .
 .
 ├── config
-│   ├── config.yaml
-│   └── secrets.yaml
+│   ├── config.yaml
+│   └── secrets.yaml
 ```
 
 ### 2. Import Existing Google Groups
@@ -137,7 +137,7 @@ Run the following command in the root of your `iambic-templates` repository to i
 iambic import
 ```
 
-If you have Google Groups defined, your iambic-templates repository should have a `google/groups` directory with a subdirectory for each domain you have defined.
+If you have Google Workspace Groups defined, your iambic-templates repository should have a `google_workspace/group` directory with a subdirectory for each domain you have defined.
 <!-- #TODO when would I have defined GG? What does that mean? We haven't talked about them being defined yet... What if I don't have them defined? -->
 
 You've completed the setup configuration connecting your Google Groups to IAMBic. Now you will practice using IAMbic to execute basic group management skills.
@@ -150,9 +150,9 @@ Iambic uses a YAML file to describe the desired state of a Google Group. In this
 Run the following set of commands from the root of your `iambic-templates` repository to create a new Google Group template:
 
 ```bash
-mkdir -p google/groups/$DOMAIN
-cat <<EOF > google/groups/$DOMAIN/iambic-test-group.yaml
-template_type: NOQ::Google::Group
+mkdir -p resources/google_workspace/group/$DOMAIN
+cat <<EOF > resources/google_workspace/group/$DOMAIN/iambic-test-group.yaml
+template_type: NOQ::GoogleWorkspace::Group
 properties:
   name: iambic-test-group
   description: ''
@@ -164,7 +164,7 @@ properties:
 EOF
 ```
 
-You can inspect and cofirm the contents of the file by viewing it at `google/groups/$DOMAIN/iambic-test-group.yaml`
+You can inspect and cofirm the contents of the file by viewing it at `resources/google_workspace/group/$DOMAIN/iambic-test-group.yaml`
 
 :::tip
 
@@ -186,7 +186,7 @@ In a production environment, this would be handled by a command issued on a Gith
 :::
 
 ```bash
-iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply resources/google_workspace/group/$DOMAIN/iambic-test-group.yaml
 ```
 
 Confirm that the group has been created by running the following command and visiting the URL in your browser:
@@ -212,10 +212,11 @@ $ tree .
 ├── config
 │   ├── config.yaml
 │   └── secrets.yaml
-├── google
-│   └── groups
-│       └── $DOMAIN
-│           ├── iambic-test-group.yaml
+├── resources
+    ├── google_workspace
+        └── group
+            └── $DOMAIN
+                ├── iambic-test-group.yaml
 ```
 
 ### 4. Add a user to the group
@@ -229,8 +230,8 @@ Run the following command to replace the previous group you created with a new o
 
 
 ```bash
-cat <<EOF > google/groups/$DOMAIN/iambic-test-group.yaml
-template_type: NOQ::Google::Group
+cat <<EOF > resources/google_workspace/group/$DOMAIN/iambic-test-group.yaml
+template_type: NOQ::GoogleWorkspace::Group
 properties:
   name: iambic-test-group
   description: ''
@@ -246,7 +247,7 @@ EOF
 Run the `apply` command to have IAMbic update the group:
 
 ```bash
-iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply resources/google_workspace/group/$DOMAIN/iambic-test-group.yaml
 ```
 
 <!-- #TODO Is there a way we can test/verify that this worked and the user is in the GG now?
@@ -267,8 +268,8 @@ If a timezone is provided, Iambic will use that timezone.
 :::
 
 ```bash
-cat <<EOF > google/groups/$DOMAIN/iambic-test-group.yaml
-template_type: NOQ::Google::Group
+cat <<EOF > resources/google_workspace/group/$DOMAIN/iambic-test-group.yaml
+template_type: NOQ::GoogleWorkspace::Group
 expires_at: tomorrow
 properties:
   name: iambic-test-group
@@ -284,7 +285,7 @@ EOF
 ```
 
 ```bash
-iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply resources/google_workspace/group/$DOMAIN/iambic-test-group.yaml
 ```
 
 After applying the change, notice that the `expires_at` date in the template was converted from a relative expiration time ("in two minutes") to an absolute date (Example: "2021-05-20T15:00:00-04:00"). This allows Iambic to know exactly when the request should be expired.
@@ -298,7 +299,7 @@ echo https://groups.google.com/a/$DOMAIN/g/iambic-test-group
 After a couple of minutes, the request should expire. In a production deployment, this process would be automatic. But for the purposes of testing, you can manually expire the request by re-running the apply command after two minutes have passed:
 
 ```bash
-iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply resources/google_workspace/group/$DOMAIN/iambic-test-group.yaml
 ```
 
 ### 6. Expire the Google Group
@@ -309,8 +310,8 @@ Notice the extra line at the top-level of the YAML below, `expires_at: in one mi
 Run the following command to update the group template, and then apply and view the new template.
 
 ```bash
-cat <<EOF > google/groups/$DOMAIN/iambic-test-group.yaml
-template_type: NOQ::Google::Group
+cat <<EOF > resources/google_workspace/group/$DOMAIN/iambic-test-group.yaml
+template_type: NOQ::GoogleWorkspace::Group
 expires_at: in one minute
 properties:
   name: iambic-test-group
@@ -324,9 +325,9 @@ properties:
       expires_at: in 2 minutes
 EOF
 
-iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply resources/google_workspace/group/$DOMAIN/iambic-test-group.yaml
 
-cat google/groups/$DOMAIN/iambic-test-group.yaml
+cat resources/google_workspace/group/$DOMAIN/iambic-test-group.yaml
 ```
 
 In the last line of the above commands, we printed the contents of the template to the terminal. Notice that the `expires_at` date has been updated from a relative time to an absolute date. This allows Iambic to know exactly when the request should be expired.
@@ -334,10 +335,10 @@ In the last line of the above commands, we printed the contents of the template 
 After a minute has passed, re-run the apply command to expire the request.
 
 ```bash
-iambic apply google/groups/$DOMAIN/iambic-test-group.yaml
+iambic apply resources/google_workspace/group/$DOMAIN/iambic-test-group.yaml
 ```
 
-<!-- #TODO Do something here to confrim it's expired properly -->
+<!-- #TODO Do something here to confirm it's expired properly -->
 
 ## Conclusion
 That's it! You've now connected Google Groups to IAMbic, and are able to create and edit your groups, and expire users and groups.

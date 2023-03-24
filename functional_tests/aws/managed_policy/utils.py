@@ -10,8 +10,8 @@ from iambic.core.models import ExecutionMessage
 from iambic.core.utils import gather_templates
 from iambic.plugins.v0_1_0.aws.iam.policy.models import (
     AWS_MANAGED_POLICY_TEMPLATE_TYPE,
+    AwsIamManagedPolicyTemplate,
     ManagedPolicyDocument,
-    ManagedPolicyTemplate,
 )
 from iambic.plugins.v0_1_0.aws.iam.policy.template_generation import (
     collect_aws_managed_policies,
@@ -22,12 +22,12 @@ from iambic.plugins.v0_1_0.aws.iam.policy.template_generation import (
 
 async def generate_managed_policy_template_from_base(
     repo_dir: str,
-) -> ManagedPolicyTemplate:
+) -> AwsIamManagedPolicyTemplate:
     managed_policies = await gather_templates(
         repo_dir, AWS_MANAGED_POLICY_TEMPLATE_TYPE
     )
     managed_policy_dir = get_template_dir(repo_dir)
-    managed_policy_template = ManagedPolicyTemplate.load(
+    managed_policy_template = AwsIamManagedPolicyTemplate.load(
         random.choice(managed_policies)
     )
     log.info(

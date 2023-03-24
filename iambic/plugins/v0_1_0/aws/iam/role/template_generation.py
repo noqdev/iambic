@@ -23,8 +23,8 @@ from iambic.plugins.v0_1_0.aws.event_bridge.models import RoleMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.policy.models import AssumeRolePolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.role.models import (
     AWS_IAM_ROLE_TEMPLATE_TYPE,
+    AwsIamRoleTemplate,
     RoleProperties,
-    RoleTemplate,
 )
 from iambic.plugins.v0_1_0.aws.iam.role.utils import (
     get_role_across_accounts,
@@ -237,7 +237,7 @@ async def create_templated_role(  # noqa: C901
     role_dir: str,
     existing_template_map: dict,
     config: AWSConfig,
-) -> RoleTemplate:
+) -> AwsIamRoleTemplate:
     account_id_to_role_map = await _account_id_to_role_map(role_refs)
     num_of_accounts = len(role_refs)
 
@@ -411,7 +411,7 @@ async def create_templated_role(  # noqa: C901
         file_path,
         existing_template_map,
         role_name,
-        RoleTemplate,
+        AwsIamRoleTemplate,
         role_template_params,
         RoleProperties(**role_template_properties),
         list(aws_account_map.values()),

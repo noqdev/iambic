@@ -264,7 +264,7 @@ class Config(BaseTemplate):
                         )
                     )
                 else:
-                    log.critical(
+                    log.warning(
                         "Templates discovered for a plugin not defined in the config file.",
                         missing_config=plugin.config_name,
                     )

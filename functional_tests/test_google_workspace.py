@@ -9,8 +9,8 @@ from iambic.core.models import ProposedChangeType
 from iambic.core.parser import load_templates
 from iambic.main import run_apply
 from iambic.plugins.v0_1_0.google_workspace.group.models import (
+    GoogleWorkspaceGroupTemplate,
     GroupMember,
-    GroupTemplate,
 )
 
 
@@ -41,7 +41,7 @@ properties:
     run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
 
     # Test Reading Template
-    group_template: GroupTemplate = load_templates([test_group_fp])[0]
+    group_template: GoogleWorkspaceGroupTemplate = load_templates([test_group_fp])[0]
     assert group_template.properties.members[2].email == "iambic_test_user_2@iambic.org"
 
     # Test attach members

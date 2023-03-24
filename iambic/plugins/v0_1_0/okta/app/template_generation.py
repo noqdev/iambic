@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 def get_resource_dir_args() -> list:
-    return ["apps"]
+    return ["app"]
 
 
 def get_response_dir(exe_message: ExecutionMessage) -> str:
