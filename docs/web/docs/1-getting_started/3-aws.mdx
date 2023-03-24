@@ -403,10 +403,10 @@ After applying the changes, the users specified in the access rules will now hav
 
 ```bash
 # Create a directory in your iambic-templates repo
-mkdir -p resources/aws/identity_center/permission_sets/
+mkdir -p resources/aws/identity_center/permission_set/
 
 # Open the yaml file with your favorite editor, and save the template you crafted above
-code resources/aws/identity_center/permission_sets/iambic_test_permission_set.yaml
+code resources/aws/identity_center/permission_set/iambic_test_permission_set.yaml
 ```
 <!-- #TODO the instructions above don't quite make sense. Are we duplicating the file or ?? -->
 
@@ -438,12 +438,19 @@ properties:
 
 Apply the file by running `iambic apply`.
 ```bash
-iambic apply resources/aws/identity_center/permission_sets/iambic_test_permission_set.yaml
+iambic apply resources/aws/identity_center/permission_set/iambic_test_permission_set.yaml
 ```
 
-#### 4.2 Provide temporary access to a permission set
+#### 4.2 Provide access to a permission set
 
-To grant temporary access to a permission set, you can add an `access_rules` section to the YAML template.
+To grant access to a permission set, you can add an `access_rules` section to the YAML template.
+
+:::note
+
+IAMbic does not yet track groups and users natively from AWS Identity Center. If you already use identity provider like Okta or Google Workspace, you can propagate groups and users by [integrating](https://docs.aws.amazon.com/singlesignon/latest/userguide/manage-your-identity-source-idp.html) AWS Identity Center with external identity providers such as Okta or Google Workspace. IAMbic does provide Okta plugin.
+
+:::
+
 
 This section specifies which users and groups can access the permission set, on which accounts they have access to, and for how long the access is valid. If the `included_accounts` field is not specified, the access rule will apply to all accounts configured in AWS Identity Center.
 
@@ -455,6 +462,22 @@ rule that grants access to members of group `GROUP_1` on all accounts that start
 access_rules:
   - groups:
       - GROUP_1
+    included_accounts:
+      - ACCOUNT_*
+    excluded_accounts:
+      - SENSITIVE_ACCOUNT
+    included_orgs:
+      - o-12345678
+```
+
+The example provided shows an access
+rule that grants access to iambic_example_user_1@iambic.org on all accounts that start with
+`ACCOUNT_` except for the `SENSITIVE_ACCOUNT` account.
+
+```yaml
+access_rules:
+  - users:
+      - iambic_example_user_1@iambic.org
     included_accounts:
       - ACCOUNT_*
     excluded_accounts:
