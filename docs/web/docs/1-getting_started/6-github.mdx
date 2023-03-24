@@ -2,9 +2,114 @@
 title: Deploy on GitHub
 ---
 
+### Configuring GitHub to work with IAMbic
+These steps will ensure GitHub is confgured properly to work with IAMbic.
+
+<!--
+
+This is experimental, WIP code.
+
+To makes these commands easier to copy and paste, we recommend filling out the following variables:
+
+GitHub Organization: <input
+type="text"
+id="inputGithubOrg"
+defaultValue="exampleOrg"
+onInput={(e) => {
+  updateText('outputGithubOrg', e.target.value)
+  updateText('outputGithubOrgLink', getGitOrganizationLink(e.target.value), true)
+  }
+}
+/>
+
+IAMbic AWS Hub Account Name: <input
+type="text"
+id="inputAWSHubAccount"
+defaultValue="aws_hub_account" onInput={(e) => {
+  updateText('outputAWSHubAccount', e.target.value)
+  }
+}
+/>
+
+import CodeBlockWithLabel from '@site/src/components/CodeBlockWithLabel';
+
+<div>
+  GitHub Organization:
+  <input
+    type="text"
+    id="inputGithubOrg"
+    defaultValue="exampleOrg"
+    onInput={(e) => {
+      updateText('outputGithubOrg', e.target.value);
+      updateText('outputGithubOrgLink', getGitOrganizationLink(e.target.value), true);
+    }}
+  />
+</div>
+
+<div>
+  IAMbic AWS Hub Account Name:
+  <input
+    type="text"
+    id="inputAWSHubAccount"
+    defaultValue="aws_hub_account"
+    onInput={(e) => {
+      updateText('outputAWSHubAccount', e.target.value);
+    }}
+  />
+</div>
+
+<CodeBlockWithLabel
+  code={`template_type: NOQ::AWS::IAM::Role
+included_accounts:
+  - {outputAWSHubAccount}
+  - {aws_account_1_label}
+  - {aws_account_2_label}
+...`}
+  language="language-yaml"
+  labels={[
+    { id: 'outputAWSHubAccount', content: 'AWS Hub Account' },
+    { id: 'aws_account_1_label', content: 'AWS Account 1' },
+    { id: 'aws_account_2_label', content: 'AWS Account 2' },
+  ]}
+/>
+
+
+
+
+ - import CodeBlockWithLabel from '@site/src/components/CodeBlockWithLabel';
+
+Pre CodeBlockWithLabel
+
+<CodeBlockWithLabel
+  code={`template_type: NOQ::AWS::IAM::Role
+included_accounts:
+  - {outputAWSHubAccount}
+  - {aws_account_1_label}
+  - {aws_account_2_label}
+...`}
+  language="language-yaml"
+  labels={[
+    { id: 'outputAWSHubAccount', content: 'AWS Hub Account' },
+    { id: 'aws_account_1_label', content: 'AWS Account 1' },
+    { id: 'aws_account_2_label', content: 'AWS Account 2' },
+  ]}
+/>
+
+Post CodeBlockWithLabel
+
+Pre-link
+
+<a href={getGitOrganizationLink('exampleOrg')} target="_blank" id={elementIds.gitHubOrgAnchorTag}><label id='outputGithubOrgLink'>{getGitOrganizationLink('exampleOrg')}</label></a>
+
+Post-Link
+
+-->
+
+
 ## Overview
 IAMbic's GitHub integration is designed to facilitate team collaboration on IAMbic templates.
 This page will walk you through the steps of configuring IAMbic, GitHub, and AWS to work together.
+
 
 ### The typical workflow for using IAMbic with GitHub
 
@@ -24,19 +129,17 @@ This page will walk you through the steps of configuring IAMbic, GitHub, and AWS
 ### Prerequisites
 Before you begin, you will need to do the following:
 
-1. Complete the [IAMbic Getting Started guide](/getting_started/) to create your Git repository and import your existing entitlements from your cloud provider(s).
+1. Complete the [IAMbic Getting Started guide](/getting_started/) to create your Git repository and import your existing identities and
+permissions from your cloud provider(s).
 2. Set up a GitHub repository for your IAMbic templates.
 3. Make sure you have admin access for the IAMbic GitHub repository that can perform the following tasks:
 	1. Configure the repository to require approvals before merging pull requests.
 4. Have an AWS admin configure federated login <!-- #TODO link to how to configure federated login --> for IAMbic GitHub actions.
 
-### Configuring GitHub to work with IAMbic
-These steps will ensure GitHub is confgured properly to work with IAMbic.
-
 #### Configure your GitHub Repository to require approvals before merging
 
-1. Go to the GitHub repository "noqdev/iambic-templates-example", where "noqdev" is the GitHub organization and "iambic-templates-example" is the repository name within the "noqdev" organization.
-2. Navigate to the "branches" settings page; the URL will look something like https://github.com/noqdev/iambic-templates-example/settings/branches
+1. Go to the GitHub repository you had created previously, "ExampleOrg/iambic-templates"
+2. Navigate to the "branches" settings page; the URL will look something like github.com/ExampleOrg/iambic-templates/settings/branches
 3. Add a branch protection rule.
 4. Set the branch name pattern to `main`.
 5. Configure the options
@@ -52,32 +155,38 @@ By installing IAMbic GitHub App, the app can integrate the pull-request and merg
 
 ### Create a GitHub App in your organization
 
-1. Visit your organization GitHub App settings. (https://github.com/organizations/ExampleOrg/settings/apps)
+1. Visit your Organization's GitHub App settings. (github.com/organizations/ExampleOrg/settings/apps)
 2. Click "New GitHub App".
 3. Input `Iambic Integrations` for "GitHub App name".
 4. Input `https://iambic.org/` for "Homepage URL".
 5. Uncheck "Active" for "Webhook".
-6. Select "Read and Write" for "Content" Under "Permissions".
-7. Select "Read and Write" for "Pull requests" Under "Permissions".
-7. Select "Read and Write" for "Issues" Under "Permissions".
-8. Leave default "Only on this account" for "Where can this GitHub App bed installed?".
-9. Click "Create GitHub App".
-10. Scroll down to "Private Keys".
-11. Click "Generate a private key".
-12. A file named "iambic-integrations.2023-02-17.private-key.pem" should be downloaded by your browser. (The exact filename will be different due to timestamp.)
+6. Select "Read and Write" for "Content" Under "Repository/Permissions".
+7. Select "Read and Write" for "Issues" Under "Repository/Permissions".
+8. Select "Read and Write" for "Pull requests" Under "Repository/Permissions".
+9. Leave the default value ("Only on this account") for "Where can this GitHub App be installed?".
+10. Click "Create GitHub App".
+11. Scroll down to "Private Keys".
+12. Click "Generate a private key".
+13. The private key should be downloaded automatically.
 
-### Store the following secrets in AWS SecretManager in the same AWS account running GitHub App lambda function.
+### Store the following secrets in AWS Secrets Manager in the same AWS account running GitHub App lambda function.
 
-1. Store the earlier downloaded private key contents (not the filename) to SecretManager and name it `staging/github-app-private-key`. (This is the default name in the later terraform. If you use another name, be sure to update it in the terraform procedure later.)
+1. Store the earlier downloaded private key contents (not the filename) in AWS Secrets Manager and name it `iambic/github-app-private-key`.
+(This is the default name used in the Terraform that will be executed later. If you use another name, be sure to update it in the Terraform procedure later.)
 
-2. Generate a webhook secret. (e.g., by taking the output of `ruby -rsecurerandom -e 'puts SecureRandom.hex(20)'` at the terminal). Store the webhook secret in SecretManager and name it `staging/github-app-webhook-secret`.
+<!-- # TODO: Mention plaintext etc. -->
+
+2. Generate a webhook secret. (e.g., by taking the output of `ruby -rsecurerandom -e 'puts SecureRandom.hex(20)'` at the terminal).
+Store the webhook secret in AWS Secrets Manager and name it `iambic/github-app-webhook-secret`.
 
 ### Create an IAM role for Lambda function execution
+<!-- # TODO: Where do I put this file and how do I write it? -->
 
-```
+
+```yaml
 template_type: NOQ::AWS::IAM::Role
 included_accounts:
-  - NAME_OF_AWS_ACCOUNT_THAT_HAS_IambicHubRole
+  - aws_hub_account_name
 identifier: iambic_github_app_lambda_execution
 properties:
   description: Github App Lambda Execution
@@ -101,10 +210,10 @@ properties:
             - secretsmanager:GetSecretValue
           effect: Allow
           resource:
-            - arn:aws:secretsmanager:*:{{account_id}}:secret:staging/github-app-private-key
-            - arn:aws:secretsmanager:*:{{account_id}}:secret:staging/github-app-private-key-*
-            - arn:aws:secretsmanager:*:{{account_id}}:secret:staging/github-app-webhook-secret
-            - arn:aws:secretsmanager:*:{{account_id}}:secret:staging/github-app-webhook-secret-*
+            - arn:aws:secretsmanager:*:{{account_id}}:secret:iambic/github-app-private-key
+            - arn:aws:secretsmanager:*:{{account_id}}:secret:iambic/github-app-private-key-*
+            - arn:aws:secretsmanager:*:{{account_id}}:secret:iambic/github-app-webhook-secret
+            - arn:aws:secretsmanager:*:{{account_id}}:secret:iambic/github-app-webhook-secret-*
           sid: SecretReading
         - action:
             - logs:CreateLogStream
@@ -122,13 +231,13 @@ properties:
 
 You will need to replace the "NAME_OF_AWS_ACCOUNT_THAT_HAS_IambicHubRole" with the account name of the AWS account holding the IambicHubRole. In the event you change the secret names, you need to update those values as well.
 
-Place the above iambic template to your iambic templates repo
+Place the above IAMbic template to your `iambic-templates` repo
 
-You can then apply the template via `iambic apply - PATH_TO_YOUR_iambic_template
+You can then apply the template via `iambic apply /path/to/your/template.yaml`
 
 ### You have created the GitHub App. A GitHub App has to be a hosted application. Now deploy the GitHub App as a lambda function.
 
-1. Checkout iambic repository. <!-- #TODO does this need a code example? Even if they should already know it? -->
+1. [Checkout iambic repository](/reference/installation/install_iambic_via_the_repo#checkout-the-iambic-repository).
 2. `cd deployment/github_app`
 3. `terraform init`
 4. `terraform apply` (Examine the plan, it is the resources it will create). Enter `yes` if you accept the plan to continue.
@@ -207,3 +316,11 @@ Typical pull-requests review flow requires reviewers approval. Action such as au
 4. Can I set IAMbic to run on just a small porton of my cloud? How do I do that?
 
 	A: <!-- #TODO  -->
+
+5. How do I debug the GitHub App?
+
+	A: <!-- #TODO  - Something about cloudwatch logs -->
+
+6. How do I update the GitHub App Lambda?
+
+	A: <!-- #TODO  - something about running terraform apply -->

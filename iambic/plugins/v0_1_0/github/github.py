@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 import json
 import os
 import re
@@ -17,14 +18,15 @@ from urllib.parse import urlparse
 import github
 from github.PullRequest import PullRequest
 
+import iambic.output.markdown
 from iambic.config.dynamic_config import load_config
 from iambic.config.utils import resolve_config_template_path
 from iambic.core.git import Repo, clone_git_repo, get_remote_default_branch
 from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
-from iambic.core.models import ExecutionMessage
+from iambic.core.models import ExecutionMessage, TemplateChangeDetails
 from iambic.core.utils import yaml
-from iambic.main import run_detect, run_expire
+from iambic.main import run_detect, run_expire, run_git_apply, run_git_plan
 
 iambic_app = __import__("iambic.lambda.app", globals(), locals(), [], 0)
 lambda_run_handler = getattr(iambic_app, "lambda").app.run_handler
@@ -199,9 +201,9 @@ GIT_APPLY_COMMENT_TEMPLATE = """iambic {iambic_op} ran with:
 """
 
 
-def ensure_body_length_fits_github_spec(body: str) -> str:
+def ensure_body_length_fits_github_spec(body: str, blob_html_url: str = None) -> str:
     if len(body) > BODY_MAX_LENGTH:
-        body = TRUNCATED_WARNING + body[-TRUNCATED_BODY_MAX_LENGTH:-1]
+        body = TRUNCATED_WARNING + f"""<a href="{blob_html_url}">Run</a>"""
     return body
 
 
@@ -234,7 +236,17 @@ def post_result_as_pr_comment(
     body = GIT_APPLY_COMMENT_TEMPLATE.format(
         plan=plan, run_url=run_url, iambic_op=iambic_op
     )
-    body = ensure_body_length_fits_github_spec(body)
+    _post_render_content_as_pr_comment(body)
+
+
+def _post_render_content_as_pr_comment(
+    pull_request: PullRequest,
+    rendered_content: str,
+    blob_html_url: str = None,
+) -> None:
+    body = ensure_body_length_fits_github_spec(
+        rendered_content, blob_html_url=blob_html_url
+    )
     pull_request.create_issue_comment(body)
 
 
@@ -341,9 +353,8 @@ def handle_iambic_git_apply(
         # merge_sha is used when we trigger a merge
         merge_sha = pull_request.head.sha
 
-        repo = prepare_local_repo(
-            repo_url, get_lambda_repo_path(), pull_request_branch_name
-        )
+        repo_dir = get_lambda_repo_path()
+        repo = prepare_local_repo(repo_url, repo_dir, pull_request_branch_name)
         # local_sha_before_git_apply may not match the initial merge
         # sha because we apply the PR to local checkout tracking branch
         local_sha_before_git_apply = repo.head.commit.hexsha
@@ -356,7 +367,9 @@ def handle_iambic_git_apply(
             # but templates config is now already stored in the templates repo itself.
             getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH = proposed_changes_path
 
-        lambda_run_handler(None, {"command": "git_apply"})
+        template_changes = run_git_apply(
+            False, None, None, repo_dir, proposed_changes_path
+        )
 
         # In the event git_apply changes relative time to absolute time
         repo.git.add(".")
@@ -377,19 +390,18 @@ def handle_iambic_git_apply(
             # update merge sha because we add new commits to pull request
             merge_sha = local_sha_after_git_apply
 
-        post_result_as_pr_comment(
-            pull_request, context, "git-apply", proposed_changes_path
+        _process_template_changes(
+            github_client,
+            templates_repo,
+            pull_request,
+            pull_number,
+            proposed_changes_path,
+            template_changes,
+            "apply",
         )
         copy_data_to_data_directory()
 
-        for i in range(5):
-            pull_request = templates_repo.get_pull(pull_number)
-            if pull_request.mergeable_state != MERGEABLE_STATE_CLEAN:
-                log.info("PR not merge-able yet, sleep for 5 seconds")
-                time.sleep(5)
-
-        pull_request = templates_repo.get_pull(pull_number)
-        pull_request.merge(sha=merge_sha)
+        maybe_merge(templates_repo, pull_number, merge_sha)
         return HandleIssueCommentReturnCode.MERGED
 
     except Exception as e:
@@ -401,6 +413,67 @@ def handle_iambic_git_apply(
             )
         )
         raise e
+
+
+def maybe_merge(
+    templates_repo: github.Repo,
+    # pull_request: PullRequest,
+    pull_number: int,
+    merge_sha: str,
+    max_attempts: int = 5,
+    sleep_interval: float = 5,
+):
+    """Attempts to merge the PR at specific sha, this function will retry a few times because
+    desired sha maybe not available yet"""
+    attempts = 0
+    merge_status = None
+    last_known_traceback = None
+    while attempts < max_attempts:
+        pull_request = templates_repo.get_pull(pull_number)
+        try:
+            merge_status = pull_request.merge(sha=merge_sha)
+            break
+        except github.GithubException:
+            last_known_traceback = traceback.format_exc()
+            attempts += 1
+            time.sleep(sleep_interval)
+    if merge_status is None:
+        raise RuntimeError(
+            f"Fail to merge PR. Target sha is {merge_sha}. last_known_trace_back is {last_known_traceback}"
+        )
+
+
+def _post_artifact_to_companion_repository(
+    github_client: github.Github,
+    templates_repo: github.Repo,
+    pull_number: str,
+    op_name: str,
+    proposed_changes_path: str,
+    markdown_summary: str,
+):
+    url = None
+    try:
+        lines = []
+        if os.path.exists(proposed_changes_path):
+            with open(proposed_changes_path) as f:
+                lines = f.readlines()
+            gist_repo_name = f"{templates_repo.full_name}-gist"
+            gist_repo = github_client.get_repo(gist_repo_name)
+            now_timestamp = datetime.datetime.now()
+            yaml_repo_path = (
+                f"pr-{pull_number}/{op_name}/{now_timestamp}/proposed_changes.yaml"
+            )
+            md_repo_path = f"pr-{pull_number}/{op_name}/{now_timestamp}/summary.md"
+            gist_repo.create_file(yaml_repo_path, op_name, "".join(lines))
+            result = gist_repo.create_file(md_repo_path, op_name, markdown_summary)
+            url = result["content"].html_url
+    except Exception:
+        # Decision to keep going is we do not want a failure of posting to companion
+        # repository (for full machine and human readable contents) to stop the rest of
+        # plan and apply operations. Companion repository is a separate failure domain.
+        captured_traceback = traceback.format_exc()
+        log.error("fault", exception=captured_traceback)
+    return url
 
 
 def handle_iambic_git_plan(
@@ -418,7 +491,8 @@ def handle_iambic_git_plan(
     os.environ["IAMBIC_SESSION_NAME"] = session_name
 
     try:
-        prepare_local_repo(repo_url, get_lambda_repo_path(), pull_request_branch_name)
+        repo_dir = get_lambda_repo_path()
+        prepare_local_repo(repo_url, repo_dir, pull_request_branch_name)
 
         if proposed_changes_path:
             # code smell to have to change a module variable
@@ -428,9 +502,15 @@ def handle_iambic_git_plan(
             # but templates config is now already stored in the templates repo itself.
             getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH = proposed_changes_path
 
-        lambda_run_handler(None, {"command": "git_plan"})
-        post_result_as_pr_comment(
-            pull_request, context, "git-plan", proposed_changes_path
+        template_changes = run_git_plan(proposed_changes_path, repo_dir)
+        _process_template_changes(
+            github_client,
+            templates_repo,
+            pull_request,
+            pull_number,
+            proposed_changes_path,
+            template_changes,
+            "plan",
         )
         copy_data_to_data_directory()
         return HandleIssueCommentReturnCode.PLANNED
@@ -443,6 +523,37 @@ def handle_iambic_git_plan(
             )
         )
         raise e
+
+
+def _process_template_changes(
+    github_client: github.Github,
+    templates_repo: github.Repo,
+    pull_request: PullRequest,
+    pull_number: str,
+    proposed_changes_path: str,  # Path where we are sourcing the machine output
+    template_changes: list[TemplateChangeDetails],
+    op_name: str,  # Examples are "plan", "apply"
+):
+    html_url = ""
+    if len(template_changes) > 0:
+        rendered_content = iambic.output.markdown.gh_render_resource_changes(
+            template_changes
+        )
+        html_url = _post_artifact_to_companion_repository(
+            github_client,
+            templates_repo,
+            pull_number,
+            op_name,
+            proposed_changes_path,
+            rendered_content,
+        )
+    else:
+        rendered_content = "no changes detected"
+
+    rendered_content = f"""Reacting to `{op_name}`\n\n{rendered_content}\n\n <a href="{html_url}">Run</a>"""
+    _post_render_content_as_pr_comment(
+        pull_request, rendered_content, blob_html_url=html_url
+    )
 
 
 def handle_pull_request(github_client: github.Github, context: dict[str, Any]) -> None:

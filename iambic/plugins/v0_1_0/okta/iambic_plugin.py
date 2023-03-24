@@ -29,7 +29,7 @@ class OktaOrganization(BaseModel):
         arbitrary_types_allowed = True
         extra = Extra.forbid
 
-    async def get_okta_client(self):
+    async def get_okta_client(self) -> OktaClient:
         if not self.client:
             self.client = OktaClient(
                 {

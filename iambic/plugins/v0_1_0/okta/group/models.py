@@ -167,7 +167,7 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
         self.file_path = os.path.expanduser(
             os.path.join(
                 repo_dir,
-                f"resources/okta/groups/{self.properties.idp_name}/{file_name}",
+                f"resources/okta/group/{self.properties.idp_name}/{file_name}",
             )
         )
 

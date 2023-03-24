@@ -1,0 +1,44 @@
+# IAMOps Philosophy
+
+## GitOps
+
+[GitOps](https://about.gitlab.com/topics/gitops/) is a modern approach to managing
+and maintaining software infrastructure
+through version-controlled code repositories like Git. It combines development best
+practices, such as version control and automated testing, with operations tasks
+like deployment and monitoring. In a nutshell, GitOps makes it easy for developers
+and operations teams to collaborate and maintain infrastructure by treating it as code.
+
+## IAMOps
+
+IAMOps, or Identity and Access Management Operations, takes the GitOps concept and
+applies it to managing cloud identities and permissions. It focuses on centralizing and
+streamlining the tracking and management of cloud identities, access rules and
+user permissions using Git as the source of truth. This way, developers, operations,
+security, and compliance teams can work together more efficiently,
+applying the same best practices they use for code development to manage access and
+permissions across different cloud platforms.
+
+## Iambic
+
+IAMbic uses Git to keep track of changes in your cloud permissions and configurations.
+By using Git's branching and commit history, IAMbic can easily spot differences in your
+cloud settings without having to make time-consuming requests to your cloud provider.
+
+### Iambic Import Process
+
+The IAMbic import process grabs updates from your cloud environment and puts them
+into your Git repository. IAMbic comes with GitHub actions that run on a schedule to
+automatically import changes from your cloud environment. If you want, you can also
+run the import process manually.
+
+<img src={"/img/git/iambic_import.png"} style={{width: '80%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+
+### Iambic Apply Process
+
+The apply process is where the magic happens. When you make changes to your
+IAMbic templates, get them approved through Git, and issue the secret command in your
+pull request (`iambic apply`), IAMbic will figure out what updates are needed in
+your cloud to match your new desired state. Then, it'll go ahead and apply those changes.
+
+<img src={"/img/git/iambic_apply.png"} style={{width: '80%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />

@@ -27,7 +27,7 @@ CURRENT_IAMBIC_VERSION = "1"
 
 
 class CoreConfig(BaseModel):
-    minimum_ulimit: int = 4096
+    minimum_ulimit: int = 64000
 
 
 class PluginType(Enum):
@@ -66,7 +66,7 @@ def load_plugins(
         if plugin_def.type == PluginType.DIRECTORY_PATH:
             for root, dirs, files in os.walk(plugin_def.location):
                 for file in files:
-                    if file.endswith("iambic_plugin.py"):
+                    if file == "iambic_plugin.py":
                         module_name, _ = os.path.splitext(file)
                         module_path = os.path.join(root, file)
                         module = importlib.machinery.SourceFileLoader(
@@ -488,7 +488,7 @@ async def process_config(
     if configure_plugins:
         log.info("Setting config metadata...")
         await config.configure_plugins()
-        log.info("Config loaded successfully...")
+        log.info("Plugins loaded successfully...")
 
     TEMPLATES.set_templates(
         list(

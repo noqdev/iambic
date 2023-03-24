@@ -1,0 +1,76 @@
+---
+title: Install and Configure
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import AsciinemaWidget from '../../src/components/AsciinemaWidget';
+
+### Set up a local Git repository
+
+To get started with IAMbic, you need to create a local Git repository. This repository will store IAMbic templates for importing your cloud resources.
+When you're ready to deploy IAMbic more broadly, create a [GitHub repository](https://docs.github.com/en/get-started/quickstart/create-a-repo).
+GitHub is recommended because Noq provides GitHub workflows that keep IAM identities and permissions
+updated within your repository.
+
+1. Open a terminal and run the following commands to create a new directory, initialize a Git repository, and set up a `.gitignore` file:
+
+```bash
+mkdir iambic-templates
+cd iambic-templates
+git init
+cat <<EOF > .gitignore
+**/secrets.yaml
+proposed_changes.yaml
+env/
+venv/
+EOF
+```
+
+### Install IAMbic
+
+1. Create and activate a Python Virtual Environment
+
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+
+2. Install IAMbic:
+
+```bash
+pip install iambic-core
+```
+
+Please visit our [installation guide](/reference/installation/) for alternative installation methods.
+
+### Configure AWS IAM credentials
+
+Configure AWS credentials before running IAMbic. You can accomplish this by either setting environment variables with your credentials, setting an AWS_PROFILE, or another supported method.
+Please reference the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html) for more details.
+
+We recommend using an AWS IAM identity (user or role) with administrative privileges
+to use the Iambic Setup Wizard. A list of specific permissions is provided [here](/reference/aws_permissions_for_setup_wizard).
+
+### Configuring IAMbic
+
+Run `iambic setup` for a guided configuration process. This will create a `iambic_config.yaml` file in your current directory.
+
+```bash
+iambic setup
+```
+
+<AsciinemaWidget src="/recordings/iambic_setup.cast" rows={30} idleTimeLimit={3} preload={true} />
+
+
+Alternatively, you can [create the configuration by hand](/how_to_guides/manually_create_the_configuration).
+
+
+### Next Steps
+
+Now that you have IAMbic installed and configured, you're ready to move on to the next steps. At this point, your experience will vary depending on the goals you want to achieve. You may configure any number of these identitiy providers to work with IAMbic.
+
+- [Continue with AWS IAM](./aws)
+- [Continue with Okta Organizations](./okta)
+- [Continue with Google Groups](./google)
+

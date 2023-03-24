@@ -1,57 +1,201 @@
-# IAMbic: Entitlements as Code
+# IAMbic: Cloud IAM as Code
 
-IAMbic revolutionizes cloud entitlements management by providing a centralized and organized way to track and edit your cloud access and permissions. With IAMbic, teams can easily manage changes to identities, access rules, and permissions, and grant temporary or emergency access for end-users, all while reducing the latency, overhead, and risk associated with permissions management. IAMbic uses GitHub actions to keep your repository updated with the live state of your cloud entitlements, regardless of whether they are managed through IAMbic, infrastructure-as-code, or ClickOps.
+"IAMbic: the Terraform of Cloud IAM"
 
-IAMbic provides a plugin-based architecture, and can be customized to support internal authentication and authorization providers. The current implementation ships with plugins for AWS IAM, AWS Identity Center (Formerly known as AWS SSO), Okta, and Google. We are planning to release additional plugins, and we welcome contributions from the community.
+Easily manage and streamline cloud Identity and Access Management (IAM) with IAMbic, a multi-cloud IAM control plane. Discover more at [https://www.iambic.org](https://www.iambic.org).
 
-The goal of IAMbic is to provide an open source and standardized request workflow, allowing self-serve access requests within the developer workflow. Approvals for shared access are integrated into the Git workflow, providing a streamlined and efficient process for managing cloud entitlements. IAMbic should only take an hour to get up and running, and will import entitlement settings from your existing environment.
+## Key Features
 
-### Features
-
-- Human-readable entitlements across AWS, Okta, Google. More to come soon.
-- Always up-to-date entitlements, with historical tracking of changes through Gitl
-- Selective management of entitlements without interfering with other flows you may be using, such as Terraform or CloudFormation.
-- Create multi-Account AWS Roles with dynamic permissions and access rules depending on the account.
-- Temporary Access Rules for AWS Identity Center, Okta Apps/Groups, and Google Apps/Groups.
-- Temporary Fine-Grained AWS Permissions for AWS IAM Roles/Users/Groups/Policies and Identity Center Permission Sets.
+- **GitOps-driven Cloud IAM (IAMOps)**: Leverage GitOps-driven Cloud IAM with human-readable formats and your favorite tools.
+- **[Multi-Cloud](https://iambic.org/getting_started/)**: Unify cloud identity management for AWS, Okta, Google Workspace, and more.
+- **[Dynamic AWS Permissions](https://iambic.org/getting_started/aws#31---create-dynamic-iam-role-policies-that-vary-per-account)**: Simplify multi-account AWS management with flexible templates, allowing multi-account roles to have different permissions and access rules on different accounts.
+- **[Temporary Access, Permissions, and Identities](https://iambic.org/getting_started/aws#32---create-temporary-expiring-iam-permissions)**: Declaratively define and automate expiration dates for resources, permissions, and access rules.
+- **Centralized Management**: IAMbic keeps Git updated with the latest, complete state of your cloud environment, maintaining a single source of truth for auditing and compliance across multiple cloud providers in Git.
+- **Extendable**: Integrate with various clouds and applications through a powerful plugin architecture.
+- **Auditable**: Track changes to IAM policies, permissions, and rules with Git history. For AWS, IAmbic annotate out-of-band commits with details from CloudTrail.
 
 ## Getting Started
 
-Please follow our [quick-start guide](http://iambic.org/getting_started/) to get IAMbic up and running.
+Dive into IAMbic with our [quick-start guide](http://iambic.org/getting_started/) and explore powerful template examples for AWS Multi-Account Roles, Dynamic Permissions, Okta Applications and Group Assignments, and Google Group Assignments. We are rapidly expanding support for existing resources and cloud providers, so check back often!
 
-## Development Setup
+### Template Examples
 
-### IAMbic Development
+Here are some examples showcasing IAMbic's capabilities:
 
-IAMbic is written in Python. We provide VSCode run configurations to make it easy to get started. Here is a quick guide:
-(#TODO Are these the same topic? Say more about this guide...)
+#### AWS Multi-Account Cloudwatch Role
 
-```bash
-# Clone IAMbic
-git clone git@github.com:noqdev/iambic.git
+Create a Cloudwatch role with static permissions across three accounts, dynamically generating role names based on the account the role is deployed to. This template would
+result in the creation of three roles: "dev_cloudwatch",
+"staging_cloudwatch", and "prod_cloudwatch" on the respective AWS accounts.
 
-# Set up Python depenedencies
-cd iambic
-python3.10 -m venv env
-. env/bin/activate
-pip install poetry
-poetry install
+```yaml
+template_type: NOQ::AWS::IAM::Role
+identifier: '{{account_name}}_cloudwatch'
+included_accounts:
+    - dev
+    - staging
+    - prod
+properties:
+  description:
+    - description: Cloudwatch role for {{account_name}}
+  assume_role_policy_document:
+    statement:
+      - action:
+          - sts:AssumeRole
+          - sts:TagSession
+        effect: Allow
+        principal:
+          aws: arn:aws:iam::123456789012:role/NoqCentralRole
+    version: '2012-10-17'
+  inline_policies:
+    policy_name: cloudwatch_logs
+    statement:
+      - effect: allow
+        action:
+            - logs:DescribeLogGroups
+            - logs:DescribeLogStreams
+            - logs:GetLogEvents
+            - logs:GetLogRecord
+            - logs:GetQueryResults
+            - logs:TestMetricFilter
+            - logs:FilterLogEvents
+            - logs:StartQuery
+            - logs:StopQuery
+        resource: "*"
+  managed_policies:
+    - policy_arn: arn:aws:iam::aws:policy/AdministratorAccess
+  role_name: '{{account_name}}_cloudwatch'
+  tags:
+    - key: owner
+      value: devops
 ```
 
-## Documentation Development
+### AWS Dynamic Permissions
 
-Documentation requires [Yarn](https://classic.yarnpkg.com/lang/en/docs/install/#debian-stable) and [nodejs/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
+Create a BackendDeveloperRole with varying permissions based on the AWS account:
 
-Documentation is located in docs/web and can be launched by following these steps:
-
-```bash
-# From the `iambic` repository directory
-cd docs/web
-yarn
-yarn start
+```yaml
+template_type: NOQ::AWS::IAM::Role
+identifier: '{{account_name}}_backend_developer'
+included_accounts:
+  - '*'
+excluded_accounts:
+  - compliance
+properties:
+  description:
+    - description: Backend developer role for {{account_name}}
+  assume_role_policy_document:
+    statement:
+      - action:
+          - sts:AssumeRole
+          - sts:TagSession
+        effect: Allow
+        principal:
+          aws: arn:aws:iam::123456789012:role/NoqCentralRole
+    version: '2012-10-17'
+  inline_policies:
+    - policy_name: s3_policy
+      statement:
+        - # Policy applies to role on all accounts except `customer_data`.
+          excluded_accounts:
+            - customer_data
+          effect: allow
+          action:
+              - s3:GetObject
+              - s3:ListObject
+          resource:
+              - "*"
+          condition:
+            StringNotEquals:
+                s3:ResourceTag/sensitive: 'true'
+        - # Allow write access to non-sensitive resources on the dev account
+          included_accounts:
+            - dev
+          effect: allow
+          action:
+              - s3:PutObject
+          resource:
+              - "*"
+          condition:
+                StringNotEquals:
+                    s3:ResourceTag/sensitive: 'true'
+  role_name: '{{account_name}}_backend_developer'
+  tags:
+    - key: owner
+      value: devops
 ```
 
-This will open your browser to http://localhost:3000 where you can view the IAMbic documentation and see live edits to the Markdown files.
+### Okta Application Assignments
+
+Manage Okta application assignments, including expiration dates for specific users:
+
+```yaml
+template_type: NOQ::Okta::App
+properties:
+  name: Salesforce.com
+  assignments:
+    - user: username@example.com
+    - user: username2@example.com
+    - user: username3@example.com
+      expires_at: 2023-09-01T00:00 UTC
+  idp_name: development
+  status: ACTIVE
+```
+
+### Okta Group Assignments
+
+Easily manage Okta group assignments with expiration dates for members:
+
+```yaml
+template_type: NOQ::Okta::Group
+properties:
+  name: engineering_interns
+  description: Engineering Interns
+  idp_name: main
+  members:
+    - username: intern1@example.com
+      expires_at: 2023-09-01 # Interns last day
+    - username: intern2@example.com
+      expires_at: 2023-09-01
+
+```
+
+### Okta User Attributes (TODO)
+
+### Google Group Assignments
+
+Manage Google Workspace group assignments, including temporary access for external users:
+
+```yaml
+template_type: NOQ::GoogleWorkspace::Group
+properties:
+  name: DockerHub
+  description: Dockerhub Access
+  domain: example.com
+  email: dockerhub@example.com
+  members:
+    - email: owner@example.com
+      role: OWNER
+    - email: external_user@gmail.com
+    - email: some_engineer@example.com
+      expires_at: 2023-03-05
+```
+
+## IAMbic - Beta Software
+
+IAMbic is currently in beta, and is not yet recommended for use in production environments. We are actively working to improve the stability and performance of the software, and welcome feedback from the community.
+
+If you choose to use IAMbic in its current state, please be aware that you may encounter bugs, performance issues, or other unexpected behavior. We strongly recommend testing IAMbic thoroughly in a non-production environment before using it in production.
+
+Please report any issues or feedback to our GitHub issue tracker. Thank you for your support and contributions to the project!
+
+## Contributing
+
+Contributions to IAMbic are welcome and encouraged! If you find a bug or want to suggest an enhancement, please open an issue. Pull requests are also welcome.
+
+## Contact Us
+
+If you have any questions or feedback, please reach out to us on [Slack](https://communityinviter.com/apps/noqcommunity/noq). We'd love to hear from you!
 
 ## License
 
@@ -61,14 +205,12 @@ IAMbic is licensed under the AGPL-3.0 license. Commercial licenses and support a
 
 ### Provider Plugins
 
-Provider Plugins (Such as the AWS, Okta, and Google-Suite plugins) are licensed under Apache 2. You are free to write your own provider plugins for internal services without releasing its source code.
+Provider Plugins (Such as the AWS, Okta, and Google Workspace plugins) are licensed under Apache 2. You are free to write your own provider plugins for internal services without releasing its source code.
 
-### Licensing Policy
+### License
 
-Our purpose in choosing AGPL v3.0 as our open source license is to ensure that any improvements made to IAMbic are shared with the community. This is because the traditional GPL license is no longer effective for a large amount of cloud-based software. To encourage contributions for proprietary providers, our provider plugins are made available under the Apache License v2.0. You are also free to write plugins for internal providers without needing to open source the plugin code.
+IAMbic is licensed with AGPLv3.
 
-If the use of our plugins under the Apache License v2.0 or IAMbic core under the AGPLv3 does not meet the legal requirements of your organization (as some may not accept the GPL in any form), commercial licenses are available through Noq Software. Please reach out to us for more information.
+IAMBic plugins are licensed under Apache License, Version 2.0.
 
-### Noq Trademark Guidelines
-
-IAMbic, Noq, and the Noq logo are registered trademarks of Noq Software, Inc.. For trademark use approval or any questions you have about using these trademarks, please email trademark@noq.dev.
+For more information, please visit [iambic.org](https://iambic.org/license).

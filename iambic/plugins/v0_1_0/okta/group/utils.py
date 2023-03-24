@@ -103,6 +103,8 @@ async def list_group_users(group: Group, okta_organization: OktaOrganization) ->
         users.append(next_users)
 
     if not users:
+        # if there is really no users, we need to update our local knowledge of membership
+        group.members = []
         return group
 
     users_to_return = []
@@ -155,8 +157,11 @@ async def list_all_groups(okta_organization: OktaOrganization) -> List[Group]:
         groups.append(next_groups)
 
     if not groups:
+        log.info(
+            "No groups found in Okta Organization",
+            okta_organization=okta_organization.idp_name,
+        )
         return []
-
     tasks = []
     for group_raw in groups:
         group = Group(

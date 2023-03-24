@@ -1,6 +1,18 @@
 BUILD_VERSION := $(shell python build_utils/tag_and_build_container.py print-current-version)
 IAMBIC_PUBLIC_ECR_ALIAS := iambic
 
+.PHONY: clean
+clean:
+	rm -rf dist/ || echo $?
+	rm -rf build/ || echo $?
+	rm -rf *.egg-info || echo $?
+	rm -rf .eggs/ || echo $?
+	rm -rf .pytest_cache/ || echo $?
+	find . -name '*.pyc' -delete
+	find . -name '*.pyo' -delete
+	find . -name '*.egg-link' -delete
+
+
 .PHONY: prepare_for_dist
 prepare_for_dist:
 	rm -f proposed_changes.yaml # especially important if this is run locally
@@ -46,7 +58,7 @@ push_manifest:
 
 .PHONY: test
 test:
-	python3 -m pytest --cov iambic --cov-report lcov:cov_unit_tests.lcov --cov-report xml:cov_unit_tests.xml --cov-report html:cov_unit_tests.html . --ignore functional_tests/ -s
+	python -m pytest --cov iambic --cov-report xml:cov_unit_tests.xml --cov-report html:cov_unit_tests.html . --ignore functional_tests/ -s
 
 .PHONY: functional_test
 functional_test:

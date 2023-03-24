@@ -313,6 +313,7 @@ async def create_assume_role_session(
         )
     except Exception as err:
         log.error("Failed to assume role", assume_role_arn=assume_role_arn, error=err)
+        raise
 
 
 def boto3_retry(f):

@@ -6,7 +6,6 @@ import random
 import time
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.parser import load_templates
 from iambic.main import run_apply
@@ -28,7 +27,7 @@ properties:
 """
     test_user_fp = os.path.join(
         temp_templates_directory,
-        f"resources/okta/users/development/{username}.yaml",
+        f"resources/okta/user/development/{username}.yaml",
     )
 
     with open(test_user_fp, "w") as temp_file:

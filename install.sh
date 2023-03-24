@@ -67,4 +67,4 @@ $( which docker ) pull ${ECR_PATH}
 
 echo
 
-echo "IAMbic installed successfully. After running the source command for your shell environment, mentioned above, you will be able to use the 'iambic --help' command to get started with IAMbic."
+echo "IAMbic installed successfully. Run 'iambic --help' to get started with IAMbic."

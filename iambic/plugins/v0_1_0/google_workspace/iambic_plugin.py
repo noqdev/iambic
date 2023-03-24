@@ -62,6 +62,8 @@ class GoogleProject(BaseModel):
     ):
         # sourcery skip: raise-specific-error
         key = f"{domain}:{service_name}:{service_path}"
+        if self._service_connection_map.get(key):
+            return self._service_connection_map[key]
         if not os.environ.get("TESTING"):
             if service_conn := self._service_connection_map.get(key):
                 return service_conn

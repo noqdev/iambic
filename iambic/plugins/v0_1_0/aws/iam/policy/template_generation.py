@@ -324,9 +324,8 @@ async def collect_aws_managed_policies(
         base_output_dir, "NOQ::AWS::IAM::ManagedPolicy"
     )
 
-    log.info("Generating AWS managed policy templates.")
     log.info(
-        "Beginning to retrieve AWS IAM Managed Policies.",
+        "Generating AWS managed policy templates. Beginning to retrieve AWS IAM Managed Policies.",
         accounts=list(aws_account_map.keys()),
     )
 
@@ -424,7 +423,10 @@ async def collect_aws_managed_policies(
                 }
             )
 
-    log.info("Finished retrieving managed policy details")
+    log.info(
+        "Finished retrieving managed policy details",
+        accounts=list(aws_account_map.keys()),
+    )
 
     account_managed_policy_output = json.dumps(account_managed_policies)
     with open(
