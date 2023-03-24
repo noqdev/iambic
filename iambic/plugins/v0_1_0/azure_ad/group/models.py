@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import typing
+from enum import Enum
 from itertools import chain
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 from aiohttp import ClientResponseError
 from pydantic import Field
@@ -18,9 +21,60 @@ from iambic.core.models import (
 )
 from iambic.core.utils import normalize_dict_keys
 from iambic.plugins.v0_1_0.azure_ad.models import AzureADOrganization, AzureADTemplate
-from iambic.plugins.v0_1_0.azure_ad.user.models import UserSimple
+
+if TYPE_CHECKING:
+    MappingIntStrAny = typing.Mapping[int | str, any]
+    AbstractSetIntStr = typing.AbstractSet[int | str]
 
 AZURE_AD_GROUP_TEMPLATE_TYPE = "NOQ::AzureAD::Group"
+
+
+class MemberDataType(Enum):
+    USER = "user"
+    GROUP = "group"
+
+
+class Member(BaseModel, ExpiryModel):
+    id: str
+    name: str
+    data_type: MemberDataType
+
+    @property
+    def resource_type(self) -> str:
+        return "azure_ad:user"
+
+    @property
+    def resource_id(self) -> str:
+        return f"{self.name} - {self.id}"
+
+    def dict(
+        self,
+        *,
+        include: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
+        exclude: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
+        by_alias: bool = False,
+        skip_defaults: Optional[bool] = None,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
+    ) -> "DictStrAny":  # noqa
+        if not exclude:
+            exclude = {"metadata_commented_dict", "deleted"}
+        else:
+            exclude.add("metadata_commented_dict")
+            exclude.add("deleted")
+
+        return json.loads(
+            super().json(
+                include=include,
+                exclude=exclude,
+                by_alias=by_alias,
+                skip_defaults=skip_defaults,
+                exclude_unset=exclude_unset,
+                exclude_defaults=exclude_defaults,
+                exclude_none=exclude_none,
+            )
+        )
 
 
 class GroupTemplateProperties(ExpiryModel, BaseModel):
@@ -44,7 +98,7 @@ class GroupTemplateProperties(ExpiryModel, BaseModel):
     membership_rule: Optional[str] = Field(
         description="The rule that determines members for this group if the group is a dynamic group."
     )
-    members: Optional[List[UserSimple]] = Field(
+    members: Optional[List[Member]] = Field(
         [], description="A list of users in the group"
     )
 

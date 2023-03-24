@@ -4,7 +4,7 @@ import asyncio
 import typing
 from enum import Enum
 from itertools import chain
-from typing import Optional, Union
+from typing import Optional
 
 from aiohttp import ClientResponseError
 from pydantic import Field
@@ -32,46 +32,6 @@ class UserStatus(Enum):
     active = "active"
     provisioned = "provisioned"
     deprovisioned = "deprovisioned"
-
-
-class UserSimple(BaseModel, ExpiryModel):
-    username: str
-    status: Optional[UserStatus] = UserStatus.active
-
-    @property
-    def resource_type(self) -> str:
-        return "azure_ad:user"
-
-    @property
-    def resource_id(self) -> str:
-        return self.username
-
-    def dict(
-        self,
-        *,
-        include: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
-        exclude: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
-        by_alias: bool = False,
-        skip_defaults: Optional[bool] = None,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
-    ) -> "DictStrAny":  # noqa
-        if not exclude:
-            exclude = {"metadata_commented_dict", "deleted"}
-        else:
-            exclude.add("metadata_commented_dict")
-            exclude.add("deleted")
-
-        return super().dict(
-            include=include,
-            exclude=exclude,
-            by_alias=by_alias,
-            skip_defaults=skip_defaults,
-            exclude_unset=exclude_unset,
-            exclude_defaults=exclude_defaults,
-            exclude_none=exclude_none,
-        )
 
 
 class UserTemplateProperties(BaseModel, ExpiryModel):

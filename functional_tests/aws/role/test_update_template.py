@@ -4,9 +4,9 @@ import asyncio
 from unittest import IsolatedAsyncioTestCase
 
 import dateparser
+
 from functional_tests.aws.role.utils import generate_role_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
 from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.role.models import PermissionBoundary

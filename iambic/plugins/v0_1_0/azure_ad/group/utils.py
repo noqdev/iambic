@@ -10,17 +10,18 @@ from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import GlobalRetryController, snake_to_camelback
-from iambic.plugins.v0_1_0.azure_ad.group.models import GroupTemplateProperties
-from iambic.plugins.v0_1_0.azure_ad.models import AzureADOrganization
-from iambic.plugins.v0_1_0.azure_ad.user.models import (
-    UserSimple,
-    UserTemplateProperties,
+from iambic.plugins.v0_1_0.azure_ad.group.models import (
+    GroupTemplateProperties,
+    Member,
+    MemberDataType,
 )
+from iambic.plugins.v0_1_0.azure_ad.models import AzureADOrganization
 from iambic.plugins.v0_1_0.azure_ad.user.utils import get_user
 
 
-async def list_group_users(
-    azure_ad_organization: AzureADOrganization, group: GroupTemplateProperties
+async def list_group_members(
+    azure_ad_organization: AzureADOrganization,
+    group: GroupTemplateProperties,
 ) -> GroupTemplateProperties:
     """
     List the members of a group in Azure AD.
@@ -34,7 +35,7 @@ async def list_group_users(
     representing the members of the group.
     """
     async with GlobalRetryController(
-        fn_identifier="azure_ad.list_group_users"
+        fn_identifier="azure_ad.list_group_members"
     ) as retry_controller:
         fn = functools.partial(
             azure_ad_organization.list, f"groups/{group.group_id}/members"
@@ -44,7 +45,7 @@ async def list_group_users(
     if not members:
         return group
 
-    members = list(
+    user_members = list(
         await asyncio.gather(
             *[
                 get_user(
@@ -53,11 +54,30 @@ async def list_group_users(
                     allow_template_ref=True,
                 )
                 for member in members
+                if member.get("@odata.type").endswith("user")
             ],
             return_exceptions=True,
         )
     )
-    group.members = [UserSimple(username=member.username) for member in members]
+    group.members = [
+        Member(id=member.user_id, name=member.username, data_type=MemberDataType.USER)
+        for member in user_members
+    ]
+
+    if len(user_members) != len(members):
+        for member in members:
+            if not member.get("@odata.type").endswith("group"):
+                continue
+
+            if (mail := member.get("mail")) and "@" in mail:
+                name = mail
+            else:
+                name = member.get("displayName")
+
+            group.members.append(
+                Member(id=member["id"], name=name, data_type=MemberDataType.GROUP)
+            )
+
     return group
 
 
@@ -78,7 +98,7 @@ async def list_groups(
 
     tasks = []
     for group in groups:
-        tasks.append(list_group_users(azure_ad_organization, group))
+        tasks.append(list_group_members(azure_ad_organization, group))
     return list(await asyncio.gather(*tasks))
 
 
@@ -107,7 +127,7 @@ async def get_group(
             fn = functools.partial(azure_ad_organization.get, f"groups/{group_id}")
             if group := await retry_controller(fn):
                 group = GroupTemplateProperties.from_azure_response(group)
-                return await list_group_users(azure_ad_organization, group)
+                return await list_group_members(azure_ad_organization, group)
             elif not group_name:
                 raise Exception(f"Group not found with id {group_id}")
 
@@ -212,10 +232,33 @@ async def update_group_attributes(
     return response
 
 
+def parse_group_member_response(
+    members: list[Member],
+    proposed_change: ProposedChange,
+    responses: list,
+    log_params: dict,
+) -> ProposedChange:
+    for i, response in enumerate(responses):
+        if isinstance(response, ClientResponseError):
+            member = members[i]
+            log.exception(
+                "Failed to update group member in Azure AD",
+                err=str(response),
+                member=member.dict(),
+                **log_params,
+            )
+            proposed_change.exceptions_seen.append(
+                f"Failed to remove member. "
+                f"Member: {member.name} ({member.data_type}). "
+                f"Response: {response.status} - {response.message}."
+            )
+    return proposed_change
+
+
 async def update_group_members(
     azure_ad_organization: AzureADOrganization,
-    group: GroupTemplateProperties,
-    new_members: List[UserSimple],
+    cloud_group: GroupTemplateProperties,
+    template_members: List[Member],
     log_params: dict[str, str],
 ) -> List[ProposedChange]:
     """
@@ -223,105 +266,87 @@ async def update_group_members(
 
     Args:
         azure_ad_organization (AzureADOrganization): The Azure AD organization to update the group in.
-        group (GroupTemplateProperties): The group to update the members of.
-        new_members (List[UserSimple]): The new members to add to the group.
+        cloud_group (GroupTemplateProperties): The group to update the members of.
+        template_members (List[Member]): The new members to add to the group.
         log_params (dict): Logging parameters.
 
     Returns:
         List[ProposedChange]: A list of proposed changes to be applied.
     """
     response = []
-    exceptions_seen = False
-    current_member_names = [member.username for member in group.members]
-    desired_member_names = [member.username for member in new_members]
+    current_member_ids = [member.id for member in cloud_group.members]
+    desired_member_ids = [member.id for member in template_members]
 
     members_to_remove = [
-        member for member in current_member_names if member not in desired_member_names
+        member for member in cloud_group.members if member.id not in desired_member_ids
     ]
     members_to_add = [
-        member for member in desired_member_names if member not in current_member_names
+        member for member in template_members if member.id not in current_member_ids
     ]
 
     if members_to_remove:
-        proposed_change = ProposedChange(
-            change_type=ProposedChangeType.DETACH,
-            resource_id=group.group_id,
-            resource_type=group.resource_type,
-            attribute="members",
-            change_summary={"MembersToRemove": list(members_to_remove)},
+        response.append(
+            ProposedChange(
+                change_type=ProposedChangeType.DETACH,
+                resource_id=cloud_group.group_id,
+                resource_type=cloud_group.resource_type,
+                attribute="members",
+                change_summary={
+                    "MembersToRemove": [member.dict() for member in members_to_remove]
+                },
+            )
         )
-        members_to_remove = await asyncio.gather(
-            *[
-                get_user(
-                    azure_ad_organization, username=member, allow_template_ref=True
-                )
-                for member in members_to_remove
-            ],
-            return_exceptions=True,
-        )
-        if not all(
-            isinstance(member, UserTemplateProperties) for member in members_to_remove
-        ):
-            exceptions_seen = True
-            proposed_change.exceptions_seen = [
-                str(err)
-                for err in members_to_remove
-                if not isinstance(err, UserTemplateProperties)
-            ]
-
-        response.append(proposed_change)
 
     if members_to_add:
-        proposed_change = ProposedChange(
-            change_type=ProposedChangeType.ATTACH,
-            resource_id=group.group_id,
-            resource_type=group.resource_type,
-            attribute="members",
-            change_summary={"MembersToAdd": list(members_to_add)},
+        response.append(
+            ProposedChange(
+                change_type=ProposedChangeType.ATTACH,
+                resource_id=cloud_group.group_id,
+                resource_type=cloud_group.resource_type,
+                attribute="members",
+                change_summary={
+                    "MembersToAdd": [member.dict() for member in members_to_add]
+                },
+            )
         )
-        members_to_add = await asyncio.gather(
-            *[
-                get_user(
-                    azure_ad_organization, username=member, allow_template_ref=True
-                )
-                for member in members_to_add
-            ],
-            return_exceptions=True,
-        )
-        if not all(
-            isinstance(member, UserTemplateProperties) for member in members_to_add
-        ):
-            exceptions_seen = True
-            proposed_change.exceptions_seen = [
-                str(err)
-                for err in members_to_add
-                if not isinstance(err, UserTemplateProperties)
-            ]
 
-        response.append(proposed_change)
-
-    if ctx.execute and not exceptions_seen:
+    if ctx.execute:
         tasks = []
         if members_to_remove:
             for member in members_to_remove:
                 tasks.append(
                     azure_ad_organization.delete(
-                        f"groups/{group.group_id}/members/{member.user_id}/$ref"
+                        f"groups/{cloud_group.group_id}/members/{member.id}/$ref"
                     )
                 )
-
         if members_to_add:
             for member in members_to_add:
                 tasks.append(
                     azure_ad_organization.post(
-                        f"groups/{group.group_id}/members/$ref",
+                        f"groups/{cloud_group.group_id}/members/$ref",
                         json={
-                            "@odata.id": f"https://graph.windows.net/v1.0/directoryObjects/{member.user_id}"
+                            "@odata.id": f"https://graph.windows.net/v1.0/directoryObjects/{member.id}"
                         },
                     )
                 )
+        responses = await asyncio.gather(*tasks, return_exceptions=True)
 
-        await asyncio.gather(*tasks)
+        if members_to_remove:
+            response[0] = parse_group_member_response(
+                members=members_to_remove,
+                proposed_change=response[0],
+                responses=list(responses[: len(members_to_remove)]),
+                log_params=log_params,
+            )
+
+        if members_to_add:
+            response_elem = 0 if not members_to_remove else 1
+            response[response_elem] = parse_group_member_response(
+                members=members_to_add,
+                proposed_change=response[response_elem],
+                responses=list(responses[len(members_to_remove) :]),
+                log_params=log_params,
+            )
 
     return response
 
