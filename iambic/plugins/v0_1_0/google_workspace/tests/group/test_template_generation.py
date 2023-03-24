@@ -177,7 +177,7 @@ class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
         "iambic.plugins.v0_1_0.google_workspace.group.template_generation.list_groups"
     )
     @patch(
-        "iambic.plugins.v0_1_0.google_workspace.group.template_generation.AwsIamGroupTemplate.write"
+        "iambic.plugins.v0_1_0.google_workspace.group.template_generation.GoogleWorkspaceGroupTemplate.write"
     )
     async def test_generate_domain_group_resource_files(
         self, mock_group_write, mock_list_groups
