@@ -73,6 +73,9 @@ class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
     description: Optional[str] = Field("", description="Description of the group")
     extra: Any = Field(None, description=("Extra attributes to store"))
     members: List[UserSimple] = Field([], description="Users in the group")
+    identifier: Optional[str] = Field(
+        None, description="Identifier for the group. Usually it's the group name"
+    )
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:

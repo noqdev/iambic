@@ -57,6 +57,10 @@ if TYPE_CHECKING:
 
 class IambicPydanticBaseModel(PydanticBaseModel):
 
+    file_path: Optional[str] = Field(
+        None,
+        description="The path to the file that this model was loaded from",
+    )
     metadata_iambic_fields = Field(
         set(), description="metadata for iambic", exclude=True
     )
