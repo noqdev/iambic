@@ -1,0 +1,36 @@
+---
+title: Azure Active Directory
+---
+
+This tutorial will guide you through the process of importing and managing
+users and groups in Azure Active Directory (AD).
+
+## Prerequisites
+
+- An Azure subscription with an active tenant
+- Azure CLI installed on your local machine
+- Access to your Azure Active Directory tenant as a Global Administrator
+
+
+
+3. Import users and groups using templates <a name="import-users-and-groups-using-templates"></a>
+To import users and groups, create template files similar to the examples provided earlier in this thread. Store the user and group templates in separate folders (e.g., resources/azure_ad/user/ and resources/azure_ad/group/).
+
+User template example
+Group template example
+User template example <a name="user-template-example"></a>
+Create a file named {username}.yaml in the resources/azure_ad/user/ folder, and use the following template:
+
+yaml
+Copy code
+template_type: NOQ::AzureAD::User
+idp_name: {idp_name}
+properties:
+  display_name: {display_name}
+  given_name: {given_name}
+  user_id: {user_id}
+  username: {username}
+Replace the placeholders with the appropriate values for your user.
+
+Group template example <a name="group-template-example"></a>
+Create a file named {group_name}.yaml in the resources/azure_ad/group/ folder, and use the following

@@ -5,7 +5,7 @@ import yaml
 
 from iambic.core.context import ctx
 from iambic.core.utils import evaluate_on_provider
-from iambic.plugins.v0_1_0.aws.iam.role.models import RoleTemplate
+from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
 TEMPLATE_UNDER_TEST = """
@@ -27,7 +27,7 @@ properties:
 """
 
 template_dict = yaml.safe_load(TEMPLATE_UNDER_TEST)
-template_cls = RoleTemplate
+template_cls = AwsIamRoleTemplate
 resource_under_test = template_cls(file_path="/dev/null", **template_dict)
 
 

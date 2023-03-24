@@ -72,7 +72,7 @@ def mock_fs():
 async def test_apply_app_assignment(
     mock_fs: tuple[str, str],
     mock_application: tuple[  # noqa: F811 # intentional for mocks
-        OktaOrganization, Group | None, App
+        OktaOrganization, Group, None, App
     ],  # noqa: F811 # intentional for mocks
 ):
     test_template_path, temp_templates_directory = mock_fs

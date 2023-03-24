@@ -93,14 +93,15 @@ $ tree -L 4
     └── aws
         ├── identity_center
         │   └── permission_sets
-        ├── managed_policies
-        │   └── account_1
-        └── roles
-            ├── all_accounts
-            ├── multi_account
-            ├── account_1
-            ├── account_2
-            └── account_3
+        └── iam
+            ├── managed_policy
+            │   └── account_1
+            └── role
+                └── all_accounts
+                ├── multi_account
+                ├── account_1
+                ├── account_2
+                └── account_3
 ```
 
 You've completed the setup configuration connecting your AWS Organization or accounts to IAMBic. Now you will practice using IAMbic to execute basic IAM management skills.
@@ -115,10 +116,10 @@ Grab your favorite code editor, have your Git repo handy, and let's get to work.
 
 ```bash
 # Create a directory in your iambic-templates repo
-mkdir -p resources/aws/roles/all_accounts
+mkdir -p resources/aws/iam/role/all_accounts
 
 # Open the config.yaml file with your favorite editor, and save the template you crafted above
-code resources/aws/roles/all_accounts/iambic_test_role.yaml
+code resources/aws/iam/role/all_accounts/iambic_test_role.yaml
 ```
 
 Next, we'll create a multi-account role template. An example template is below; it can be used as-is, or modified. Take the contents of this template and write it to the iambic_test_role.yaml file we're editing.
@@ -160,7 +161,7 @@ properties:
 Save the template, and in your terminal, use IAMbic to apply the change.
 
 ```bash
-iambic apply resources/aws/roles/all_accounts/iambic_test_role.yaml
+iambic apply resources/aws/iam/role/all_accounts/iambic_test_role.yaml
 ```
 
 If all went according to plan, you should now have a new role across all of the accounts you've defined, or the accounts we've detected in AWS Organizations.
@@ -223,7 +224,7 @@ properties:
 Save the template, and in your terminal, use IAMbic to apply the change.
 
 ```bash
-iambic apply resources/aws/roles/all_accounts/iambic_test_role.yaml
+iambic apply resources/aws/iam/role/all_accounts/iambic_test_role.yaml
 ```
 
 ### 3.2 - Create Temporary, Expiring IAM Permissions
@@ -285,7 +286,7 @@ properties:
 Now run the apply command.
 
 ```bash
-iambic apply resources/aws/roles/all_accounts/iambic_test_role.yaml
+iambic apply resources/aws/iam/role/all_accounts/iambic_test_role.yaml
 ```
 
 Once it has run, you'll notice the changes reflected in the cloud immediately, and the file has been updated to reflect the changes.
@@ -392,7 +393,7 @@ properties:
 Save the template, and in your terminal, use IAMbic to apply the change.
 
 ```bash
-iambic apply resources/aws/roles/all_accounts/iambic_test_role.yaml
+iambic apply resources/aws/iam/role/all_accounts/iambic_test_role.yaml
 ```
 
 After applying the changes, the users specified in the access rules will now have access to the role in the Noq platform for 3 days.
@@ -402,10 +403,10 @@ After applying the changes, the users specified in the access rules will now hav
 
 ```bash
 # Create a directory in your iambic-templates repo
-mkdir -p resources/aws/identity_center/permission_sets/
+mkdir -p resources/aws/identity_center/permission_set/
 
 # Open the yaml file with your favorite editor, and save the template you crafted above
-code resources/aws/identity_center/permission_sets/iambic_test_permission_set.yaml
+code resources/aws/identity_center/permission_set/iambic_test_permission_set.yaml
 ```
 <!-- #TODO the instructions above don't quite make sense. Are we duplicating the file or ?? -->
 
@@ -437,12 +438,19 @@ properties:
 
 Apply the file by running `iambic apply`.
 ```bash
-iambic apply resources/aws/identity_center/permission_sets/iambic_test_permission_set.yaml
+iambic apply resources/aws/identity_center/permission_set/iambic_test_permission_set.yaml
 ```
 
-#### 4.2 Provide temporary access to a permission set
+#### 4.2 Provide access to a permission set
 
-To grant temporary access to a permission set, you can add an `access_rules` section to the YAML template.
+To grant access to a permission set, you can add an `access_rules` section to the YAML template.
+
+:::note
+
+IAMbic does not yet track groups and users natively from AWS Identity Center. If you already use identity provider like Okta or Google Workspace, you can propagate groups and users by [integrating](https://docs.aws.amazon.com/singlesignon/latest/userguide/manage-your-identity-source-idp.html) AWS Identity Center with external identity providers such as Okta or Google Workspace. IAMbic does provide Okta plugin.
+
+:::
+
 
 This section specifies which users and groups can access the permission set, on which accounts they have access to, and for how long the access is valid. If the `included_accounts` field is not specified, the access rule will apply to all accounts configured in AWS Identity Center.
 
@@ -454,6 +462,22 @@ rule that grants access to members of group `GROUP_1` on all accounts that start
 access_rules:
   - groups:
       - GROUP_1
+    included_accounts:
+      - ACCOUNT_*
+    excluded_accounts:
+      - SENSITIVE_ACCOUNT
+    included_orgs:
+      - o-12345678
+```
+
+The example provided shows an access
+rule that grants access to iambic_example_user_1@iambic.org on all accounts that start with
+`ACCOUNT_` except for the `SENSITIVE_ACCOUNT` account.
+
+```yaml
+access_rules:
+  - users:
+      - iambic_example_user_1@iambic.org
     included_accounts:
       - ACCOUNT_*
     excluded_accounts:

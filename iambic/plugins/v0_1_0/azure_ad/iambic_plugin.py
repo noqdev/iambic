@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
@@ -14,6 +14,20 @@ class AzureADConfig(BaseModel):
     organizations: list[AzureADOrganization] = Field(
         description="A list of Azure Active Directory organizations."
     )
+
+    @validator(
+        "organizations", allow_reuse=True
+    )  # the need of allow_reuse is possibly related to how we handle inheritance
+    def validate_azure_ad_organizations(cls, orgs: list[organizations]):
+        idp_name_set = set()
+        for org in orgs:
+            if org.idp_name in idp_name_set:
+                raise ValueError(
+                    f"idp_name must be unique within organizations: {org.idp_name}"
+                )
+            else:
+                idp_name_set.add(org.idp_name)
+        return orgs
 
     def get_organization(self, idp_name: str) -> AzureADOrganization:
         for o in self.organizations:

@@ -29,7 +29,7 @@ from deepdiff.model import PrettyOrderedSet
 from git import Repo
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, root_validator, validate_model, validator
+from pydantic import Field, root_validator, schema, validate_model, validator
 from pydantic.fields import ModelField
 
 from iambic.core.iambic_enum import Command, ExecutionStatus, IambicManaged
@@ -52,6 +52,23 @@ if TYPE_CHECKING:
 
     MappingIntStrAny = typing.Mapping[int | str, Any]
     AbstractSetIntStr = typing.AbstractSet[int | str]
+
+
+def field_schema(field: ModelField, **kwargs: Any) -> Any:
+    """
+    Used to hide a field from the OpenAPI schema. If
+    the field has a field_info.extra key "hidden_from_schema" set to True,
+    then this code will skip the field and prevent it from being added to
+    the OpenAPI schema.
+    """
+    if field.field_info.extra.get("hidden_from_schema", False):
+        raise schema.SkipField(f"{field.name} field is being hidden")
+    else:
+        return original_field_schema(field, **kwargs)
+
+
+original_field_schema = schema.field_schema
+schema.field_schema = field_schema
 
 
 class IambicPydanticBaseModel(PydanticBaseModel):
@@ -450,7 +467,7 @@ class BaseTemplate(
     BaseModel,
 ):
     template_type: str
-    file_path: str
+    file_path: str = Field(..., hidden_from_schema=True)
     owner: Optional[str]
     iambic_managed: Optional[IambicManaged] = Field(
         IambicManaged.UNDEFINED,

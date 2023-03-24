@@ -13,15 +13,15 @@ from iambic.core.utils import aio_wrapper
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.google_workspace.group.models import (
+        GoogleWorkspaceGroupTemplate,
         GroupMember,
-        GroupTemplate,
     )
     from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import GoogleProject
 
 
 async def list_groups(
     domain: str, google_project: GoogleProject
-) -> list[GroupTemplate]:
+) -> list[GoogleWorkspaceGroupTemplate]:
     from iambic.plugins.v0_1_0.google_workspace.group.models import get_group_template
 
     groups = []
@@ -270,7 +270,7 @@ async def update_group_email(
 
 
 async def maybe_delete_group(
-    group: GroupTemplate,
+    group: GoogleWorkspaceGroupTemplate,
     google_project: GoogleProject,
     log_params: dict[str, str],
 ) -> list[ProposedChange]:

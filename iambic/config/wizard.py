@@ -51,7 +51,7 @@ from iambic.plugins.v0_1_0.aws.handlers import load as aws_load
 from iambic.plugins.v0_1_0.aws.iam.policy.models import PolicyDocument, PolicyStatement
 from iambic.plugins.v0_1_0.aws.iam.role.models import (
     AWS_IAM_ROLE_TEMPLATE_TYPE,
-    RoleTemplate,
+    AwsIamRoleTemplate,
 )
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import (
@@ -697,7 +697,7 @@ class ConfigurationWizard:
 
         ctx.command = current_command
 
-    async def save_and_deploy_changes(self, role_template: RoleTemplate):
+    async def save_and_deploy_changes(self, role_template: AwsIamRoleTemplate):
         log.info(
             "Writing changes locally and deploying updates to AWS",
             role_name=role_template.properties.role_name,
@@ -1099,7 +1099,9 @@ class ConfigurationWizard:
         self.config.write()
 
         if role_arn:
-            role_template: RoleTemplate = self.existing_role_template_map.get(role_name)
+            role_template: AwsIamRoleTemplate = self.existing_role_template_map.get(
+                role_name
+            )
             role_template.properties.inline_policies.append(
                 PolicyDocument(
                     policy_name="read_iambic_secrets",
@@ -1486,7 +1488,9 @@ class ConfigurationWizard:
         role_name = IAMBIC_SPOKE_ROLE_NAME
         hub_account_id = self.hub_account_id
         sqs_arn = f"arn:aws:sqs:us-east-1:{hub_account_id}:IAMbicChangeDetectionQueue"
-        role_template: RoleTemplate = self.existing_role_template_map.get(role_name)
+        role_template: AwsIamRoleTemplate = self.existing_role_template_map.get(
+            role_name
+        )
         role_template.properties.inline_policies.append(
             PolicyDocument(
                 policy_name="consume_iambic_changes",

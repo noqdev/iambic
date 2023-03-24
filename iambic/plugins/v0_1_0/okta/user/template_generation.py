@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 def get_resource_dir_args() -> list:
-    return ["users"]
+    return ["user"]
 
 
 def get_response_dir(exe_message: ExecutionMessage) -> str:

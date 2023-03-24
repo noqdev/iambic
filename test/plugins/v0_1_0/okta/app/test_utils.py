@@ -66,7 +66,7 @@ def mock_application(
 
 @pytest.mark.asyncio
 async def test_list_app_group_assignments_with_zero_assignment(
-    mock_application: tuple[OktaOrganization, Group | None, App]
+    mock_application: tuple[OktaOrganization, Group, None, App]
 ):
     okta_organization, _, okta_app, _ = mock_application
     group_assignment = await list_app_group_assignments(okta_organization, okta_app)
@@ -75,7 +75,7 @@ async def test_list_app_group_assignments_with_zero_assignment(
 
 @pytest.mark.asyncio
 async def test_list_app_group_assignments_with_one_assignment(
-    mock_application: tuple[OktaOrganization, Group | None, App]
+    mock_application: tuple[OktaOrganization, Group, None, App]
 ):
     okta_organization, okta_group, okta_app, _ = mock_application
 
@@ -110,7 +110,7 @@ async def test_list_app_group_assignments_with_one_assignment(
 
 @pytest.mark.asyncio
 async def test_list_app_user_assignments_with_zero_assignment(
-    mock_application: tuple[OktaOrganization, Group | None, App]
+    mock_application: tuple[OktaOrganization, Group, None, App]
 ):
     okta_organization, _, okta_app, _ = mock_application
     user_assignment = await list_app_user_assignments(okta_organization, okta_app)
@@ -119,7 +119,7 @@ async def test_list_app_user_assignments_with_zero_assignment(
 
 @pytest.mark.asyncio
 async def test_list_app_user_assignments_with_one_assignment(
-    mock_application: tuple[OktaOrganization, Group | None, App]
+    mock_application: tuple[OktaOrganization, Group, None, App]
 ):
     okta_organization, _, okta_app, okta_user = mock_application
 
@@ -154,7 +154,7 @@ async def test_list_app_user_assignments_with_one_assignment(
 
 @pytest.mark.asyncio
 async def test_list_all_apps(
-    mock_application: tuple[OktaOrganization, Group | None, App]
+    mock_application: tuple[OktaOrganization, Group, None, App]
 ):
     okta_organization, _, okta_app, _ = mock_application
     apps = await list_all_apps(okta_organization)
@@ -164,7 +164,7 @@ async def test_list_all_apps(
 
 @pytest.mark.asyncio
 async def test_update_app_name(
-    mock_application: tuple[OktaOrganization, Group | None, App]
+    mock_application: tuple[OktaOrganization, Group, None, App]
 ):
     okta_organization, _, okta_app, _ = mock_application
     new_app_name = "new application name"
@@ -180,7 +180,7 @@ async def test_update_app_name(
 
 @pytest.mark.asyncio
 async def test_maybe_delete_app(
-    mock_application: tuple[OktaOrganization, Group | None, App]
+    mock_application: tuple[OktaOrganization, Group, None, App]
 ):
     okta_organization, _, okta_app, _ = mock_application
     proposed_changes = await maybe_delete_app(

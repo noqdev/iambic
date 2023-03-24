@@ -11,7 +11,7 @@ from functional_tests.aws.permission_set.utils import (
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.plugins.v0_1_0.aws.event_bridge.models import PermissionSetMessageDetails
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
-    AWSIdentityCenterPermissionSetTemplate,
+    AwsIdentityCenterPermissionSetTemplate,
 )
 
 
@@ -34,7 +34,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
 
         self.template.properties.description = updated_description
         # Confirm template on disk has not been updated
-        file_sys_template = AWSIdentityCenterPermissionSetTemplate.load(
+        file_sys_template = AwsIdentityCenterPermissionSetTemplate.load(
             self.template.file_path
         )
         self.assertEqual(file_sys_template.properties.description, initial_description)
@@ -62,7 +62,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
             ]
         )
 
-        file_sys_template = AWSIdentityCenterPermissionSetTemplate.load(
+        file_sys_template = AwsIdentityCenterPermissionSetTemplate.load(
             self.template.file_path
         )
         self.assertEqual(file_sys_template.properties.description, updated_description)

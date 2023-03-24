@@ -103,6 +103,12 @@ class GoogleTemplate(BaseTemplate, ExpiryModel):
             resource_type=self.resource_type, resource_id=self.resource_id
         )
         for account in config.workspaces:
+            match = False
+            for subject in account.subjects:
+                if self.properties.domain == subject.domain:
+                    match = True
+            if not match:
+                continue
             # if evaluate_on_google_account(self, account):
             if ctx.execute:
                 log_str = "Applying changes to resource."

@@ -10,7 +10,7 @@ import pytest
 import iambic.plugins.v0_1_0.example
 from iambic.config.dynamic_config import load_config
 from iambic.core.utils import gather_templates
-from iambic.main import run_apply
+from iambic.main import ctx, run_apply
 
 TEST_TEMPLATE_YAML = """template_type: NOQ::Example::LocalFile
 name: test_template
@@ -63,7 +63,15 @@ def example_test_filesystem():
             print(e)
 
 
-def test_run_apply(example_test_filesystem):
+@pytest.fixture
+def mock_context():
+    ctx_eval_orig_value = ctx.eval_only
+    ctx.eval_only = False
+    yield ctx
+    ctx.eval_only = ctx_eval_orig_value
+
+
+def test_run_apply(mock_context, example_test_filesystem):
     config_path, repo_dir = example_test_filesystem
     with open(f"{repo_dir}/{TEST_TEMPLATE_PATH}", "r") as f:
         before_template_content = "\n".join(f.readlines())

@@ -1,10 +1,10 @@
 # AWS Template Models
-* [RoleTemplate](schemas/role_template.md)
-* [ManagedPolicyTemplate](schemas/managed_policy_template.md)
-* [AWSIdentityCenterPermissionSetTemplate](schemas/awsidentity_center_permission_set_template.md)
+* [AwsIamRoleTemplate](schemas/role_template.md)
+* [AwsIamManagedPolicyTemplate](schemas/managed_policy_template.md)
+* [AwsIdentityCenterPermissionSetTemplate](schemas/awsidentity_center_permission_set_template.md)
 
 # Google Template Models
-* [GroupTemplate](schemas/group_template.md)
+* [AwsIamGroupTemplate](schemas/group_template.md)
 
 # Config Models
 * [AWSAccount](schemas/awsaccount.md)

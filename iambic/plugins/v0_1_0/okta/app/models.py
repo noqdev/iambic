@@ -89,6 +89,8 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
             return template_changes
 
         for okta_organization in config.organizations:
+            if self.properties.idp_name != okta_organization.idp_name:
+                continue
             if ctx.execute:
                 log_str = "Applying changes to resource."
             else:
@@ -132,7 +134,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
         file_name = f"{self.properties.name}.yaml"
         self.file_path = os.path.expanduser(
             os.path.join(
-                repo_dir, f"resources/okta/apps/{self.properties.idp_name}/{file_name}"
+                repo_dir, f"resources/okta/app/{self.properties.idp_name}/{file_name}"
             )
         )
 

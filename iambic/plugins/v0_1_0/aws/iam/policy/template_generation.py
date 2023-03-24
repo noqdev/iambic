@@ -21,8 +21,8 @@ from iambic.core.template_generation import (
 from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import ManagedPolicyMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.policy.models import (
+    AwsIamManagedPolicyTemplate,
     ManagedPolicyProperties,
-    ManagedPolicyTemplate,
 )
 from iambic.plugins.v0_1_0.aws.iam.policy.utils import (
     get_managed_policy_across_accounts,
@@ -291,7 +291,7 @@ async def create_templated_managed_policy(  # noqa: C901
         file_path,
         existing_template_map,
         managed_policy_name,
-        ManagedPolicyTemplate,
+        AwsIamManagedPolicyTemplate,
         template_params,
         ManagedPolicyProperties(**template_properties),
         list(aws_account_map.values()),

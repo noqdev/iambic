@@ -9,7 +9,7 @@ from functional_tests.aws.managed_policy.utils import (
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.plugins.v0_1_0.aws.event_bridge.models import ManagedPolicyMessageDetails
-from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyTemplate
+from iambic.plugins.v0_1_0.aws.iam.policy.models import AwsIamManagedPolicyTemplate
 
 
 class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
@@ -40,7 +40,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
         self.template.properties.description = updated_description
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
-        file_sys_template = ManagedPolicyTemplate.load(self.template.file_path)
+        file_sys_template = AwsIamManagedPolicyTemplate.load(self.template.file_path)
         self.assertEqual(file_sys_template.properties.description, initial_description)
 
         await managed_policy_full_import(
@@ -54,7 +54,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
             ]
         )
 
-        file_sys_template = ManagedPolicyTemplate.load(self.template.file_path)
+        file_sys_template = AwsIamManagedPolicyTemplate.load(self.template.file_path)
         self.assertEqual(file_sys_template.properties.description, updated_description)
 
     async def test_delete_managed_policy_template(self):
@@ -92,7 +92,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
         self.template.excluded_accounts = [deleted_account]
 
         # Confirm the change is only in memory and not on the file system
-        file_sys_template = ManagedPolicyTemplate.load(self.template.file_path)
+        file_sys_template = AwsIamManagedPolicyTemplate.load(self.template.file_path)
         self.assertNotIn(deleted_account, file_sys_template.excluded_accounts)
 
         # Create the policy on all accounts except 1
@@ -110,7 +110,7 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
             ]
         )
 
-        file_sys_template = ManagedPolicyTemplate.load(self.template.file_path)
+        file_sys_template = AwsIamManagedPolicyTemplate.load(self.template.file_path)
         self.assertEqual(file_sys_template.included_accounts, ["*"])
         self.assertEqual(
             file_sys_template.excluded_accounts, [deleted_account_obj.account_name]

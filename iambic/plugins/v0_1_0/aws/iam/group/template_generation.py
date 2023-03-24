@@ -22,8 +22,8 @@ from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_u
 from iambic.plugins.v0_1_0.aws.event_bridge.models import GroupMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.group.models import (
     AWS_IAM_GROUP_TEMPLATE_TYPE,
+    AwsIamGroupTemplate,
     GroupProperties,
-    GroupTemplate,
 )
 from iambic.plugins.v0_1_0.aws.iam.group.utils import (
     get_group_across_accounts,
@@ -211,7 +211,7 @@ async def create_templated_group(  # noqa: C901
     group_dir: str,
     existing_template_map: dict,
     config: AWSConfig,
-) -> GroupTemplate:
+) -> AwsIamGroupTemplate:
     account_id_to_group_map = await _account_id_to_group_map(group_refs)
     num_of_accounts = len(group_refs)
 
@@ -305,7 +305,7 @@ async def create_templated_group(  # noqa: C901
         file_path,
         existing_template_map,
         group_name,
-        GroupTemplate,
+        AwsIamGroupTemplate,
         group_template_params,
         GroupProperties(**group_template_properties),
         list(aws_account_map.values()),
