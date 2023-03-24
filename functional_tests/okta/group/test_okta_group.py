@@ -22,7 +22,7 @@ properties:
 """
     test_group_path = os.path.join(
         IAMBIC_TEST_DETAILS.template_dir_path,
-        "resources/okta/groups/development",
+        "resources/okta/group/development",
     )
     test_group_fp = os.path.join(test_group_path, "iambic_functional_test_group.yaml")
     os.makedirs(test_group_path, exist_ok=True)

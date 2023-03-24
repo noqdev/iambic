@@ -136,7 +136,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
         file_name = f"{self.properties.name}.yaml"
         self.file_path = os.path.expanduser(
             os.path.join(
-                repo_dir, f"resources/okta/apps/{self.properties.idp_name}/{file_name}"
+                repo_dir, f"resources/okta/app/{self.properties.idp_name}/{file_name}"
             )
         )
 

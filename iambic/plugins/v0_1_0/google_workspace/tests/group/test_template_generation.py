@@ -111,7 +111,6 @@ class TestGenerateGroupTemplates(IsolatedAsyncioTestCase):
         ) as mock_update_or_create_group_template, patch(
             "iambic.plugins.v0_1_0.google_workspace.group.template_generation.delete_orphaned_templates"
         ) as mock_delete_orphaned_templates:
-
             mock_update_or_create_group_template.return_value = group_template
             await generate_group_templates(
                 self.exe_message,
@@ -129,7 +128,7 @@ class TestGenerateGroupTemplates(IsolatedAsyncioTestCase):
 class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
     def test_get_resource_dir_args(self):
         domain = "example.com"
-        expected_args = ["groups", "example.com"]
+        expected_args = ["group", "example.com"]
         self.assertEqual(get_resource_dir_args(domain), expected_args)
 
     def test_get_response_dir(self):
@@ -143,7 +142,7 @@ class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
         google_project.project_id = "test_project_id"
         domain = "example.com"
 
-        expected_dir = "test_provider_id/groups/example.com/templates"
+        expected_dir = "test_provider_id/group/example.com/templates"
 
         assert get_response_dir(exe_message, google_project, domain).endswith(
             expected_dir
@@ -156,7 +155,7 @@ class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
             "test_base_dir",
             "resources",
             "google_workspace",
-            "groups",
+            "group",
             "example.com",
         )
         self.assertEqual(get_group_dir(base_dir, domain), expected_path)
