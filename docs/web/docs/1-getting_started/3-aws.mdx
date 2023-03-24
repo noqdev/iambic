@@ -402,10 +402,10 @@ After applying the changes, the users specified in the access rules will now hav
 
 ```bash
 # Create a directory in your iambic-templates repo
-mkdir -p resources/aws/iam/identity_center/permission_sets/
+mkdir -p resources/aws/iam/identity_center/permission_set/
 
 # Open the yaml file with your favorite editor, and save the template you crafted above
-code resources/aws/iam/identity_center/permission_sets/iambic_test_permission_set.yaml
+code resources/aws/iam/identity_center/permission_set/iambic_test_permission_set.yaml
 ```
 <!-- #TODO the instructions above don't quite make sense. Are we duplicating the file or ?? -->
 
@@ -437,7 +437,7 @@ properties:
 
 Apply the file by running `iambic apply`.
 ```bash
-iambic apply resources/aws/iam/identity_center/permission_sets/iambic_test_permission_set.yaml
+iambic apply resources/aws/iam/identity_center/permission_set/iambic_test_permission_set.yaml
 ```
 
 #### 4.2 Provide temporary access to a permission set

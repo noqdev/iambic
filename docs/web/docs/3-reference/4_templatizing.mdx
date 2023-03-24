@@ -1,5 +1,5 @@
 ---
-title: Templatizing templates
+title: Template Variables
 toc_min_heading_level: 2
 toc_max_heading_level: 5
 ---
@@ -65,7 +65,7 @@ properties:
           aws: arn:aws:iam::4567890123456:role/NoqCentralRoleCorpNoqDev
     version: '2012-10-17'
   managed_policies:
-    - policy_arn: arn:aws:iam::aws:policy/ReadOnlyAccess
+    - policy_arn: arn:aws:iam::{{account_id}}:policy/ReadOnlyAccess
   role_name: '{{account_name}}_readonly'
   tags:
     - key: noq-tra-supported-groups
