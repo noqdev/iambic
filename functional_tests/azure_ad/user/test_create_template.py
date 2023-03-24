@@ -4,6 +4,7 @@ from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.azure_ad.user.utils import generate_user_template
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.azure_ad.user.utils import get_user
 
@@ -23,6 +24,8 @@ class CreateUserTestCase(IsolatedAsyncioTestCase):
         self.assertEqual(len(changes.exceptions_seen), 0, changes.exceptions_seen)
 
         try:
-            await get_user(self.org, username=self.username)
+            user = await get_user(self.org, username=self.username)
         except Exception as err:
             self.fail(f"User was not created but no exceptions in changes: {err}")
+
+        self.assertEqual(user.username, self.username)

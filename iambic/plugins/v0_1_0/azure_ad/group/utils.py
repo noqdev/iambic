@@ -205,7 +205,7 @@ async def update_group_attributes(
             response.append(
                 ProposedChange(
                     change_type=ProposedChangeType.UPDATE,
-                    resource_id=template_group.group_id,
+                    resource_id=template_group.resource_id,
                     resource_type=template_group.resource_type,
                     attribute=attr,
                     current_value=value,
@@ -288,7 +288,7 @@ async def update_group_members(
         response.append(
             ProposedChange(
                 change_type=ProposedChangeType.DETACH,
-                resource_id=cloud_group.group_id,
+                resource_id=cloud_group.resource_id,
                 resource_type=cloud_group.resource_type,
                 attribute="members",
                 change_summary={
@@ -301,7 +301,7 @@ async def update_group_members(
         response.append(
             ProposedChange(
                 change_type=ProposedChangeType.ATTACH,
-                resource_id=cloud_group.group_id,
+                resource_id=cloud_group.resource_id,
                 resource_type=cloud_group.resource_type,
                 attribute="members",
                 change_summary={
@@ -369,7 +369,7 @@ async def delete_group(
     response: list[ProposedChange] = [
         ProposedChange(
             change_type=ProposedChangeType.DELETE,
-            resource_id=group.group_id,
+            resource_id=group.resource_id,
             resource_type=group.resource_type,
             attribute="group",
             change_summary={"group": group.name},

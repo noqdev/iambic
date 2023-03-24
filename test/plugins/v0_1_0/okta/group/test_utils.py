@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from test.plugins.v0_1_0.okta.test_utils import (  # noqa: F401 # intentional for mocks
     mock_okta_organization,
 )
