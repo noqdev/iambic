@@ -10,12 +10,15 @@ from iambic.core.utils import camel_to_snake
 from iambic.plugins.v0_1_0.aws.iam.group.models import GroupTemplate as AWSGroupTemplate
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyTemplate
 from iambic.plugins.v0_1_0.aws.iam.role.models import RoleTemplate
+from iambic.plugins.v0_1_0.aws.iam.user.models import UserTemplate as AWSUserTemplate
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetTemplate,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount, AWSOrganization
-from iambic.plugins.v0_1_0.google.group.models import GroupTemplate
+from iambic.plugins.v0_1_0.google_workspace.group.models import GroupTemplate
+from iambic.plugins.v0_1_0.okta.app.models import OktaAppTemplate
 from iambic.plugins.v0_1_0.okta.group.models import OktaGroupTemplate
+from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate
 
 
 def create_model_schemas(
@@ -28,8 +31,10 @@ def create_model_schemas(
         class_name = str(model.__name__)
         file_name = camel_to_snake(class_name)
         model_schema_path = str(os.path.join(schema_dir, f"{file_name}.md"))
+        json_schema_path = str(os.path.join(schema_dir, f"{file_name}.json"))
         schema_md_str += f"* [{class_name}]({model_schema_path.replace('docs/', '')})\n"
-
+        with open(json_schema_path, "w") as f:
+            f.write(model.schema_json(by_alias=False, indent=2))
         with open(model_schema_path, "w") as f:
             f.write("".join(parser.parse_schema(model.schema(by_alias=False))))
 
@@ -42,9 +47,10 @@ def generate_docs():
         ManagedPolicyTemplate,
         AWSIdentityCenterPermissionSetTemplate,
         AWSGroupTemplate,
+        AWSUserTemplate,
     ]
     google_template_models = [GroupTemplate]
-    okta_template_models = [OktaGroupTemplate]
+    okta_template_models = [OktaGroupTemplate, OktaUserTemplate, OktaAppTemplate]
     config_models = [
         AWSAccount,
         AWSOrganization,
