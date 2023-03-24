@@ -65,7 +65,7 @@ class UserTemplateProperties(BaseModel, ExpiryModel):
         )
 
 
-class UserTemplate(ExpiryModel, AzureADTemplate):
+class AzureActiveDirectoryUserTemplate(ExpiryModel, AzureADTemplate):
     template_type = AZURE_AD_USER_TEMPLATE_TYPE
     properties: UserTemplateProperties = Field(
         ..., description="Properties for the Azure AD User"

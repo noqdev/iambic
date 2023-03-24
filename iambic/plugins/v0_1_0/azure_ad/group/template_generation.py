@@ -12,7 +12,7 @@ from iambic.core.template_generation import (
 )
 from iambic.plugins.v0_1_0.azure_ad.group.models import (
     AZURE_AD_GROUP_TEMPLATE_TYPE,
-    GroupTemplate,
+    AzureActiveDirectoryGroupTemplate,
 )
 from iambic.plugins.v0_1_0.azure_ad.group.utils import list_groups
 
@@ -29,10 +29,10 @@ def get_response_dir(exe_message: ExecutionMessage) -> str:
 
 
 async def update_or_create_group_template(
-    discovered_template: GroupTemplate, existing_template_map: dict
-) -> GroupTemplate:
+    discovered_template: AzureActiveDirectoryGroupTemplate, existing_template_map: dict
+) -> AzureActiveDirectoryGroupTemplate:
     """
-    Update or create an GroupTemplate object from the provided Group object.
+    Update or create an AzureActiveDirectoryGroupTemplate object from the provided Group object.
 
     Args:
         discovered_template (Group): The Group template generated from the Azure AD cloud response.
@@ -43,7 +43,7 @@ async def update_or_create_group_template(
         discovered_template.file_path,
         existing_template_map,
         discovered_template.resource_id,
-        GroupTemplate,
+        AzureActiveDirectoryGroupTemplate,
         {"idp_name": discovered_template.idp_name},
         discovered_template.properties,
         [],
@@ -60,7 +60,7 @@ async def collect_org_groups(exe_message: ExecutionMessage, config: AzureADConfi
 
     groups = await list_groups(azure_organization)
     for group in groups:
-        azure_group = GroupTemplate(
+        azure_group = AzureActiveDirectoryGroupTemplate(
             file_path="unset",
             idp_name=azure_organization.idp_name,
             properties=group,
@@ -92,7 +92,7 @@ async def generate_group_templates(
     )
     # Update or create templates
     for group in groups:
-        group = GroupTemplate(file_path="unset", **group)
+        group = AzureActiveDirectoryGroupTemplate(file_path="unset", **group)
         group.set_default_file_path(output_dir, group.properties.name)
         resource_template = await update_or_create_group_template(
             group, existing_template_map

@@ -15,7 +15,7 @@ configurations for other models used in IAMbic.*
     - *string*
 - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
 - **`template_type`** *(string)*: Default: `"NOQ::Okta::Group"`.
-- **`owner`** *(string)*
+- **`owner`** *(string)*: Owner of the group.
 - **`iambic_managed`**: Controls the directionality of Iambic changes. Default: `"undefined"`.
   - **All of**
     - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
@@ -53,7 +53,6 @@ configurations for other models used in IAMbic.
       - *string*
   - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
   - **`name`** *(string)*: Name of the group.
-  - **`owner`** *(string)*: Owner of the group.
   - **`idp_name`** *(string)*: Name of the identity provider that's associated with the group.
   - **`group_id`** *(string)*: Unique Group ID for the group. Usually it's {idp-name}-{name}. Default: `""`.
   - **`description`** *(string)*: Description of the group. Default: `""`.

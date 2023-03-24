@@ -15,6 +15,10 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AwsIdentityCenterPermissionSetTemplate,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount, AWSOrganization
+from iambic.plugins.v0_1_0.azure_ad.group.models import (
+    AzureActiveDirectoryGroupTemplate,
+)
+from iambic.plugins.v0_1_0.azure_ad.user.models import AzureActiveDirectoryUserTemplate
 from iambic.plugins.v0_1_0.google_workspace.group.models import (
     GoogleWorkspaceGroupTemplate,
 )
@@ -51,6 +55,10 @@ def generate_docs():
         AwsIamGroupTemplate,
         AwsIamUserTemplate,
     ]
+    azure_ad_template_models = [
+        AzureActiveDirectoryGroupTemplate,
+        AzureActiveDirectoryUserTemplate,
+    ]
     google_template_models = [GoogleWorkspaceGroupTemplate]
     okta_template_models = [OktaGroupTemplate, OktaUserTemplate, OktaAppTemplate]
     config_models = [
@@ -70,6 +78,10 @@ def generate_docs():
     schema_md_str = "# AWS Template Models\n"
     schema_md_str = create_model_schemas(
         parser, schema_dir, schema_md_str, aws_template_models
+    )
+    schema_md_str += "\n# Azure AD Template Models\n"
+    schema_md_str = create_model_schemas(
+        parser, schema_dir, schema_md_str, azure_ad_template_models
     )
     schema_md_str += "\n# Google Template Models\n"
     schema_md_str = create_model_schemas(

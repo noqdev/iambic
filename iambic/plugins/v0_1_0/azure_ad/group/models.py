@@ -90,7 +90,7 @@ class GroupTemplateProperties(ExpiryModel, BaseModel):
     mail_nickname: str = Field(
         ...,
         description="Mail nickname of the group",
-        regex=r"^[!#$%&'*+-./0-9=?A-Z^_`a-z{|}~]{1,64}$"
+        regex=r"^[!#$%&'*+-./0-9=?A-Z^_`a-z{|}~]{1,64}$",
     )
     group_id: Optional[str] = Field(
         None,
@@ -135,7 +135,7 @@ class GroupTemplateProperties(ExpiryModel, BaseModel):
         )
 
 
-class GroupTemplate(ExpiryModel, AzureADTemplate):
+class AzureActiveDirectoryGroupTemplate(ExpiryModel, AzureADTemplate):
     template_type = AZURE_AD_GROUP_TEMPLATE_TYPE
     owner: Optional[str] = Field(None, description="Owner of the group")
     properties: GroupTemplateProperties = Field(

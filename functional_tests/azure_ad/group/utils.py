@@ -5,17 +5,18 @@ import random
 import uuid
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
-from iambic.plugins.v0_1_0.azure_ad.group.models import GroupTemplate
+from iambic.plugins.v0_1_0.azure_ad.group.models import (
+    AzureActiveDirectoryGroupTemplate,
+)
 from iambic.plugins.v0_1_0.azure_ad.group.template_generation import (
     collect_org_groups,
     generate_group_templates,
 )
 
 
-def generate_group_template() -> GroupTemplate:
+def generate_group_template() -> AzureActiveDirectoryGroupTemplate:
     group_dir = os.path.join(
         IAMBIC_TEST_DETAILS.template_dir_path,
         "resources/azure_ad/group/noq_dev",
@@ -37,7 +38,7 @@ properties:
 """
     with open(file_path, "w") as f:
         f.write(group_template)
-    group_template = GroupTemplate.load(file_path)
+    group_template = AzureActiveDirectoryGroupTemplate.load(file_path)
 
     return group_template
 

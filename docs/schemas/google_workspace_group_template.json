@@ -47,6 +47,7 @@
     },
     "owner": {
       "title": "Owner",
+      "description": "Owner of the group",
       "type": "string"
     },
     "iambic_managed": {

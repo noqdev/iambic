@@ -233,7 +233,6 @@ configurations for other models used in IAMbic.
   - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
     - **Items**
   - **`user_name`** *(string)*: Name of the user.
-  - **`owner`** *(string)*
   - **`path`**: Default: `"/"`.
     - **Any of**
       - *string*
