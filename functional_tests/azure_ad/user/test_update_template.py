@@ -34,6 +34,5 @@ class UpdateUserTestCase(IsolatedAsyncioTestCase):
         self.assertEqual(
             self.template.properties.given_name,
             user.given_name,
-            "given_name was not updated"
+            "given_name was not updated",
         )
-

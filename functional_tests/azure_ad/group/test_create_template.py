@@ -26,9 +26,9 @@ class CreateGroupTestCase(IsolatedAsyncioTestCase):
         except Exception as err:
             self.fail(f"Group was not created: {err}")
 
-        group_members = [member.username for member in group.members]
+        group_members = [member.name for member in group.members]
         for member in self.template.properties.members:
-            self.assertIn(member.username, group_members)
+            self.assertIn(member.name, group_members)
 
     async def test_create_security_group(self):
         self.template.properties.mail_enabled = False

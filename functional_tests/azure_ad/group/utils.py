@@ -5,6 +5,7 @@ import random
 import uuid
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
 from iambic.plugins.v0_1_0.azure_ad.group.models import GroupTemplate
@@ -32,9 +33,6 @@ properties:
     - Unified
   mail_enabled: true
   mail_nickname: fn_test_group_{identifier}
-  members:
-    - username: curtis@noq.dev
-    - username: will@noq.dev
   security_enabled: false
 """
     with open(file_path, "w") as f:
