@@ -5,7 +5,7 @@ from typing import Optional
 
 import googleapiclient.discovery
 from google.oauth2 import service_account
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field, SecretStr, validator
 
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.iambic_plugin import ProviderPlugin
@@ -117,6 +117,20 @@ class GoogleProject(BaseModel):
 
 class GoogleWorkspaceConfig(BaseModel):
     workspaces: list[GoogleProject]
+
+    @validator(
+        "workspaces", allow_reuse=True
+    )  # the need of allow_reuse is possibly related to how we handle inheritance
+    def validate_google_workspaces(cls, workspaces: list[GoogleProject]):
+        project_id_set = set()
+        for workspace in workspaces:
+            if workspace.project_id in project_id_set:
+                raise ValueError(
+                    f"project_id must be unique within workspaces: {workspace.project_id}"
+                )
+            else:
+                project_id_set.add(workspace.project_id)
+        return workspaces
 
     def get_workspace(self, project_id: str) -> GoogleProject:
         for w in self.workspaces:
