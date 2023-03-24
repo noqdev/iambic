@@ -9,7 +9,6 @@ from test.plugins.v0_1_0.okta.test_utils import (  # noqa: F401 # intentional fo
 
 import pytest
 
-from iambic.core.context import ExecutionContext
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.okta.group.models import (
     OktaGroupTemplate,
@@ -81,9 +80,7 @@ async def test_apply_create_group(
     )
     template.write()
     okta_config = OktaConfig(organizations=[mock_okta_organization])
-    context = ExecutionContext()
-    context.eval_only = False
-    template_change_details = await template.apply(okta_config, context)
+    template_change_details = await template.apply(okta_config)
     assert (
         template_change_details.proposed_changes[0].proposed_changes[0].change_type
         == ProposedChangeType.CREATE

@@ -6,7 +6,7 @@ from typing import Callable, Optional, Union
 import botocore
 from pydantic import Field, validator
 
-from iambic.core.context import ExecutionContext, ctx
+from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -92,7 +92,7 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
         )
 
     async def _apply_to_account(  # noqa: C901
-        self, aws_account: AWSAccount, context: ExecutionContext
+        self, aws_account: AWSAccount
     ) -> AccountChangeDetails:
         boto3_session = await aws_account.get_boto3_session()
         client = boto3_session.client(
@@ -101,7 +101,7 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
         self = await remove_expired_resources(
             self, self.resource_type, self.resource_id
         )
-        account_group = self.apply_resource_dict(aws_account, context)
+        account_group = self.apply_resource_dict(aws_account)
 
         self = await remove_expired_resources(
             self, self.resource_type, self.resource_id
@@ -147,11 +147,11 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
                     )
                 )
                 log_str = "Active resource found with deleted=false."
-                if context.execute and not iambic_import_only:
+                if ctx.execute and not iambic_import_only:
                     log_str = f"{log_str} Deleting resource..."
                 log.info(log_str, **log_params)
 
-                if context.execute:
+                if ctx.execute:
                     await delete_iam_group(group_name, client, log_params)
 
             return account_change_details
@@ -188,7 +188,7 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
                             resource_type=self.resource_type,
                         )
                     ]
-                    if context.execute:
+                    if ctx.execute:
                         log.info(
                             f"{log_str} Updating resource...",
                             **update_resource_log_params,
@@ -213,7 +213,7 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
                     )
                 )
                 log_str = "New resource found in code."
-                if not context.execute:
+                if not ctx.execute:
                     log.info(log_str, **log_params)
                     # Exit now because apply functions won't work if resource doesn't exist
                     return account_change_details
@@ -233,7 +233,6 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
                     managed_policies,
                     existing_managed_policies,
                     log_params,
-                    context,
                 ),
                 apply_group_inline_policies(
                     group_name,
@@ -241,7 +240,6 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
                     inline_policies,
                     existing_inline_policies,
                     log_params,
-                    context,
                 ),
             ]
         )
@@ -269,7 +267,7 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
         if any(exceptions):
             account_change_details.exceptions_seen.extend(exceptions)
 
-        if context.execute:
+        if ctx.execute:
             if self.deleted:
                 self.delete()
             self.write()

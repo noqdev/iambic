@@ -6,7 +6,6 @@ from test.plugins.v0_1_0.okta.test_utils import (  # noqa: F401 # intentional fo
 
 import pytest
 
-from iambic.core.context import ExecutionContext
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.okta.group.utils import (
     create_group,
@@ -45,9 +44,7 @@ async def test_list_all_users_with_users(
         username=username, idp_name=idp_name, profile={"login": username}
     )
     template = OktaUserTemplate(file_path="example", properties=user_properties)
-    context = ExecutionContext()
-    context.eval_only = False
-    okta_user = await create_user(template, mock_okta_organization, context)
+    okta_user = await create_user(template, mock_okta_organization)
 
     # verify users
     okta_users = await list_all_users(mock_okta_organization)
@@ -64,10 +61,8 @@ async def test_create_group(
     group_name = "example_groupname"
     idp_name = "example.org"
     description = "example description"
-    context = ExecutionContext()
-    context.eval_only = False
     okta_group = await create_group(
-        group_name, idp_name, description, mock_okta_organization, context
+        group_name, idp_name, description, mock_okta_organization
     )
 
     # verify users
@@ -87,10 +82,11 @@ async def test_update_group_members(
     group_name = "example_groupname"
     idp_name = "example.org"
     description = "example description"
-    context = ExecutionContext()
-    context.eval_only = False
     okta_group = await create_group(
-        group_name, idp_name, description, mock_okta_organization, context
+        group_name,
+        idp_name,
+        description,
+        mock_okta_organization,
     )
     okta_group = await list_group_users(okta_group, mock_okta_organization)
     assert len(okta_group.members) == 0
@@ -102,14 +98,18 @@ async def test_update_group_members(
         username=username, idp_name=idp_name, profile={"login": username}
     )
     template = OktaUserTemplate(file_path="example", properties=user_properties)
-    context = ExecutionContext()
-    context.eval_only = False
-    okta_user = await create_user(template, mock_okta_organization, context)
+    okta_user = await create_user(
+        template,
+        mock_okta_organization,
+    )
 
     # test add users
     new_members = [okta_user]
     proposed_changes = await update_group_members(
-        okta_group, new_members, mock_okta_organization, {}, context
+        okta_group,
+        new_members,
+        mock_okta_organization,
+        {},
     )
     assert proposed_changes[0].change_type == ProposedChangeType.ATTACH
 
@@ -119,7 +119,10 @@ async def test_update_group_members(
     # test remove users
     new_members = []
     proposed_changes = await update_group_members(
-        okta_group, new_members, mock_okta_organization, {}, context
+        okta_group,
+        new_members,
+        mock_okta_organization,
+        {},
     )
     assert proposed_changes[0].change_type == ProposedChangeType.DETACH
 
@@ -133,10 +136,11 @@ async def test_get_group(mock_okta_organization):  # noqa: F811 # intentional fo
     group_name = "example_groupname"
     idp_name = "example.org"
     description = "example description"
-    context = ExecutionContext()
-    context.eval_only = False
     okta_group = await create_group(
-        group_name, idp_name, description, mock_okta_organization, context
+        group_name,
+        idp_name,
+        description,
+        mock_okta_organization,
     )
     okta_group = await list_group_users(okta_group, mock_okta_organization)
     assert len(okta_group.members) == 0
@@ -155,19 +159,21 @@ async def test_update_group_name(
     group_name = "example_groupname"
     idp_name = "example.org"
     description = "example description"
-    context = ExecutionContext()
-    context.eval_only = False
     okta_group = await create_group(
-        group_name, idp_name, description, mock_okta_organization, context
+        group_name,
+        idp_name,
+        description,
+        mock_okta_organization,
     )
     okta_group = await list_group_users(okta_group, mock_okta_organization)
     assert len(okta_group.members) == 0
 
     new_group_name = "new_group_name"
-    context = ExecutionContext()
-    context.eval_only = False
     proposed_changes = await update_group_name(
-        okta_group, new_group_name, mock_okta_organization, {}, context
+        okta_group,
+        new_group_name,
+        mock_okta_organization,
+        {},
     )
     assert proposed_changes[0].change_type == ProposedChangeType.UPDATE
 
@@ -185,19 +191,21 @@ async def test_update_group_description(
     group_name = "example_groupname"
     idp_name = "example.org"
     description = "example description"
-    context = ExecutionContext()
-    context.eval_only = False
     okta_group = await create_group(
-        group_name, idp_name, description, mock_okta_organization, context
+        group_name,
+        idp_name,
+        description,
+        mock_okta_organization,
     )
     okta_group = await list_group_users(okta_group, mock_okta_organization)
     assert len(okta_group.members) == 0
 
     new_group_description = "new description"
-    context = ExecutionContext()
-    context.eval_only = False
     proposed_changes = await update_group_description(
-        okta_group, new_group_description, mock_okta_organization, {}, context
+        okta_group,
+        new_group_description,
+        mock_okta_organization,
+        {},
     )
     assert proposed_changes[0].change_type == ProposedChangeType.UPDATE
 
@@ -215,18 +223,20 @@ async def test_maybe_delete_group(
     group_name = "example_groupname"
     idp_name = "example.org"
     description = "example description"
-    context = ExecutionContext()
-    context.eval_only = False
     okta_group = await create_group(
-        group_name, idp_name, description, mock_okta_organization, context
+        group_name,
+        idp_name,
+        description,
+        mock_okta_organization,
     )
     okta_group = await list_group_users(okta_group, mock_okta_organization)
     assert len(okta_group.members) == 0
 
-    context = ExecutionContext()
-    context.eval_only = False
     proposed_changes = await maybe_delete_group(
-        True, okta_group, mock_okta_organization, {}, context
+        True,
+        okta_group,
+        mock_okta_organization,
+        {},
     )
     assert proposed_changes[0].change_type == ProposedChangeType.DELETE
 
@@ -244,10 +254,11 @@ async def test_list_all_group(
     group_name = "example_groupname"
     idp_name = "example.org"
     description = "example description"
-    context = ExecutionContext()
-    context.eval_only = False
     okta_group = await create_group(
-        group_name, idp_name, description, mock_okta_organization, context
+        group_name,
+        idp_name,
+        description,
+        mock_okta_organization,
     )
     okta_group = await list_group_users(okta_group, mock_okta_organization)
     assert len(okta_group.members) == 0

@@ -5,7 +5,6 @@ from unittest import IsolatedAsyncioTestCase
 from functional_tests.azure_ad.user.utils import generate_user_template
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 
-from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.azure_ad.user.utils import get_user
 
 
@@ -17,10 +16,10 @@ class CreateUserTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
 
     async def test_create_user(self):
-        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
         self.assertEqual(len(changes.exceptions_seen), 0, changes.exceptions_seen)
 
         try:

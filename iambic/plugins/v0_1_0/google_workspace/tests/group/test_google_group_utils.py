@@ -4,7 +4,6 @@ import unittest
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, MagicMock
 
-from iambic.core.context import ExecutionContext
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.plugins.v0_1_0.google_workspace.group.models import (
     GoogleWorkspaceGroupTemplate,
@@ -123,11 +122,8 @@ class TestUpdateGroupDomain(IsolatedAsyncioTestCase):
             "resource_id": "group1@example.com",
             "account": "example.com",
         }
-        context = ExecutionContext()
 
-        result = await update_group_domain(
-            current_domain, proposed_domain, log_params, context
-        )
+        result = await update_group_domain(current_domain, proposed_domain, log_params)
 
         self.assertEqual(result, [])
 
@@ -139,11 +135,8 @@ class TestUpdateGroupDomain(IsolatedAsyncioTestCase):
             "resource_id": "group1@example.com",
             "account": "example.com",
         }
-        context = ExecutionContext()
         with self.assertRaises(NotImplementedError):
-            await update_group_domain(
-                current_domain, proposed_domain, log_params, context
-            )
+            await update_group_domain(current_domain, proposed_domain, log_params)
 
 
 class TestUpdateGroupDescription(IsolatedAsyncioTestCase):
@@ -162,8 +155,6 @@ class TestUpdateGroupDescription(IsolatedAsyncioTestCase):
         proposed_description = "Current Group Description"
         domain = "example.com"
 
-        context = ExecutionContext()
-
         result = await update_group_description(
             group_email,
             current_description,
@@ -171,7 +162,6 @@ class TestUpdateGroupDescription(IsolatedAsyncioTestCase):
             domain,
             self.google_project,
             self.log_params,
-            context,
         )
 
         self.assertEqual(result, [])
@@ -182,8 +172,6 @@ class TestUpdateGroupDescription(IsolatedAsyncioTestCase):
         proposed_description = "New Group Description"
         domain = "example.com"
 
-        context = ExecutionContext()
-
         result = await update_group_description(
             group_email,
             current_description,
@@ -191,7 +179,6 @@ class TestUpdateGroupDescription(IsolatedAsyncioTestCase):
             domain,
             self.google_project,
             self.log_params,
-            context,
         )
 
         self.assertEqual(len(result), 1)
@@ -216,7 +203,6 @@ class TestUpdateGroupName(IsolatedAsyncioTestCase):
             "resource_id": "group1@example.com",
             "account": "example.com",
         }
-        self.context = ExecutionContext()
 
     async def test_update_group_name_same_name(self):
         group_email = "group1@example.com"
@@ -231,7 +217,6 @@ class TestUpdateGroupName(IsolatedAsyncioTestCase):
             domain,
             self.google_project,
             self.log_params,
-            self.context,
         )
 
         self.assertEqual(result, [])
@@ -249,7 +234,6 @@ class TestUpdateGroupName(IsolatedAsyncioTestCase):
             domain,
             self.google_project,
             self.log_params,
-            self.context,
         )
 
         self.assertEqual(len(result), 1)
@@ -268,7 +252,6 @@ class TestUpdateGroupEmail(IsolatedAsyncioTestCase):
             "resource_id": "group1@example.com",
             "account": "example.com",
         }
-        self.context = ExecutionContext()
 
     async def test_update_group_email_same_email(self):
         current_email = "group1@example.com"
@@ -281,7 +264,6 @@ class TestUpdateGroupEmail(IsolatedAsyncioTestCase):
             domain,
             self.google_project,
             self.log_params,
-            self.context,
         )
 
         self.assertEqual(result, [])
@@ -297,7 +279,6 @@ class TestUpdateGroupEmail(IsolatedAsyncioTestCase):
             domain,
             self.google_project,
             self.log_params,
-            self.context,
         )
 
         self.assertEqual(len(result), 1)
@@ -316,7 +297,6 @@ class TestMaybeDeleteGroup(IsolatedAsyncioTestCase):
             "resource_id": "group1@example.com",
             "account": "example.com",
         }
-        self.context = ExecutionContext()
 
     async def test_maybe_delete_group_not_deleted(self):
         group = GoogleWorkspaceGroupTemplate(
@@ -335,7 +315,6 @@ class TestMaybeDeleteGroup(IsolatedAsyncioTestCase):
             group,
             self.google_project,
             self.log_params,
-            self.context,
         )
 
         self.assertEqual(result, [])
@@ -356,7 +335,6 @@ class TestMaybeDeleteGroup(IsolatedAsyncioTestCase):
             group,
             self.google_project,
             self.log_params,
-            self.context,
         )
 
         self.assertEqual(len(result), 1)
@@ -375,7 +353,6 @@ class TestUpdateGroupMembers(IsolatedAsyncioTestCase):
             "resource_id": "group1@example.com",
             "account": "example.com",
         }
-        self.context = ExecutionContext()
 
     async def test_update_group_members_no_changes(self):
         group_email = "group1@example.com"
@@ -396,7 +373,6 @@ class TestUpdateGroupMembers(IsolatedAsyncioTestCase):
             "example.com",
             self.google_project,
             self.log_params,
-            self.context,
         )
 
         self.assertEqual(result, [])
@@ -427,7 +403,6 @@ class TestUpdateGroupMembers(IsolatedAsyncioTestCase):
             "example.com",
             self.google_project,
             self.log_params,
-            self.context,
         )
 
         self.assertEqual(len(result), 2)

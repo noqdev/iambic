@@ -9,7 +9,6 @@ from functional_tests.aws.permission_set.utils import (
     permission_set_full_import,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.event_bridge.models import PermissionSetMessageDetails
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AwsIdentityCenterPermissionSetTemplate,
@@ -24,7 +23,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
     async def test_update_permission_set_attribute(self):
         initial_description = "This was created by a functional test."
@@ -40,7 +39,7 @@ class PartialImportPermissionSetTestCase(IsolatedAsyncioTestCase):
         )
         self.assertEqual(file_sys_template.properties.description, initial_description)
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
         await asyncio.sleep(5)
         await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
 

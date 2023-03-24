@@ -130,7 +130,7 @@ async def apply(
     template_changes: list[TemplateChangeDetails] = []
 
     if managed_policy_tasks := [
-        template.apply(config, ctx)
+        template.apply(config)
         for template in templates
         if template.template_type == AWS_MANAGED_POLICY_TEMPLATE_TYPE
     ]:
@@ -143,7 +143,7 @@ async def apply(
     template_changes.extend(
         await asyncio.gather(
             *[
-                template.apply(config, ctx)
+                template.apply(config)
                 for template in templates
                 if template.template_type != AWS_MANAGED_POLICY_TEMPLATE_TYPE
             ]

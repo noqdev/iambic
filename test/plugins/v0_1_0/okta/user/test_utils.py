@@ -8,7 +8,6 @@ import okta.models
 import pytest
 
 import iambic.plugins.v0_1_0.okta.models
-from iambic.core.context import ExecutionContext
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
 from iambic.plugins.v0_1_0.okta.user.models import (
@@ -35,9 +34,10 @@ async def test_get_user_by_username(
         username=username, idp_name=idp_name, profile={"login": username}
     )
     template = OktaUserTemplate(file_path="example", properties=user_properties)
-    context = ExecutionContext()
-    context.eval_only = False
-    okta_user = await create_user(template, mock_okta_organization, context)
+    okta_user = await create_user(
+        template,
+        mock_okta_organization,
+    )
 
     # Test the get_user method
     okta_user = await get_user(username, None, mock_okta_organization)
@@ -55,9 +55,7 @@ async def test_get_user_by_user_id(
         username=username, idp_name=idp_name, profile={"login": username}
     )
     template = OktaUserTemplate(file_path="example", properties=user_properties)
-    context = ExecutionContext()
-    context.eval_only = False
-    init_okta_user = await create_user(template, mock_okta_organization, context)
+    init_okta_user = await create_user(template, mock_okta_organization)
 
     # Test the get_user method
     okta_user = await get_user(username, init_okta_user.user_id, mock_okta_organization)
@@ -74,9 +72,10 @@ async def test_create_user(
         username=username, idp_name=idp_name, profile={"login": username}
     )
     template = OktaUserTemplate(file_path="example", properties=user_properties)
-    context = ExecutionContext()
-    context.eval_only = False
-    okta_user = await create_user(template, mock_okta_organization, context)
+    okta_user = await create_user(
+        template,
+        mock_okta_organization,
+    )
     assert okta_user.username == username
 
 
@@ -91,9 +90,10 @@ async def test_change_user_status(
         username=username, idp_name=idp_name, profile={"login": username}
     )
     template = OktaUserTemplate(file_path="example", properties=user_properties)
-    context = ExecutionContext()
-    context.eval_only = False
-    okta_user = await create_user(template, mock_okta_organization, context)
+    okta_user = await create_user(
+        template,
+        mock_okta_organization,
+    )
 
     input_user = iambic.plugins.v0_1_0.okta.models.User(
         idp_name=idp_name,
@@ -102,10 +102,10 @@ async def test_change_user_status(
         status="suspended",
         profile={},
     )
-    context = ExecutionContext()
-    context.eval_only = False
     proposed_changes = await change_user_status(
-        input_user, okta.models.UserStatus.ACTIVE, mock_okta_organization, context
+        input_user,
+        okta.models.UserStatus.ACTIVE,
+        mock_okta_organization,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.UPDATE
     assert proposed_changes[0].resource_type == input_user.resource_type
@@ -126,9 +126,10 @@ async def test_update_user_profile(
         username=username, idp_name=idp_name, profile={"login": username}
     )
     template = OktaUserTemplate(file_path="example", properties=user_properties)
-    context = ExecutionContext()
-    context.eval_only = False
-    okta_user = await create_user(template, mock_okta_organization, context)
+    okta_user = await create_user(
+        template,
+        mock_okta_organization,
+    )
 
     proposed_user = OktaUserTemplateProperties(
         username=username, idp_name=idp_name, profile={}
@@ -141,10 +142,12 @@ async def test_update_user_profile(
         profile={},
     )
     input_profile = {"nickname": "example"}
-    context = ExecutionContext()
-    context.eval_only = False
     proposed_changes = await update_user_profile(
-        proposed_user, input_user, input_profile, mock_okta_organization, {}, context
+        proposed_user,
+        input_user,
+        input_profile,
+        mock_okta_organization,
+        {},
     )
     assert proposed_changes[0].change_type == ProposedChangeType.UPDATE
     assert proposed_changes[0].resource_type == input_user.resource_type
@@ -167,9 +170,10 @@ async def test_maybe_deprovision_user(
         username=username, idp_name=idp_name, profile={"login": username}
     )
     template = OktaUserTemplate(file_path="example", properties=user_properties)
-    context = ExecutionContext()
-    context.eval_only = False
-    okta_user = await create_user(template, mock_okta_organization, context)
+    okta_user = await create_user(
+        template,
+        mock_okta_organization,
+    )
 
     input_user = iambic.plugins.v0_1_0.okta.models.User(
         idp_name=idp_name,
@@ -178,10 +182,11 @@ async def test_maybe_deprovision_user(
         status="suspended",
         profile={},
     )
-    context = ExecutionContext()
-    context.eval_only = False
     proposed_changes = await maybe_deprovision_user(
-        True, input_user, mock_okta_organization, {}, context
+        True,
+        input_user,
+        mock_okta_organization,
+        {},
     )
     assert proposed_changes[0].change_type == ProposedChangeType.DELETE
     assert proposed_changes[0].resource_type == input_user.resource_type

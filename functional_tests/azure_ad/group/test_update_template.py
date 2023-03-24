@@ -7,7 +7,6 @@ import uuid
 from functional_tests.azure_ad.base_test_case import BaseMS365TestCase
 from functional_tests.azure_ad.group.utils import generate_group_template
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
 from iambic.core.parser import load_templates
@@ -23,16 +22,16 @@ class UpdateMS365GroupTestCase(BaseMS365TestCase):
         cls.template = generate_group_template()
         cls.group_name = cls.template.properties.name
         cls.org = IAMBIC_TEST_DETAILS.config.azure_ad.organizations[0]
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad))
 
     @classmethod
     def tearDownClass(cls):
         cls.template.deleted = True
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad))
 
     async def test_update_description(self):
         self.template.properties.description = "Updated description"
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -55,7 +54,7 @@ class UpdateMS365GroupTestCase(BaseMS365TestCase):
                 data_type=MemberDataType.USER,
             )
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -75,14 +74,14 @@ class UpdateMS365GroupTestCase(BaseMS365TestCase):
                 data_type=MemberDataType.USER,
             )
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
 
         self.template.properties.members = [
             member
             for member in self.template.properties.members
             if member.id != user_member.user_id
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -110,7 +109,7 @@ class UpdateMS365GroupTestCase(BaseMS365TestCase):
                 data_type=MemberDataType.USER,
             ),
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
 
         expired_member = self.template.properties.members[0].name
         cur_time = datetime.datetime.now(datetime.timezone.utc)
@@ -148,16 +147,16 @@ class UpdateSecurityGroupTestCase(BaseMS365TestCase):
         cls.template.write(exclude_unset=False)
         cls.group_name = cls.template.properties.name
         cls.org = IAMBIC_TEST_DETAILS.config.azure_ad.organizations[0]
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad))
 
     @classmethod
     def tearDownClass(cls):
         cls.template.deleted = True
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad))
 
     async def test_update_description(self):
         self.template.properties.description = "Updated description"
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -181,7 +180,7 @@ class UpdateSecurityGroupTestCase(BaseMS365TestCase):
                 data_type=MemberDataType.GROUP,
             )
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -208,7 +207,7 @@ class UpdateSecurityGroupTestCase(BaseMS365TestCase):
                 data_type=MemberDataType.GROUP,
             ),
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -236,14 +235,14 @@ class UpdateSecurityGroupTestCase(BaseMS365TestCase):
                 data_type=MemberDataType.GROUP,
             ),
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
 
         self.template.properties.members = [
             member
             for member in self.template.properties.members
             if member.id not in [user_member.user_id, group_member.group_id]
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
 
         try:
             group = await get_group(self.org, group_name=self.group_name)

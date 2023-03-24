@@ -3,8 +3,6 @@ from __future__ import annotations
 from functional_tests.azure_ad.base_test_case import BaseMS365TestCase
 from functional_tests.azure_ad.group.utils import generate_group_template
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
-from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.azure_ad.group.models import Member, MemberDataType
 from iambic.plugins.v0_1_0.azure_ad.group.utils import get_group
 
@@ -17,7 +15,7 @@ class CreateGroupTestCase(BaseMS365TestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
 
     async def test_create_ms_365_group_with_user_member(self):
         new_member = self.get_random_user()
@@ -28,7 +26,7 @@ class CreateGroupTestCase(BaseMS365TestCase):
                 data_type=MemberDataType.USER,
             )
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -43,7 +41,7 @@ class CreateGroupTestCase(BaseMS365TestCase):
         self.template.properties.members = []
         self.template.properties.security_enabled = True
 
-        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
         self.assertEqual(len(changes.exceptions_seen), 0, changes.exceptions_seen)
 
         try:
@@ -69,7 +67,7 @@ class CreateGroupTestCase(BaseMS365TestCase):
         self.template.properties.group_types = []
         self.template.properties.mail_enabled = False
         self.template.properties.security_enabled = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -83,7 +81,7 @@ class CreateGroupTestCase(BaseMS365TestCase):
         self.template.properties.group_types = []
         self.template.properties.security_enabled = True
 
-        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
         self.assertGreaterEqual(len(changes.exceptions_seen), 1)
 
         # Should not exist

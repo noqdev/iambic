@@ -7,7 +7,7 @@ from typing import Union
 
 from deepdiff import DeepDiff
 
-from iambic.core.context import ExecutionContext, ctx
+from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper, plugin_apply_wrapper
@@ -147,7 +147,6 @@ async def apply_role_tags(
     template_tags: list[dict],
     existing_tags: list[dict],
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     existing_tag_map = {tag["Key"]: tag.get("Value") for tag in existing_tags}
     template_tag_map = {tag["Key"]: tag.get("Value") for tag in template_tags}
@@ -254,7 +253,6 @@ async def update_assume_role_policy(
     template_policy_document: dict,
     existing_policy_document: str,
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     response = []
     policy_drift = None
@@ -316,7 +314,6 @@ async def apply_role_managed_policies(
     template_policies: list[dict],
     existing_policies: list[dict],
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     tasks = []
     response = []
@@ -393,7 +390,6 @@ async def apply_role_permission_boundary(
     template_permission_boundary: dict,
     existing_permission_boundary: dict,
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     tasks = []
     response = []
@@ -483,7 +479,6 @@ async def apply_role_inline_policies(
     template_policies: list[dict],
     existing_policies: list[dict],
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     tasks = []
     response = []

@@ -8,7 +8,7 @@ import aiohttp
 import msal
 from pydantic import BaseModel, Field
 
-from iambic.core.context import ExecutionContext, ctx
+from iambic.core.context import ctx
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, TemplateChangeDetails
@@ -132,9 +132,7 @@ class AzureADTemplate(BaseTemplate):
     def resource_id(self) -> str:
         return self.properties.resource_id
 
-    async def apply(
-        self, config: AzureADConfig, context: ExecutionContext
-    ) -> TemplateChangeDetails:
+    async def apply(self, config: AzureADConfig) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
             resource_id=self.resource_id,
@@ -156,12 +154,12 @@ class AzureADTemplate(BaseTemplate):
             if azure_ad_organization.idp_name != self.idp_name:
                 continue
 
-            if context.execute:
+            if ctx.execute:
                 log_str = "Applying changes to resource."
             else:
                 log_str = "Detecting changes for resource."
             log.info(log_str, idp_name=azure_ad_organization.idp_name, **log_params)
-            tasks.append(self._apply_to_account(azure_ad_organization, context))
+            tasks.append(self._apply_to_account(azure_ad_organization))
 
         account_changes = list(await asyncio.gather(*tasks))
         template_changes.extend_changes(account_changes)
