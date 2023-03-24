@@ -56,7 +56,6 @@ class UpdateMS365GroupTestCase(BaseMS365TestCase):
             )
         ]
         await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
-        self.template.write()
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -77,7 +76,6 @@ class UpdateMS365GroupTestCase(BaseMS365TestCase):
             )
         ]
         await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
-        self.template.write()
 
         self.template.properties.members = [
             member
@@ -113,7 +111,6 @@ class UpdateMS365GroupTestCase(BaseMS365TestCase):
             ),
         ]
         await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
-        self.template.write()
 
         expired_member = self.template.properties.members[0].name
         cur_time = datetime.datetime.now(datetime.timezone.utc)
@@ -130,7 +127,6 @@ class UpdateMS365GroupTestCase(BaseMS365TestCase):
         )
 
         # Write new template, apply, and confirm access removed
-        self.template.write()
         await flag_expired_resources([self.template.file_path])
         await IAMBIC_TEST_DETAILS.config.run_apply(exe_message, [self.template])
 
@@ -186,7 +182,6 @@ class UpdateSecurityGroupTestCase(BaseMS365TestCase):
             )
         ]
         await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
-        self.template.write()
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -214,7 +209,6 @@ class UpdateSecurityGroupTestCase(BaseMS365TestCase):
             ),
         ]
         await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
-        self.template.write()
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -243,7 +237,6 @@ class UpdateSecurityGroupTestCase(BaseMS365TestCase):
             ),
         ]
         await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
-        self.template.write()
 
         self.template.properties.members = [
             member

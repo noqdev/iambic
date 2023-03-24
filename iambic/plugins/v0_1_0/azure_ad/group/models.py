@@ -38,6 +38,14 @@ class Member(BaseModel, ExpiryModel):
     id: str
     name: str
     data_type: MemberDataType
+    """TODO: validate name
+
+    https://learn.microsoft.com/en-us/azure/active-directory/authentication/concept-sspr-policy#userprincipalname-policies-that-apply-to-all-user-accounts
+
+    The total length must not exceed 113 characters
+    There can be up to 64 characters before the "@" symbol
+    There can be up to 48 characters after the "@" symbol
+    """
 
     @property
     def resource_type(self) -> str:

@@ -42,7 +42,6 @@ class CreateGroupTestCase(BaseMS365TestCase):
         self.template.properties.mail_enabled = False
         self.template.properties.members = []
         self.template.properties.security_enabled = True
-        self.template.write(exclude_unset=False)
 
         changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
         self.assertEqual(len(changes.exceptions_seen), 0, changes.exceptions_seen)
@@ -83,7 +82,6 @@ class CreateGroupTestCase(BaseMS365TestCase):
     async def test_attempt_create_mail_enabled_security_group(self):
         self.template.properties.group_types = []
         self.template.properties.security_enabled = True
-        self.template.write(exclude_unset=False)
 
         changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad, ctx)
         self.assertGreaterEqual(len(changes.exceptions_seen), 1)
