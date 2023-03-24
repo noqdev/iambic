@@ -86,8 +86,12 @@ class Member(BaseModel, ExpiryModel):
 
 
 class GroupTemplateProperties(ExpiryModel, BaseModel):
-    name: str = Field(..., description="Name of the group")
-    mail_nickname: str = Field(..., description="Mail nickname of the group")
+    name: str = Field(..., description="Name of the group", max_length=256)
+    mail_nickname: str = Field(
+        ...,
+        description="Mail nickname of the group",
+        regex=r"^[!#$%&'*+-./0-9=?A-Z^_`a-z{|}~]{1,64}$"
+    )
     group_id: Optional[str] = Field(
         None,
         description="Unique Group ID for the group. Usually it's {idp-name}-{name}",
