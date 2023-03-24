@@ -1,0 +1,1296 @@
+{
+  "title": "AwsIamRoleTemplate",
+  "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+  "type": "object",
+  "properties": {
+    "metadata_commented_dict": {
+      "title": "Metadatacommenteddict",
+      "description": "yaml inline comments",
+      "default": {},
+      "type": "object"
+    },
+    "metadata_iambic_fields": {
+      "title": "Metadataiambicfields",
+      "description": "metadata for iambic",
+      "default": [],
+      "type": "array",
+      "items": {},
+      "uniqueItems": true
+    },
+    "included_accounts": {
+      "title": "Includedaccounts",
+      "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+      "default": [
+        "*"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "excluded_accounts": {
+      "title": "Excludedaccounts",
+      "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "included_orgs": {
+      "title": "Includedorgs",
+      "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+      "default": [
+        "*"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "excluded_orgs": {
+      "title": "Excludedorgs",
+      "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "expires_at": {
+      "title": "Expiresat",
+      "description": "The date and time the resource will be/was set to deleted.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "string",
+          "format": "date"
+        }
+      ]
+    },
+    "deleted": {
+      "title": "Deleted",
+      "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
+      "default": false,
+      "type": "boolean"
+    },
+    "template_type": {
+      "title": "Templatetype",
+      "default": "NOQ::AWS::IAM::Role",
+      "type": "string"
+    },
+    "owner": {
+      "title": "Owner",
+      "type": "string"
+    },
+    "iambic_managed": {
+      "description": "Controls the directionality of Iambic changes",
+      "default": "undefined",
+      "allOf": [
+        {
+          "$ref": "#/definitions/IambicManaged"
+        }
+      ]
+    },
+    "identifier": {
+      "title": "Identifier",
+      "type": "string"
+    },
+    "properties": {
+      "title": "Properties",
+      "description": "Properties of the role",
+      "allOf": [
+        {
+          "$ref": "#/definitions/RoleProperties"
+        }
+      ]
+    },
+    "access_rules": {
+      "title": "Accessrules",
+      "description": "Used to define users and groups who can access the role via Noq credential brokering",
+      "default": [],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/RoleAccess"
+      }
+    }
+  },
+  "required": [
+    "identifier",
+    "properties"
+  ],
+  "definitions": {
+    "IambicManaged": {
+      "title": "IambicManaged",
+      "description": "An enumeration.",
+      "enum": [
+        "undefined",
+        "read_and_write",
+        "import_only",
+        "disabled"
+      ]
+    },
+    "Description": {
+      "title": "Description",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "metadata_commented_dict": {
+          "title": "Metadatacommenteddict",
+          "description": "yaml inline comments",
+          "default": {},
+          "type": "object"
+        },
+        "metadata_iambic_fields": {
+          "title": "Metadataiambicfields",
+          "description": "metadata for iambic",
+          "default": [],
+          "type": "array",
+          "items": {},
+          "uniqueItems": true
+        },
+        "included_accounts": {
+          "title": "Includedaccounts",
+          "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_accounts": {
+          "title": "Excludedaccounts",
+          "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "included_orgs": {
+          "title": "Includedorgs",
+          "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_orgs": {
+          "title": "Excludedorgs",
+          "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "description": {
+          "title": "Description",
+          "default": "",
+          "type": "string"
+        }
+      }
+    },
+    "MaxSessionDuration": {
+      "title": "MaxSessionDuration",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "metadata_commented_dict": {
+          "title": "Metadatacommenteddict",
+          "description": "yaml inline comments",
+          "default": {},
+          "type": "object"
+        },
+        "metadata_iambic_fields": {
+          "title": "Metadataiambicfields",
+          "description": "metadata for iambic",
+          "default": [],
+          "type": "array",
+          "items": {},
+          "uniqueItems": true
+        },
+        "included_accounts": {
+          "title": "Includedaccounts",
+          "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_accounts": {
+          "title": "Excludedaccounts",
+          "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "included_orgs": {
+          "title": "Includedorgs",
+          "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_orgs": {
+          "title": "Excludedorgs",
+          "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "max_session_duration": {
+          "title": "Maxsessionduration",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_session_duration"
+      ]
+    },
+    "Path": {
+      "title": "Path",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "metadata_commented_dict": {
+          "title": "Metadatacommenteddict",
+          "description": "yaml inline comments",
+          "default": {},
+          "type": "object"
+        },
+        "metadata_iambic_fields": {
+          "title": "Metadataiambicfields",
+          "description": "metadata for iambic",
+          "default": [],
+          "type": "array",
+          "items": {},
+          "uniqueItems": true
+        },
+        "included_accounts": {
+          "title": "Includedaccounts",
+          "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_accounts": {
+          "title": "Excludedaccounts",
+          "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "included_orgs": {
+          "title": "Includedorgs",
+          "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_orgs": {
+          "title": "Excludedorgs",
+          "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "PermissionBoundary": {
+      "title": "PermissionBoundary",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "metadata_commented_dict": {
+          "title": "Metadatacommenteddict",
+          "description": "yaml inline comments",
+          "default": {},
+          "type": "object"
+        },
+        "metadata_iambic_fields": {
+          "title": "Metadataiambicfields",
+          "description": "metadata for iambic",
+          "default": [],
+          "type": "array",
+          "items": {},
+          "uniqueItems": true
+        },
+        "included_accounts": {
+          "title": "Includedaccounts",
+          "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_accounts": {
+          "title": "Excludedaccounts",
+          "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "included_orgs": {
+          "title": "Includedorgs",
+          "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_orgs": {
+          "title": "Excludedorgs",
+          "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "expires_at": {
+          "title": "Expiresat",
+          "description": "The date and time the resource will be/was set to deleted.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
+        "deleted": {
+          "title": "Deleted",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
+          "default": false,
+          "type": "boolean"
+        },
+        "policy_arn": {
+          "title": "Permissions Boundary Arn",
+          "pattern": "(^arn:([^:]*):([^:]*):([^:]*):(|\\*|[\\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\\*$",
+          "type": "string"
+        },
+        "permissions_boundary_type": {
+          "title": "Permissionsboundarytype",
+          "type": "string"
+        }
+      },
+      "required": [
+        "policy_arn"
+      ]
+    },
+    "Principal": {
+      "title": "Principal",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "metadata_commented_dict": {
+          "title": "Metadatacommenteddict",
+          "description": "yaml inline comments",
+          "default": {},
+          "type": "object"
+        },
+        "metadata_iambic_fields": {
+          "title": "Metadataiambicfields",
+          "description": "metadata for iambic",
+          "default": [],
+          "type": "array",
+          "items": {},
+          "uniqueItems": true
+        },
+        "aws": {
+          "title": "Aws",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "service": {
+          "title": "Service",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "canonical_user": {
+          "title": "Canonicaluser",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "federated": {
+          "title": "Federated",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "PolicyStatement": {
+      "title": "PolicyStatement",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "metadata_commented_dict": {
+          "title": "Metadatacommenteddict",
+          "description": "yaml inline comments",
+          "default": {},
+          "type": "object"
+        },
+        "metadata_iambic_fields": {
+          "title": "Metadataiambicfields",
+          "description": "metadata for iambic",
+          "default": [],
+          "type": "array",
+          "items": {},
+          "uniqueItems": true
+        },
+        "expires_at": {
+          "title": "Expiresat",
+          "description": "The date and time the resource will be/was set to deleted.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
+        "deleted": {
+          "title": "Deleted",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
+          "default": false,
+          "type": "boolean"
+        },
+        "included_accounts": {
+          "title": "Includedaccounts",
+          "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_accounts": {
+          "title": "Excludedaccounts",
+          "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "included_orgs": {
+          "title": "Includedorgs",
+          "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_orgs": {
+          "title": "Excludedorgs",
+          "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "effect": {
+          "title": "Effect",
+          "description": "Allow | Deny",
+          "type": "string"
+        },
+        "principal": {
+          "title": "Principal",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Principal"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "not_principal": {
+          "title": "Notprincipal",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Principal"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "action": {
+          "title": "Action",
+          "description": "A single regex or list of regexes. Values are the actions that can be performed on the resources in the policy statement",
+          "example": "dynamodb:list*",
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "not_action": {
+          "title": "Notaction",
+          "description": "An advanced policy element that explicitly matches everything except the specified list of actions.DON'T use this with effect: allow in the same statement OR policy",
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "resource": {
+          "title": "Resource",
+          "description": "A single regex or list of regexes. Values specified are the resources the statement applies to",
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "not_resource": {
+          "title": "Notresource",
+          "description": "An advanced policy element that explicitly matches every resource except those specified.DON'T use this with effect: allow and action: '*'",
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "condition": {
+          "title": "Condition",
+          "description": "An optional set of conditions to determine of the policy applies to a resource.",
+          "type": "object"
+        },
+        "sid": {
+          "title": "Sid",
+          "description": "The Policy Statement ID.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "effect"
+      ]
+    },
+    "AssumeRolePolicyDocument": {
+      "title": "AssumeRolePolicyDocument",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "metadata_commented_dict": {
+          "title": "Metadatacommenteddict",
+          "description": "yaml inline comments",
+          "default": {},
+          "type": "object"
+        },
+        "metadata_iambic_fields": {
+          "title": "Metadataiambicfields",
+          "description": "metadata for iambic",
+          "default": [],
+          "type": "array",
+          "items": {},
+          "uniqueItems": true
+        },
+        "included_accounts": {
+          "title": "Includedaccounts",
+          "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_accounts": {
+          "title": "Excludedaccounts",
+          "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "included_orgs": {
+          "title": "Includedorgs",
+          "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_orgs": {
+          "title": "Excludedorgs",
+          "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "version": {
+          "title": "Version",
+          "default": "2008-10-17",
+          "type": "string"
+        },
+        "statement": {
+          "title": "Statement",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PolicyStatement"
+          }
+        }
+      }
+    },
+    "Tag": {
+      "title": "Tag",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "metadata_commented_dict": {
+          "title": "Metadatacommenteddict",
+          "description": "yaml inline comments",
+          "default": {},
+          "type": "object"
+        },
+        "metadata_iambic_fields": {
+          "title": "Metadataiambicfields",
+          "description": "metadata for iambic",
+          "default": [],
+          "type": "array",
+          "items": {},
+          "uniqueItems": true
+        },
+        "included_accounts": {
+          "title": "Includedaccounts",
+          "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_accounts": {
+          "title": "Excludedaccounts",
+          "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "included_orgs": {
+          "title": "Includedorgs",
+          "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_orgs": {
+          "title": "Excludedorgs",
+          "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "expires_at": {
+          "title": "Expiresat",
+          "description": "The date and time the resource will be/was set to deleted.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
+        "deleted": {
+          "title": "Deleted",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
+          "default": false,
+          "type": "boolean"
+        },
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ]
+    },
+    "ManagedPolicyRef": {
+      "title": "ManagedPolicyRef",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "metadata_commented_dict": {
+          "title": "Metadatacommenteddict",
+          "description": "yaml inline comments",
+          "default": {},
+          "type": "object"
+        },
+        "metadata_iambic_fields": {
+          "title": "Metadataiambicfields",
+          "description": "metadata for iambic",
+          "default": [],
+          "type": "array",
+          "items": {},
+          "uniqueItems": true
+        },
+        "expires_at": {
+          "title": "Expiresat",
+          "description": "The date and time the resource will be/was set to deleted.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
+        "deleted": {
+          "title": "Deleted",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
+          "default": false,
+          "type": "boolean"
+        },
+        "included_accounts": {
+          "title": "Includedaccounts",
+          "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_accounts": {
+          "title": "Excludedaccounts",
+          "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "included_orgs": {
+          "title": "Includedorgs",
+          "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_orgs": {
+          "title": "Excludedorgs",
+          "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "policy_arn": {
+          "title": "Policyarn",
+          "pattern": "(^arn:([^:]*):([^:]*):([^:]*):(|\\*|[\\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\\*$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "policy_arn"
+      ]
+    },
+    "PolicyDocument": {
+      "title": "PolicyDocument",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "metadata_commented_dict": {
+          "title": "Metadatacommenteddict",
+          "description": "yaml inline comments",
+          "default": {},
+          "type": "object"
+        },
+        "metadata_iambic_fields": {
+          "title": "Metadataiambicfields",
+          "description": "metadata for iambic",
+          "default": [],
+          "type": "array",
+          "items": {},
+          "uniqueItems": true
+        },
+        "expires_at": {
+          "title": "Expiresat",
+          "description": "The date and time the resource will be/was set to deleted.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
+        "deleted": {
+          "title": "Deleted",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
+          "default": false,
+          "type": "boolean"
+        },
+        "included_accounts": {
+          "title": "Includedaccounts",
+          "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_accounts": {
+          "title": "Excludedaccounts",
+          "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "included_orgs": {
+          "title": "Includedorgs",
+          "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_orgs": {
+          "title": "Excludedorgs",
+          "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "policy_name": {
+          "title": "Policyname",
+          "description": "The name of the policy.",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "statement": {
+          "title": "Statement",
+          "description": "List of policy statements",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PolicyStatement"
+          }
+        }
+      },
+      "required": [
+        "policy_name"
+      ]
+    },
+    "RoleProperties": {
+      "title": "RoleProperties",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "metadata_commented_dict": {
+          "title": "Metadatacommenteddict",
+          "description": "yaml inline comments",
+          "default": {},
+          "type": "object"
+        },
+        "metadata_iambic_fields": {
+          "title": "Metadataiambicfields",
+          "description": "metadata for iambic",
+          "default": [],
+          "type": "array",
+          "items": {},
+          "uniqueItems": true
+        },
+        "role_name": {
+          "title": "Rolename",
+          "description": "Name of the role",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "description": "Description of the role",
+          "default": "",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Description"
+              }
+            }
+          ]
+        },
+        "owner": {
+          "title": "Owner",
+          "type": "string"
+        },
+        "max_session_duration": {
+          "title": "Maxsessionduration",
+          "default": 3600,
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/MaxSessionDuration"
+              }
+            }
+          ]
+        },
+        "path": {
+          "title": "Path",
+          "default": "/",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Path"
+              }
+            }
+          ]
+        },
+        "permissions_boundary": {
+          "title": "Permissionsboundary",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PermissionBoundary"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/PermissionBoundary"
+              }
+            }
+          ]
+        },
+        "assume_role_policy_document": {
+          "title": "Assumerolepolicydocument",
+          "description": "Who can assume the Role",
+          "default": [],
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AssumeRolePolicyDocument"
+              }
+            },
+            {
+              "$ref": "#/definitions/AssumeRolePolicyDocument"
+            }
+          ]
+        },
+        "tags": {
+          "title": "Tags",
+          "description": "List of tags attached to the role",
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Tag"
+          }
+        },
+        "managed_policies": {
+          "title": "Managedpolicies",
+          "description": "Managed policy arns attached to the role",
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ManagedPolicyRef"
+          }
+        },
+        "inline_policies": {
+          "title": "Inlinepolicies",
+          "description": "List of the role's inline policies",
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PolicyDocument"
+          }
+        }
+      },
+      "required": [
+        "role_name"
+      ]
+    },
+    "RoleAccess": {
+      "title": "RoleAccess",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "metadata_commented_dict": {
+          "title": "Metadatacommenteddict",
+          "description": "yaml inline comments",
+          "default": {},
+          "type": "object"
+        },
+        "metadata_iambic_fields": {
+          "title": "Metadataiambicfields",
+          "description": "metadata for iambic",
+          "default": [],
+          "type": "array",
+          "items": {},
+          "uniqueItems": true
+        },
+        "included_accounts": {
+          "title": "Includedaccounts",
+          "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_accounts": {
+          "title": "Excludedaccounts",
+          "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "included_orgs": {
+          "title": "Includedorgs",
+          "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_orgs": {
+          "title": "Excludedorgs",
+          "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "expires_at": {
+          "title": "Expiresat",
+          "description": "The date and time the resource will be/was set to deleted.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
+        "deleted": {
+          "title": "Deleted",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
+          "default": false,
+          "type": "boolean"
+        },
+        "users": {
+          "title": "Users",
+          "description": "List of users who can assume into the role",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "groups": {
+          "title": "Groups",
+          "description": "List of groups. Users in one or more of the groups can assume into the role",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
