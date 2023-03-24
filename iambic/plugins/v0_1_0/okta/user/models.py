@@ -141,7 +141,7 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
         file_name = f"{self.properties.username}.yaml"
         self.file_path = os.path.expanduser(
             os.path.join(
-                repo_dir, f"resources/okta/users/{self.properties.idp_name}/{file_name}"
+                repo_dir, f"resources/okta/user/{self.properties.idp_name}/{file_name}"
             )
         )
 
