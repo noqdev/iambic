@@ -99,7 +99,7 @@ class GroupTemplateProperties(BaseModel):
         return sorted_v
 
 
-class GroupTemplate(GoogleTemplate, ExpiryModel):
+class GoogleWorkspaceGroupTemplate(GoogleTemplate, ExpiryModel):
     template_type = GOOGLE_GROUP_TEMPLATE_TYPE
     properties: GroupTemplateProperties
 
@@ -288,11 +288,11 @@ class GroupTemplate(GoogleTemplate, ExpiryModel):
         )
 
 
-async def get_group_template(service, group, domain) -> GroupTemplate:
+async def get_group_template(service, group, domain) -> GoogleWorkspaceGroupTemplate:
     members = await get_group_members(service, group)
 
     file_name = f"{group['email'].split('@')[0]}.yaml"
-    return GroupTemplate(
+    return GoogleWorkspaceGroupTemplate(
         file_path=f"resources/google/groups/{domain}/{file_name}",
         properties=dict(
             domain=domain,

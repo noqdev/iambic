@@ -9,7 +9,7 @@ from iambic.plugins.v0_1_0.aws.models import ARN_RE, AccessModel
 
 
 class Path(AccessModel):
-    file_path: str
+    file_path: str = Field(..., hidden_from_schema=True)
 
     @property
     def resource_type(self) -> str:

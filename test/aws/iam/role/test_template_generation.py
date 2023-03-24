@@ -6,7 +6,7 @@ import pytest
 
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.template_generation import merge_model
-from iambic.plugins.v0_1_0.aws.iam.role.models import RoleTemplate
+from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate
 from iambic.plugins.v0_1_0.aws.iam.role.template_generation import create_templated_role
 from iambic.plugins.v0_1_0.aws.models import AWSAccount, Description
 
@@ -22,7 +22,7 @@ def get_aws_account_map(aws_accounts: list[AWSAccount]) -> dict[str, AWSAccount]
 @pytest.fixture
 def test_role():
     test_role_name = "test_role"
-    test_role = RoleTemplate(
+    test_role = AwsIamRoleTemplate(
         identifier=test_role_name,
         included_accounts=["dev"],
         file_path="/tmp/test_role.yaml",

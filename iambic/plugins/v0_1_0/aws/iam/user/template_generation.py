@@ -22,8 +22,8 @@ from iambic.core.utils import NoqSemaphore, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import UserMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.user.models import (
     AWS_IAM_USER_TEMPLATE_TYPE,
+    AwsIamUserTemplate,
     UserProperties,
-    UserTemplate,
 )
 from iambic.plugins.v0_1_0.aws.iam.user.utils import (
     get_user_across_accounts,
@@ -229,7 +229,7 @@ async def create_templated_user(  # noqa: C901
     user_dir: str,
     existing_template_map: dict,
     config: AWSConfig,
-) -> UserTemplate:
+) -> AwsIamUserTemplate:
     account_id_to_user_map = await _account_id_to_user_map(user_refs)
     num_of_accounts = len(user_refs)
 
@@ -390,7 +390,7 @@ async def create_templated_user(  # noqa: C901
         file_path,
         existing_template_map,
         user_name,
-        UserTemplate,
+        AwsIamUserTemplate,
         user_template_params,
         UserProperties(**user_template_properties),
         list(aws_account_map.values()),

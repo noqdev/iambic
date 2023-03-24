@@ -3,7 +3,7 @@ from __future__ import annotations
 from pydantic_factories import Ignore, ModelFactory
 
 from iambic.plugins.v0_1_0.aws.iam.policy import models as policy_models
-from iambic.plugins.v0_1_0.aws.iam.role.models import RoleTemplate
+from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate
 
 
 class AssumeRolePolicyDocumentFactory(ModelFactory):
@@ -15,7 +15,7 @@ class PolicyDocumentFactory(ModelFactory):
 
 
 class RoleFactory(ModelFactory):
-    __model__ = RoleTemplate
+    __model__ = AwsIamRoleTemplate
 
     deleted = Ignore()
     included_orgs = Ignore()

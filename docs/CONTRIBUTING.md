@@ -10,7 +10,7 @@ class Path(AccessModel):
     file_path: str
 
 
-class RoleTemplate(NoqTemplate, AccessModel):
+class AwsIamRoleTemplate(NoqTemplate, AccessModel):
     ...
     path: Optional[Union[str , list[Path]]] = "/"
 ```

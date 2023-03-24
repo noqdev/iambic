@@ -18,8 +18,8 @@ from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import (
 class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         from iambic.plugins.v0_1_0.google_workspace.group.models import (
+            GoogleWorkspaceGroupTemplate,
             GroupMember,
-            GroupTemplate,
             GroupTemplateProperties,
         )
 
@@ -28,7 +28,7 @@ class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp_dir.cleanup)
         self.temp_file_path = os.path.join(self.temp_dir.name, "test_path.yaml")
-        self.template = GroupTemplate(
+        self.template = GoogleWorkspaceGroupTemplate(
             template_type="google:group",
             file_path=self.temp_file_path,
             properties=GroupTemplateProperties(
@@ -39,7 +39,7 @@ class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
                 members=[GroupMember(email="testuser@example.com")],
             ),
         )
-        self.template_2 = GroupTemplate(
+        self.template_2 = GoogleWorkspaceGroupTemplate(
             template_type="google:group",
             file_path=self.temp_file_path,
             properties=GroupTemplateProperties(

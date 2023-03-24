@@ -24,7 +24,7 @@ from iambic.plugins.v0_1_0.aws.event_bridge.models import PermissionSetMessageDe
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
     AWSIdentityCenterPermissionSetProperties,
-    AWSIdentityCenterPermissionSetTemplate,
+    AwsIdentityCenterPermissionSetTemplate,
 )
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
     enrich_permission_set_details,
@@ -148,7 +148,7 @@ async def create_templated_permission_set(  # noqa: C901
     permission_set_refs: list[dict],
     permission_set_dir: str,
     existing_template_map: dict,
-) -> Union[AWSIdentityCenterPermissionSetTemplate, None]:
+) -> Union[AwsIdentityCenterPermissionSetTemplate, None]:
     account_id_to_permissionn_set_map = {}
     num_of_accounts = len(permission_set_refs)
     for permission_set_ref in permission_set_refs:
@@ -365,7 +365,7 @@ async def create_templated_permission_set(  # noqa: C901
         file_path,
         existing_template_map,
         permission_set_name,
-        AWSIdentityCenterPermissionSetTemplate,
+        AwsIdentityCenterPermissionSetTemplate,
         template_params,
         AWSIdentityCenterPermissionSetProperties(**template_properties),
         list(aws_account_map.values()),

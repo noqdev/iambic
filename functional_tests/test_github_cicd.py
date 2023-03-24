@@ -16,7 +16,7 @@ from functional_tests.conftest import all_config
 from iambic.config.dynamic_config import Config, load_config
 from iambic.core.git import clone_git_repo
 from iambic.core.logger import log
-from iambic.plugins.v0_1_0.aws.iam.role.models import RoleTemplate
+from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate
 
 os.environ["TESTING"] = "true"
 
@@ -413,27 +413,27 @@ def test_github_detect(filesystem, generate_templates_fixture, build_push_contai
         GITHUB_CICID_TEMPLATE_TARGET_PATH,
     )
 
-    role_template = RoleTemplate.load(file_path=test_role_path)
+    role_template = AwsIamRoleTemplate.load(file_path=test_role_path)
 
     # this is prone to race condition since we are using the same resource for test
     assert role_template.properties.description == new_description
 
 
-def verify_func_before_action_delete_role(role_template: RoleTemplate):
+def verify_func_before_action_delete_role(role_template: AwsIamRoleTemplate):
     assert not role_template.deleted
 
 
-def verify_func_after_action_delete_role(role_template: RoleTemplate):
+def verify_func_after_action_delete_role(role_template: AwsIamRoleTemplate):
     assert role_template.deleted
 
 
-def verify_func_before_action_inner_properties(role_template: RoleTemplate):
+def verify_func_before_action_inner_properties(role_template: AwsIamRoleTemplate):
     assert len(role_template.properties.assume_role_policy_document.statement) == 2
     assert len(role_template.properties.inline_policies[0].statement) == 1
     assert len(role_template.properties.managed_policies) == 1
 
 
-def verify_func_after_action_inner_properties(role_template: RoleTemplate):
+def verify_func_after_action_inner_properties(role_template: AwsIamRoleTemplate):
     assert len(role_template.properties.assume_role_policy_document.statement) == 1
     assert len(role_template.properties.inline_policies[0].statement) == 0
     assert len(role_template.properties.managed_policies) == 0
@@ -495,7 +495,7 @@ def test_github_expire_base(
         print("git push to origin/main")
 
     # testing specific expire section
-    role_template = RoleTemplate.load(file_path=test_role_path)
+    role_template = AwsIamRoleTemplate.load(file_path=test_role_path)
     verify_func_before_action(role_template)
 
     github_client = Github(github_token)
@@ -529,5 +529,5 @@ def test_github_expire_base(
     repo.git.pull("origin", "main")
 
     # testing specific verification
-    role_template = RoleTemplate.load(file_path=test_role_path)
+    role_template = AwsIamRoleTemplate.load(file_path=test_role_path)
     verify_func_after_action(role_template)
