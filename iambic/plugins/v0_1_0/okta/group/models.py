@@ -62,7 +62,6 @@ class User(UserSimple):
 
 class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the group")
-    owner: Optional[str] = Field(None, description="Owner of the group")
     idp_name: str = Field(
         ...,
         description="Name of the identity provider that's associated with the group",
@@ -94,6 +93,7 @@ class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
 
 class OktaGroupTemplate(BaseTemplate, ExpiryModel):
     template_type = OKTA_GROUP_TEMPLATE_TYPE
+    owner: Optional[str] = Field(None, description="Owner of the group")
     properties: OktaGroupTemplateProperties = Field(
         ..., description="Properties for the Okta Group"
     )
@@ -164,7 +164,7 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
         self.file_path = os.path.expanduser(
             os.path.join(
                 repo_dir,
-                f"resources/okta/groups/{self.properties.idp_name}/{file_name}",
+                f"resources/okta/group/{self.properties.idp_name}/{file_name}",
             )
         )
 

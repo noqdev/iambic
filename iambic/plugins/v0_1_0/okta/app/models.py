@@ -36,7 +36,6 @@ OKTA_APP_TEMPLATE_TYPE = "NOQ::Okta::App"
 
 class OktaAppTemplateProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the app")
-    owner: Optional[str] = Field(None, description="Owner of the app")
     status: Optional[Status] = Field(None, description="Status of the app")
     idp_name: str = Field(
         ...,
@@ -69,6 +68,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
     properties: OktaAppTemplateProperties = Field(
         ..., description="Properties for the Okta App"
     )
+    owner: Optional[str] = Field(None, description="Owner of the app")
 
     async def apply(
         self, config: OktaConfig, context: ExecutionContext
@@ -91,6 +91,8 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
             return template_changes
 
         for okta_organization in config.organizations:
+            if self.properties.idp_name != okta_organization.idp_name:
+                continue
             if context.execute:
                 log_str = "Applying changes to resource."
             else:
@@ -134,7 +136,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
         file_name = f"{self.properties.name}.yaml"
         self.file_path = os.path.expanduser(
             os.path.join(
-                repo_dir, f"resources/okta/apps/{self.properties.idp_name}/{file_name}"
+                repo_dir, f"resources/okta/app/{self.properties.idp_name}/{file_name}"
             )
         )
 
@@ -143,7 +145,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
     ):
         return {
             "name": self.properties.name,
-            "owner": self.properties.owner,
+            "owner": self.owner,
             "status": self.properties.status,
             "idp_name": self.properties.idp_name,
             "description": self.properties.description,

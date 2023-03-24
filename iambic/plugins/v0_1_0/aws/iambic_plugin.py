@@ -15,12 +15,12 @@ from iambic.plugins.v0_1_0.aws.handlers import (
     import_aws_resources,
     load,
 )
-from iambic.plugins.v0_1_0.aws.iam.group.models import GroupTemplate
-from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyTemplate
-from iambic.plugins.v0_1_0.aws.iam.role.models import RoleTemplate
-from iambic.plugins.v0_1_0.aws.iam.user.models import UserTemplate
+from iambic.plugins.v0_1_0.aws.iam.group.models import AwsIamGroupTemplate
+from iambic.plugins.v0_1_0.aws.iam.policy.models import AwsIamManagedPolicyTemplate
+from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate
+from iambic.plugins.v0_1_0.aws.iam.user.models import AwsIamUserTemplate
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
-    AWSIdentityCenterPermissionSetTemplate,
+    AwsIdentityCenterPermissionSetTemplate,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount, AWSOrganization
 
@@ -110,10 +110,10 @@ IAMBIC_PLUGIN = ProviderPlugin(
     async_detect_changes_callable=detect_changes,
     async_discover_upstream_config_changes_callable=aws_account_update_and_discovery,
     templates=[
-        AWSIdentityCenterPermissionSetTemplate,
-        GroupTemplate,
-        RoleTemplate,
-        UserTemplate,
-        ManagedPolicyTemplate,
+        AwsIdentityCenterPermissionSetTemplate,
+        AwsIamGroupTemplate,
+        AwsIamRoleTemplate,
+        AwsIamUserTemplate,
+        AwsIamManagedPolicyTemplate,
     ],
 )

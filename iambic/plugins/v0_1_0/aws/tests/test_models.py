@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from iambic.plugins.v0_1_0.aws.iam.models import MaxSessionDuration, Path
-from iambic.plugins.v0_1_0.aws.iam.role.models import RoleProperties, RoleTemplate
+from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate, RoleProperties
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import AWSAccount, Description, Partition
 
@@ -75,7 +75,7 @@ class TestBaseModel(unittest.TestCase):
             ],
             path=[Path(file_path="/")],
         )
-        self.role_template = RoleTemplate(
+        self.role_template = AwsIamRoleTemplate(
             identifier="test_role",
             file_path="/tmp/test_role.yaml",
             properties=properties,

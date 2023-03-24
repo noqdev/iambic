@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock
 from iambic.core.context import ExecutionContext
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.plugins.v0_1_0.google_workspace.group.models import (
+    GoogleWorkspaceGroupTemplate,
     GroupMember,
-    GroupTemplate,
     GroupTemplateProperties,
 )
 from iambic.plugins.v0_1_0.google_workspace.group.utils import (
@@ -319,7 +319,7 @@ class TestMaybeDeleteGroup(IsolatedAsyncioTestCase):
         self.context = ExecutionContext()
 
     async def test_maybe_delete_group_not_deleted(self):
-        group = GroupTemplate(
+        group = GoogleWorkspaceGroupTemplate(
             properties=GroupTemplateProperties(
                 email="group1@example.com",
                 name="Group 1",
@@ -341,7 +341,7 @@ class TestMaybeDeleteGroup(IsolatedAsyncioTestCase):
         self.assertEqual(result, [])
 
     async def test_maybe_delete_group_deleted(self):
-        group = GroupTemplate(
+        group = GoogleWorkspaceGroupTemplate(
             file_path="test_google_group.yaml",
             properties=GroupTemplateProperties(
                 email="group1@example.com",

@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import shutil
 import tempfile
-from unittest.mock import PropertyMock, call, patch
+from unittest.mock import MagicMock, PropertyMock, call, patch
 
+import github
 import pytest
 
-from iambic.plugins.v0_1_0.github.github import (  # prepare_local_repo,
+from iambic.plugins.v0_1_0.github.github import (
     BODY_MAX_LENGTH,
     MERGEABLE_STATE_BLOCKED,
     MERGEABLE_STATE_CLEAN,
@@ -17,6 +18,7 @@ from iambic.plugins.v0_1_0.github.github import (  # prepare_local_repo,
     get_session_name,
     handle_issue_comment,
     handle_pull_request,
+    maybe_merge,
 )
 
 
@@ -415,13 +417,11 @@ def test_run_handler(mocker, mg):
 
 @pytest.fixture
 def mock_proposed_changes_filesystem():
-
     temp_templates_directory = tempfile.mkdtemp(
         prefix="iambic_test_temp_templates_directory"
     )
 
     try:
-
         contents = """hello world"""
         contents_path = f"{temp_templates_directory}/proposed_chagnes.yaml"
 
@@ -508,3 +508,52 @@ def test_ensure_body_length_fits_github_spec():
     body = "h" * (BODY_MAX_LENGTH + 1)
     new_body = ensure_body_length_fits_github_spec(body, blob_html_url=blob_html_url)
     assert blob_html_url in new_body
+
+
+def test_maybe_merge_crashes(
+    mock_github_client,
+):
+    def merge_error(*args, **kwargs):
+        raise github.GithubException(409, "409 unable to merge", {})
+
+    mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
+    mock_pull_request.mergeable_state = MERGEABLE_STATE_CLEAN
+    mock_pull_request.merge.side_effect = merge_error
+    templates_repo = mock_github_client.get_repo("ExampleOrg/iambic-templates")
+    pull_number = 1337
+    merge_sha = "non_existent_sha"
+    expected_attempts = 3
+    with pytest.raises(RuntimeError, match="Fail to merge PR"):
+        maybe_merge(
+            templates_repo,
+            pull_number,
+            merge_sha,
+            max_attempts=expected_attempts,
+            sleep_interval=0.1,
+        )
+    assert mock_pull_request.merge.called
+    assert len(mock_pull_request.merge.mock_calls) == expected_attempts
+
+
+def test_maybe_merge_does_not_crash(
+    mock_github_client,
+):
+    def merge_error(*args, **kwargs):
+        return MagicMock()
+
+    mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
+    mock_pull_request.mergeable_state = MERGEABLE_STATE_CLEAN
+    mock_pull_request.merge.side_effect = merge_error
+    templates_repo = mock_github_client.get_repo("ExampleOrg/iambic-templates")
+    pull_number = 1337
+    merge_sha = "non_existent_sha"
+    expected_attempts = 3
+    maybe_merge(
+        templates_repo,
+        pull_number,
+        merge_sha,
+        max_attempts=expected_attempts,
+        sleep_interval=0.1,
+    )
+    assert mock_pull_request.merge.called
+    assert len(mock_pull_request.merge.mock_calls) == 1

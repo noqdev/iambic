@@ -75,7 +75,6 @@ class RoleProperties(BaseModel):
         "",
         description="Description of the role",
     )
-    owner: Optional[str] = None
     max_session_duration: Optional[Union[int, list[MaxSessionDuration]]] = 3600
     path: Optional[Union[str, list[Path]]] = "/"
     permissions_boundary: Optional[
@@ -166,8 +165,9 @@ class RoleProperties(BaseModel):
         return sorted_v
 
 
-class RoleTemplate(AWSTemplate, AccessModel):
+class AwsIamRoleTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_ROLE_TEMPLATE_TYPE
+    owner: Optional[str] = Field(None, description="Owner of the role")
     properties: RoleProperties = Field(
         description="Properties of the role",
     )
@@ -184,7 +184,9 @@ class RoleTemplate(AWSTemplate, AccessModel):
     def _apply_resource_dict(
         self, aws_account: AWSAccount = None, context: ExecutionContext = None
     ) -> dict:
-        response = super(RoleTemplate, self)._apply_resource_dict(aws_account, context)
+        response = super(AwsIamRoleTemplate, self)._apply_resource_dict(
+            aws_account, context
+        )
         response.pop("RoleAccess", None)
         if "Tags" not in response:
             response["Tags"] = []

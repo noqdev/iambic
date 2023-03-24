@@ -19,7 +19,6 @@ from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig
 
 
 def test_members_sorting():
-
     members = [
         {"username": "user_1@example.org"},
         {"username": "user_2@example.org"},

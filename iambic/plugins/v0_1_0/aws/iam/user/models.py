@@ -49,7 +49,6 @@ class UserProperties(BaseModel):
     user_name: str = Field(
         description="Name of the user",
     )
-    owner: Optional[str] = None
     path: Optional[Union[str, list[Path]]] = "/"
     permissions_boundary: Optional[
         Union[None, PermissionBoundary, list[PermissionBoundary]]
@@ -121,7 +120,7 @@ class UserProperties(BaseModel):
         return sorted_v
 
 
-class UserTemplate(AWSTemplate, AccessModel):
+class AwsIamUserTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_USER_TEMPLATE_TYPE
     properties: UserProperties = Field(
         description="Properties of the user",
@@ -130,7 +129,9 @@ class UserTemplate(AWSTemplate, AccessModel):
     def _apply_resource_dict(
         self, aws_account: AWSAccount = None, context: ExecutionContext = None
     ) -> dict:
-        response = super(UserTemplate, self)._apply_resource_dict(aws_account, context)
+        response = super(AwsIamUserTemplate, self)._apply_resource_dict(
+            aws_account, context
+        )
         if "Tags" not in response:
             response["Tags"] = []
 

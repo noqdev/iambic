@@ -6,7 +6,7 @@ import uuid
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
-from iambic.plugins.v0_1_0.aws.iam.group.models import GroupTemplate
+from iambic.plugins.v0_1_0.aws.iam.group.models import AwsIamGroupTemplate
 from iambic.plugins.v0_1_0.aws.iam.group.template_generation import (
     collect_aws_groups,
     generate_aws_group_templates,
@@ -17,7 +17,7 @@ from iambic.plugins.v0_1_0.aws.iam.group.utils import list_groups
 
 async def generate_group_template_from_base(
     repo_dir: str,
-) -> GroupTemplate:
+) -> AwsIamGroupTemplate:
     group_dir = get_template_dir(repo_dir)
     identifier = f"iambic_test_{random.randint(0, 10000)}"
     file_path = f"{group_dir}/{identifier}.yaml"
@@ -42,7 +42,7 @@ properties:
 """
     with open(file_path, "w") as f:
         f.write(group_template)
-    group_template = GroupTemplate.load(file_path)
+    group_template = AwsIamGroupTemplate.load(file_path)
 
     return group_template
 

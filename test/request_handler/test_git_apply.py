@@ -42,7 +42,6 @@ EXAMPLE_PLUGIN_PATH = iambic.plugins.v0_1_0.example.__path__[0]
 
 @pytest.fixture
 def templates_repo():
-
     temp_templates_directory = tempfile.mkdtemp(
         prefix="iambic_test_temp_templates_directory"
     )
@@ -124,7 +123,6 @@ async def test_apply_git_changes_with_deleted_template_due_to_git_apply(template
 
 @pytest.fixture
 def repo_with_modified_and_renamed_template():
-
     temp_templates_directory = tempfile.mkdtemp(
         prefix="iambic_test_temp_templates_directory"
     )
@@ -200,7 +198,6 @@ async def test_apply_git_changes_with_modified_and_renamed_template(
 
 @pytest.fixture
 def repo_with_git_rm_template():
-
     temp_templates_directory = tempfile.mkdtemp(
         prefix="iambic_test_temp_templates_directory"
     )

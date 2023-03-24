@@ -167,7 +167,6 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
 
     @validator("description")
     def validate_description(cls, v: Union[str, list[Description]]):
-
         # validation portion
         if isinstance(v, str) and not (1 <= len(v) <= 700):
             raise ValueError(
@@ -207,10 +206,11 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
         return sorted_v
 
 
-class AWSIdentityCenterPermissionSetTemplate(
+class AwsIdentityCenterPermissionSetTemplate(
     AccessModelMixin, AWSTemplate, ExpiryModel
 ):
     template_type: str = AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
+    owner: Optional[str] = Field(None, description="Owner of the permission set")
     properties: AWSIdentityCenterPermissionSetProperties
     access_rules: Optional[list[PermissionSetAccess]] = []
     included_orgs: list[str] = Field(

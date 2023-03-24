@@ -11,7 +11,7 @@ from iambic.core.models import ProviderChild
 from iambic.core.template_generation import merge_access_model_list
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWSIdentityCenterPermissionSetProperties,
-    AWSIdentityCenterPermissionSetTemplate,
+    AwsIdentityCenterPermissionSetTemplate,
     PermissionSetAccess,
 )
 from iambic.plugins.v0_1_0.aws.models import Description
@@ -70,7 +70,6 @@ def test_description_validation_with_list_with_empty_string():
 
 
 def test_description_sorting():
-
     description = [
         {"included_accounts": ["account_1", "account_2"], "description": "foo"},
         {"included_accounts": ["account_3"], "description": "bar"},
@@ -90,13 +89,12 @@ def test_description_sorting():
 
 
 def test_access_rule_validation():
-
     access_rules = [
         {"included_accounts": ["account_1", "account_2"], "users": ["foo"]},
         {"included_accounts": ["account_3"], "users": ["bar"]},
     ]
     properties_1 = AWSIdentityCenterPermissionSetProperties(name="foo")
-    template_1 = AWSIdentityCenterPermissionSetTemplate(
+    template_1 = AwsIdentityCenterPermissionSetTemplate(
         file_path="foo",
         identifier="foo",
         properties=properties_1,
@@ -114,7 +112,6 @@ def test_access_rule_validation():
 
 
 class FakeAccount(ProviderChild):
-
     name: str
     account_owner: str
 

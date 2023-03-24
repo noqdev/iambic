@@ -28,7 +28,6 @@ from iambic.plugins.v0_1_0.okta.user.utils import (
 async def test_get_user_by_username(
     mock_okta_organization: OktaOrganization,  # noqa: F811 # intentional for mocks
 ):
-
     # Have to create user before getting it
     username = "example_username"
     idp_name = "example.org"
@@ -49,7 +48,6 @@ async def test_get_user_by_username(
 async def test_get_user_by_user_id(
     mock_okta_organization: OktaOrganization,  # noqa: F811 # intentional for mocks
 ):
-
     # Have to create user before getting it
     username = "example_username"
     idp_name = "example.org"
@@ -59,11 +57,11 @@ async def test_get_user_by_user_id(
     template = OktaUserTemplate(file_path="example", properties=user_properties)
     context = ExecutionContext()
     context.eval_only = False
-    okta_user = await create_user(template, mock_okta_organization, context)
+    init_okta_user = await create_user(template, mock_okta_organization, context)
 
     # Test the get_user method
-    okta_user = await get_user(username, okta_user.user_id, mock_okta_organization)
-    assert okta_user.user_id == okta_user.user_id
+    okta_user = await get_user(username, init_okta_user.user_id, mock_okta_organization)
+    assert init_okta_user.user_id == okta_user.user_id
 
 
 @pytest.mark.asyncio
@@ -86,7 +84,6 @@ async def test_create_user(
 async def test_change_user_status(
     mock_okta_organization: OktaOrganization,  # noqa: F811 # intentional for mocks
 ):
-
     # Have to create user before getting it
     username = "example_username"
     idp_name = "example.org"
@@ -122,7 +119,6 @@ async def test_change_user_status(
 async def test_update_user_profile(
     mock_okta_organization: OktaOrganization,  # noqa: F811 # intentional for mocks
 ):
-
     # Have to create user before getting it
     username = "example_username"
     idp_name = "example.org"
@@ -164,7 +160,6 @@ async def test_update_user_profile(
 async def test_maybe_deprovision_user(
     mock_okta_organization: OktaOrganization,  # noqa: F811 # intentional for mocks
 ):
-
     # Have to create user before getting it
     username = "example_username"
     idp_name = "example.org"

@@ -15,7 +15,7 @@ from iambic.core.template_generation import (
 )
 from iambic.plugins.v0_1_0.google_workspace.group.models import (
     GOOGLE_GROUP_TEMPLATE_TYPE,
-    GroupTemplate,
+    GoogleWorkspaceGroupTemplate,
 )
 from iambic.plugins.v0_1_0.google_workspace.group.utils import list_groups
 
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 
 def get_resource_dir_args(domain: str) -> list:
-    return ["groups", domain]
+    return ["group", domain]
 
 
 def get_response_dir(
@@ -86,11 +86,10 @@ async def generate_domain_group_resource_files(
 
 
 async def update_or_create_group_template(
-    discovered_group_template: GroupTemplate,
+    discovered_group_template: GoogleWorkspaceGroupTemplate,
     existing_template_map: dict,
     group_dir: str,
-) -> GroupTemplate:
-
+) -> GoogleWorkspaceGroupTemplate:
     discovered_group_template.file_path = get_templated_resource_file_path(
         group_dir,
         discovered_group_template.properties.email,
@@ -100,7 +99,7 @@ async def update_or_create_group_template(
         discovered_group_template.file_path,
         existing_template_map,
         discovered_group_template.resource_id,
-        GroupTemplate,
+        GoogleWorkspaceGroupTemplate,
         {},
         discovered_group_template.properties,
         [],
@@ -153,7 +152,7 @@ async def generate_group_templates(
             )
             # Update or create templates
             for group in groups:
-                group = GroupTemplate(file_path="unset", **group)
+                group = GoogleWorkspaceGroupTemplate(file_path="unset", **group)
                 group.file_path = group.default_file_path
                 resource_template = await update_or_create_group_template(
                     group, existing_template_map, group_dir

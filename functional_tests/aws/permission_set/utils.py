@@ -4,13 +4,14 @@ import random
 import uuid
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
 from iambic.core.utils import gather_templates
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
-    AWSIdentityCenterPermissionSetTemplate,
+    AwsIdentityCenterPermissionSetTemplate,
     PermissionSetAccess,
 )
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation import (
@@ -22,10 +23,10 @@ from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
 
 def attach_access_rule(
-    permission_set_template: AWSIdentityCenterPermissionSetTemplate,
+    permission_set_template: AwsIdentityCenterPermissionSetTemplate,
     aws_account: AWSAccount,
     exclude_accounts: int = 0,
-) -> AWSIdentityCenterPermissionSetTemplate:
+) -> AwsIdentityCenterPermissionSetTemplate:
     users = [
         details["UserName"]
         for details in aws_account.identity_center_details.user_map.values()
@@ -59,12 +60,12 @@ def attach_access_rule(
 
 async def generate_permission_set_template_from_base(
     repo_dir: str,
-) -> AWSIdentityCenterPermissionSetTemplate:
+) -> AwsIdentityCenterPermissionSetTemplate:
     permission_sets = await gather_templates(
         repo_dir, AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
     )
     permission_set_dir = get_template_dir(repo_dir)
-    permission_set_template = AWSIdentityCenterPermissionSetTemplate.load(
+    permission_set_template = AwsIdentityCenterPermissionSetTemplate.load(
         random.choice(permission_sets)
     )
     log.info(

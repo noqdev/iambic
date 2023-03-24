@@ -79,7 +79,6 @@ class TestAWSUtils(IsolatedAsyncioTestCase):
 
             # Use botocore stubber to mock the s3.head_bucket function
             with Stubber(s3_client) as stubber:
-
                 # Add the throttling exception and the successful response to the stubber
                 for i in range(10):
                     stubber.add_client_error(
