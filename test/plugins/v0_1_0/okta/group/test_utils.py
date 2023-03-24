@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from test.plugins.v0_1_0.okta.test_utils import (  # noqa: F401 # intentional for mocks
     mock_okta_organization,
 )
@@ -36,7 +38,6 @@ async def test_list_all_users_with_no_users(
 async def test_list_all_users_with_users(
     mock_okta_organization,  # noqa: F811 # intentional for mocks
 ):
-
     # Have to create user before getting it
     username = "example_username"
     idp_name = "example.org"
@@ -59,7 +60,6 @@ async def test_list_all_users_with_users(
 async def test_create_group(
     mock_okta_organization,  # noqa: F811 # intentional for mocks
 ):
-
     # Have to create user before getting it
     group_name = "example_groupname"
     idp_name = "example.org"
@@ -83,7 +83,6 @@ async def test_create_group(
 async def test_update_group_members(
     mock_okta_organization,  # noqa: F811 # intentional for mocks
 ):
-
     # Have to create group before getting it
     group_name = "example_groupname"
     idp_name = "example.org"
@@ -130,7 +129,6 @@ async def test_update_group_members(
 
 @pytest.mark.asyncio
 async def test_get_group(mock_okta_organization):  # noqa: F811 # intentional for mocks
-
     # Have to create group before getting it
     group_name = "example_groupname"
     idp_name = "example.org"
@@ -153,7 +151,6 @@ async def test_get_group(mock_okta_organization):  # noqa: F811 # intentional fo
 async def test_update_group_name(
     mock_okta_organization,  # noqa: F811 # intentional for mocks
 ):
-
     # Have to create group before getting it
     group_name = "example_groupname"
     idp_name = "example.org"
@@ -184,7 +181,6 @@ async def test_update_group_name(
 async def test_update_group_description(
     mock_okta_organization,  # noqa: F811 # intentional for mocks
 ):
-
     # Have to create group before getting it
     group_name = "example_groupname"
     idp_name = "example.org"
@@ -215,7 +211,6 @@ async def test_update_group_description(
 async def test_maybe_delete_group(
     mock_okta_organization,  # noqa: F811 # intentional for mocks
 ):
-
     # Have to create group before getting it
     group_name = "example_groupname"
     idp_name = "example.org"
@@ -245,7 +240,6 @@ async def test_maybe_delete_group(
 async def test_list_all_group(
     mock_okta_organization,  # noqa: F811 # intentional for mocks
 ):
-
     # Have to create group before getting it
     group_name = "example_groupname"
     idp_name = "example.org"

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-from moto import mock_secretsmanager
 
 from iambic.config.dynamic_config import ExtendsConfig, ExtendsConfigKey
 

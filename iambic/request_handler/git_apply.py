@@ -103,7 +103,6 @@ async def apply_git_changes(
 def commit_deleted_templates(
     repo_dir: str, templates: list[BaseTemplate], details: list[TemplateChangeDetails]
 ):
-
     repo = Repo(repo_dir)
 
     # intended to delete
@@ -112,9 +111,7 @@ def commit_deleted_templates(
     }
 
     for template_detail in details:
-
         if template_detail.template_path in deleted_template_path_to_template:
-
             if template_detail.exceptions_seen:
                 log_params = {"path": template_detail.template_path}
                 log.error(

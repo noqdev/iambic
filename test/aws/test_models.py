@@ -20,7 +20,6 @@ def test_aws_template_merge(aws_accounts):
 
 
 def test_access_model_sorting():
-
     included_accounts_1 = ["development", "ses"]
     included_accounts_2 = list(reversed(included_accounts_1))
     access_model_1 = AccessModel(included_accounts=included_accounts_1)
@@ -32,7 +31,6 @@ def test_access_model_sorting():
 # Make sure even if includedd children is modified after model
 # creation the sort weight is still stable
 def test_access_model_sorting_weight():
-
     included_accounts_1 = ["development", "ses"]
     access_model_1 = AccessModel()
     access_model_2 = AccessModel()

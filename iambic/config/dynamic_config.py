@@ -21,7 +21,7 @@ from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
 from iambic.core.utils import sort_dict, yaml
-from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, google_workspace, okta
+from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, azure_ad, google_workspace, okta
 
 CURRENT_IAMBIC_VERSION = "1"
 
@@ -120,6 +120,11 @@ class Config(BaseTemplate):
                 location=iambic.plugins.v0_1_0.github.__path__[0],
                 version=PLUGIN_VERSION,
             ),
+            PluginDefinition(
+                type=PluginType.DIRECTORY_PATH,
+                location=azure_ad.__path__[0],
+                version=PLUGIN_VERSION,
+            ),
         ],
         description="The plugins used by your IAMbic template repo.",
     )
@@ -216,7 +221,7 @@ class Config(BaseTemplate):
                 task_message.provider_type = plugin.config_name
                 tasks.append(
                     plugin.async_import_callable(
-                        exe_message, self.get_config_plugin(plugin), output_dir
+                        task_message, self.get_config_plugin(plugin), output_dir
                     )
                 )
 

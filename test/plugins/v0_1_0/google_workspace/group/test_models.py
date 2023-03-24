@@ -95,7 +95,6 @@ def test_merge_list_group_members_expires_at():
 
 
 def test_members_sorting():
-
     members = [
         {"email": "user_1@example.org"},
         {"email": "user_2@example.org"},

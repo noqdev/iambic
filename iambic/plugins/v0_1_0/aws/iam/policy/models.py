@@ -389,7 +389,6 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
             return account_change_details
 
         if current_policy:
-
             tasks = [
                 apply_update_managed_policy(
                     client,

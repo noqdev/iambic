@@ -473,7 +473,6 @@ def create_or_update_template(
     properties,
     all_provider_children: list[ProviderChild],
 ):
-
     new_template = template_cls(
         file_path=file_path,
         properties=properties,
@@ -941,7 +940,6 @@ def merge_model(
             else:
                 setattr(merged_model, key, new_value)
         elif isinstance(existing_value, BaseModel):
-
             if isinstance(new_value, BaseModel):
                 setattr(
                     merged_model,

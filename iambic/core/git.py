@@ -210,7 +210,6 @@ def create_templates_for_deleted_files(deleted_files: list[GitDiff]) -> list:
 def create_templates_for_modified_files(
     config: Config, modified_files: list[GitDiff]
 ) -> list:
-
     """
     Create a class instance of the original file content and the new file content with its template type
     Check for aws_accounts that were removed from included_accounts or added to excluded_accounts

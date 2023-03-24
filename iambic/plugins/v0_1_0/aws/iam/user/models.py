@@ -49,7 +49,6 @@ class UserProperties(BaseModel):
     user_name: str = Field(
         description="Name of the user",
     )
-    owner: Optional[str] = None
     path: Optional[Union[str, list[Path]]] = "/"
     permissions_boundary: Optional[
         Union[None, PermissionBoundary, list[PermissionBoundary]]

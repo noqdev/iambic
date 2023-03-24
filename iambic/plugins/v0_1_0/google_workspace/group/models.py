@@ -101,6 +101,7 @@ class GroupTemplateProperties(BaseModel):
 
 class GoogleWorkspaceGroupTemplate(GoogleTemplate, ExpiryModel):
     template_type = GOOGLE_GROUP_TEMPLATE_TYPE
+    owner: Optional[str] = Field(None, description="Owner of the group")
     properties: GroupTemplateProperties
 
     def apply_resource_dict(

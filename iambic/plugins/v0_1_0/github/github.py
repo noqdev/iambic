@@ -291,7 +291,6 @@ def get_session_name(repo_name: str, pull_request_number: str) -> str:
 def handle_issue_comment(
     github_client: github.Github, context: dict[str, Any]
 ) -> HandleIssueCommentReturnCode:
-
     comment_body = context["event"]["comment"]["body"]
     log_params = {"COMMENT_DISPATCH_MAP_KEYS": COMMENT_DISPATCH_MAP.keys()}
     log.info("COMMENT_DISPATCH_MAP keys", **log_params)
@@ -584,7 +583,6 @@ def handle_pull_request(github_client: github.Github, context: dict[str, Any]) -
 def handle_detect_changes_from_eventbridge(
     github_client: github.Github, context: dict[str, Any]
 ) -> None:
-
     # we need a different github token because we will need to push to main without PR
     github_token = context["iambic"]["GH_OVERRIDE_TOKEN"]
     repository_url = context["event"]["repository"]["clone_url"]
@@ -597,7 +595,6 @@ def handle_detect_changes_from_eventbridge(
 
 
 def _handle_detect_changes_from_eventbridge(repo_url: str, default_branch: str) -> None:
-
     try:
         repo = prepare_local_repo_for_new_commits(
             repo_url, get_lambda_repo_path(), "detect"
@@ -617,7 +614,6 @@ def _handle_detect_changes_from_eventbridge(repo_url: str, default_branch: str) 
 
 
 def handle_import(github_client: github.Github, context: dict[str, Any]) -> None:
-
     # we need a different github token because we will need to push to main without PR
     github_token = context["iambic"]["GH_OVERRIDE_TOKEN"]
 
@@ -653,7 +649,6 @@ def _handle_import(repo_url: str, default_branch: str) -> None:
 
 
 def handle_expire(github_client: github.Github, context: dict[str, Any]) -> None:
-
     # we need a different github token because we will need to push to main without PR
     github_token = context["iambic"]["GH_OVERRIDE_TOKEN"]
 
@@ -667,7 +662,6 @@ def handle_expire(github_client: github.Github, context: dict[str, Any]) -> None
 
 
 def _handle_expire(repo_url: str, default_branch: str) -> None:
-
     try:
         repo = prepare_local_repo_for_new_commits(
             repo_url, get_lambda_repo_path(), "expire"

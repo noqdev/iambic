@@ -36,7 +36,6 @@ OKTA_APP_TEMPLATE_TYPE = "NOQ::Okta::App"
 
 class OktaAppTemplateProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the app")
-    owner: Optional[str] = Field(None, description="Owner of the app")
     status: Optional[Status] = Field(None, description="Status of the app")
     idp_name: str = Field(
         ...,
@@ -69,6 +68,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
     properties: OktaAppTemplateProperties = Field(
         ..., description="Properties for the Okta App"
     )
+    owner: Optional[str] = Field(None, description="Owner of the app")
 
     async def apply(
         self, config: OktaConfig, context: ExecutionContext
@@ -145,7 +145,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
     ):
         return {
             "name": self.properties.name,
-            "owner": self.properties.owner,
+            "owner": self.owner,
             "status": self.properties.status,
             "idp_name": self.properties.idp_name,
             "description": self.properties.description,
