@@ -12,7 +12,7 @@ from iambic.core.template_generation import (
 )
 from iambic.plugins.v0_1_0.azure_ad.user.models import (
     AZURE_AD_USER_TEMPLATE_TYPE,
-    UserTemplate,
+    AzureActiveDirectoryUserTemplate,
 )
 from iambic.plugins.v0_1_0.azure_ad.user.utils import list_users
 
@@ -29,10 +29,10 @@ def get_response_dir(exe_message: ExecutionMessage) -> str:
 
 
 async def update_or_create_user_template(
-    discovered_template: UserTemplate, existing_template_map: dict
-) -> UserTemplate:
+    discovered_template: AzureActiveDirectoryUserTemplate, existing_template_map: dict
+) -> AzureActiveDirectoryUserTemplate:
     """
-    Update or create a UserTemplate object from the provided User object.
+    Update or create a AzureActiveDirectoryUserTemplate object from the provided User object.
 
     Args:
         discovered_template (User): The User template generated from the Azure AD cloud response.
@@ -43,7 +43,7 @@ async def update_or_create_user_template(
         discovered_template.file_path,
         existing_template_map,
         discovered_template.resource_id,
-        UserTemplate,
+        AzureActiveDirectoryUserTemplate,
         {"idp_name": discovered_template.idp_name},
         discovered_template.properties,
         [],
@@ -60,7 +60,7 @@ async def collect_org_users(exe_message: ExecutionMessage, config: AzureADConfig
 
     users = await list_users(azure_organization)
     for user in users:
-        azure_user = UserTemplate(
+        azure_user = AzureActiveDirectoryUserTemplate(
             file_path="unset",
             idp_name=azure_organization.idp_name,
             properties=user,
@@ -92,7 +92,7 @@ async def generate_user_templates(
     )
     # Update or create templates
     for user in users:
-        user = UserTemplate(file_path="unset", **user)
+        user = AzureActiveDirectoryUserTemplate(file_path="unset", **user)
         user.set_default_file_path(output_dir, user.properties.username)
         resource_template = await update_or_create_user_template(
             user, existing_template_map

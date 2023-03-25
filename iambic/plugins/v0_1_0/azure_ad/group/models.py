@@ -135,7 +135,7 @@ class GroupTemplateProperties(ExpiryModel, BaseModel):
         )
 
 
-class GroupTemplate(ExpiryModel, AzureADTemplate):
+class AzureActiveDirectoryGroupTemplate(ExpiryModel, AzureADTemplate):
     template_type = AZURE_AD_GROUP_TEMPLATE_TYPE
     owner: Optional[str] = Field(None, description="Owner of the group")
     properties: GroupTemplateProperties = Field(

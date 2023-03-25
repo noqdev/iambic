@@ -47,6 +47,7 @@
     },
     "owner": {
       "title": "Owner",
+      "description": "Owner of the group",
       "type": "string"
     },
     "iambic_managed": {
@@ -200,11 +201,6 @@
         "name": {
           "title": "Name",
           "description": "Name of the group",
-          "type": "string"
-        },
-        "owner": {
-          "title": "Owner",
-          "description": "Owner of the group",
           "type": "string"
         },
         "idp_name": {

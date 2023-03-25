@@ -953,10 +953,6 @@
           "description": "Name of the user",
           "type": "string"
         },
-        "owner": {
-          "title": "Owner",
-          "type": "string"
-        },
         "path": {
           "title": "Path",
           "default": "/",

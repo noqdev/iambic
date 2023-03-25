@@ -4,10 +4,10 @@ import os
 import random
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.plugins.v0_1_0.azure_ad.user.models import UserTemplate
+from iambic.plugins.v0_1_0.azure_ad.user.models import AzureActiveDirectoryUserTemplate
 
 
-def generate_user_template() -> UserTemplate:
+def generate_user_template() -> AzureActiveDirectoryUserTemplate:
     user_dir = os.path.join(
         IAMBIC_TEST_DETAILS.template_dir_path,
         "resources/azure_ad/user/noq_dev",
@@ -26,6 +26,6 @@ properties:
 """
     with open(file_path, "w") as f:
         f.write(user_template)
-    user_template = UserTemplate.load(file_path)
+    user_template = AzureActiveDirectoryUserTemplate.load(file_path)
 
     return user_template

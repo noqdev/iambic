@@ -47,6 +47,7 @@
     },
     "owner": {
       "title": "Owner",
+      "description": "Owner of the permission set",
       "type": "string"
     },
     "iambic_managed": {

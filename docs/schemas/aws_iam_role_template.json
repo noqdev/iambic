@@ -87,6 +87,7 @@
     },
     "owner": {
       "title": "Owner",
+      "description": "Owner of the role",
       "type": "string"
     },
     "iambic_managed": {
@@ -1093,10 +1094,6 @@
               }
             }
           ]
-        },
-        "owner": {
-          "title": "Owner",
-          "type": "string"
         },
         "max_session_duration": {
           "title": "Maxsessionduration",
