@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from aiohttp import ClientResponseError
 
@@ -17,6 +17,9 @@ from iambic.plugins.v0_1_0.azure_ad.group.models import (
 )
 from iambic.plugins.v0_1_0.azure_ad.models import AzureADOrganization
 from iambic.plugins.v0_1_0.azure_ad.user.utils import get_user
+
+if TYPE_CHECKING:
+    from iambic.plugins.v0_1_0.azure_ad.user.models import UserTemplateProperties
 
 
 async def list_group_members(
@@ -104,8 +107,8 @@ async def list_groups(
 
 async def get_group(
     azure_ad_organization: AzureADOrganization,
-    group_id: str = None,
-    group_name: str = None,
+    group_id: Optional[str] = None,
+    group_name: Optional[str] = None,
 ) -> Optional[GroupTemplateProperties]:
     """
     Get a group from Azure AD using the Microsoft Graph API.
@@ -148,7 +151,7 @@ async def create_group(
     group_name: str,
     description: str,
     mail_enabled: bool,
-    mail_nickname: str,
+    mail_nickname: Optional[str],
     security_enabled: bool,
     group_types: list[str],
 ) -> Optional[GroupTemplateProperties]:
@@ -242,13 +245,13 @@ def parse_group_member_response(
         if isinstance(response, ClientResponseError):
             member = members[i]
             log.exception(
-                "Failed to update group member in Azure AD",
+                "Failed to update group members in Azure AD",
                 err=str(response),
                 member=member.dict(),
                 **log_params,
             )
             proposed_change.exceptions_seen.append(
-                f"Failed to remove member. "
+                f"Failed to add or remove member. "
                 f"Member: {member.name} ({member.data_type}). "
                 f"Response: {response.status} - {response.message}."
             )
@@ -274,6 +277,7 @@ async def update_group_members(
         List[ProposedChange]: A list of proposed changes to be applied.
     """
     response = []
+
     current_member_ids = [member.id for member in cloud_group.members]
     desired_member_ids = [member.id for member in template_members]
 
@@ -387,3 +391,29 @@ async def delete_group(
             response[0].exceptions_seen = [str(err)]
 
     return response
+
+
+async def resolve_member_ids(
+    azure_ad_organization: AzureADOrganization, members: List[Member]
+) -> List[Member]:
+    from iambic.plugins.v0_1_0.azure_ad.group.utils import get_group
+    from iambic.plugins.v0_1_0.azure_ad.user.utils import get_user
+
+    for member in members:
+        if member.id:
+            continue
+        if member.data_type == MemberDataType.USER:
+            user_details: Optional[UserTemplateProperties] = await get_user(
+                azure_ad_organization, username=member.name
+            )
+            if not user_details:
+                continue
+            member.id = user_details.user_id
+        elif member.data_type == MemberDataType.GROUP:
+            group_details: Optional[GroupTemplateProperties] = await get_group(
+                azure_ad_organization, group_name=member.name
+            )
+            if not group_details:
+                continue
+            member.id = group_details.group_id
+    return members
