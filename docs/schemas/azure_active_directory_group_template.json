@@ -1,0 +1,279 @@
+{
+  "title": "AzureActiveDirectoryGroupTemplate",
+  "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+  "type": "object",
+  "properties": {
+    "metadata_commented_dict": {
+      "title": "Metadatacommenteddict",
+      "description": "yaml inline comments",
+      "default": {},
+      "type": "object"
+    },
+    "metadata_iambic_fields": {
+      "title": "Metadataiambicfields",
+      "description": "metadata for iambic",
+      "default": [],
+      "type": "array",
+      "items": {},
+      "uniqueItems": true
+    },
+    "template_type": {
+      "title": "Templatetype",
+      "default": "NOQ::AzureAD::Group",
+      "type": "string"
+    },
+    "owner": {
+      "title": "Owner",
+      "description": "Owner of the group",
+      "type": "string"
+    },
+    "iambic_managed": {
+      "description": "Controls the directionality of Iambic changes",
+      "default": "undefined",
+      "allOf": [
+        {
+          "$ref": "#/definitions/IambicManaged"
+        }
+      ]
+    },
+    "idp_name": {
+      "title": "Idpname",
+      "description": "Name of the identity provider that's associated with the resource",
+      "type": "string"
+    },
+    "expires_at": {
+      "title": "Expiresat",
+      "description": "The date and time the resource will be/was set to deleted.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "string",
+          "format": "date"
+        }
+      ]
+    },
+    "deleted": {
+      "title": "Deleted",
+      "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
+      "default": false,
+      "type": "boolean"
+    },
+    "properties": {
+      "title": "Properties",
+      "description": "Properties for the Azure AD Group",
+      "allOf": [
+        {
+          "$ref": "#/definitions/GroupTemplateProperties"
+        }
+      ]
+    }
+  },
+  "required": [
+    "idp_name",
+    "properties"
+  ],
+  "definitions": {
+    "IambicManaged": {
+      "title": "IambicManaged",
+      "description": "An enumeration.",
+      "enum": [
+        "undefined",
+        "read_and_write",
+        "import_only",
+        "disabled"
+      ]
+    },
+    "MemberDataType": {
+      "title": "MemberDataType",
+      "description": "An enumeration.",
+      "enum": [
+        "user",
+        "group"
+      ]
+    },
+    "Member": {
+      "title": "Member",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "metadata_commented_dict": {
+          "title": "Metadatacommenteddict",
+          "description": "yaml inline comments",
+          "default": {},
+          "type": "object"
+        },
+        "metadata_iambic_fields": {
+          "title": "Metadataiambicfields",
+          "description": "metadata for iambic",
+          "default": [],
+          "type": "array",
+          "items": {},
+          "uniqueItems": true
+        },
+        "expires_at": {
+          "title": "Expiresat",
+          "description": "The date and time the resource will be/was set to deleted.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
+        "deleted": {
+          "title": "Deleted",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
+          "default": false,
+          "type": "boolean"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "data_type": {
+          "$ref": "#/definitions/MemberDataType"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "data_type"
+      ]
+    },
+    "GroupTemplateProperties": {
+      "title": "GroupTemplateProperties",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "metadata_commented_dict": {
+          "title": "Metadatacommenteddict",
+          "description": "yaml inline comments",
+          "default": {},
+          "type": "object"
+        },
+        "metadata_iambic_fields": {
+          "title": "Metadataiambicfields",
+          "description": "metadata for iambic",
+          "default": [],
+          "type": "array",
+          "items": {},
+          "uniqueItems": true
+        },
+        "expires_at": {
+          "title": "Expiresat",
+          "description": "The date and time the resource will be/was set to deleted.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
+        "deleted": {
+          "title": "Deleted",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
+          "default": false,
+          "type": "boolean"
+        },
+        "name": {
+          "title": "Name",
+          "description": "Name of the group",
+          "maxLength": 256,
+          "type": "string"
+        },
+        "mail_nickname": {
+          "title": "Mailnickname",
+          "description": "Mail nickname of the group",
+          "pattern": "^[!#$%&'*+-./0-9=?A-Z^_`a-z{|}~]{1,64}$",
+          "type": "string"
+        },
+        "group_id": {
+          "title": "Groupid",
+          "description": "Unique Group ID for the group. Usually it's {idp-name}-{name}",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "description": "Description of the group",
+          "default": "",
+          "type": "string"
+        },
+        "group_types": {
+          "title": "Grouptypes",
+          "description": "Specifies the group type and its membership.",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mail": {
+          "title": "Mail",
+          "description": "Email address of the group",
+          "type": "string"
+        },
+        "mail_enabled": {
+          "title": "Mailenabled",
+          "default": false,
+          "type": "boolean"
+        },
+        "security_enabled": {
+          "title": "Securityenabled",
+          "default": true,
+          "type": "boolean"
+        },
+        "extra": {
+          "title": "Extra",
+          "description": "Extra attributes to store"
+        },
+        "is_assignable_to_role": {
+          "title": "Isassignabletorole",
+          "description": "Indicates whether this group can be assigned to an Azure Active Directory role or not.",
+          "type": "boolean"
+        },
+        "membership_rule": {
+          "title": "Membershiprule",
+          "description": "The rule that determines members for this group if the group is a dynamic group.",
+          "type": "string"
+        },
+        "members": {
+          "title": "Members",
+          "description": "A list of users in the group",
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Member"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "mail_nickname"
+      ]
+    }
+  }
+}
