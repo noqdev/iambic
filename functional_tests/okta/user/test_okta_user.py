@@ -15,9 +15,9 @@ def test_okta_user():
     temp_templates_directory = IAMBIC_TEST_DETAILS.template_dir_path
     username = f"iambic_functional_test_user_{random.randint(0, 1000000)}"
     iambic_functional_test_user_yaml = f"""template_type: NOQ::Okta::User
+idp_name: development
 properties:
   username: {username}
-  idp_name: development
   profile:
     firstName: iambic
     lastName: {username}
