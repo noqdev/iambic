@@ -24,7 +24,6 @@ def test_members_sorting():
     ]
     properties_1 = OktaGroupTemplateProperties(
         name="example_group",
-        idp_name="example.org",
         group_id="example.org-example_group",
         members=members,
     )
@@ -72,11 +71,10 @@ async def test_apply_create_group(
     idp_name = "example.org"
     group_properties = OktaGroupTemplateProperties(
         name="example_group",
-        idp_name=idp_name,
         description="example description",
     )
     template = OktaGroupTemplate(
-        file_path=test_template_path, properties=group_properties
+        file_path=test_template_path, idp_name=idp_name, properties=group_properties
     )
     template.write()
     okta_config = OktaConfig(organizations=[mock_okta_organization])

@@ -37,7 +37,7 @@ async def update_or_create_app_template(
         existing_template_map,
         discovered_template.resource_id,
         OktaAppTemplate,
-        {},
+        {"idp_name": discovered_template.idp_name},
         discovered_template.properties,
         [],
     )

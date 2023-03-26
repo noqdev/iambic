@@ -49,11 +49,10 @@ async def test_apply_create_user(
     idp_name = "example.org"
     user_properties = OktaUserTemplateProperties(
         username="example_user",
-        idp_name=idp_name,
         profile={"login": "example_username"},
     )
     template = OktaUserTemplate(
-        file_path=test_template_path, properties=user_properties
+        file_path=test_template_path, idp_name=idp_name, properties=user_properties
     )
     template.write()
     okta_config = OktaConfig(organizations=[mock_okta_organization])

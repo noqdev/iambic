@@ -38,7 +38,7 @@ async def update_or_create_group_template(
         existing_template_map,
         discovered_template.resource_id,
         OktaGroupTemplate,
-        {},
+        {"idp_name": discovered_template.idp_name},
         discovered_template.properties,
         [],
     )
@@ -54,9 +54,9 @@ async def collect_org_groups(exe_message: ExecutionMessage, config: OktaConfig):
     for group in groups:
         okta_group = OktaGroupTemplate(
             file_path="unset",
+            idp_name=group.idp_name,
             properties=OktaGroupTemplateProperties(
                 group_id=group.group_id,
-                idp_name=group.idp_name,
                 name=group.name,
                 description=group.description,
                 members=[json.loads(m.json()) for m in group.members],

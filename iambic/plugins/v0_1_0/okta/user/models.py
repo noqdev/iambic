@@ -43,10 +43,6 @@ class Assignment(BaseModel):
 
 class OktaUserTemplateProperties(BaseModel):
     username: str = Field(..., description="Username of the user")
-    idp_name: str = Field(
-        ...,
-        description="Name of the identity provider that's associated with the user",
-    )
     user_id: str = Field("", description="Unique User ID for the user")
     status: UserStatus = Field(UserStatus.active, description="Status of the user")
     profile: dict[str, Any]
@@ -75,6 +71,10 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
         description=(
             "If `self.deleted` is true, the user will be force deleted from Okta. "
         ),
+    )
+    idp_name: str = Field(
+        ...,
+        description="Name of the identity provider that's associated with the user",
     )
 
     async def apply(
@@ -141,9 +141,7 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
     def set_default_file_path(self, repo_dir: str):
         file_name = f"{self.properties.username}.yaml"
         self.file_path = os.path.expanduser(
-            os.path.join(
-                repo_dir, f"resources/okta/user/{self.properties.idp_name}/{file_name}"
-            )
+            os.path.join(repo_dir, f"resources/okta/user/{self.idp_name}/{file_name}")
         )
 
     def apply_resource_dict(
@@ -163,7 +161,7 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
         await self.remove_expired_resources()
         proposed_user = self.apply_resource_dict(okta_organization)
         change_details = AccountChangeDetails(
-            account=self.properties.idp_name,
+            account=self.idp_name,
             resource_id=self.properties.username,
             new_value=proposed_user,
             proposed_changes=[],
@@ -172,7 +170,7 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
         log_params = dict(
             resource_type=self.properties.resource_type,
             resource_id=self.properties.username,
-            organization=str(self.properties.idp_name),
+            organization=str(self.idp_name),
         )
 
         current_user_task = await OKTA_GET_USER_SEMAPHORE.process(
