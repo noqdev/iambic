@@ -15,6 +15,80 @@ Before you begin, you will need the following:
 
 ## Setup
 
+### Create an Azure application for IAMbic
+
+In this section, you will create an Azure application that will allows IAMbic to manage user and group memberships.
+
+From within Azure AD:
+1. Click on App Registrations -> New Registrations
+
+<details>
+  <summary>Screenshot</summary>
+
+![Create App 1](/img/azure_ad/1-create_app.png)
+
+</details>
+
+2. Fill out the form with the following values:
+  * Name: iambic
+  * Supported account types: Accounts in this organizational directory only
+
+<details>
+  <summary>Screenshot</summary>
+
+![Create App 2](/img/azure_ad/2-create-app-settings.png)
+
+</details>
+
+3. Add App Permissions:
+  * Click on "API Permissions"
+  * Click on "Add a permission"
+  * Click on "Microsoft Graph"
+  * Click on "Application permissions"
+  * Select the following permissions:
+    * Application.ReadWrite.All
+    * AppRoleAssignment.ReadWrite.All
+    * Directory.ReadWrite.All
+    * Group.ReadWrite.All
+    * User.ReadWrite.All
+  * Click on "Add permissions"
+  * Click "Grants Admin Consent for <ORG NAME>
+
+<details>
+  <summary>Screenshot</summary>
+
+![Create App 3](/img/azure_ad/3-add-app-permissions.png)
+
+</details>
+
+4. Create a secret (Save this for later):
+  * Click on "Certificates & Secrets"
+  * Click on "New client secret"
+  * Fill out the form with the following values:
+    * Description: iambic
+    * Expires: User preference
+  * Click on "Add"
+  * Save the value of the secret for next steps
+
+<details>
+  <summary>Screenshot</summary>
+
+![Create App 4](/img/azure_ad/4-add-app-secret.png)
+
+</details>
+
+5. Retrieve the client ID and tenant ID
+  * Click on "Overview"
+  * Save the value of "Application (client) ID" and "Directory (tenant) ID" for the next steps
+
+<details>
+  <summary>Screenshot</summary>
+
+![Create App 5](/img/azure_ad/5-retrieve-app-info.png)
+
+</details>
+
+
 ### Create a basic Azure AD Configuration for IAMbic
 
 #### Setup Wizard (Recommended)
