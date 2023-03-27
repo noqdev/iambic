@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, List, Optional, Union
 
 import boto3
 import botocore
+from aws_error_utils.aws_error_utils import errors
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, constr, validator
 from ruamel.yaml import YAML, yaml_object
@@ -350,10 +351,16 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
             identity_store_client = await self.get_boto3_client(
                 "identitystore", region_name=region
             )
-
-            identity_center_instances = await boto_crud_call(
-                identity_center_client.list_instances
-            )
+            try:
+                identity_center_instances = await boto_crud_call(
+                    identity_center_client.list_instances
+                )
+            except errors.AccessDeniedException as err:
+                raise Exception(
+                    "Please ensure you've specified the correct AWS Identity Center region in "
+                    "IAMbic's configuration and that the spoke role has the sso-admin:ListInstances permission. ",
+                    f"Original Exception: {err}",
+                )
 
             if not identity_center_instances.get("Instances"):
                 raise ValueError("No Identity Center instances found")
