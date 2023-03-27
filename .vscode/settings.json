@@ -16,14 +16,4 @@
     "coverage-gutters.coverageBaseDir": ".",
     "coverage-gutters.showGutterCoverage": false,
     "coverage-gutters.showLineCoverage": true,
-    "yaml.schemas": {
-        "https://iambic.org/schemas/role_template.json": ["**/resources/aws/iam/role/**/*.yaml"],
-        "https://iambic.org/schemas/awsidentity_center_permission_set_template.json": ["**/resources/aws/identity_center/permission_set/**/*.yaml"],
-        "https://iambic.org/schemas/managed_policy_template.json": ["**/resources/aws/iam/managed_policy/**/*.yaml"],
-        "https://iambic.org/schemas/okta_group_template.json": ["**/resources/okta/groups/**/*.yaml"],
-        "https://iambic.org/schemas/group_template.json": ["**/resources/google_workspace/groups/**/*.yaml"]
-    },
-    "yaml.validate": true,
-    "yaml.trace.server": "verbose",
-    "yaml.disableAdditionalProperties": true,
 }
