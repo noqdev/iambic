@@ -236,7 +236,6 @@ class GoogleWorkspaceGroupTemplate(GoogleTemplate, ExpiryModel):
                     self,
                     google_project,
                     log_params,
-                    ctx,
                 )
             ]
         )

@@ -44,12 +44,10 @@ def output_proposed_changes(
         log.info(f"A detailed summary of changes has been saved to {output_path}")
         file_render_resource_changes(output_path, template_changes)
 
-    json_filepath = pathlib.Path(output_path).name.with_suffix(".json")
-    with open(str(json_filepath), "w") as f:
-        f.write(
-            json.dump(
-                [template_change.dict() for template_change in template_changes],
-            )
+    json_filepath = pathlib.Path(output_path).with_suffix(".json")
+    with open(str(json_filepath), "w") as fp:
+        json.dump(
+            [template_change.dict() for template_change in template_changes], fp
         )
 
     if exceptions_in_proposed_changes([change.dict() for change in template_changes]):
