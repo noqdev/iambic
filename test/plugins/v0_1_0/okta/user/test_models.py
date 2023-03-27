@@ -9,13 +9,9 @@ from test.plugins.v0_1_0.okta.user.test_utils import (  # noqa: F401 # intention
 
 import pytest
 
-from iambic.core.context import ExecutionContext
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig
-from iambic.plugins.v0_1_0.okta.user.models import (
-    OktaUserTemplate,
-    OktaUserTemplateProperties,
-)
+from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate, UserProperties
 
 TEST_TEMPLATE_DIR = "okta"
 TEST_TEMPLATE_PATH = "okta/okta_user.yaml"
@@ -48,20 +44,17 @@ async def test_apply_create_user(
 ):
     test_template_path, temp_templates_directory = mock_fs
     idp_name = "example.org"
-    user_properties = OktaUserTemplateProperties(
+    user_properties = UserProperties(
         username="example_user",
-        idp_name=idp_name,
         profile={"login": "example_username"},
     )
     template = OktaUserTemplate(
-        file_path=test_template_path, properties=user_properties
+        file_path=test_template_path, idp_name=idp_name, properties=user_properties
     )
     template.write()
     okta_config = OktaConfig(organizations=[mock_okta_organization])
-    context = ExecutionContext()
-    context.eval_only = False
     mock_okta_organization.client.has_no_user = True
-    template_change_details = await template.apply(okta_config, context)
+    template_change_details = await template.apply(okta_config)
     assert (
         template_change_details.proposed_changes[0].proposed_changes[0].change_type
         == ProposedChangeType.CREATE

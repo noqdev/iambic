@@ -8,7 +8,7 @@ import botocore
 from jinja2 import BaseLoader, Environment
 from pydantic import Field, constr, validator
 
-from iambic.core.context import ExecutionContext, ctx
+from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -46,11 +46,10 @@ class Principal(BaseModel):
     federated: Optional[Union[str, list[str]]] = None
 
     def _apply_resource_dict(
-        self, aws_account: AWSAccount = None, context: ExecutionContext = None
+        self,
+        aws_account: AWSAccount = None,
     ) -> dict:
-        resource_dict = super(Principal, self)._apply_resource_dict(
-            aws_account, context
-        )
+        resource_dict = super(Principal, self)._apply_resource_dict(aws_account)
         if aws_val := resource_dict.pop("aws", resource_dict.pop("Aws", None)):
             resource_dict["AWS"] = aws_val
         return resource_dict
@@ -219,16 +218,12 @@ class ManagedPolicyDocument(AccessModel):
         description="List of policy statements",
     )
 
-    def _apply_resource_dict(
-        self, aws_account: AWSAccount = None, context: ExecutionContext = None
-    ) -> str:
-        resource_dict = super()._apply_resource_dict(aws_account, context)
+    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> str:
+        resource_dict = super()._apply_resource_dict(aws_account)
         return json.dumps(resource_dict)
 
-    def apply_resource_dict(
-        self, aws_account: AWSAccount, context: ExecutionContext
-    ) -> dict:
-        response = json.loads(self._apply_resource_dict(aws_account, context))
+    def apply_resource_dict(self, aws_account: AWSAccount) -> dict:
+        response = json.loads(self._apply_resource_dict(aws_account))
         variables = {var.key: var.value for var in aws_account.variables}
         variables["account_id"] = aws_account.account_id
         variables["account_name"] = aws_account.account_name
@@ -305,19 +300,17 @@ class ManagedPolicyProperties(BaseModel):
         return sorted_v
 
 
-class ManagedPolicyTemplate(AWSTemplate, AccessModel):
+class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
     template_type = AWS_MANAGED_POLICY_TEMPLATE_TYPE
     properties: ManagedPolicyProperties = Field(
         description="The properties of the managed policy",
     )
 
-    def _is_iambic_import_only(
-        self, aws_account: AWSAccount, context: ExecutionContext
-    ):
+    def _is_iambic_import_only(self, aws_account: AWSAccount):
         return (
             aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
             or self.iambic_managed == IambicManaged.IMPORT_ONLY
-            or context.eval_only
+            or ctx.eval_only
         )
 
     def get_arn_for_account(self, aws_account: AWSAccount) -> str:
@@ -325,21 +318,17 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
         policy_name = self.properties.policy_name
         return f"arn:{aws_account.partition.value}:iam::{aws_account.account_id}:policy{path}{policy_name}"
 
-    def _apply_resource_dict(
-        self, aws_account: AWSAccount = None, context: ExecutionContext = None
-    ) -> dict:
-        resource_dict = super()._apply_resource_dict(aws_account, context)
+    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
+        resource_dict = super()._apply_resource_dict(aws_account)
         resource_dict["Arn"] = self.get_arn_for_account(aws_account)
         return resource_dict
 
-    async def _apply_to_account(
-        self, aws_account: AWSAccount, context: ExecutionContext
-    ) -> AccountChangeDetails:
+    async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
         boto3_session = await aws_account.get_boto3_session()
         client = boto3_session.client(
             "iam", config=botocore.client.Config(max_pool_connections=50)
         )
-        account_policy = self.apply_resource_dict(aws_account, context)
+        account_policy = self.apply_resource_dict(aws_account)
         policy_name = account_policy["PolicyName"]
         account_change_details = AccountChangeDetails(
             account=str(aws_account),
@@ -353,7 +342,7 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
             resource_id=policy_name,
             account=str(aws_account),
         )
-        is_iambic_import_only = self._is_iambic_import_only(aws_account, context)
+        is_iambic_import_only = self._is_iambic_import_only(aws_account)
         policy_arn = account_policy.pop("Arn")
         current_policy = await get_managed_policy(client, policy_arn)
         if current_policy:
@@ -389,7 +378,6 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
             return account_change_details
 
         if current_policy:
-
             tasks = [
                 apply_update_managed_policy(
                     client,
@@ -398,7 +386,6 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
                     current_policy["PolicyDocument"],
                     is_iambic_import_only,
                     log_params,
-                    context,
                 ),
                 apply_managed_policy_tags(
                     client,
@@ -407,7 +394,6 @@ class ManagedPolicyTemplate(AWSTemplate, AccessModel):
                     current_policy.get("Tags", []),
                     is_iambic_import_only,
                     log_params,
-                    context,
                 ),
             ]
 

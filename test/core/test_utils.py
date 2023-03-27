@@ -60,12 +60,10 @@ def test_sort_dict_stability(test_input, expected):
 
 
 class TreeModel(BaseModel):
-
     name: str
 
 
 class ForrestModel(BaseModel):
-
     forrest: List[TreeModel]
 
 

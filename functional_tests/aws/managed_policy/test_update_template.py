@@ -7,9 +7,7 @@ from functional_tests.aws.managed_policy.utils import (
     generate_managed_policy_template_from_base,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
 from iambic.core import noq_json as json
-from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.models import Tag
 
 
@@ -29,18 +27,18 @@ class ManagedPolicyUpdateTestCase(IsolatedAsyncioTestCase):
         cls.template.included_accounts = cls.all_account_ids[
             : len(cls.all_account_ids) // 2
         ]
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
 
     @classmethod
     def tearDownClass(cls):
         cls.template.deleted = True
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
 
     # tag None string value is not acceptable
     async def test_update_tag_with_bad_input(self):
         self.template.properties.tags = [Tag(key="*", value="")]  # bad input
         template_change_details = await self.template.apply(
-            IAMBIC_TEST_DETAILS.config.aws, ctx
+            IAMBIC_TEST_DETAILS.config.aws,
         )
 
         self.assertGreater(

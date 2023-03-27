@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 import okta.models as models
 
-from iambic.core.context import ExecutionContext
+from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import GlobalRetryController
@@ -252,7 +252,6 @@ async def create_group(
     idp_name: str,
     description: str,
     okta_organization: OktaOrganization,
-    context: ExecutionContext,
 ) -> Optional[Group]:
     """
     Create a new group in Okta.
@@ -279,7 +278,7 @@ async def create_group(
 
     # Create the group
     group_model = models.Group({"profile": group_profile})
-    if context.execute:
+    if ctx.execute:
         async with GlobalRetryController(
             fn_identifier="okta.create_group"
         ) as retry_controller:
@@ -306,7 +305,6 @@ async def update_group_name(
     new_name: str,
     okta_organization: OktaOrganization,
     log_params: dict[str, str],
-    context: ExecutionContext,
 ) -> List[ProposedChange]:
     """
     Update the name of a group in Okta.
@@ -316,7 +314,6 @@ async def update_group_name(
         new_name (str): The new name for the group.
         okta_organization (OktaOrganization): The Okta organization to update the group in.
         log_params (dict): Logging parameters.
-        context (ExecutionContext): The context object containing the execution flag.
 
     Returns:
         List[ProposedChange]: A list of proposed changes to be applied.
@@ -344,7 +341,7 @@ async def update_group_name(
             )
         }
     )
-    if context.execute:
+    if ctx.execute:
         client = await okta_organization.get_okta_client()
         async with GlobalRetryController(
             fn_identifier="okta.update_group"
@@ -371,7 +368,6 @@ async def update_group_description(
     new_description: str,
     okta_organization: OktaOrganization,
     log_params: dict[str, str],
-    context: ExecutionContext,
 ) -> List[ProposedChange]:
     """
     Update the description of a group in Okta.
@@ -381,7 +377,6 @@ async def update_group_description(
         new_description (str): The new description for the group.
         okta_organization (OktaOrganization): The Okta organization to update the group in.
         log_params (dict): Logging parameters.
-        context (object): The context object containing the execution flag.
 
     Returns:
         List[ProposedChange]: A list of proposed changes to be applied.
@@ -412,7 +407,7 @@ async def update_group_description(
             },
         )
     )
-    if context.execute:
+    if ctx.execute:
         async with GlobalRetryController(
             fn_identifier="okta.update_group"
         ) as retry_controller:
@@ -438,7 +433,6 @@ async def update_group_members(
     new_members: List[UserSimple],
     okta_organization: OktaOrganization,
     log_params: dict[str, str],
-    context: ExecutionContext,
 ) -> List[ProposedChange]:
     """
     Update the members of a group in Okta.
@@ -448,7 +442,6 @@ async def update_group_members(
         new_members (List[UserSimple]): The new members to add to the group.
         okta_organization (OktaOrganization): The Okta organization to update the group in.
         log_params (dict): Logging parameters.
-        context (object): The context object containing the execution flag.
 
     Returns:
         List[ProposedChange]: A list of proposed changes to be applied.
@@ -488,7 +481,7 @@ async def update_group_members(
             )
         )
 
-    if context.execute:
+    if ctx.execute:
         for user in users_to_remove:
             async with GlobalRetryController(
                 fn_identifier="okta.get_user"
@@ -548,7 +541,6 @@ async def maybe_delete_group(
     group: Group,
     okta_organization: OktaOrganization,
     log_params: dict[str, str],
-    context: ExecutionContext,
 ) -> List[ProposedChange]:
     """
     Delete a group in Okta.
@@ -557,7 +549,6 @@ async def maybe_delete_group(
         group (Group): The group to delete.
         okta_organization (OktaOrganization): The Okta organization to delete the group from.
         log_params (dict): Logging parameters.
-        context (object): The context object containing the execution flag.
 
     Returns:
         List[ProposedChange]: A list of proposed changes to be applied.
@@ -575,7 +566,7 @@ async def maybe_delete_group(
             change_summary={"group": group.name},
         )
     )
-    if context.execute:
+    if ctx.execute:
         async with GlobalRetryController(
             fn_identifier="okta.delete_group"
         ) as retry_controller:

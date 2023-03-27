@@ -6,7 +6,7 @@ import uuid
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
-from iambic.plugins.v0_1_0.aws.iam.user.models import UserTemplate
+from iambic.plugins.v0_1_0.aws.iam.user.models import AwsIamUserTemplate
 from iambic.plugins.v0_1_0.aws.iam.user.template_generation import (
     collect_aws_users,
     generate_aws_user_templates,
@@ -17,7 +17,7 @@ from iambic.plugins.v0_1_0.aws.iam.user.utils import list_users
 
 async def generate_user_template_from_base(
     repo_dir: str,
-) -> UserTemplate:
+) -> AwsIamUserTemplate:
     user_dir = get_template_dir(repo_dir)
     identifier = f"iambic_test_{random.randint(0, 10000)}"
     file_path = f"{user_dir}/{identifier}.yaml"
@@ -42,7 +42,7 @@ properties:
 """
     with open(file_path, "w") as f:
         f.write(user_template)
-    user_template = UserTemplate.load(file_path)
+    user_template = AwsIamUserTemplate.load(file_path)
 
     return user_template
 

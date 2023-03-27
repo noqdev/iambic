@@ -5,7 +5,8 @@ import functools
 from typing import TYPE_CHECKING, Any, List, Optional
 
 import okta.models as models
-from iambic.core.context import ExecutionContext
+
+from iambic.core.context import ctx
 from iambic.core.exceptions import RateLimitException
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
@@ -22,7 +23,6 @@ if TYPE_CHECKING:
 async def create_user(
     user_template: OktaUserTemplate,
     okta_organization: OktaOrganization,
-    context: ExecutionContext,
 ) -> Optional[User]:
     """
     Create a new user in Okta.
@@ -44,7 +44,7 @@ async def create_user(
     }
 
     # Create the user
-    if context.execute:
+    if ctx.execute:
         async with GlobalRetryController(
             fn_identifier="okta.create_user"
         ) as retry_controller:
@@ -112,7 +112,6 @@ async def change_user_status(
     user: User,
     new_status: str,
     okta_organization: OktaOrganization,
-    context: ExecutionContext,
 ) -> List[ProposedChange]:
     """
     Change a user's status in Okta.
@@ -121,7 +120,6 @@ async def change_user_status(
         user (User): The user to change the status of.
         new_status (str): The new status for the user.
         okta_organization (OktaOrganization): The Okta organization to change the user in.
-        context (ExecutionContext): The context object containing the execution flag.
 
     Returns:
         List[ProposedChange]: A list of proposed changes to be applied.
@@ -143,7 +141,7 @@ async def change_user_status(
         )
     )
 
-    if context.execute:
+    if ctx.execute:
         async with GlobalRetryController(
             fn_identifier="okta.update_user"
         ) as retry_controller:
@@ -163,7 +161,6 @@ async def update_user_profile(
     new_profile: dict[str, Any],
     okta_organization: OktaOrganization,
     log_params: dict[str, Any],
-    context: ExecutionContext,
 ) -> List[ProposedChange]:
     """
     Update a user's profile in Okta.
@@ -172,7 +169,6 @@ async def update_user_profile(
         user (User): The user to update the profile of.
         new_profile (dict): The new profile for the user.
         okta_organization (OktaOrganization): The Okta organization to update the user in.
-        context (ExecutionContext): The context object containing the execution flag.
     """
     response: list = []
     if not user:
@@ -192,7 +188,7 @@ async def update_user_profile(
             },
         )
     )
-    if context.execute:
+    if ctx.execute:
         client = await okta_organization.get_okta_client()
         updated_user_obj = models.User({"profile": new_profile})
         async with GlobalRetryController(
@@ -232,7 +228,6 @@ async def update_user_status(
     new_status: str,
     okta_organization: OktaOrganization,
     log_params: dict[str, str],
-    context: ExecutionContext,
 ) -> List[ProposedChange]:
     """
     Update the status of a user in Okta.
@@ -242,7 +237,6 @@ async def update_user_status(
         new_status (str): The new status for the user.
         okta_organization (OktaOrganization): The Okta organization to update the user in.
         log_params (dict): Logging parameters.
-        context (ExecutionContext): The context object containing the execution flag.
 
     Returns:
         List[ProposedChange]: A list of proposed changes to be applied.
@@ -269,7 +263,7 @@ async def update_user_status(
             },
         )
     )
-    if context.execute:
+    if ctx.execute:
         client = await okta_organization.get_okta_client()
         method = "POST"
         base_endpoint = f"/api/v1/users/{user.user_id}"
@@ -351,7 +345,6 @@ async def maybe_deprovision_user(
     user: User,
     okta_organization: OktaOrganization,
     log_params: dict[str, str],
-    context: ExecutionContext,
 ) -> List[ProposedChange]:
     """
     Delete a user in Okta.
@@ -360,7 +353,6 @@ async def maybe_deprovision_user(
         user (User): The user to delete.
         okta_organization (OktaOrganization): The Okta organization to delete the user from.
         log_params (dict): Logging parameters.
-        context (ExecutionContext): The context object containing the execution flag.
 
     Returns:
         List[ProposedChange]: A list of proposed changes to be applied.
@@ -379,7 +371,7 @@ async def maybe_deprovision_user(
             change_summary={"user": user.username},
         )
     )
-    if context.execute:
+    if ctx.execute:
         client = await okta_organization.get_okta_client()
         async with GlobalRetryController(
             fn_identifier="okta.deactivate_or_delete_user"

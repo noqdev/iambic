@@ -417,13 +417,11 @@ def test_run_handler(mocker, mg):
 
 @pytest.fixture
 def mock_proposed_changes_filesystem():
-
     temp_templates_directory = tempfile.mkdtemp(
         prefix="iambic_test_temp_templates_directory"
     )
 
     try:
-
         contents = """hello world"""
         contents_path = f"{temp_templates_directory}/proposed_chagnes.yaml"
 

@@ -6,7 +6,6 @@ from typing import Union
 import xxhash
 
 from iambic.core import noq_json as json
-from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import AccessModelMixin, BaseModel, BaseTemplate, ProviderChild
 from iambic.core.parser import load_templates
@@ -473,7 +472,6 @@ def create_or_update_template(
     properties,
     all_provider_children: list[ProviderChild],
 ):
-
     new_template = template_cls(
         file_path=file_path,
         properties=properties,
@@ -572,9 +570,7 @@ def update_access_attributes(
         return new_model, existing_model
     else:
         for child in all_provider_children:
-            currently_evaluated = evaluate_on_provider(
-                existing_model, child, ctx, False
-            )
+            currently_evaluated = evaluate_on_provider(existing_model, child, False)
             evaluated_on_new_model = bool(
                 child.preferred_identifier in new_model.included_children
             )
@@ -941,7 +937,6 @@ def merge_model(
             else:
                 setattr(merged_model, key, new_value)
         elif isinstance(existing_value, BaseModel):
-
             if isinstance(new_value, BaseModel):
                 setattr(
                     merged_model,

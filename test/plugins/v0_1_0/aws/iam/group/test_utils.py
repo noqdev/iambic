@@ -6,7 +6,6 @@ import boto3
 import pytest
 from moto import mock_iam
 
-from iambic.core.context import ExecutionContext
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.aws.iam.group.utils import (
     apply_group_inline_policies,
@@ -110,14 +109,12 @@ async def test_apply_group_managed_policies_on_attach(mock_iam_client):
     template_policies = [{"PolicyArn": EXAMPLE_MANAGED_POLICY_ARN}]
     existing_policies = []
     log_params = {}
-    context = ExecutionContext()
     proposed_changes = await apply_group_managed_policies(
         EXAMPLE_GROUPNAME,
         mock_iam_client,
         template_policies,
         existing_policies,
         log_params,
-        context,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.ATTACH
 
@@ -127,14 +124,12 @@ async def test_apply_group_managed_policies_on_detach(mock_iam_client):
     template_policies = []
     existing_policies = [{"PolicyArn": EXAMPLE_MANAGED_POLICY_ARN}]
     log_params = {}
-    context = ExecutionContext()
     proposed_changes = await apply_group_managed_policies(
         EXAMPLE_GROUPNAME,
         mock_iam_client,
         template_policies,
         existing_policies,
         log_params,
-        context,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.DETACH
 
@@ -145,14 +140,12 @@ async def test_apply_group_inline_policies_on_attach(mock_iam_client):
     template_policies[0].update(json.loads(EXAMPLE_INLINE_POLICY_DOCUMENT))
     existing_policies = []
     log_params = {}
-    context = ExecutionContext()
     proposed_changes = await apply_group_inline_policies(
         EXAMPLE_GROUPNAME,
         mock_iam_client,
         template_policies,
         existing_policies,
         log_params,
-        context,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.CREATE
 
@@ -163,14 +156,12 @@ async def test_apply_group_inline_policies_on_detach(mock_iam_client):
     existing_policies = [{"PolicyName": EXAMPLE_INLINE_POLICY_NAME}]
     existing_policies[0].update(json.loads(EXAMPLE_INLINE_POLICY_DOCUMENT))
     log_params = {}
-    context = ExecutionContext()
     proposed_changes = await apply_group_inline_policies(
         EXAMPLE_GROUPNAME,
         mock_iam_client,
         template_policies,
         existing_policies,
         log_params,
-        context,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.DELETE
 

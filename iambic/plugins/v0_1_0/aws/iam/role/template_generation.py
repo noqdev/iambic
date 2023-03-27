@@ -18,13 +18,13 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import RoleMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.policy.models import AssumeRolePolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.role.models import (
     AWS_IAM_ROLE_TEMPLATE_TYPE,
+    AwsIamRoleTemplate,
     RoleProperties,
-    RoleTemplate,
 )
 from iambic.plugins.v0_1_0.aws.iam.role.utils import (
     get_role_across_accounts,
@@ -37,7 +37,6 @@ from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
-    normalize_boto3_resp,
 )
 
 if TYPE_CHECKING:
@@ -217,7 +216,7 @@ async def _account_id_to_role_map(role_refs):
             )
             if assume_role_policy_document:
                 policy_document = AssumeRolePolicyDocument.parse_obj(
-                    normalize_boto3_resp(assume_role_policy_document)
+                    normalize_dict_keys(assume_role_policy_document)
                 )
                 content_dict["AssumeRolePolicyDocument"] = json.loads(
                     policy_document.json(
@@ -225,7 +224,7 @@ async def _account_id_to_role_map(role_refs):
                     )
                 )
 
-            account_id_to_role_map[role_ref["account_id"]] = normalize_boto3_resp(
+            account_id_to_role_map[role_ref["account_id"]] = normalize_dict_keys(
                 content_dict
             )
     return account_id_to_role_map
@@ -238,7 +237,7 @@ async def create_templated_role(  # noqa: C901
     role_dir: str,
     existing_template_map: dict,
     config: AWSConfig,
-) -> RoleTemplate:
+) -> AwsIamRoleTemplate:
     account_id_to_role_map = await _account_id_to_role_map(role_refs)
     num_of_accounts = len(role_refs)
 
@@ -412,7 +411,7 @@ async def create_templated_role(  # noqa: C901
         file_path,
         existing_template_map,
         role_name,
-        RoleTemplate,
+        AwsIamRoleTemplate,
         role_template_params,
         RoleProperties(**role_template_properties),
         list(aws_account_map.values()),

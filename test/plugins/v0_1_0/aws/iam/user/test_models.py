@@ -5,7 +5,6 @@ from iambic.plugins.v0_1_0.aws.iam.user.models import Group, UserProperties
 
 
 def test_merge_group(aws_accounts):
-
     existing_group = Group(
         group_name="foo",
         expires_at="tomorrow",
@@ -17,7 +16,6 @@ def test_merge_group(aws_accounts):
 
 
 def test_merge_user_properties(aws_accounts):
-
     existing_groups = [
         {
             "group_name": "bar",
@@ -69,7 +67,6 @@ def test_user_properties_sorting():
 
 
 def test_user_path_validation():
-
     path = [
         {"included_accounts": ["account_1", "account_2"], "file_path": "/engineering"},
         {"included_accounts": ["account_3"], "file_path": "/finance"},
@@ -87,7 +84,6 @@ def test_user_path_validation():
 
 
 def test_user_permissions_boundary_validation():
-
     permissions_boundary = [
         {
             "included_accounts": ["account_1", "account_2"],

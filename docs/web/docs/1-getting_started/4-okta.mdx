@@ -2,83 +2,34 @@
 title: Okta
 ---
 
+Welcome to our Okta documentation! This tutorial will guide you through setting up IAMbic to manage your Okta organization
+and use it to create, manipulate, and expire groups, application assignments, and users.
 
-
-In this tutorial, you will configure IAMbic to manage an Okta Organization, and then
-practice using IAMbic to to create, manipulate, and expire a test group and test app assignment.
-
-#### Setup
-1. Create a basic Okta configuration for Iambic
-1. Import existing Okta Groups into your IAMbic templates repository
-
-#### Practice
-1. Create an Okta Group with one or more users
-1. Add a user to the group
-1. Provide temporary ("break-glass") access to an Okta Group
-1. Expire a group membership
-1. Expire a group
-1. Create an application assignment
-1. Provide temporary ("break-glass") access to an application
-
-<!-- #TODO As with the google page, these headings should link to, and match, headings below -->
-
-## Prerequisities
+## Prerequisites
 
 Before you begin, you will need the following:
 
 * A local Git repository to store your IAMbic templates (See [Install and Configure](/getting_started/install_and_configure) for guidance on setting this up)
-* Administrative access to an existing Okta organization. If you do not have one, you can
+* Administrative access to an existing Okta organization. If you do not have an Okta Organization, you can
 create a developer organization at [developer.okta.com](https://developer.okta.com/).
+* An Okta API token with administrative privileges.
 
-We'll start by setting environment variables to make it easier to run the commands in this tutorial.
-These environment variables will be used in the subsequent commands on this page, and aren't needed
-for regular IAMbic usage. In a production environment, we recommend storing these values
-in AWS Secrets Manager and extending the IAMbic configuration to load them during runtime.
-
-<!--
-Email: <input type="text" id="inputOktaEmail" value="user@example.com" onInput={() => updateText(document.getElementById('inputOktaEmail'), 'outputOktaEmail')} />
-
-Okta Domain: <input type="text" id="inputOktaDomain" value="https://dev-12345.okta.com/" onInput={() => updateText(document.getElementById('inputOktaDomain'), 'outputOktaDomain')} />
-
-IdP Name: <input type="text" id="inputOktaIdpName" onInput={() => updateText(document.getElementById('inputOktaIdpName'), 'outputOktaIdpName')} />
-
-Okta API Token: <input type="text" id="inputOktaApiToken" value="s3cr3tOktaToken" onInput={() => updateText(document.getElementById('inputOktaApiToken'), 'outputOktaApiToken')} />
--->
-
-<!-- TODO: Variables in code blocks: https://github.com/mdx-js/mdx/issues/1095#issuecomment-967511279 -->
-
-<!--  Email: <input type="text" id="inputOktaEmail" defaultValue="user@example.com" onInput={() => updateText(document.getElementById('inputOktaEmail'), 'outputOktaEmail')}/>  -->
-
-<!--  <label id={'outputOktaEmail'}>user@example.com</label> -->
-
-<!--   export const OktaEmail = () => <label id='outputOktaEmail'>user@example.com</label> -->
-
-<!--  <OktaEmail />  -->
+To make it easier to run the commands in this tutorial, we recommend setting up environment variables that will be used
+in the subsequent commands on this page. These environment variables are not needed for regular IAMbic usage, and in a
+production environment, we recommend storing these values in AWS Secrets Manager and extending the Iambic configuration
+to load them during runtime.
 
 ```bash
 export EMAIL=<your_okta_email_address>
-export OKTA_DOMAIN=<your_okta_domain> # ex: https://dev-12345.okta.com/, you get the `dev-12345` portion, specific to your environment from the Okta portal.
-export OKTA_ORG_NAME=<your_okta_org_name> # ex: development. This is a friendly name to identify your Okta organization.  Any arbitrary string will work here.
+export OKTA_DOMAIN=<your_okta_domain> # e.g.: https://dev-12345.okta.com/. Get the `dev-12345` portion, specific to your environment from the Okta portal.
+export OKTA_ORG_NAME=<your_okta_org_name> # e.g.: development. This is a friendly name to identify your Okta organization.  Any arbitrary string will work here.
 export OKTA_API_TOKEN=<your_okta_api_token> # An administrative API token for your Okta organization, follow the instructions in the following steps to create one.
+export OKTA_TEST_USER_EMAIL=<test_email> # A test-user e-mail address to use in this tutorial
 ```
 
-## Setup
+### Setup
 
-###  1. Configure iambic for Okta management
-
-You have a few options for configuring IAMbic to manage your Okta Organization. You can either:
-
-1. Use the setup wizard to configure IAMbic (`iambic setup`)
-1. Write your Okta configuration manually
-
-If you use the setup wizard, you'll first need to configure an AWS account. As a part of the setup process,
-IAMbic will create an AWS Secret to store your Okta API token. If you choose to configure IAMbic manually,
-you can either leverage AWS Secrets Manager to store your token, or you can store it in a local file that
-will be merged into your IAMbic configuration but won't be checked into your `iambic-templates` Git repository.
-
-The steps below will walk you through configuring IAMbic manually.
-
-#### Manually Configure IAMbic
+#### Create an Okta API Token
 
 In this section, you will create an API token that allows iambic to manage application and group memberships by
 signing in to Okta.
@@ -99,6 +50,32 @@ From within Okta
 
 </details>
 
+Save the value of this API token for the next stpes.
+
+####  Configure iambic for Okta management
+
+You have a few options for configuring IAMbic to manage your Okta Organization. You can either:
+
+1. Use the setup wizard to configure IAMbic (`iambic setup`)
+1. Write your Okta configuration manually
+
+If you use the setup wizard, you'll first need to configure an AWS account. As a part of the setup process,
+IAMbic will create an AWS Secret to store your Okta API token. If you choose to configure IAMbic manually,
+you can either leverage AWS Secrets Manager to store your token, or you can store it in a local file that
+will be merged into your IAMbic configuration but won't be checked into your `iambic-templates` Git repository.
+
+The steps below will walk you through configuring IAMbic manually.
+1. Import existing Okta Groups into your IAMbic templates repository
+
+#### Setup Wizard
+
+If you'd like to use the setup wizard, you can run `iambic setup` and follow the prompts. The setup wizard will
+create an AWS Secret to store your Okta API token. You can then use the IAMbic CLI to manage your Okta organization.
+
+#### Manually Configure IAMbic
+
+As an alternative to the setup wizard, you can set up IAMbic manually.
+
 With your token in hand, create `config/secrets.yaml`
 in your `iambic-templates` Git repo if it doesn't already exist:
 
@@ -108,13 +85,6 @@ Never commit secrets Git. Ensure that you have a  `.gitignore` file in the root 
 repository that is configured to ignore secrets.yaml files with `**/secrets.yaml`. [Learn more](https://git-scm.com/docs/gitignore) about `.gitignore` files.
 
 :::
-
-As a reminder and in case you did not export the bash variables in the `Prerequisities` section:
-
-* OKTA_DOMAIN=<your_okta_domain> # ex: https://dev-12345.okta.com/, you get the `dev-12345` portion, specific to your environment from the Okta portal.
-* OKTA_ORG_NAME=<your_okta_org_name> # ex: development. This is a friendly name to identify your Okta organization. Any arbitrary string will work here.
-* OKTA_API_TOKEN=<your_okta_api_token> # An administrative API token for your Okta organization
-
 
 ```bash
 cat <<EOF > config/secrets.yaml
@@ -138,11 +108,34 @@ tree .
 │   └── secrets.yaml
 ```
 
-### 2. Import existing Okta Groups
+<!-- #TODO As with the google page, these headings should link to, and match, headings below -->
 
 
-In this section, you will manually import existing Okta Groups into your IAMbic templates repository. In a production environment, automation provided by Iambic would ensure that Git is updated with the
-cloud resources in your production environment. This allows you to monitor the history of these groups via Git History.
+<!--
+Email: <input type="text" id="inputOktaEmail" value="user@example.com" onInput={() => updateText(document.getElementById('inputOktaEmail'), 'outputOktaEmail')} />
+
+Okta Domain: <input type="text" id="inputOktaDomain" value="https://dev-12345.okta.com/" onInput={() => updateText(document.getElementById('inputOktaDomain'), 'outputOktaDomain')} />
+
+IdP Name: <input type="text" id="inputOktaIdpName" onInput={() => updateText(document.getElementById('inputOktaIdpName'), 'outputOktaIdpName')} />
+
+Okta API Token: <input type="text" id="inputOktaApiToken" value="s3cr3tOktaToken" onInput={() => updateText(document.getElementById('inputOktaApiToken'), 'outputOktaApiToken')} />
+-->
+
+<!-- TODO: Variables in code blocks: https://github.com/mdx-js/mdx/issues/1095#issuecomment-967511279 -->
+
+<!--  Email: <input type="text" id="inputOktaEmail" defaultValue="user@example.com" onInput={() => updateText(document.getElementById('inputOktaEmail'), 'outputOktaEmail')}/>  -->
+
+<!--  <label id={'outputOktaEmail'}>user@example.com</label> -->
+
+<!--   export const OktaEmail = () => <label id='outputOktaEmail'>user@example.com</label> -->
+
+<!--  <OktaEmail />  -->
+
+
+### Import existing Okta Users, Groups, and Apps
+
+In this section, you will manually import your existing Okta Users, Groups, and Apps into your IAMbic templates repository. In a production environment, automation provided by Iambic would ensure that Git is always up-to-date with the
+cloud resources in your production environment.
 
 Run the following command in the root of your `iambic-templates` repository to import your existing Okta Groups:
 
@@ -154,8 +147,7 @@ If you have Okta Groups defined, your iambic-templates repository should have a 
 
 That's it, you've completed the setup configuration connecting your Okta Groups to IAMBic. Now you will practice using IAMbic to execute basic group management skills.
 
-## Practice
-### 3. Create an Okta Group
+### Create an Okta Group
 
 Iambic uses a YAML file to describe the desired state of an Okta Group. In this section, we will create a group called `iambic-test-group` in your domain. Ensure that the environment variables you've set previously are still configured, and also ensure that your credentials are working properly by running the import process from the previous section.
 
@@ -208,7 +200,7 @@ $ tree .
     │           ├── iambic-test-group.yaml
 ```
 
-### 4. Add a user to the group
+### Add a user to an Okta group
 
 In this section, we will add a user (`testuser@example.com`) to the group we created in the previous section.
 `example.com` is a reserved domain for tests and example use cases, and `testuser@example.com` is not a real user.
@@ -236,10 +228,10 @@ Run the `apply` command to have IAMbic update the group:
 iambic apply resources/okta/group/$OKTA_DOMAIN/iambic-test-group.yaml
 ```
 
-### 5. Provide temporary ("break-glass") access to an Okta Group
+### Provide temporary ("break-glass") access to an Okta Group
 
 In this section, we will update the group added in the previous section to configure the access to expire in two minutes,
-simulating a very short breakglass request. In order to strive for least privilege while accomodating this request,
+simulating a very short break-glass request. In order to strive for least privilege while accomodating this request,
 we will add an expiration date to the user's membership in the group. Run the following command to replace the previous
 group you created with a new one that includes the additional user and an expiration date, and then apply that change:
 
@@ -281,10 +273,169 @@ After a couple of minutes, the request should expire. In a production deployment
 iambic apply resources/okta/group/$OKTA_IDP_NAME/iambic-test-group.yaml
 ```
 
+### Create an Okta User
 
-### Expire? Maybe? #TODO
+In this section, you will create a new Okta User using IAMbic. We'll start
+by writing a template for the user. We'll use the `iambic apply` command to
+create the user in Okta. You should be operating out of a local Git repository.
 
-<!-- #TODO Do something here to confrim it's expired properly -->
 
-## Conclusion
-That's it! You've now connected Okta to IAMbic, and are able to create and edit your groups, and expire users and groups. <!-- #TODO or whichever subset of users and groups we actaully are demonstrating. -->
+```bash
+mkdir -p resources/okta/user/$OKTA_IDP_NAME
+cat <<EOF > resources/okta/user/$OKTA_IDP_NAME/$OKTA_TEST_USER_EMAIL.yaml
+template_type: NOQ::Okta::User
+idp_name: $OKTA_IDP_NAME
+properties:
+  profile:
+    email: $OKTA_TEST_USER_EMAIL
+    firstName: Example
+    lastName: User
+    login: $OKTA_TEST_USER_EMAIL
+  status: provisioned
+  username: $OKTA_TEST_USER_EMAIL
+EOF
+```
+
+Run the following command to create the user:
+
+```bash
+iambic apply resources/okta/user/$OKTA_IDP_NAME/$OKTA_TEST_USER_EMAIL.yaml
+```
+
+### Add an attribute to the user
+
+```bash
+mkdir -p resources/okta/user/$OKTA_IDP_NAME
+cat <<EOF > resources/okta/user/$OKTA_IDP_NAME/$OKTA_TEST_USER_EMAIL.yaml
+template_type: NOQ::Okta::User
+idp_name: $OKTA_IDP_NAME
+properties:
+  profile:
+    email: $OKTA_TEST_USER_EMAIL
+    firstName: Example
+    lastName: User
+    login: $OKTA_TEST_USER_EMAIL
+    title: Temporary User
+  status: provisioned
+  username: $OKTA_TEST_USER_EMAIL
+EOF
+```
+
+Run the following command to create the user:
+
+```bash
+iambic apply resources/okta/user/$OKTA_IDP_NAME/$OKTA_TEST_USER_EMAIL.yaml
+```
+
+
+### Manually Create an Okta Application
+
+IAMbic doesn't support creating or deleting Okta applications yet, however it can
+manage application assignments from applications that were imported from
+Okta. During this section, we are going to create an application in the Okta UI,
+and then import it into IAMbic with the `iambic import` command.
+
+1. In the Okta UI, navigate to the Applications page and click the "Create App Integration" button.
+2. Select "API Services" and click "Next".
+3. Enter `test_application` for the name, and click "Save".
+
+After creating the application, run `iambic import` to import the application into
+your iambic templates repository.
+
+The output should be written to this file:
+
+resources/okta/app/$OKTA_IDP_NAME/test_application.yaml
+
+```yaml
+template_type: NOQ::Okta::App
+idp_name: development
+properties:
+  name: test_application
+  id: 12345
+  status: ACTIVE
+```
+
+### Provide temporary access to an application
+
+```bash
+cat <<EOF >> resources/okta/app/$OKTA_IDP_NAME/test_application.yaml
+  assignments:
+    - user: $OKTA_TEST_USER_EMAIL
+      expires_at: tomorrow
+EOF
+```
+
+```bash
+iambic apply resources/okta/app/$OKTA_IDP_NAME/test_application.yaml
+```
+
+### Expire the application assignment
+
+Modify the yaml file and set the expires_at property to a relative or
+absolute date in the past:
+
+```yaml
+expires_at: yesterday
+```
+
+### Delete the Okta application
+
+To delete the application, we can either set deleted: true or an expires_at
+tag at the top level of the application, and then run `iambic apply resources/okta/app/$OKTA_IDP_NAME/test_application.yaml`:
+
+Some examples of how this might look are below:
+
+With `deleted: true`:
+
+```yaml
+template_type: NOQ::Okta::App
+deleted: true
+idp_name: development
+properties:
+  name: test_application
+  id: 12345
+  status: ACTIVE
+```
+
+With `expires_at`:
+
+```yaml
+expires_at: yesterday
+template_type: NOQ::Okta::App
+deleted: true
+idp_name: development
+properties:
+  name: test_application
+  id: 12345
+  status: ACTIVE
+```
+
+Apply the changes once done:
+
+```bash
+iambic apply resources/okta/app/$OKTA_IDP_NAME/test_application.yaml
+```
+
+
+### Delete the Okta User
+
+The process for deleting a user is relatively similar. We can either set `deleted: true or an expires_at
+tag at the top level of the user, and then run `iambic apply resources/okta/user/$OKTA_IDP_NAME/$OKTA_TEST_USER_EMAIL.yaml`.
+
+Here's an example:
+
+```yaml
+expires_at: yesterday
+template_type: NOQ::Okta::User
+idp_name: development
+properties:
+  profile:
+    email: testuser@example.com
+    firstName: Example
+    lastName: User
+    login: testuser@example.com
+    title: Temporary User
+  status: provisioned
+  user_id: 12345
+  username: testuser@example.com
+```

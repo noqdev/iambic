@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import json
 
 import boto3
 import pytest
 from moto import mock_iam
 
-from iambic.core.context import ExecutionContext
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.aws.iam.policy.utils import (
     apply_managed_policy_tags,
@@ -117,7 +118,6 @@ async def test_apply_update_managed_policy(mock_iam_client):
     template_policy_document = json.loads(EXAMPLE_POLICY_DOCUMENT)
     existing_policy_document = []
     log_params = {}
-    context = ExecutionContext()
     proposed_changes = await apply_update_managed_policy(
         mock_iam_client,
         EXAMPLE_POLICY_ARN,
@@ -125,7 +125,6 @@ async def test_apply_update_managed_policy(mock_iam_client):
         existing_policy_document,
         False,
         log_params,
-        context,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.UPDATE
 
@@ -135,7 +134,6 @@ async def test_apply_user_tags_on_detach(mock_iam_client):
     template_tags = []
     existing_tags = [{"Key": EXAMPLE_TAG_KEY, "Value": EXAMPLE_TAG_VALUE}]
     log_params = {}
-    context = ExecutionContext()
     proposed_changes = await apply_managed_policy_tags(
         mock_iam_client,
         EXAMPLE_POLICY_ARN,
@@ -143,7 +141,6 @@ async def test_apply_user_tags_on_detach(mock_iam_client):
         existing_tags,
         False,
         log_params,
-        context,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.DETACH
 
@@ -153,7 +150,6 @@ async def test_apply_user_tags_on_attach(mock_iam_client):
     template_tags = [{"Key": EXAMPLE_TAG_KEY, "Value": EXAMPLE_TAG_VALUE}]
     existing_tags = []
     log_params = {}
-    context = ExecutionContext()
     proposed_changes = await apply_managed_policy_tags(
         mock_iam_client,
         EXAMPLE_POLICY_ARN,
@@ -161,6 +157,5 @@ async def test_apply_user_tags_on_attach(mock_iam_client):
         existing_tags,
         False,
         log_params,
-        context,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.ATTACH

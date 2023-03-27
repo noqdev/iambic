@@ -59,7 +59,6 @@ def example_test_filesystem():
     )
 
     try:
-
         os.makedirs(f"{temp_templates_directory}/{TEST_TEMPLATE_DIR}")
         os.makedirs(f"{temp_templates_directory}/{TEST_CONFIG_DIR}")
 

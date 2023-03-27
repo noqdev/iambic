@@ -8,6 +8,7 @@ import okta.models
 import pytest
 from okta.errors.okta_api_error import OktaAPIError
 
+from iambic.core.context import ctx
 from iambic.core.exceptions import RateLimitException
 from iambic.plugins.v0_1_0.okta.exceptions import UserProfileNotUpdatableYet
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
@@ -16,6 +17,9 @@ from iambic.plugins.v0_1_0.okta.utils import generate_user_profile, handle_okta_
 
 @pytest.fixture
 def mock_okta_organization() -> OktaOrganization:
+    ctx_orig_eval_only = ctx.eval_only
+    ctx.eval_only = False
+
     idp_name = "example.org"
     okta_organization = OktaOrganization(
         idp_name=idp_name,
@@ -23,12 +27,13 @@ def mock_okta_organization() -> OktaOrganization:
         api_token="fake_token",
     )
     okta_organization.client = FakeOktaClient()
-    return okta_organization
+    yield okta_organization
+
+    ctx.eval_only = ctx_orig_eval_only
 
 
 @pytest.mark.asyncio
 async def test_generate_user_profile():
-
     user = okta.models.User()
     user.profile = okta.models.user_profile.UserProfile()
     user.profile.login = "example_user"
@@ -96,7 +101,6 @@ async def test_handle_okta_fn_user_not_provisioned():
 
 @pytest.mark.asyncio
 async def test_handle_okta_fn_generic_json_error():
-
     json_error_string = json.dumps({"errorCode": "E0000047"})
 
     async def sample_fn(*args, **kwargs):

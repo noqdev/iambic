@@ -5,7 +5,8 @@ import functools
 from typing import TYPE_CHECKING, List
 
 import okta.models as models
-from iambic.core.context import ExecutionContext
+
+from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import GlobalRetryController
@@ -195,7 +196,6 @@ async def update_app_assignments(
     new_assignments: List[Assignment],
     okta_organization: OktaOrganization,
     log_params: dict[str, str],
-    context: ExecutionContext,
 ) -> List[ProposedChange]:
     """
     Update the assignments of a app in Okta.
@@ -205,7 +205,6 @@ async def update_app_assignments(
         new_assignments (List[Assignment]): The new assignments to add to the app.
         okta_organization (OktaOrganization): The Okta organization to update the app in.
         log_params (dict): Logging parameters.
-        context (object): The context object containing the execution flag.
 
     Returns:
         List[ProposedChange]: A list of proposed changes to be applied.
@@ -286,7 +285,7 @@ async def update_app_assignments(
             )
         )
 
-    if context.execute:
+    if ctx.execute:
         for assignment in user_assignments_to_assign:
             async with GlobalRetryController(
                 fn_identifier="okta.get_user"
@@ -405,7 +404,6 @@ async def update_app_name(
     new_name: str,
     okta_organization: OktaOrganization,
     log_params: dict[str, str],
-    context: ExecutionContext,
 ):
     response: list[ProposedChange] = []
     if app.name == new_name:
@@ -427,7 +425,7 @@ async def update_app_name(
         }
     )
 
-    if context.execute:
+    if ctx.execute:
         client = await okta_organization.get_okta_client()
         async with GlobalRetryController(
             fn_identifier="okta.update_application"
@@ -444,7 +442,6 @@ async def maybe_delete_app(
     app: App,
     okta_organization: OktaOrganization,
     log_params: dict[str, str],
-    context: ExecutionContext,
 ) -> List[ProposedChange]:
     """
     Delete a app in Okta.
@@ -453,7 +450,6 @@ async def maybe_delete_app(
         app (App): The app to delete.
         okta_organization (OktaOrganization): The Okta organization to delete the group from.
         log_params (dict): Logging parameters.
-        context (object): The context object containing the execution flag.
 
     Returns:
         List[ProposedChange]: A list of proposed changes to be applied.
@@ -470,7 +466,7 @@ async def maybe_delete_app(
             change_summary={"app": app.name},
         )
     )
-    if context.execute:
+    if ctx.execute:
         client = await okta_organization.get_okta_client()
         async with GlobalRetryController(
             fn_identifier="okta.delete_app"

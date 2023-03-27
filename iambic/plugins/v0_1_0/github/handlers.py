@@ -8,7 +8,6 @@ if TYPE_CHECKING:
 
 
 async def load(config: GithubConfig) -> GithubConfig:
-
     import iambic.plugins.v0_1_0.github.github
 
     iambic.plugins.v0_1_0.github.github.COMMIT_MESSAGE_USER_NAME = (

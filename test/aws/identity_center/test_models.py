@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from iambic.core.template_generation import merge_model
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
-    AWSIdentityCenterPermissionSetTemplate,
+    AwsIdentityCenterPermissionSetTemplate,
 )
 
 
@@ -18,7 +18,7 @@ def test_merge_template_access_rules(aws_accounts):
             "expires_at": "in 3 days",
         }
     ]
-    existing_document = AWSIdentityCenterPermissionSetTemplate(
+    existing_document = AwsIdentityCenterPermissionSetTemplate(
         identifier="bar",
         file_path="foo",
         properties=existing_properties,
@@ -34,13 +34,13 @@ def test_merge_template_access_rules(aws_accounts):
             ],
         }
     ]
-    new_document = AWSIdentityCenterPermissionSetTemplate(
+    new_document = AwsIdentityCenterPermissionSetTemplate(
         identifier="bar",
         file_path="foo",
         properties=new_properties,
         access_rules=new_access_rules,
     )
-    merged_document: AWSIdentityCenterPermissionSetTemplate = merge_model(
+    merged_document: AwsIdentityCenterPermissionSetTemplate = merge_model(
         new_document, existing_document, aws_accounts
     )
     assert existing_access_rules != new_access_rules
