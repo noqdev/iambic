@@ -744,6 +744,13 @@ class ConfigurationWizard:
         is_hub_account = bool(
             not self.config.aws.accounts and not self.config.aws.organizations
         )
+        requires_sync = bool(
+            not is_hub_account and (
+                    len(self.config.aws.accounts)
+                    > self.config.aws.min_accounts_required_for_wildcard_included_accounts
+            )
+        )
+
         if is_hub_account:
             account_id = self.hub_account_id
             account_name = set_required_text_value(
@@ -759,10 +766,7 @@ class ConfigurationWizard:
                 )
                 return
         else:
-            if (
-                len(self.config.aws.accounts)
-                > self.config.aws.min_accounts_required_for_wildcard_included_accounts
-            ):
+            if requires_sync:
                 if not questionary.confirm(
                     "Adding this account will require a sync to be ran.\n"
                     "This is to apply any matching templates to the account if the resource does not already exist.\n"
@@ -847,7 +851,7 @@ class ConfigurationWizard:
         # account.partition = set_aws_account_partition(account.partition)
 
         confirm_command_exe(
-            "AWS Account", Operation.ADDED, requires_sync=is_hub_account
+            "AWS Account", Operation.ADDED, requires_sync=requires_sync
         )
 
         self.config.aws.accounts.append(account)
