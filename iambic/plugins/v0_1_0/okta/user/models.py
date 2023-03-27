@@ -41,7 +41,7 @@ class Assignment(BaseModel):
     resource_set: str
 
 
-class OktaUserTemplateProperties(BaseModel):
+class UserProperties(BaseModel):
     username: str = Field(..., description="Username of the user")
     user_id: str = Field("", description="Unique User ID for the user")
     status: UserStatus = Field(UserStatus.active, description="Status of the user")
@@ -65,7 +65,7 @@ class OktaUserTemplateProperties(BaseModel):
 
 class OktaUserTemplate(BaseTemplate, ExpiryModel):
     template_type: str = "NOQ::Okta::User"
-    properties: OktaUserTemplateProperties
+    properties: UserProperties
     force_delete: bool = Field(
         False,
         description=(

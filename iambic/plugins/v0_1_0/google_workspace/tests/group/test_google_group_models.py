@@ -20,7 +20,7 @@ class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
         from iambic.plugins.v0_1_0.google_workspace.group.models import (
             GoogleWorkspaceGroupTemplate,
             GroupMember,
-            GroupTemplateProperties,
+            GroupProperties,
         )
 
         workspaces = []
@@ -31,7 +31,7 @@ class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
         self.template = GoogleWorkspaceGroupTemplate(
             template_type="google:group",
             file_path=self.temp_file_path,
-            properties=GroupTemplateProperties(
+            properties=GroupProperties(
                 name="test_group",
                 domain="example.com",
                 email="test@example.com",
@@ -42,7 +42,7 @@ class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
         self.template_2 = GoogleWorkspaceGroupTemplate(
             template_type="google:group",
             file_path=self.temp_file_path,
-            properties=GroupTemplateProperties(
+            properties=GroupProperties(
                 name="test_group",
                 domain="example2.com",
                 email="test@example2.com",

@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import TYPE_CHECKING, Any, Union
+import typing
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import aiohttp
 import msal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import IambicManaged
@@ -17,12 +18,15 @@ from iambic.core.utils import exceptions_in_proposed_changes
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.azure_ad.iambic_plugin import AzureADConfig
 
+    MappingIntStrAny = typing.Mapping[int | str, any]
+    AbstractSetIntStr = typing.AbstractSet[int | str]
+
 
 class AzureADOrganization(BaseModel):
     idp_name: str
     tenant_id: str
     client_id: str
-    client_secret: str
+    client_secret: SecretStr
     request_timeout: int = 60
     client: Any = None
     access_token: str = ""
@@ -42,7 +46,7 @@ class AzureADOrganization(BaseModel):
             self.client = msal.ConfidentialClientApplication(
                 self.client_id,
                 authority=f"https://login.microsoftonline.com/{self.tenant_id}",
-                client_credential=self.client_secret,
+                client_credential=self.client_secret.get_secret_value(),
             )
             token_result = self.client.acquire_token_for_client(
                 ["https://graph.microsoft.com/.default"]
@@ -120,6 +124,33 @@ class AzureADOrganization(BaseModel):
 
     async def delete(self, endpoint, **kwargs):
         return await self._make_request("delete", endpoint, **kwargs)
+
+    def dict(
+        self,
+        *,
+        include: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
+        exclude: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
+        by_alias: bool = False,
+        skip_defaults: Optional[bool] = None,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
+    ) -> "DictStrAny":  # noqa
+        required_exclude = {"access_token", "client"}
+        if not exclude:
+            exclude = required_exclude
+        elif isinstance(exclude, set):
+            exclude.update(required_exclude)
+
+        return super().dict(
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            skip_defaults=skip_defaults,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+        )
 
 
 class AzureADTemplate(BaseTemplate):

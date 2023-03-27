@@ -134,7 +134,7 @@ class InlinePolicy(BaseModel, ExpiryModel):
         return str(self.statement)
 
 
-class AWSIdentityCenterPermissionSetProperties(BaseModel):
+class PermissionSetProperties(BaseModel):
     name: str
     description: Optional[Union[str, list[Description]]] = Field(
         None,
@@ -183,10 +183,8 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
         # sorting portion
         if not isinstance(v, list):
             return v
-        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
-        return sorted_v
 
-        return v
+        return sorted(v, key=lambda d: d.access_model_sort_weight())
 
     @validator("managed_policies")
     def sort_managed_policy_refs(cls, v: list[ManagedPolicyArn]):
@@ -211,7 +209,7 @@ class AwsIdentityCenterPermissionSetTemplate(
 ):
     template_type: str = AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
     owner: Optional[str] = Field(None, description="Owner of the permission set")
-    properties: AWSIdentityCenterPermissionSetProperties
+    properties: PermissionSetProperties
     access_rules: Optional[list[PermissionSetAccess]] = []
     included_orgs: list[str] = Field(
         ["*"],

@@ -23,8 +23,8 @@ from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_u
 from iambic.plugins.v0_1_0.aws.event_bridge.models import PermissionSetMessageDetails
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
-    AWSIdentityCenterPermissionSetProperties,
     AwsIdentityCenterPermissionSetTemplate,
+    PermissionSetProperties,
 )
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
     enrich_permission_set_details,
@@ -366,7 +366,7 @@ async def create_templated_permission_set(  # noqa: C901
         permission_set_name,
         AwsIdentityCenterPermissionSetTemplate,
         template_params,
-        AWSIdentityCenterPermissionSetProperties(**template_properties),
+        PermissionSetProperties(**template_properties),
         list(aws_account_map.values()),
     )
 

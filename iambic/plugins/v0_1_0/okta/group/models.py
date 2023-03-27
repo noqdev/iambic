@@ -60,7 +60,7 @@ class User(UserSimple):
     extra: Any = Field(None, description=("Extra attributes to store"))
 
 
-class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
+class GroupProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the group")
     group_id: str = Field(
         "", description="Unique Group ID for the group. Usually it's {idp-name}-{name}"
@@ -90,7 +90,7 @@ class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
 class OktaGroupTemplate(BaseTemplate, ExpiryModel):
     template_type = OKTA_GROUP_TEMPLATE_TYPE
     owner: Optional[str] = Field(None, description="Owner of the group")
-    properties: OktaGroupTemplateProperties = Field(
+    properties: GroupProperties = Field(
         ..., description="Properties for the Okta Group"
     )
     idp_name: str = Field(

@@ -8,7 +8,7 @@ from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.plugins.v0_1_0.google_workspace.group.models import (
     GoogleWorkspaceGroupTemplate,
     GroupMember,
-    GroupTemplateProperties,
+    GroupProperties,
 )
 from iambic.plugins.v0_1_0.google_workspace.group.utils import (
     create_group,
@@ -300,7 +300,7 @@ class TestMaybeDeleteGroup(IsolatedAsyncioTestCase):
 
     async def test_maybe_delete_group_not_deleted(self):
         group = GoogleWorkspaceGroupTemplate(
-            properties=GroupTemplateProperties(
+            properties=GroupProperties(
                 email="group1@example.com",
                 name="Group 1",
                 domain="example.com",
@@ -322,7 +322,7 @@ class TestMaybeDeleteGroup(IsolatedAsyncioTestCase):
     async def test_maybe_delete_group_deleted(self):
         group = GoogleWorkspaceGroupTemplate(
             file_path="test_google_group.yaml",
-            properties=GroupTemplateProperties(
+            properties=GroupProperties(
                 email="group1@example.com",
                 name="Group 1",
                 domain="example.com",

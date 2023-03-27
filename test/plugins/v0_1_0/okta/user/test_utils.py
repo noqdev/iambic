@@ -10,10 +10,7 @@ import pytest
 import iambic.plugins.v0_1_0.okta.models
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
-from iambic.plugins.v0_1_0.okta.user.models import (
-    OktaUserTemplate,
-    OktaUserTemplateProperties,
-)
+from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate, UserProperties
 from iambic.plugins.v0_1_0.okta.user.utils import (
     change_user_status,
     create_user,
@@ -30,9 +27,7 @@ async def test_get_user_by_username(
     # Have to create user before getting it
     username = "example_username"
     idp_name = "example.org"
-    user_properties = OktaUserTemplateProperties(
-        username=username, profile={"login": username}
-    )
+    user_properties = UserProperties(username=username, profile={"login": username})
     template = OktaUserTemplate(
         file_path="example", idp_name=idp_name, properties=user_properties
     )
@@ -53,9 +48,7 @@ async def test_get_user_by_user_id(
     # Have to create user before getting it
     username = "example_username"
     idp_name = "example.org"
-    user_properties = OktaUserTemplateProperties(
-        username=username, profile={"login": username}
-    )
+    user_properties = UserProperties(username=username, profile={"login": username})
     template = OktaUserTemplate(
         file_path="example", idp_name=idp_name, properties=user_properties
     )
@@ -72,9 +65,7 @@ async def test_create_user(
 ):
     username = "example_username"
     idp_name = "example.org"
-    user_properties = OktaUserTemplateProperties(
-        username=username, profile={"login": username}
-    )
+    user_properties = UserProperties(username=username, profile={"login": username})
     template = OktaUserTemplate(
         file_path="example", idp_name=idp_name, properties=user_properties
     )
@@ -92,9 +83,7 @@ async def test_change_user_status(
     # Have to create user before getting it
     username = "example_username"
     idp_name = "example.org"
-    user_properties = OktaUserTemplateProperties(
-        username=username, profile={"login": username}
-    )
+    user_properties = UserProperties(username=username, profile={"login": username})
     template = OktaUserTemplate(
         file_path="example", idp_name=idp_name, properties=user_properties
     )
@@ -130,9 +119,7 @@ async def test_update_user_profile(
     # Have to create user before getting it
     username = "example_username"
     idp_name = "example.org"
-    user_properties = OktaUserTemplateProperties(
-        username=username, profile={"login": username}
-    )
+    user_properties = UserProperties(username=username, profile={"login": username})
     template = OktaUserTemplate(
         file_path="example", idp_name=idp_name, properties=user_properties
     )
@@ -141,7 +128,7 @@ async def test_update_user_profile(
         mock_okta_organization,
     )
 
-    proposed_user = OktaUserTemplateProperties(username=username, profile={})
+    proposed_user = UserProperties(username=username, profile={})
     input_user = iambic.plugins.v0_1_0.okta.models.User(
         idp_name=idp_name,
         username=username,
@@ -174,9 +161,7 @@ async def test_maybe_deprovision_user(
     # Have to create user before getting it
     username = "example_username"
     idp_name = "example.org"
-    user_properties = OktaUserTemplateProperties(
-        username=username, profile={"login": username}
-    )
+    user_properties = UserProperties(username=username, profile={"login": username})
     template = OktaUserTemplate(
         file_path="example", idp_name=idp_name, properties=user_properties
     )

@@ -21,10 +21,7 @@ from iambic.plugins.v0_1_0.okta.app.utils import (
 from iambic.plugins.v0_1_0.okta.group.utils import create_group
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
 from iambic.plugins.v0_1_0.okta.models import App, Assignment, Group
-from iambic.plugins.v0_1_0.okta.user.models import (
-    OktaUserTemplate,
-    OktaUserTemplateProperties,
-)
+from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate, UserProperties
 from iambic.plugins.v0_1_0.okta.user.utils import create_user
 
 
@@ -43,9 +40,7 @@ def mock_application(
     # Have to create user before getting it
     username = "example_username"
     idp_name = "example.org"
-    user_properties = OktaUserTemplateProperties(
-        username=username, profile={"login": username}
-    )
+    user_properties = UserProperties(username=username, profile={"login": username})
     template = OktaUserTemplate(
         file_path="example", idp_name=idp_name, properties=user_properties
     )

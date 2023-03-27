@@ -10,21 +10,21 @@ from pydantic import ValidationError
 from iambic.core.models import ProviderChild
 from iambic.core.template_generation import merge_access_model_list
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
-    AWSIdentityCenterPermissionSetProperties,
     AwsIdentityCenterPermissionSetTemplate,
     PermissionSetAccess,
+    PermissionSetProperties,
 )
 from iambic.plugins.v0_1_0.aws.models import Description
 
 
 def test_description_validation_with_default_being_none():
-    properties = AWSIdentityCenterPermissionSetProperties(name="foo")
+    properties = PermissionSetProperties(name="foo")
     assert properties.description is None
 
 
 def test_description_validation_with_empty_string():
     with pytest.raises(ValidationError) as exc_info:
-        AWSIdentityCenterPermissionSetProperties(name="foo", description="")
+        PermissionSetProperties(name="foo", description="")
     if sys.version_info < (3, 10):
         exc = exc_info.value
         captured_traceback_lines = traceback.format_exception(
@@ -40,12 +40,12 @@ def test_description_validation_with_empty_string():
 
 
 def test_description_validation_with_valid_string():
-    properties = AWSIdentityCenterPermissionSetProperties(name="foo", description="A")
+    properties = PermissionSetProperties(name="foo", description="A")
     assert properties.description == "A"
 
 
 def test_description_validation_with_valid_list():
-    properties = AWSIdentityCenterPermissionSetProperties(
+    properties = PermissionSetProperties(
         name="foo", description=[Description(description="A")]
     )
     assert properties.description[0].description == "A"
@@ -53,9 +53,7 @@ def test_description_validation_with_valid_list():
 
 def test_description_validation_with_list_with_empty_string():
     with pytest.raises(ValidationError) as exc_info:
-        AWSIdentityCenterPermissionSetProperties(
-            name="foo", description=[Description(description="")]
-        )
+        PermissionSetProperties(name="foo", description=[Description(description="")])
     if sys.version_info < (3, 10):
         exc = exc_info.value
         captured_traceback_lines = traceback.format_exception(
@@ -74,9 +72,7 @@ def test_description_sorting():
         {"included_accounts": ["account_1", "account_2"], "description": "foo"},
         {"included_accounts": ["account_3"], "description": "bar"},
     ]
-    properties_1 = AWSIdentityCenterPermissionSetProperties(
-        name="foo", description=description
-    )
+    properties_1 = PermissionSetProperties(name="foo", description=description)
     description_1 = properties_1.description
     description_2 = list(reversed(properties_1.description))
     assert description_1 != description_2  # because we reverse the list
@@ -93,7 +89,7 @@ def test_access_rule_validation():
         {"included_accounts": ["account_1", "account_2"], "users": ["foo"]},
         {"included_accounts": ["account_3"], "users": ["bar"]},
     ]
-    properties_1 = AWSIdentityCenterPermissionSetProperties(name="foo")
+    properties_1 = PermissionSetProperties(name="foo")
     template_1 = AwsIdentityCenterPermissionSetTemplate(
         file_path="foo",
         identifier="foo",

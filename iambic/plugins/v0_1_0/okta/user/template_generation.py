@@ -14,7 +14,7 @@ from iambic.plugins.v0_1_0.okta.group.utils import list_all_users
 from iambic.plugins.v0_1_0.okta.user.models import (
     OKTA_USER_TEMPLATE_TYPE,
     OktaUserTemplate,
-    OktaUserTemplateProperties,
+    UserProperties,
 )
 
 if TYPE_CHECKING:
@@ -54,7 +54,7 @@ async def collect_org_users(exe_message: ExecutionMessage, config: OktaConfig):
         okta_user = OktaUserTemplate(
             file_path="unset",
             idp_name=user.idp_name,
-            properties=OktaUserTemplateProperties(
+            properties=UserProperties(
                 username=user.username,
                 user_id=user.user_id,
                 status=user.status.value,

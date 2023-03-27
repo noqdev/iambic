@@ -11,10 +11,7 @@ import pytest
 
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig
-from iambic.plugins.v0_1_0.okta.user.models import (
-    OktaUserTemplate,
-    OktaUserTemplateProperties,
-)
+from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate, UserProperties
 
 TEST_TEMPLATE_DIR = "okta"
 TEST_TEMPLATE_PATH = "okta/okta_user.yaml"
@@ -47,7 +44,7 @@ async def test_apply_create_user(
 ):
     test_template_path, temp_templates_directory = mock_fs
     idp_name = "example.org"
-    user_properties = OktaUserTemplateProperties(
+    user_properties = UserProperties(
         username="example_user",
         profile={"login": "example_username"},
     )

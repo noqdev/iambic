@@ -13,8 +13,8 @@ from iambic.core.template_generation import (
 )
 from iambic.plugins.v0_1_0.okta.group.models import (
     OKTA_GROUP_TEMPLATE_TYPE,
+    GroupProperties,
     OktaGroupTemplate,
-    OktaGroupTemplateProperties,
 )
 from iambic.plugins.v0_1_0.okta.group.utils import list_all_groups
 
@@ -55,7 +55,7 @@ async def collect_org_groups(exe_message: ExecutionMessage, config: OktaConfig):
         okta_group = OktaGroupTemplate(
             file_path="unset",
             idp_name=group.idp_name,
-            properties=OktaGroupTemplateProperties(
+            properties=GroupProperties(
                 group_id=group.group_id,
                 name=group.name,
                 description=group.description,

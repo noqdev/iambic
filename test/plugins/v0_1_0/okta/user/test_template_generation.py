@@ -14,10 +14,7 @@ import iambic.core.utils
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
-from iambic.plugins.v0_1_0.okta.user.models import (
-    OktaUserTemplate,
-    OktaUserTemplateProperties,
-)
+from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate, UserProperties
 from iambic.plugins.v0_1_0.okta.user.template_generation import (
     collect_org_users,
     get_response_dir,
@@ -61,7 +58,7 @@ async def test_collect_org_apps(
 
     # Have to create user before getting it
     username = "example_username"
-    user_properties = OktaUserTemplateProperties(
+    user_properties = UserProperties(
         username=username,
         profile={"login": username},
     )
