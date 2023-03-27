@@ -1197,6 +1197,7 @@ class ConfigurationWizard:
                         )
                     ]
                 )
+            asyncio.run(self.run_import_google_workspace_resources())
             self.update_secret()
         else:
             self.config.google_workspace = GoogleWorkspaceConfig(
@@ -1206,10 +1207,9 @@ class ConfigurationWizard:
                     )
                 ]
             )
+            asyncio.run(self.run_import_google_workspace_resources())
             self.config.secrets = {"google_workspace": {"workspaces": [google_obj]}}
             self.create_secret()
-
-        asyncio.run(self.run_import_google_workspace_resources())
 
     def configuration_wizard_google_workspace_edit(self):
         project_ids = [
@@ -1354,7 +1354,7 @@ class ConfigurationWizard:
                         )
                     ]
                 )
-            # asyncio.run(self.run_import_okta_resources())
+            asyncio.run(self.run_import_okta_resources())
             self.update_secret()
         else:
             self.config.okta = OktaConfig(
@@ -1365,7 +1365,7 @@ class ConfigurationWizard:
                 ]
             )
             self.config.secrets = {"okta": {"organizations": [okta_obj]}}
-            # asyncio.run(self.run_import_okta_resources())
+            asyncio.run(self.run_import_okta_resources())
             self.create_secret()
 
     def configuration_wizard_okta_organization_edit(self):
@@ -1421,8 +1421,7 @@ class ConfigurationWizard:
                 org_name_to_config_elem_map[org_name]
             ] = org_to_edit
 
-            # asyncio.run(self.run_import_okta_resources())
-
+            asyncio.run(self.run_import_okta_resources())
             self.update_secret()
             self.config.write()
 
