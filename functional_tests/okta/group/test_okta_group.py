@@ -4,6 +4,7 @@ import datetime
 import os
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.parser import load_templates
 from iambic.main import run_apply
@@ -11,9 +12,9 @@ from iambic.main import run_apply
 
 def test_okta_group():
     iambic_functional_test_group_yaml = """template_type: NOQ::Okta::Group
+idp_name: development
 properties:
   name: iambic_functional_test_group
-  idp_name: development
   description: This is a test group created by the Iambic functional test suite.
   members:
     - username: user1@example.com
@@ -22,7 +23,7 @@ properties:
 """
     test_group_path = os.path.join(
         IAMBIC_TEST_DETAILS.template_dir_path,
-        "resources/okta/groups/development",
+        "resources/okta/group/development",
     )
     test_group_fp = os.path.join(test_group_path, "iambic_functional_test_group.yaml")
     os.makedirs(test_group_path, exist_ok=True)

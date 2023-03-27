@@ -1,7 +1,13 @@
-# RoleTemplate
+# AwsIamRoleTemplate
+
+*A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.*
 
 ## Properties
 
+- **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+- **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+  - **Items**
 - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
   - **Items** *(string)*
 - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -17,7 +23,7 @@
     - *string*
 - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
 - **`template_type`** *(string)*: Default: `"NOQ::AWS::IAM::Role"`.
-- **`file_path`** *(string)*
+- **`owner`** *(string)*: Owner of the role.
 - **`iambic_managed`**: Controls the directionality of Iambic changes. Default: `"undefined"`.
   - **All of**
     - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
@@ -29,8 +35,12 @@
   - **Items**: Refer to *[#/definitions/RoleAccess](#definitions/RoleAccess)*.
 ## Definitions
 
-- <a id="definitions/IambicManaged"></a>**`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only"]`.
-- <a id="definitions/Description"></a>**`Description`** *(object)*
+- <a id="definitions/IambicManaged"></a>**`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+- <a id="definitions/Description"></a>**`Description`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -40,7 +50,11 @@
   - **`excluded_orgs`** *(array)*: A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string. Default: `[]`.
     - **Items** *(string)*
   - **`description`** *(string)*: Default: `""`.
-- <a id="definitions/MaxSessionDuration"></a>**`MaxSessionDuration`** *(object)*
+- <a id="definitions/MaxSessionDuration"></a>**`MaxSessionDuration`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -50,7 +64,11 @@
   - **`excluded_orgs`** *(array)*: A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string. Default: `[]`.
     - **Items** *(string)*
   - **`max_session_duration`** *(integer)*
-- <a id="definitions/Path"></a>**`Path`** *(object)*
+- <a id="definitions/Path"></a>**`Path`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -59,8 +77,11 @@
     - **Items** *(string)*
   - **`excluded_orgs`** *(array)*: A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string. Default: `[]`.
     - **Items** *(string)*
-  - **`file_path`** *(string)*
-- <a id="definitions/PermissionBoundary"></a>**`PermissionBoundary`** *(object)*
+- <a id="definitions/PermissionBoundary"></a>**`PermissionBoundary`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -75,9 +96,13 @@
       - *string*
       - *string*
   - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+  - **`policy_arn`** *(string)*
   - **`permissions_boundary_type`** *(string)*
-  - **`permissions_boundary_arn`** *(string)*
-- <a id="definitions/Principal"></a>**`Principal`** *(object)*
+- <a id="definitions/Principal"></a>**`Principal`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
   - **`aws`**
     - **Any of**
       - *string*
@@ -98,7 +123,11 @@
       - *string*
       - *array*
         - **Items** *(string)*
-- <a id="definitions/PolicyStatement"></a>**`PolicyStatement`** *(object)*
+- <a id="definitions/PolicyStatement"></a>**`PolicyStatement`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
   - **`expires_at`**: The date and time the resource will be/was set to deleted.
     - **Any of**
       - *string*
@@ -144,7 +173,11 @@
       - *string*
   - **`condition`** *(object)*: An optional set of conditions to determine of the policy applies to a resource.
   - **`sid`** *(string)*: The Policy Statement ID.
-- <a id="definitions/AssumeRolePolicyDocument"></a>**`AssumeRolePolicyDocument`** *(object)*
+- <a id="definitions/AssumeRolePolicyDocument"></a>**`AssumeRolePolicyDocument`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -153,10 +186,14 @@
     - **Items** *(string)*
   - **`excluded_orgs`** *(array)*: A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string. Default: `[]`.
     - **Items** *(string)*
-  - **`version`** *(string)*
+  - **`version`** *(string)*: Default: `"2008-10-17"`.
   - **`statement`** *(array)*
     - **Items**: Refer to *[#/definitions/PolicyStatement](#definitions/PolicyStatement)*.
-- <a id="definitions/Tag"></a>**`Tag`** *(object)*
+- <a id="definitions/Tag"></a>**`Tag`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -173,7 +210,11 @@
   - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
   - **`key`** *(string)*
   - **`value`** *(string)*
-- <a id="definitions/ManagedPolicyRef"></a>**`ManagedPolicyRef`** *(object)*
+- <a id="definitions/ManagedPolicyRef"></a>**`ManagedPolicyRef`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
   - **`expires_at`**: The date and time the resource will be/was set to deleted.
     - **Any of**
       - *string*
@@ -189,7 +230,11 @@
   - **`excluded_orgs`** *(array)*: A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string. Default: `[]`.
     - **Items** *(string)*
   - **`policy_arn`** *(string)*
-- <a id="definitions/PolicyDocument"></a>**`PolicyDocument`** *(object)*
+- <a id="definitions/PolicyDocument"></a>**`PolicyDocument`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
   - **`expires_at`**: The date and time the resource will be/was set to deleted.
     - **Any of**
       - *string*
@@ -208,14 +253,17 @@
   - **`version`** *(string)*
   - **`statement`** *(array)*: List of policy statements.
     - **Items**: Refer to *[#/definitions/PolicyStatement](#definitions/PolicyStatement)*.
-- <a id="definitions/RoleProperties"></a>**`RoleProperties`** *(object)*
+- <a id="definitions/RoleProperties"></a>**`RoleProperties`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
   - **`role_name`** *(string)*: Name of the role.
   - **`description`**: Description of the role. Default: `""`.
     - **Any of**
       - *string*
       - *array*
         - **Items**: Refer to *[#/definitions/Description](#definitions/Description)*.
-  - **`owner`** *(string)*
   - **`max_session_duration`**: Default: `3600`.
     - **Any of**
       - *integer*
@@ -242,7 +290,11 @@
     - **Items**: Refer to *[#/definitions/ManagedPolicyRef](#definitions/ManagedPolicyRef)*.
   - **`inline_policies`** *(array)*: List of the role's inline policies. Default: `[]`.
     - **Items**: Refer to *[#/definitions/PolicyDocument](#definitions/PolicyDocument)*.
-- <a id="definitions/RoleAccess"></a>**`RoleAccess`** *(object)*
+- <a id="definitions/RoleAccess"></a>**`RoleAccess`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.

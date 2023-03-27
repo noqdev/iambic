@@ -1,0 +1,348 @@
+---
+title: Azure Active Directory
+---
+
+This tutorial will guide you through the process of importing and managing
+users and groups in Azure Active Directory (AD).
+
+## Prerequisites
+
+Before you begin, you will need the following:
+
+* A local Git repository to store your IAMbic templates (See [Install and Configure](/getting_started/install_and_configure) for guidance on setting this up).
+* An Azure subscription with an active tenant
+* Access to your Azure Active Directory tenant as a Global Administrator
+
+## Setup
+
+### Create an Azure application for IAMbic
+
+In this section, you will create an Azure application that will allows IAMbic to manage user and group memberships.
+
+From within Azure AD:
+1. Click on App Registrations -> New Registrations
+
+<details>
+  <summary>Screenshot</summary>
+
+![Create App 1](/img/azure_ad/1-create_app.png)
+
+</details>
+
+2. Fill out the form with the following values:
+  * Name: iambic
+  * Supported account types: Accounts in this organizational directory only
+
+<details>
+  <summary>Screenshot</summary>
+
+![Create App 2](/img/azure_ad/2-create-app-settings.png)
+
+</details>
+
+3. Add App Permissions:
+  * Click on "API Permissions"
+  * Click on "Add a permission"
+  * Click on "Microsoft Graph"
+  * Click on "Application permissions"
+  * Select the following permissions:
+    * Application.ReadWrite.All
+    * AppRoleAssignment.ReadWrite.All
+    * Directory.ReadWrite.All
+    * Group.ReadWrite.All
+    * User.ReadWrite.All
+  * Click on "Add permissions"
+  * Click "Grants Admin Consent for <ORG NAME>
+
+<details>
+  <summary>Screenshot</summary>
+
+![Create App 3](/img/azure_ad/3-add-app-permissions.png)
+
+</details>
+
+4. Create a secret (Save this for later):
+  * Click on "Certificates & Secrets"
+  * Click on "New client secret"
+  * Fill out the form with the following values:
+    * Description: iambic
+    * Expires: User preference
+  * Click on "Add"
+  * Save the value of the secret for next steps
+
+<details>
+  <summary>Screenshot</summary>
+
+![Create App 4](/img/azure_ad/4-add-app-secret.png)
+
+</details>
+
+5. Retrieve the client ID and tenant ID
+  * Click on "Overview"
+  * Save the value of "Application (client) ID" and "Directory (tenant) ID" for the next steps
+
+<details>
+  <summary>Screenshot</summary>
+
+![Create App 5](/img/azure_ad/5-retrieve-app-info.png)
+
+</details>
+
+
+### Create a basic Azure AD Configuration for IAMbic
+
+#### Setup Wizard (Recommended)
+
+We recommend running `iambic setup`, which will guide you through the process of creating a
+basic Azure AD configuration for IAMbic. If you have not run `iambic setup` before,
+you will be prompted to connect to an AWS account first. The setup wizard requires an
+AWS account because it uses AWS Secrets Manager to store sensitive secrets like your
+Azure AD credentials.
+
+#### Manual Configuration
+
+If you prefer to configure IAMbic manually, follow these steps:
+
+1. Set the following environment variables:
+
+```bash
+export AZURE_IDP_NAME=<your_azure_ad_domain> # Any friendly name will work here. This will be used in the directory structure, so we recommend avoiding spaces and special characters.
+export AZURE_TENANT_ID=<your_azure_tenant_id> # ex: 12345678-1234-1234-1234-123456789012
+export AZURE_CLIENT_ID=<your_azure_client_id>
+export AZURE_CLIENT_SECRET=<your_azure_client_secret>
+export AZURE_TEST_USER_EMAIL=<test_email> # A test-user e-mail address to use in this tutorial
+```
+
+2. Add the following lines to your secrets.yaml file,
+  or to your existing AWS Secrets Manager secret for IAMbic:
+
+```yaml
+secrets:
+  azure_ad:
+    organizations:
+      - idp_name: $AZURE_IDP_NAME
+        tenant_id: $AZURE_TENANT_ID
+        client_id: $AZURE_CLIENT_ID
+        client_secret: $AZURE_CLIENT_SECRET
+```
+
+3. From the base directory of your IAMbic templates repository, run `tree .`
+to confirm that the directory structure includes the following:
+
+```bash
+tree .
+.
+├── config
+│   ├── config.yaml
+│   └── secrets.yaml
+```
+
+### Import existing users and groups using templates
+
+In this section, you will manually import existing Azure AD Users and Groups into your
+IAMbic templates repository. In a production environment, automation provided by Iambic
+would ensure that Git is always up-to-date with the cloud resources in your production
+environment. This allows you to monitor the history of your resources via Git History.
+
+1. Run the following command in the root of your iambic-templates repository to
+  import your existing Azure AD Users and Groups:
+
+```bash
+iambic import
+```
+
+2. If you have existing Azure AD Users and/or Groups, your iambic-templates
+repository should now have applicable directories under resources/azure_ad.
+
+That's it, you've completed the setup configuration connecting your Azure AD Users
+and Groups to IAMbic. Now you will practice using IAMbic to manage Azure AD Users and Groups.
+
+## Practice
+
+### Create a new user
+
+In this section, you will create a new Azure AD User using IAMbic. We'll start
+by writing a template for the user. We'll use the `iambic apply` command to
+create the user in Azure AD. You should be operating out of a local Git repository.
+
+```bash
+mkdir -p resources/azure_ad/user/$AZURE_IDP_NAME
+cat <<EOF > resources/azure_ad/user/$AZURE_IDP_NAME/$AZURE_TEST_USER_EMAIL.yaml
+template_type: NOQ::AzureAD::User
+idp_name: $AZURE_IDP_NAME
+properties:
+  display_name: Example User
+  given_name: Example
+  username: $AZURE_TEST_USER_EMAIL
+EOF
+```
+
+Run:
+
+```bash
+iambic apply resources/azure_ad/user/$AZURE_IDP_NAME/$AZURE_TEST_USER_EMAIL.yaml
+```
+
+Observe that a new user was created in Azure Active Directory. Also notice that
+the ID of the user was added to the template in Git. In a production setup,
+IAMbic would automatically update the template with the user's ID, and commit
+the change. For the purposes of this tutorial, we will commit the change
+manually.
+
+```bash
+git add resources/azure_ad/user/$AZURE_IDP_NAME/$AZURE_TEST_USER_EMAIL.yaml
+git commit -m "Add new user to Azure AD"
+```
+
+### Create a new Group
+
+In this section, you will create a new Azure AD Group using IAMbic.
+
+```bash
+mkdir -p resources/azure_ad/group/$AZURE_IDP_NAME/
+cat <<EOF > resources/azure_ad/group/$AZURE_IDP_NAME/iambic_test_group.yaml
+template_type: NOQ::AzureAD::Group
+idp_name: $AZURE_IDP_NAME
+properties:
+  name: iambic_test_group
+  description: A test group to use with IAMbic
+EOF
+```
+
+Apply the change:
+
+```bash
+iambic apply resources/azure_ad/group/$AZURE_IDP_NAME/iambic_test_group.yaml
+```
+
+Commit the change to your local Git repository:
+
+```bash
+git add resources/azure_ad/group/$AZURE_IDP_NAME/iambic_test_group.yaml
+git commit -m "Add new user to Azure AD"
+```
+
+
+### Provide temporary ("break-glass") access to an Azure AD Group
+
+We're going to add the user we created earlier to our new group temporarily.
+We'll use the `expires_at` property to specify when the user should be removed from the group.
+`expires_at` can be a relative timestamp. Once our request is approved and merged in by
+IAMbic, the relative timestamp will be converted to an absolute timestamp. This means that if
+a user requests access to a group for 4 hours, the clock will start ticking down from the time
+the request is approved and applied, not the time the request is made.
+
+```bash
+cat <<EOF >> resources/azure_ad/group/$AZURE_IDP_NAME/iambic_test_group.yaml
+  members:
+    - name: $AZURE_TEST_USER_EMAIL
+      data_type: user
+      expires_at: tomorrow
+EOF
+```
+
+Run:
+
+```bash
+iambic apply resources/azure_ad/group/$AZURE_IDP_NAME/iambic_test_group.yaml
+```
+
+After applying the change, you should see the user added to the group in the Active Directory portal IAMbic
+also updated the `iambic_test_group.yaml` template with the user's ID, and converted the relative expiration date
+to an absolute expiration date.
+
+```bash
+git add resources/azure_ad/group/$AZURE_IDP_NAME/iambic_test_group.yaml
+git commit -m "Add user to group"
+```
+
+
+### Expire a group membership
+
+Modify the `resources/azure_ad/group/$AZURE_IDP_NAME/iambic_test_group.yaml` file, and
+change the `expires_at` property to `yesterday`. The member should look something like this:
+
+```yaml
+  members:
+    - name: testuser@noq.dev
+      data_type: user
+      expires_at: yesterday
+      id: 12345-67890-12345-67890
+```
+
+Run:
+
+```bash
+iambic apply resources/azure_ad/group/$AZURE_IDP_NAME/iambic_test_group.yaml
+```
+
+After applying, run a `git diff` to see the changes made to the template. You should see
+that the user was removed from the group completely. Confirm in the Azure AD console.
+
+An alternative way of removing a user from a group is to remove the user from the template
+completely, and apply, or set `deleted: true` for the specific user.
+
+Let's commit our change:
+
+```bash
+git add resources/azure_ad/group/$AZURE_IDP_NAME/iambic_test_group.yaml
+git commit -m "Remove user from group"
+```
+
+
+### Expire the group
+
+We can also configure our entire group to expire. We could also set `deleted: true` on the group.
+
+Create an `expires_at` attribute at the top of the group template, and set it to a date in the past.
+
+Here's an example of what that might look like:
+
+```yaml
+expires_at: 2021-01-01
+template_type: NOQ::AzureAD::Group
+idp_name: development
+properties:
+  name: iambic_test_group
+  description: A test group to use with IAMbic
+  group_id: 11111111-1111-1111-1111-111111111111
+  mail_nickname: iambic_test_group
+```
+
+Run:
+
+```bash
+iambic apply resources/azure_ad/group/$AZURE_IDP_NAME/iambic_test_group.yaml
+```
+
+Observe that the group is deleted in Azure AD, and the template is removed from Git.
+
+```bash
+git status
+g
+```
+
+### Expire the user
+
+Let's now expire our user. Modify
+the `resources/azure_ad/user/$AZURE_IDP_NAME/$AZURE_TEST_USER_EMAIL.yaml` file, and
+set the `expires_at` property to a date in the past.
+
+```yaml
+expires_at: 2021-01-01
+template_type: NOQ::AzureAD::User
+idp_name: development
+properties:
+  display_name: Example User
+  given_name: Example
+  user_id: 11111111-1111-1111-1111-111111111111
+  username: testuser@noq.dev
+```
+
+Run:
+
+```bash
+iambic apply resources/azure_ad/user/$AZURE_IDP_NAME/$AZURE_TEST_USER_EMAIL.yaml
+```
+
+Observe that the user was deleted after the change was applied.

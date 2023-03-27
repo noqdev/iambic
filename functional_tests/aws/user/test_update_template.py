@@ -8,7 +8,6 @@ from functional_tests.aws.user.utils import generate_user_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 
 from iambic.core import noq_json as json
-from iambic.core.context import ctx
 from iambic.plugins.v0_1_0.aws.iam.models import PermissionBoundary
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.user.utils import get_user_across_accounts
@@ -30,19 +29,19 @@ class UpdateUserTestCase(IsolatedAsyncioTestCase):
         cls.template.included_accounts = cls.all_account_ids[
             : len(cls.all_account_ids) // 2
         ]
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
 
     @classmethod
     def tearDownClass(cls):
         cls.template.deleted = True
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
 
     # tag None string value is not acceptable
     async def test_update_tag_with_bad_input(self):
         self.template.properties.path = "/engineering/"  # good input
         self.template.properties.tags = [Tag(key="*", value="")]  # bad input
         template_change_details = await self.template.apply(
-            IAMBIC_TEST_DETAILS.config.aws, ctx
+            IAMBIC_TEST_DETAILS.config.aws
         )
 
         self.assertGreater(
@@ -61,7 +60,7 @@ class UpdateUserTestCase(IsolatedAsyncioTestCase):
         self.template.properties.permissions_boundary = PermissionBoundary(
             policy_arn=view_policy_arn
         )
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
         account_user_mapping = await get_user_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.user_name, False
@@ -79,7 +78,7 @@ class UpdateUserTestCase(IsolatedAsyncioTestCase):
     async def test_update_managed_policies(self):
         if self.template.properties.managed_policies:
             self.template.properties.managed_policies = []
-            await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+            await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
             account_user_mapping = await get_user_across_accounts(
                 IAMBIC_TEST_DETAILS.config.aws.accounts,
@@ -98,7 +97,7 @@ class UpdateUserTestCase(IsolatedAsyncioTestCase):
         self.template.properties.managed_policies = [
             ManagedPolicyRef(policy_arn=policy_arn)
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
         account_user_mapping = await get_user_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts,
@@ -114,7 +113,7 @@ class UpdateUserTestCase(IsolatedAsyncioTestCase):
                 )
 
         self.template.properties.managed_policies = []
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
         account_user_mapping = await get_user_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts,
@@ -133,7 +132,7 @@ class UpdateUserTestCase(IsolatedAsyncioTestCase):
         self.template.included_accounts = ["*"]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
         account_user_mapping = await get_user_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.user_name, False
@@ -171,7 +170,7 @@ class UpdateUserTestCase(IsolatedAsyncioTestCase):
                 ],
             )
         )
-        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
         self.assertEqual(len(r.proposed_changes), 2)
 
         # Set expiration
@@ -180,5 +179,5 @@ class UpdateUserTestCase(IsolatedAsyncioTestCase):
         ].expires_at = dateparser.parse(
             "yesterday", settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True}
         )
-        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
         self.assertEqual(len(r.proposed_changes), 1)

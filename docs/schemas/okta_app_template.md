@@ -1,0 +1,63 @@
+# OktaAppTemplate
+
+*A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.*
+
+## Properties
+
+- **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+- **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+  - **Items**
+- **`expires_at`**: The date and time the resource will be/was set to deleted.
+  - **Any of**
+    - *string*
+    - *string*
+    - *string*
+- **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+- **`template_type`** *(string)*: Default: `"NOQ::Okta::App"`.
+- **`owner`** *(string)*: Owner of the app.
+- **`iambic_managed`**: Controls the directionality of Iambic changes. Default: `"undefined"`.
+  - **All of**
+    - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
+- **`properties`**: Properties for the Okta App.
+  - **All of**
+    - : Refer to *[#/definitions/OktaAppTemplateProperties](#definitions/OktaAppTemplateProperties)*.
+## Definitions
+
+- <a id="definitions/IambicManaged"></a>**`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+- <a id="definitions/Status"></a>**`Status`**: An enumeration. Must be one of: `["ACTIVE", "INACTIVE"]`.
+- <a id="definitions/Assignment"></a>**`Assignment`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
+  - **`expires_at`**: The date and time the resource will be/was set to deleted.
+    - **Any of**
+      - *string*
+      - *string*
+      - *string*
+  - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+  - **`user`** *(string)*: User assigned to the app.
+  - **`group`** *(string)*: Group assigned to the app.
+- <a id="definitions/OktaAppTemplateProperties"></a>**`OktaAppTemplateProperties`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
+  - **`expires_at`**: The date and time the resource will be/was set to deleted.
+    - **Any of**
+      - *string*
+      - *string*
+      - *string*
+  - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+  - **`name`** *(string)*: Name of the app.
+  - **`status`**: Status of the app.
+    - **All of**
+      - : Refer to *[#/definitions/Status](#definitions/Status)*.
+  - **`idp_name`** *(string)*: Name of the identity provider that's associated with the group.
+  - **`id`** *(string)*: Unique App ID for the app. Usually it's {idp-name}-{name}.
+  - **`description`** *(string)*: Description of the app. Default: `""`.
+  - **`extra`**: Extra attributes to store.
+  - **`created`** *(string)*: Date the app was created. Default: `""`.
+  - **`assignments`** *(array)*: List of assignments. Default: `[]`.
+    - **Items**: Refer to *[#/definitions/Assignment](#definitions/Assignment)*.

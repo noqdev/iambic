@@ -18,11 +18,11 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import ManagedPolicyMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.policy.models import (
+    AwsIamManagedPolicyTemplate,
     ManagedPolicyProperties,
-    ManagedPolicyTemplate,
 )
 from iambic.plugins.v0_1_0.aws.iam.policy.utils import (
     get_managed_policy_across_accounts,
@@ -32,7 +32,6 @@ from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
-    normalize_boto3_resp,
 )
 
 if TYPE_CHECKING:
@@ -196,7 +195,7 @@ async def create_templated_managed_policy(  # noqa: C901
             content_dict = json.loads(await f.read())
             account_id_to_mp_map[
                 managed_policy_ref["account_id"]
-            ] = normalize_boto3_resp(content_dict)
+            ] = normalize_dict_keys(content_dict)
 
     # calculate preference based on existing template
     prefer_templatized = calculate_import_preference(
@@ -292,7 +291,7 @@ async def create_templated_managed_policy(  # noqa: C901
         file_path,
         existing_template_map,
         managed_policy_name,
-        ManagedPolicyTemplate,
+        AwsIamManagedPolicyTemplate,
         template_params,
         ManagedPolicyProperties(**template_properties),
         list(aws_account_map.values()),

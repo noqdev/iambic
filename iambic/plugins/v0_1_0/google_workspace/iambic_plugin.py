@@ -5,14 +5,16 @@ from typing import Optional
 
 import googleapiclient.discovery
 from google.oauth2 import service_account
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field, SecretStr, validator
 
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.models import Variable
 from iambic.core.utils import aio_wrapper
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
-from iambic.plugins.v0_1_0.google_workspace.group.models import GroupTemplate
+from iambic.plugins.v0_1_0.google_workspace.group.models import (
+    GoogleWorkspaceGroupTemplate,
+)
 from iambic.plugins.v0_1_0.google_workspace.handlers import (
     import_google_resources,
     load,
@@ -118,6 +120,20 @@ class GoogleProject(BaseModel):
 class GoogleWorkspaceConfig(BaseModel):
     workspaces: list[GoogleProject]
 
+    @validator(
+        "workspaces", allow_reuse=True
+    )  # the need of allow_reuse is possibly related to how we handle inheritance
+    def validate_google_workspaces(cls, workspaces: list[GoogleProject]):
+        project_id_set = set()
+        for workspace in workspaces:
+            if workspace.project_id in project_id_set:
+                raise ValueError(
+                    f"project_id must be unique within workspaces: {workspace.project_id}"
+                )
+            else:
+                project_id_set.add(workspace.project_id)
+        return workspaces
+
     def get_workspace(self, project_id: str) -> GoogleProject:
         for w in self.workspaces:
             if w.project_id == project_id:
@@ -133,6 +149,6 @@ IAMBIC_PLUGIN = ProviderPlugin(
     async_import_callable=import_google_resources,
     async_load_callable=load,
     templates=[
-        GroupTemplate,
+        GoogleWorkspaceGroupTemplate,
     ],
 )

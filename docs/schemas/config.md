@@ -1,133 +1,49 @@
 # Config
 
+*A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.*
+
 ## Properties
 
-- **`aws`**: AWS configuration for iambic to use when managing AWS resources. Default: `{"organizations": [], "accounts": [], "min_accounts_required_for_wildcard_included_accounts": 3}`.
+- **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+- **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+  - **Items**
+- **`template_type`** *(string)*: Default: `"NOQ::Core::Config"`.
+- **`owner`** *(string)*
+- **`iambic_managed`**: Controls the directionality of Iambic changes. Default: `"undefined"`.
   - **All of**
-    - : Refer to *[#/definitions/AWSConfig](#definitions/AWSConfig)*.
-- **`google_projects`** *(array)*: Default: `[]`.
-  - **Items**: Refer to *[#/definitions/GoogleProject](#definitions/GoogleProject)*.
-- **`okta_organizations`** *(array)*: Default: `[]`.
-  - **Items**: Refer to *[#/definitions/OktaOrganization](#definitions/OktaOrganization)*.
+    - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
+- **`version`** *(string)*: Do not change! The version of iambic this repo is compatible with.
+- **`plugins`** *(array)*: The plugins used by your IAMbic template repo. Default: `[{"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/aws", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/google_workspace", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/okta", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/github", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/azure_ad", "version": "v0.1.0"}]`.
+  - **Items**: Refer to *[#/definitions/PluginDefinition](#definitions/PluginDefinition)*.
 - **`extends`** *(array)*: Default: `[]`.
   - **Items**: Refer to *[#/definitions/ExtendsConfig](#definitions/ExtendsConfig)*.
-- **`secrets`** *(object)*
-- **`role_access_tag`** *(string)*: The key of the tag used to store users and groups that can assume into the role the tag is on. Default: `"noq-authorized"`.
-- **`variables`** *(array)*: A list of variables to be used when creating templates. These apply to all aws_accounts but can be overwritten by an account. Default: `[]`.
-  - **Items**: Refer to *[#/definitions/Variable](#definitions/Variable)*.
-- **`slack_app`** *(string)*
-- **`sqs_cloudtrail_changes_queues`** *(array)*: Default: `[]`.
-  - **Items** *(string)*
-- **`slack`** *(object)*: Default: `{}`.
-- **`template_type`** *(string)*: Default: `"NOQ::Core::Config"`.
-- **`version`** *(string)*: Do not change! The version of iambic this repo is compatible with.
+- **`secrets`** *(object)*: Secrets should only be used in memory and never serialized out. Default: `{}`.
+- **`plugin_instances`** *(array)*: A list of the plugin instances parsed as part of the plugin paths.
+  - **Items**: Refer to *[#/definitions/ProviderPlugin](#definitions/ProviderPlugin)*.
+- **`core`**: Core configuration options for iambic. Default: `{"minimum_ulimit": 64000}`.
+  - **All of**
+    - : Refer to *[#/definitions/CoreConfig](#definitions/CoreConfig)*.
 ## Definitions
 
-- <a id="definitions/RegionName"></a>**`RegionName`**: An enumeration. Must be one of: `["us-east-1", "us-west-1", "us-west-2", "eu-west-1", "eu-west-2", "eu-central-1", "ap-southeast-1", "ap-southeast-2", "ap-northeast-1", "ap-northeast-2", "sa-east-1", "cn-north-1"]`.
-- <a id="definitions/AWSIdentityCenterAccount"></a>**`AWSIdentityCenterAccount`** *(object)*
-  - **`account_id`** *(string)*: The AWS Account ID.
-  - **`region`** *(string)*
-- <a id="definitions/IambicManaged"></a>**`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only"]`.
-- <a id="definitions/BaseAWSOrgRule"></a>**`BaseAWSOrgRule`** *(object)*
-  - **`enabled`** *(boolean)*: If set to False, iambic will ignore the included accounts. Default: `true`.
-  - **`iambic_managed`**: Controls the directionality of iambic changes. Default: `"undefined"`.
-    - **All of**
-      - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
-  - **`assume_role_name`**: The role name(s) to use when assuming into an included account. If not provided, this iambic will use the default AWS organization role(s). Default: `["OrganizationAccountAccessRole", "AWSControlTowerExecution"]`.
-    - **Any of**
-      - *string*
-      - *array*
-        - **Items** *(string)*
-- <a id="definitions/AWSOrgAccountRule"></a>**`AWSOrgAccountRule`** *(object)*
-  - **`enabled`** *(boolean)*: If set to False, iambic will ignore the included accounts. Default: `true`.
-  - **`iambic_managed`**: Controls the directionality of iambic changes. Default: `"undefined"`.
-    - **All of**
-      - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
-  - **`assume_role_name`**: The role name(s) to use when assuming into an included account. If not provided, this iambic will use the default AWS organization role(s). Default: `["OrganizationAccountAccessRole", "AWSControlTowerExecution"]`.
-    - **Any of**
-      - *string*
-      - *array*
-        - **Items** *(string)*
-  - **`included_accounts`** *(array)*: A list of account ids and/or account names this rule applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
-    - **Items** *(string)*
-  - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this rule explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
-    - **Items** *(string)*
-- <a id="definitions/AWSOrganization"></a>**`AWSOrganization`** *(object)*
-  - **`default_region`**: Default region to use when making AWS requests. Default: `"us-east-1"`.
-    - **All of**
-      - : Refer to *[#/definitions/RegionName](#definitions/RegionName)*.
-  - **`aws_profile`** *(string)*: The AWS profile used when making calls to the account.
-  - **`assume_role_arn`** *(string)*: The role arn to assume into when making calls to the account.
-  - **`external_id`** *(string)*: The external id to use for assuming into a role when making calls to the account.
-  - **`org_id`** *(string)*: A unique identifier designating the identity of the organization.
-  - **`org_name`** *(string)*
-  - **`identity_center_account`**: The AWS Account ID and region of the AWS Identity Center instance to use for this organization.
-    - **All of**
-      - : Refer to *[#/definitions/AWSIdentityCenterAccount](#definitions/AWSIdentityCenterAccount)*.
-  - **`default_rule`**: The rule used to determine how an organization account should be handled if the account was not found in account_rules.
-    - **All of**
-      - : Refer to *[#/definitions/BaseAWSOrgRule](#definitions/BaseAWSOrgRule)*.
-  - **`account_rules`** *(array)*: A list of rules used to determine how organization accounts are handled. Default: `[]`.
-    - **Items**: Refer to *[#/definitions/AWSOrgAccountRule](#definitions/AWSOrgAccountRule)*.
-- <a id="definitions/Partition"></a>**`Partition`**: An enumeration. Must be one of: `["aws", "aws-us-gov", "aws-cn"]`.
-- <a id="definitions/Variable"></a>**`Variable`** *(object)*
-  - **`key`** *(string)*
-  - **`value`** *(string)*
-- <a id="definitions/AWSAccount"></a>**`AWSAccount`** *(object)*
-  - **`default_region`**: Default region to use when making AWS requests. Default: `"us-east-1"`.
-    - **All of**
-      - : Refer to *[#/definitions/RegionName](#definitions/RegionName)*.
-  - **`aws_profile`** *(string)*: The AWS profile used when making calls to the account.
-  - **`assume_role_arn`** *(string)*: The role arn to assume into when making calls to the account.
-  - **`external_id`** *(string)*: The external id to use for assuming into a role when making calls to the account.
-  - **`account_id`** *(string)*: The AWS Account ID.
-  - **`org_id`** *(string)*: A unique identifier designating the identity of the organization.
-  - **`account_name`** *(string)*
-  - **`partition`**: The AWS partition the account is in. Options are aws, aws-us-gov, and aws-cn. Default: `"aws"`.
-    - **All of**
-      - : Refer to *[#/definitions/Partition](#definitions/Partition)*.
-  - **`role_access_tag`** *(string)*: The key of the tag used to store users and groups that can assume into the role the tag is on.
-  - **`iambic_managed`**: Controls the directionality of iambic changes. Default: `"undefined"`.
-    - **All of**
-      - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
-  - **`variables`** *(array)*: A list of variables to be used when creating templates. Default: `[]`.
-    - **Items**: Refer to *[#/definitions/Variable](#definitions/Variable)*.
-- <a id="definitions/AWSConfig"></a>**`AWSConfig`** *(object)*
-  - **`organizations`** *(array)*: A list of AWS Organizations to be managed by iambic. Default: `[]`.
-    - **Items**: Refer to *[#/definitions/AWSOrganization](#definitions/AWSOrganization)*.
-  - **`accounts`** *(array)*: A list of AWS Accounts to be managed by iambic. Default: `[]`.
-    - **Items**: Refer to *[#/definitions/AWSAccount](#definitions/AWSAccount)*.
-  - **`min_accounts_required_for_wildcard_included_accounts`** *(integer)*: Iambic will set included_accounts=* on imported resources that exist on all accounts if the minimum number of accounts is met. Default: `3`.
-- <a id="definitions/GoogleSubjects"></a>**`GoogleSubjects`** *(object)*
-  - **`domain`** *(string)*
-  - **`service_account`** *(string)*
-- <a id="definitions/GoogleProject"></a>**`GoogleProject`** *(object)*
-  - **`project_id`** *(string)*
-  - **`project_name`** *(string)*
-  - **`subjects`** *(array)*
-    - **Items**: Refer to *[#/definitions/GoogleSubjects](#definitions/GoogleSubjects)*.
-  - **`type`** *(string)*
-  - **`private_key_id`** *(string)*
-  - **`private_key`** *(string)*
-  - **`client_email`** *(string)*
-  - **`client_id`** *(string)*
-  - **`auth_uri`** *(string)*
-  - **`token_uri`** *(string)*
-  - **`auth_provider_x509_cert_url`** *(string)*
-  - **`client_x509_cert_url`** *(string)*
-  - **`variables`** *(array)*: A list of variables to be used when creating templates. Default: `[]`.
-    - **Items**: Refer to *[#/definitions/Variable](#definitions/Variable)*.
-  - **`iambic_managed`**: Controls the directionality of iambic changes. Default: `"undefined"`.
-    - **All of**
-      - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
-- <a id="definitions/OktaOrganization"></a>**`OktaOrganization`** *(object)*
-  - **`idp_name`** *(string)*
-  - **`org_url`** *(string)*
-  - **`api_token`** *(string)*
-  - **`request_timeout`** *(integer)*: Default: `60`.
-- <a id="definitions/ExtendsConfigKey"></a>**`ExtendsConfigKey`**: An enumeration. Must be one of: `["AWS_SECRETS_MANAGER"]`.
+- <a id="definitions/IambicManaged"></a>**`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+- <a id="definitions/PluginType"></a>**`PluginType`**: An enumeration. Must be one of: `["DIRECTORY_PATH"]`.
+- <a id="definitions/PluginDefinition"></a>**`PluginDefinition`** *(object)*
+  - **`type`**: Refer to *[#/definitions/PluginType](#definitions/PluginType)*.
+  - **`location`** *(string)*: The location of the plugin. For a DIRECTORY_PATH, this is the path to the plugin. For a GIT plugin, this is the git url.
+  - **`version`** *(string)*
+- <a id="definitions/ExtendsConfigKey"></a>**`ExtendsConfigKey`**: An enumeration. Must be one of: `["AWS_SECRETS_MANAGER", "LOCAL_FILE"]`.
 - <a id="definitions/ExtendsConfig"></a>**`ExtendsConfig`** *(object)*
   - **`key`**: Refer to *[#/definitions/ExtendsConfigKey](#definitions/ExtendsConfigKey)*.
   - **`value`** *(string)*
   - **`assume_role_arn`** *(string)*
   - **`external_id`** *(string)*
+- <a id="definitions/ProviderPlugin"></a>**`ProviderPlugin`** *(object)*
+  - **`version`** *(string)*: The version of the plugin.
+  - **`config_name`** *(string)*: The name of the provider configuration in the iambic config file.
+  - **`requires_secret`** *(boolean)*: Whether or not the provider requires a secret to be passed in. Default: `false`.
+  - **`provider_config`**: The Pydantic model that is attached to the Config.This will contain the provider specific configuration.These are things like the AWSAccount model, OktaOrganization or GoogleProject.
+  - **`templates`** *(array)*: The list of templates used for this provider.
+    - **Items**
+- <a id="definitions/CoreConfig"></a>**`CoreConfig`** *(object)*
+  - **`minimum_ulimit`** *(integer)*: Default: `64000`.

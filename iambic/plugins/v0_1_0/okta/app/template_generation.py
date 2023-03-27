@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 def get_resource_dir_args() -> list:
-    return ["apps"]
+    return ["app"]
 
 
 def get_response_dir(exe_message: ExecutionMessage) -> str:
@@ -32,13 +32,12 @@ def get_response_dir(exe_message: ExecutionMessage) -> str:
 async def update_or_create_app_template(
     discovered_template: OktaAppTemplate, existing_template_map: dict
 ) -> OktaAppTemplate:
-
     return create_or_update_template(
         discovered_template.file_path,
         existing_template_map,
         discovered_template.resource_id,
         OktaAppTemplate,
-        {},
+        {"idp_name": discovered_template.idp_name},
         discovered_template.properties,
         [],
     )

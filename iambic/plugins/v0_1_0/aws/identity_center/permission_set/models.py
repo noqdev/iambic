@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 from pydantic import Field, validator
 
-from iambic.core.context import ExecutionContext, ctx
+from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -134,7 +134,7 @@ class InlinePolicy(BaseModel, ExpiryModel):
         return str(self.statement)
 
 
-class AWSIdentityCenterPermissionSetProperties(BaseModel):
+class PermissionSetProperties(BaseModel):
     name: str
     description: Optional[Union[str, list[Description]]] = Field(
         None,
@@ -167,7 +167,6 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
 
     @validator("description")
     def validate_description(cls, v: Union[str, list[Description]]):
-
         # validation portion
         if isinstance(v, str) and not (1 <= len(v) <= 700):
             raise ValueError(
@@ -184,10 +183,8 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
         # sorting portion
         if not isinstance(v, list):
             return v
-        sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
-        return sorted_v
 
-        return v
+        return sorted(v, key=lambda d: d.access_model_sort_weight())
 
     @validator("managed_policies")
     def sort_managed_policy_refs(cls, v: list[ManagedPolicyArn]):
@@ -207,11 +204,12 @@ class AWSIdentityCenterPermissionSetProperties(BaseModel):
         return sorted_v
 
 
-class AWSIdentityCenterPermissionSetTemplate(
+class AwsIdentityCenterPermissionSetTemplate(
     AccessModelMixin, AWSTemplate, ExpiryModel
 ):
     template_type: str = AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
-    properties: AWSIdentityCenterPermissionSetProperties
+    owner: Optional[str] = Field(None, description="Owner of the permission set")
+    properties: PermissionSetProperties
     access_rules: Optional[list[PermissionSetAccess]] = []
     included_orgs: list[str] = Field(
         ["*"],
@@ -408,12 +406,11 @@ class AWSIdentityCenterPermissionSetTemplate(
         )
 
     async def _apply_to_account(  # noqa: C901
-        self, aws_account: AWSAccount, context: ExecutionContext
+        self, aws_account: AWSAccount
     ) -> AccountChangeDetails:
         """Apply the permission set to the given AWS account
 
         :param aws_account:
-        :param context:
         :return:
         """
 
@@ -425,7 +422,7 @@ class AWSIdentityCenterPermissionSetTemplate(
         self = await remove_expired_resources(
             self, self.resource_type, self.resource_id
         )
-        template_permission_set = self.apply_resource_dict(aws_account, context)
+        template_permission_set = self.apply_resource_dict(aws_account)
         name = template_permission_set["Name"]
         template_account_assignments = await self._verbose_access_rules(aws_account)
         account_change_details = AccountChangeDetails(
@@ -499,11 +496,11 @@ class AWSIdentityCenterPermissionSetTemplate(
                     )
                 )
                 log_str = "Active resource found with deleted=false."
-                if context.execute and not read_only:
+                if ctx.execute and not read_only:
                     log_str = f"{log_str} Deleting resource..."
                 log.info(log_str, **log_params)
 
-                if context.execute:
+                if ctx.execute:
                     await delete_permission_set(
                         identity_center_client,
                         instance_arn,
@@ -528,7 +525,6 @@ class AWSIdentityCenterPermissionSetTemplate(
                         template_permission_set.get("Tags", []),
                         current_permission_set.get("Tags", []),
                         log_params,
-                        context,
                     )
                 )
 
@@ -558,7 +554,7 @@ class AWSIdentityCenterPermissionSetTemplate(
                             resource_type=self.resource_type,
                         )
                     ]
-                    if context.execute:
+                    if ctx.execute:
                         log.info(
                             f"{log_str} Updating resource...",
                             **update_resource_log_params,
@@ -584,7 +580,7 @@ class AWSIdentityCenterPermissionSetTemplate(
                     )
                 )
                 log_str = "New resource found in code."
-                if not context.execute:
+                if not ctx.execute:
                     log.info(log_str, **log_params)
                     # Exit now because apply functions won't work if resource doesn't exist
                     return account_change_details
@@ -628,7 +624,6 @@ class AWSIdentityCenterPermissionSetTemplate(
                         for mp in current_permission_set.get("ManagedPolicies", [])
                     ],
                     log_params,
-                    context,
                 ),
                 apply_permission_set_customer_managed_policies(
                     identity_center_client,
@@ -637,7 +632,6 @@ class AWSIdentityCenterPermissionSetTemplate(
                     template_permission_set.get("CustomerManagedPolicyReferences", []),
                     current_permission_set.get("CustomerManagedPolicyReferences", []),
                     log_params,
-                    context,
                 ),
                 apply_permission_set_inline_policy(
                     identity_center_client,
@@ -646,7 +640,6 @@ class AWSIdentityCenterPermissionSetTemplate(
                     template_permission_set.get("InlinePolicy", "{}"),
                     current_permission_set.get("InlinePolicy", "{}"),
                     log_params,
-                    context,
                 ),
                 apply_permission_set_permission_boundary(
                     identity_center_client,
@@ -655,7 +648,6 @@ class AWSIdentityCenterPermissionSetTemplate(
                     template_permission_set.get("PermissionsBoundary", {}),
                     current_permission_set.get("PermissionsBoundary", {}),
                     log_params,
-                    context,
                 ),
             ]
         )
@@ -672,7 +664,6 @@ class AWSIdentityCenterPermissionSetTemplate(
                     template_account_assignments,
                     current_account_assignments,
                     log_params,
-                    context,
                 )
             )
         except Exception as e:
@@ -695,7 +686,7 @@ class AWSIdentityCenterPermissionSetTemplate(
         if any(exceptions):
             account_change_details.exceptions_seen.extend(exceptions)
 
-        if context.execute:
+        if ctx.execute:
             if any(changes_made):
                 res = await boto_crud_call(
                     identity_center_client.provision_permission_set,
@@ -739,9 +730,7 @@ class AWSIdentityCenterPermissionSetTemplate(
         # If changes are detected they are to be executed then call provision_permission_set
         return account_change_details
 
-    async def apply(
-        self, config: AWSConfig, context: ExecutionContext
-    ) -> TemplateChangeDetails:
+    async def apply(self, config: AWSConfig) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
             resource_id=self.resource_id,
@@ -757,13 +746,13 @@ class AWSIdentityCenterPermissionSetTemplate(
             if not account.identity_center_details:
                 continue
 
-            if evaluate_on_provider(self, account, context):
-                if context.execute:
+            if evaluate_on_provider(self, account):
+                if ctx.execute:
                     log_str = "Applying changes to resource."
                 else:
                     log_str = "Detecting changes for resource."
                 log.info(log_str, account=str(account), **log_params)
-                tasks.append(self._apply_to_account(account, context))
+                tasks.append(self._apply_to_account(account))
 
         account_changes = await asyncio.gather(*tasks)
         template_changes.proposed_changes = [
@@ -780,12 +769,12 @@ class AWSIdentityCenterPermissionSetTemplate(
 
         proposed_changes = [x for x in account_changes if x.proposed_changes]
 
-        if proposed_changes and context.execute:
+        if proposed_changes and ctx.execute:
             log.info(
                 "Successfully applied all or some resource changes to all AWS accounts. Any unapplied resources will have an accompanying error message.",
                 **log_params,
             )
-        elif proposed_changes and not context.execute:
+        elif proposed_changes and not ctx.execute:
             log.info(
                 "Successfully detected all or some required resource changes on all AWS accounts. Any unapplied resources will have an accompanying error message.",
                 **log_params,

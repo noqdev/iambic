@@ -7,7 +7,6 @@ import boto3
 import pytest
 from moto import mock_iam
 
-from iambic.core.context import ExecutionContext
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.aws.iam.role.utils import (
     apply_role_inline_policies,
@@ -182,14 +181,12 @@ async def test_apply_role_tags_on_detach(mock_iam_client):
     template_tags = []
     existing_tags = [{"Key": EXAMPLE_TAG_KEY, "Value": EXAMPLE_TAG_VALUE}]
     log_params = {}
-    context = ExecutionContext()
     proposed_changes = await apply_role_tags(
         EXAMPLE_ROLE_NAME,
         mock_iam_client,
         template_tags,
         existing_tags,
         log_params,
-        context,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.DETACH
 
@@ -199,14 +196,12 @@ async def test_apply_role_tags_on_attach(mock_iam_client):
     template_tags = [{"Key": EXAMPLE_TAG_KEY, "Value": EXAMPLE_TAG_VALUE}]
     existing_tags = []
     log_params = {}
-    context = ExecutionContext()
     proposed_changes = await apply_role_tags(
         EXAMPLE_ROLE_NAME,
         mock_iam_client,
         template_tags,
         existing_tags,
         log_params,
-        context,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.ATTACH
 
@@ -216,14 +211,12 @@ async def test_apply_role_managed_policies_on_attach(mock_iam_client):
     template_policies = [{"PolicyArn": EXAMPLE_MANAGED_POLICY_ARN}]
     existing_policies = []
     log_params = {}
-    context = ExecutionContext()
     proposed_changes = await apply_role_managed_policies(
         EXAMPLE_ROLE_NAME,
         mock_iam_client,
         template_policies,
         existing_policies,
         log_params,
-        context,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.ATTACH
 
@@ -233,14 +226,12 @@ async def test_apply_role_managed_policies_on_detach(mock_iam_client):
     template_policies = []
     existing_policies = [{"PolicyArn": EXAMPLE_MANAGED_POLICY_ARN}]
     log_params = {}
-    context = ExecutionContext()
     proposed_changes = await apply_role_managed_policies(
         EXAMPLE_ROLE_NAME,
         mock_iam_client,
         template_policies,
         existing_policies,
         log_params,
-        context,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.DETACH
 
@@ -250,14 +241,12 @@ async def test_apply_role_permission_boundary_on_attach(mock_iam_client):
     template_permission_boundary = {"PolicyArn": EXAMPLE_MANAGED_POLICY_ARN}
     existing_permission_boundary = {}
     log_params = {}
-    context = ExecutionContext()
     proposed_changes = await apply_role_permission_boundary(
         EXAMPLE_ROLE_NAME,
         mock_iam_client,
         template_permission_boundary,
         existing_permission_boundary,
         log_params,
-        context,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.ATTACH
 
@@ -269,14 +258,12 @@ async def test_apply_role_permission_boundary_on_detach(mock_iam_client):
         "PermissionsBoundaryArn": EXAMPLE_MANAGED_POLICY_ARN
     }
     log_params = {}
-    context = ExecutionContext()
     proposed_changes = await apply_role_permission_boundary(
         EXAMPLE_ROLE_NAME,
         mock_iam_client,
         template_permission_boundary,
         existing_permission_boundary,
         log_params,
-        context,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.DETACH
 
@@ -287,14 +274,12 @@ async def test_apply_role_inline_policies_on_attach(mock_iam_client):
     template_policies[0].update(json.loads(EXAMPLE_INLINE_POLICY_DOCUMENT))
     existing_policies = []
     log_params = {}
-    context = ExecutionContext()
     proposed_changes = await apply_role_inline_policies(
         EXAMPLE_ROLE_NAME,
         mock_iam_client,
         template_policies,
         existing_policies,
         log_params,
-        context,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.CREATE
 
@@ -305,14 +290,12 @@ async def test_apply_role_inline_policies_on_detach(mock_iam_client):
     existing_policies = [{"PolicyName": EXAMPLE_INLINE_POLICY_NAME}]
     existing_policies[0].update(json.loads(EXAMPLE_INLINE_POLICY_DOCUMENT))
     log_params = {}
-    context = ExecutionContext()
     proposed_changes = await apply_role_inline_policies(
         EXAMPLE_ROLE_NAME,
         mock_iam_client,
         template_policies,
         existing_policies,
         log_params,
-        context,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.DELETE
 

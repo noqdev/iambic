@@ -6,22 +6,22 @@ from typing import TYPE_CHECKING
 from googleapiclient import _auth
 from googleapiclient.errors import HttpError
 
-from iambic.core.context import ExecutionContext
+from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.google_workspace.group.models import (
+        GoogleWorkspaceGroupTemplate,
         GroupMember,
-        GroupTemplate,
     )
     from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import GoogleProject
 
 
 async def list_groups(
     domain: str, google_project: GoogleProject
-) -> list[GroupTemplate]:
+) -> list[GoogleWorkspaceGroupTemplate]:
     from iambic.plugins.v0_1_0.google_workspace.group.models import get_group_template
 
     groups = []
@@ -97,7 +97,7 @@ async def create_group(
 
 
 async def update_group_domain(
-    current_domain: str, proposed_domain: str, log_params: dict[str, str], context
+    current_domain: str, proposed_domain: str, log_params: dict[str, str]
 ):
     response = []
     if current_domain != proposed_domain:
@@ -133,7 +133,6 @@ async def update_group_description(
     domain: str,
     google_project: GoogleProject,
     log_params: dict[str, str],
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     response: list[ProposedChange] = []
     if current_description == proposed_description:
@@ -161,7 +160,7 @@ async def update_group_description(
             },
         )
     )
-    if context.execute:
+    if ctx.execute:
         log_str = "Updating group description"
         await aio_wrapper(
             service.groups()
@@ -185,7 +184,6 @@ async def update_group_name(
     domain: str,
     google_project: GoogleProject,
     log_params: dict[str, str],
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     response: list[ProposedChange] = []
     if current_name == proposed_name:
@@ -211,7 +209,7 @@ async def update_group_name(
     except AttributeError as err:
         log.exception("Unable to process google groups.", error=err)
         return response
-    if context.execute:
+    if ctx.execute:
         log_str = "Updating group name"
         await aio_wrapper(
             service.groups()
@@ -231,7 +229,6 @@ async def update_group_email(
     domain: str,
     google_project: GoogleProject,
     log_params: dict[str, str],
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     # TODO: This won't work as-is, since we aren't really aware of the old e-mail
     response: list[ProposedChange] = []
@@ -258,7 +255,7 @@ async def update_group_email(
     except AttributeError as err:
         log.exception("Unable to process google groups.", error=err)
         return response
-    if context.execute:
+    if ctx.execute:
         log_str = "Updating group e-mail"
         await aio_wrapper(
             service.groups()
@@ -273,10 +270,9 @@ async def update_group_email(
 
 
 async def maybe_delete_group(
-    group: GroupTemplate,
+    group: GoogleWorkspaceGroupTemplate,
     google_project: GoogleProject,
     log_params: dict[str, str],
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     response: list[ProposedChange] = []
     if not group.deleted:
@@ -290,7 +286,7 @@ async def maybe_delete_group(
             change_summary={"group": group.properties.name},
         )
     )
-    if context.execute:
+    if ctx.execute:
         try:
             service = await google_project.get_service_connection(
                 "admin", "directory_v1", group.properties.domain
@@ -304,7 +300,7 @@ async def maybe_delete_group(
 
         log_str = "Detected group deletion"
 
-        if context.execute:
+        if ctx.execute:
             log_str = "Deleting Group"
             await aio_wrapper(
                 service.groups().delete(groupKey=group.properties.email).execute,
@@ -343,7 +339,6 @@ async def update_group_members(
     domain: str,
     google_project: GoogleProject,
     log_params: dict[str, str],
-    context: ExecutionContext,
 ):
     # TODO: This will likely fail if I change the Role of a user, since we are doing all
     # of these operations with asyncio.gather. Should do the remove operations first, then the add ones.
@@ -376,7 +371,7 @@ async def update_group_members(
                 },
             )
         )
-        if context.execute:
+        if ctx.execute:
             log_str = "Removing users from group"
             for user in users_to_remove:
                 http = _auth.authorized_http(service._http.credentials)
@@ -405,7 +400,7 @@ async def update_group_members(
                 change_summary={"UsersToAdd": [user.email for user in users_to_add]},
             )
         )
-        if context.execute:
+        if ctx.execute:
             log_str = "Adding users to group"
             for user in users_to_add:
                 http = _auth.authorized_http(service._http.credentials)

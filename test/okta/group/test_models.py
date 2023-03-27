@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 from iambic.core.template_generation import merge_model
-from iambic.plugins.v0_1_0.okta.group.models import OktaGroupTemplateProperties
+from iambic.plugins.v0_1_0.okta.group.models import GroupProperties
 
 
 def test_merge_template_access_rules():
     existing_members = [{"username": "user@example.com", "expires_at": "tomorrow"}]
-    existing_document = OktaGroupTemplateProperties(
+    existing_document = GroupProperties(
         identifier="bar",
         file_path="foo",
         name="engineering",
-        idp_name="3ks9",
         members=existing_members,
     )
     new_members = [
@@ -18,16 +17,13 @@ def test_merge_template_access_rules():
             "username": "user@example.com",
         }
     ]
-    new_document = OktaGroupTemplateProperties(
+    new_document = GroupProperties(
         identifier="bar",
         file_path="foo",
         name="engineering",
-        idp_name="3ks9",
         members=new_members,
     )
-    merged_document: OktaGroupTemplateProperties = merge_model(
-        new_document, existing_document, []
-    )
+    merged_document: GroupProperties = merge_model(new_document, existing_document, [])
     assert existing_members != new_members
     assert merged_document.members[0].username == "user@example.com"
     assert (

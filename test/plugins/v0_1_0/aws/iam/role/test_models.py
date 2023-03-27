@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from iambic.core.template_generation import merge_model
-from iambic.plugins.v0_1_0.aws.iam.role.models import RoleProperties, RoleTemplate
+from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate, RoleProperties
 from iambic.plugins.v0_1_0.aws.models import AWSAccount, Description
 
 
@@ -20,7 +20,7 @@ def test_merge_role_template_without_sid(aws_accounts: list[AWSAccount]):
             }
         ],
     }
-    existing_document = RoleTemplate(
+    existing_document = AwsIamRoleTemplate(
         identifier="{{account_name}}_iambic_test_role",
         file_path="foo",
         properties=existing_properties,
@@ -38,12 +38,12 @@ def test_merge_role_template_without_sid(aws_accounts: list[AWSAccount]):
             }
         ],
     }
-    new_document = RoleTemplate(
+    new_document = AwsIamRoleTemplate(
         identifier="{{account_name}}_iambic_test_role",
         file_path="foo",
         properties=new_properties,
     )
-    merged_document: RoleTemplate = merge_model(
+    merged_document: AwsIamRoleTemplate = merge_model(
         new_document, existing_document, aws_accounts
     )
     assert (
@@ -79,7 +79,7 @@ def test_merge_role_template_access_rules(aws_accounts: list[AWSAccount]):
             "expires_at": "in 3 days",
         }
     ]
-    existing_document = RoleTemplate(
+    existing_document = AwsIamRoleTemplate(
         identifier="{{account_name}}_iambic_test_role",
         file_path="foo",
         properties=existing_properties,
@@ -105,13 +105,13 @@ def test_merge_role_template_access_rules(aws_accounts: list[AWSAccount]):
             ],
         }
     ]
-    new_document = RoleTemplate(
+    new_document = AwsIamRoleTemplate(
         identifier="{{account_name}}_iambic_test_role",
         file_path="foo",
         properties=new_properties,
         access_rules=new_access_rules,
     )
-    merged_document: RoleTemplate = merge_model(
+    merged_document: AwsIamRoleTemplate = merge_model(
         new_document, existing_document, aws_accounts
     )
     assert (
@@ -154,7 +154,7 @@ def test_merge_role_with_forked_policy(aws_accounts: list[AWSAccount]):
             }
         ],
     }
-    existing_document = RoleTemplate(
+    existing_document = AwsIamRoleTemplate(
         identifier="{{account_name}}_iambic_test_role",
         file_path="foo",
         properties=existing_properties,
@@ -187,12 +187,12 @@ def test_merge_role_with_forked_policy(aws_accounts: list[AWSAccount]):
             },
         ],
     }
-    new_document = RoleTemplate(
+    new_document = AwsIamRoleTemplate(
         identifier="{{account_name}}_iambic_test_role",
         file_path="foo",
         properties=new_properties,
     )
-    merged_document: RoleTemplate = merge_model(
+    merged_document: AwsIamRoleTemplate = merge_model(
         new_document, existing_document, aws_accounts
     )
     assert len(merged_document.properties.inline_policies) == 2
@@ -248,7 +248,7 @@ def test_merge_role_with_access_preservation(aws_accounts: list[AWSAccount]):
             },
         ],
     }
-    existing_document = RoleTemplate(
+    existing_document = AwsIamRoleTemplate(
         identifier="{{account_name}}_iambic_test_role",
         file_path="foo",
         properties=existing_properties,
@@ -288,12 +288,12 @@ def test_merge_role_with_access_preservation(aws_accounts: list[AWSAccount]):
         else:
             non_prod_expires_at = inline_policy.expires_at
 
-    new_document = RoleTemplate(
+    new_document = AwsIamRoleTemplate(
         identifier="{{account_name}}_iambic_test_role",
         file_path="foo",
         properties=new_properties,
     )
-    merged_document: RoleTemplate = merge_model(
+    merged_document: AwsIamRoleTemplate = merge_model(
         new_document, existing_document, aws_accounts
     )
 
@@ -329,7 +329,7 @@ def test_merge_role_with_assignment_resolution(aws_accounts: list[AWSAccount]):
             }
         ],
     }
-    existing_document = RoleTemplate(
+    existing_document = AwsIamRoleTemplate(
         identifier="{{account_name}}_iambic_test_role",
         file_path="foo",
         properties=existing_properties,
@@ -350,12 +350,12 @@ def test_merge_role_with_assignment_resolution(aws_accounts: list[AWSAccount]):
             }
         ],
     }
-    new_document = RoleTemplate(
+    new_document = AwsIamRoleTemplate(
         identifier="{{account_name}}_iambic_test_role",
         file_path="foo",
         properties=new_properties,
     )
-    merged_document: RoleTemplate = merge_model(
+    merged_document: AwsIamRoleTemplate = merge_model(
         new_document, existing_document, aws_accounts
     )
 
@@ -393,7 +393,7 @@ def test_merge_role_with_new_excluded_account(aws_accounts: list[AWSAccount]):
             }
         ],
     }
-    existing_document = RoleTemplate(
+    existing_document = AwsIamRoleTemplate(
         identifier="{{account_name}}_iambic_test_role",
         file_path="foo",
         properties=existing_properties,
@@ -414,12 +414,12 @@ def test_merge_role_with_new_excluded_account(aws_accounts: list[AWSAccount]):
             }
         ],
     }
-    new_document = RoleTemplate(
+    new_document = AwsIamRoleTemplate(
         identifier="{{account_name}}_iambic_test_role",
         file_path="foo",
         properties=new_properties,
     )
-    merged_document: RoleTemplate = merge_model(
+    merged_document: AwsIamRoleTemplate = merge_model(
         new_document, existing_document, aws_accounts
     )
 
@@ -467,7 +467,7 @@ def test_merge_role_with_multiple_access_removals(aws_accounts: list[AWSAccount]
             },
         ],
     }
-    existing_document = RoleTemplate(
+    existing_document = AwsIamRoleTemplate(
         identifier="{{account_name}}_iambic_test_role",
         file_path="foo",
         properties=existing_properties,
@@ -487,12 +487,12 @@ def test_merge_role_with_multiple_access_removals(aws_accounts: list[AWSAccount]
             },
         ],
     }
-    new_document = RoleTemplate(
+    new_document = AwsIamRoleTemplate(
         identifier="{{account_name}}_iambic_test_role",
         file_path="foo",
         properties=new_properties,
     )
-    merged_document: RoleTemplate = merge_model(
+    merged_document: AwsIamRoleTemplate = merge_model(
         new_document, existing_document, aws_accounts
     )
 
@@ -517,7 +517,6 @@ def test_merge_role_with_multiple_access_removals(aws_accounts: list[AWSAccount]
 
 
 def test_role_properties_tags():
-
     tags_1 = [
         {"key": "apple", "value": "red", "included_accounts": ["ses"]},
         {"key": "apple", "value": "yellow", "included_accounts": ["development"]},
@@ -530,7 +529,6 @@ def test_role_properties_tags():
 
 
 def test_role_properties_validation():
-
     tags_1 = [
         {"key": "apple", "value": "red", "included_accounts": ["ses"]},
         {"key": "apple", "value": "yellow", "included_accounts": ["development"]},
@@ -548,7 +546,6 @@ def test_role_properties_validation():
 
 
 def test_role_max_session_duration_validation():
-
     max_session_duration = [
         {"included_accounts": ["account_1", "account_2"], "max_session_duration": 3600},
         {"included_accounts": ["account_3"], "max_session_duration": 600},
@@ -570,7 +567,6 @@ def test_role_max_session_duration_validation():
 
 
 def test_role_permissions_boundary_validation():
-
     permissions_boundary = [
         {
             "included_accounts": ["account_1", "account_2"],
@@ -598,7 +594,6 @@ def test_role_permissions_boundary_validation():
 
 
 def test_role_path_validation():
-
     path = [
         {"included_accounts": ["account_1", "account_2"], "file_path": "/engineering"},
         {"included_accounts": ["account_3"], "file_path": "/finance"},
@@ -616,7 +611,6 @@ def test_role_path_validation():
 
 
 def test_description_path_validation():
-
     description = [
         {"included_accounts": ["account_1", "account_2"], "description": "foo"},
         {"included_accounts": ["account_3"], "description": "bar"},
@@ -634,13 +628,12 @@ def test_description_path_validation():
 
 
 def test_access_rule_validation():
-
     access_rules = [
         {"included_accounts": ["account_1", "account_2"], "users": ["foo"]},
         {"included_accounts": ["account_3"], "users": ["bar"]},
     ]
     properties_1 = RoleProperties(role_name="foo")
-    template_1 = RoleTemplate(
+    template_1 = AwsIamRoleTemplate(
         file_path="foo",
         identifier="foo",
         properties=properties_1,
