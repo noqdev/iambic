@@ -101,6 +101,9 @@ class AccountSummary(PydanticBaseModel):
     num_changes: int = Field(default=0)
     changes: List[ProposedChange] = Field(default=[])
 
+    def __hash__(self):
+        return hash((self.account, self.num_changes))
+
     @classmethod
     def compile(
         cls, account: str, count: int, changes: List[ProposedChange], **data: Any
@@ -137,13 +140,14 @@ class TemplateSummary(PydanticBaseModel):
         instance.template_name = template_name
         instance.count = count
         instance.num_accounts = len(set([x.account for x in changes]))
+        accounts = set(x.account for x in changes)
         instance.accounts = [
             AccountSummary.compile(
-                account=change.account,
+                account=account,
                 count=len(changes),
-                changes=[x for x in changes if x.account == change.account],
+                changes=[x for x in changes if x.account == account],
             )
-            for change in changes
+            for account in accounts
         ]
         return instance
 
