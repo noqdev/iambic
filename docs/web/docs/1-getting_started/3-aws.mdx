@@ -322,7 +322,7 @@ access_rules:
       - ACCOUNT_A
 ```
 
-In order to provide temporary access to a role (for breakglass use cases or otherwise), we will add an `expires_at` flag to the access rules. This will cause the access rules to expire after the specified time. The following example will expire the access rules in 3 days.
+In order to provide temporary access to a role (for break-glass use cases or otherwise), we will add an `expires_at` flag to the access rules. This will cause the access rules to expire after the specified time. The following example will expire the access rules in 3 days.
 
 ```yaml
 access_rules:
@@ -456,7 +456,7 @@ This section specifies which users and groups can access the permission set, on 
 
 The example provided shows an access
 rule that grants access to members of group `GROUP_1` on all accounts that start with
-`ACCOUNT_` except for the `SENSITIVE_ACCOUNT` account.
+`ACCOUNT_` except for the `ACCOUNT_SENSITIVE` account.
 
 ```yaml
 access_rules:
@@ -465,14 +465,14 @@ access_rules:
     included_accounts:
       - ACCOUNT_*
     excluded_accounts:
-      - SENSITIVE_ACCOUNT
+      - ACCOUNT_SENSITIVE
     included_orgs:
       - o-12345678
 ```
 
 The example provided shows an access
 rule that grants access to iambic_example_user_1@iambic.org on all accounts that start with
-`ACCOUNT_` except for the `SENSITIVE_ACCOUNT` account.
+`ACCOUNT_` except for the `ACCOUNT_SENSITIVE` account.
 
 ```yaml
 access_rules:
@@ -481,7 +481,7 @@ access_rules:
     included_accounts:
       - ACCOUNT_*
     excluded_accounts:
-      - SENSITIVE_ACCOUNT
+      - ACCOUNT_SENSITIVE
     included_orgs:
       - o-12345678
 ```
@@ -500,7 +500,7 @@ access_rules:
     included_accounts:
       - ACCOUNT_*
     excluded_accounts:
-      - SENSITIVE_ACCOUNT
+      - ACCOUNT_SENSITIVE
     included_orgs:
       - o-12345678
 properties:
@@ -523,7 +523,7 @@ properties:
 #### 4.3 - Provide Temporary Access to an AWS Identity Center Permission Set
 
 Similarly to IAM roles, access to IAM Permission Sets can be granted temporarily. This is
-useful for situations where users need temporary elevated privileges (breakglass access).
+useful for situations where users need temporary elevated privileges (break-glass access).
 
 ```yaml
 access_rules:

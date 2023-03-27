@@ -5,7 +5,7 @@ title: Okta
 Welcome to our Okta documentation! This tutorial will guide you through setting up IAMbic to manage your Okta organization
 and use it to create, manipulate, and expire groups, application assignments, and users.
 
-## Prerequisities
+## Prerequisites
 
 Before you begin, you will need the following:
 
@@ -231,7 +231,7 @@ iambic apply resources/okta/group/$OKTA_DOMAIN/iambic-test-group.yaml
 ### Provide temporary ("break-glass") access to an Okta Group
 
 In this section, we will update the group added in the previous section to configure the access to expire in two minutes,
-simulating a very short breakglass request. In order to strive for least privilege while accomodating this request,
+simulating a very short break-glass request. In order to strive for least privilege while accomodating this request,
 we will add an expiration date to the user's membership in the group. Run the following command to replace the previous
 group you created with a new one that includes the additional user and an expiration date, and then apply that change:
 
@@ -388,7 +388,6 @@ Some examples of how this might look are below:
 With `deleted: true`:
 
 ```yaml
-deleted: true
 template_type: NOQ::Okta::App
 deleted: true
 idp_name: development
