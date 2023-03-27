@@ -1555,7 +1555,7 @@ class ConfigurationWizard:
     def configuration_wizard_azure_ad(self):
         log.info(
             "For details on how to retrieve the information required to add an Azure AD Organization "
-            "to IAMbic check out our docs: https://iambic.org/getting_started/azure-ad/"
+            "to IAMbic check out our docs: https://iambic.org/getting_started/azure_ad/"
         )
         if self.config.azure_ad:
             action = questionary.select(
