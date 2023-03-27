@@ -50,7 +50,7 @@ properties:
     assert user_template.properties.profile["firstName"] == "TestNameChange"
 
     # set the template to import_only
-    proposed_changes_path = "{0}/proposed_changes.txt".format(os.getcwd())
+    proposed_changes_path = "{0}/proposed_changes.json".format(os.getcwd())
     if os.path.isfile(proposed_changes_path):
         os.remove(proposed_changes_path)
     else:
@@ -63,7 +63,7 @@ properties:
     user_template.write()
     run_apply(IAMBIC_TEST_DETAILS.config, [test_user_fp])
     if os.path.isfile(proposed_changes_path):
-        assert os.path.getsize(proposed_changes_path) == 0
+        assert os.path.getsize(proposed_changes_path) == 2  # {} is 2 bytes
     else:
         # this is acceptable as well because there are no changes to be made.
         pass
