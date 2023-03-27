@@ -1,6 +1,8 @@
 name: Run test
 on:
   pull_request:
+  push:
+    branches: [main]
 jobs:
   run-unit-test:
     runs-on: self-hosted
