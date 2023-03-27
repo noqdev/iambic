@@ -1,0 +1,23 @@
+---
+title: Iambic Import Process
+---
+The `iambic import` command is used to import existing cloud resources into a human-readable, YAML format in Git.
+The iambic import command is typically ran continually to ensure that your Git repository is kept up-to-date
+with the actual state of your cloud environment.
+
+In AWS, `iambic import` needs to be aware of your AWS accounts, because it will attempt to represent complex
+multi-account resources into as few templates as possible. For example, if you have an engineering role
+across multiple accounts, but with policies on the role that vary per account, `iambic import` will attempt
+to represent this in a single template that identifies the differences. The same can be said for cloud identities
+with various access rules per account.
+
+When importing files using the iambic import command, IAMbic will overwrite the representation of a cloud identity in
+Git with the updated representation of how that cloud resources looks in the cloud. If a conflict arises between the
+imported file and the existing file, IAMbic will overwrite the existing file.
+
+We are currently working on `IAMbic managed` mode, which would allow you to toggle IAMbic as the source of truth for
+specific cloud identities. This would mean that any out-of-band changes to cloud identities would be reverted, if
+those cloud identities are represented by an IAMbic template that is in `IAMbic managed` mode.
+
+The iambic import command will intelligently retry when errors are recoverable,
+such as rate limits. If the errors are not recoverable, IAMbic will raise an exception.
