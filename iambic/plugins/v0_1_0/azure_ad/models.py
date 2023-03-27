@@ -24,8 +24,8 @@ if TYPE_CHECKING:
 
 class AzureADOrganization(BaseModel):
     idp_name: str
-    tenant_id: SecretStr
-    client_id: SecretStr
+    tenant_id: str
+    client_id: str
     client_secret: SecretStr
     request_timeout: int = 60
     client: Any = None
