@@ -61,13 +61,13 @@ class ProposedChangeDiff(ProposedChange):
                 else:
                     change_from = x[2]
                     change_to = x[2]
-                diff_plus_minus += f"\n(Remove) {label}: {yaml.dump(change_from)}\n(Add) {yaml.dump(change_to)}\n"
+                diff_plus_minus += f"(Remove) {label}: \n{yaml.dump(change_from)}\n(Add) {yaml.dump(change_to)}\n"
                 diff_plus_minus.rstrip('\n')
             elif x[0] == "add":
-                diff_plus_minus += f"\n(Add) {label}: {yaml.dump(x[2])}\n"
+                diff_plus_minus += f"(Add) {label}: \n{yaml.dump(x[2])}\n"
                 diff_plus_minus.rstrip('\n')
             elif x[0] == "remove":
-                diff_plus_minus += f"\n(Remove) {label}: {yaml.dump(x[1])}\n"
+                diff_plus_minus += f"(Remove) {label}: \n{yaml.dump(x[1])}\n"
                 diff_plus_minus.rstrip('\n')
         return diff_plus_minus
 
@@ -181,7 +181,6 @@ def get_applicable_changes(
                 # If proposed change is a list of AccountChangeDetails, we need to iterate through those
                 for account_change in proposed_change.proposed_changes:
                     if account_change.change_type.value == proposed_change_type:
-                        account_change.current_value = proposed_change.current_value
                         applicable_changes.add(
                             _get_annotated_change(
                                 account_change, template_change, proposed_change.account
