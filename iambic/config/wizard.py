@@ -1536,7 +1536,7 @@ class ConfigurationWizard:
             elif action == "Update Client ID":
                 org_to_edit.client_id = set_client_id(org_to_edit.client_id)
             elif action == "Update Client Secret":
-                org_to_edit.client_secret = set_client_secret(org_to_edit.client_secret)
+                org_to_edit.client_secret = set_client_secret()
 
             confirm_command_exe("Azure AD Organization", Operation.UPDATED)
             self.config.azure_ad.organizations[

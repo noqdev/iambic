@@ -44,8 +44,8 @@ class AzureADOrganization(BaseModel):
         if not self.access_token:
             # initialize the client here
             self.client = msal.ConfidentialClientApplication(
-                self.client_id.get_secret_value(),
-                authority=f"https://login.microsoftonline.com/{self.tenant_id.get_secret_value()}",
+                self.client_id,
+                authority=f"https://login.microsoftonline.com/{self.tenant_id}",
                 client_credential=self.client_secret.get_secret_value(),
             )
             token_result = self.client.acquire_token_for_client(
