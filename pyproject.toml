@@ -7,7 +7,7 @@ name = "iambic-core"
 packages = [
     { include="iambic", from="." },
 ]
-version = "0.1.169"
+version = "0.1.171"
 license = "AGPL-3.0-or-later"
 description = "The python package used to generate, parse, and execute noqform yaml templates."
 authors = ["Noq Software <hello@noq.dev>"]
