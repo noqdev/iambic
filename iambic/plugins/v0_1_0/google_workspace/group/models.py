@@ -66,7 +66,7 @@ class GroupMember(BaseModel, ExpiryModel):
         return self.email
 
 
-class GroupTemplateProperties(BaseModel):
+class GroupProperties(BaseModel):
     name: str
     domain: str
     email: str
@@ -102,7 +102,7 @@ class GroupTemplateProperties(BaseModel):
 class GoogleWorkspaceGroupTemplate(GoogleTemplate, ExpiryModel):
     template_type = GOOGLE_GROUP_TEMPLATE_TYPE
     owner: Optional[str] = Field(None, description="Owner of the group")
-    properties: GroupTemplateProperties
+    properties: GroupProperties
 
     def apply_resource_dict(self, google_project: GoogleProject):
         return {

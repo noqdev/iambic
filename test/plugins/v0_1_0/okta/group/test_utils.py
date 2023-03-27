@@ -18,10 +18,7 @@ from iambic.plugins.v0_1_0.okta.group.utils import (
     update_group_members,
     update_group_name,
 )
-from iambic.plugins.v0_1_0.okta.user.models import (
-    OktaUserTemplate,
-    OktaUserTemplateProperties,
-)
+from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate, UserProperties
 from iambic.plugins.v0_1_0.okta.user.utils import create_user
 
 
@@ -40,9 +37,7 @@ async def test_list_all_users_with_users(
     # Have to create user before getting it
     username = "example_username"
     idp_name = "example.org"
-    user_properties = OktaUserTemplateProperties(
-        username=username, profile={"login": username}
-    )
+    user_properties = UserProperties(username=username, profile={"login": username})
     template = OktaUserTemplate(
         file_path="example", idp_name=idp_name, properties=user_properties
     )
@@ -96,9 +91,7 @@ async def test_update_group_members(
     # Have to create user before getting it
     username = "example_username"
     idp_name = "example.org"
-    user_properties = OktaUserTemplateProperties(
-        username=username, profile={"login": username}
-    )
+    user_properties = UserProperties(username=username, profile={"login": username})
     template = OktaUserTemplate(
         file_path="example", idp_name=idp_name, properties=user_properties
     )

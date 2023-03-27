@@ -34,7 +34,7 @@ OKTA_GET_APP_SEMAPHORE = NoqSemaphore(get_app, 10)
 OKTA_APP_TEMPLATE_TYPE = "NOQ::Okta::App"
 
 
-class OktaAppTemplateProperties(ExpiryModel, BaseModel):
+class AppProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the app")
     status: Optional[Status] = Field(None, description="Status of the app")
     id: Optional[str] = Field(
@@ -61,9 +61,7 @@ class OktaAppTemplateProperties(ExpiryModel, BaseModel):
 
 class OktaAppTemplate(BaseTemplate, ExpiryModel):
     template_type = OKTA_APP_TEMPLATE_TYPE
-    properties: OktaAppTemplateProperties = Field(
-        ..., description="Properties for the Okta App"
-    )
+    properties: AppProperties = Field(..., description="Properties for the Okta App")
     owner: Optional[str] = Field(None, description="Owner of the app")
     idp_name: str = Field(
         ...,
@@ -264,7 +262,7 @@ async def get_app_template(okta_app) -> OktaAppTemplate:
         file_path=f"resources/okta/apps/{okta_app.idp_name}/{file_name}",
         template_type="NOQ::Okta::App",
         idp_name=okta_app.idp_name,
-        properties=OktaAppTemplateProperties(
+        properties=AppProperties(
             name=okta_app.name,
             status=okta_app.status,
             id=okta_app.id,

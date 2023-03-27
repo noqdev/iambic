@@ -4,9 +4,9 @@ import asyncio
 from unittest import IsolatedAsyncioTestCase
 
 import dateparser
-
 from functional_tests.aws.user.utils import generate_user_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core import noq_json as json
 from iambic.plugins.v0_1_0.aws.iam.models import PermissionBoundary
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
