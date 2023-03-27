@@ -21,7 +21,7 @@ To get started with IAMbic, create a local Git repository to store IAMbic templa
 For production usage, a [GitHub repository](https://docs.github.com/en/get-started/quickstart/create-a-repo) is recommended
 because IAMbic provides GitHub workflows that keep IAM identities and permissions updated within your repository.
 
-1. Open a terminal and run the following commands to create a new directory, initialize a Git repository, and set up a .gitignore file:
+1. Open a terminal and run the following commands to create a new directory, initialize a Git repository, and set up a `.gitignore` file:
 
 ```bash
 mkdir iambic-templates
@@ -55,17 +55,17 @@ Please visit our [installation guide](/reference/installation/) for alternative 
 ### Configure AWS IAM credentials
 
 Before running IAMbic, configure your AWS credentials.
-You can set environment variables with your credentials, set an AWS_PROFILE, or use another supported method.
+You can set environment variables with your credentials, set an `AWS_PROFILE`, or use another supported method.
 Refer to the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html)
 for more details.
 
-We recommend using an AWS IAM identity (user or role) with administrative privileges to use the Iambic
-Setup Wizard. Refer to the list of [specific permissions](/reference/aws_permissions_for_setup_wizard)
-required for the wizard.
+We recommend using an AWS IAM identity (user or role) with administrative privileges to use the IAMbic
+setup wizard. Refer to the list of [specific permissions](/reference/aws_permissions_for_setup_wizard)
+required to run the wizard.
 
 ### Configuring IAMbic
 
-Run the following command to launch the Iambic Setup Wizard and configure IAMbic:
+Run the following command to launch the IAMbic setup wizard and configure IAMbic:
 
 ```bash
 iambic setup
