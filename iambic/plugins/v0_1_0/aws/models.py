@@ -358,7 +358,7 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
             except errors.AccessDeniedException as err:
                 raise Exception(
                     "Please ensure you've specified the correct AWS Identity Center region in "
-                    "IAMbic's configuration and that the spoke role has the sso-admin:ListInstances permission. ",
+                    "IAMbic's configuration and that the spoke role has the correct permissions. ",
                     f"Original Exception: {err}",
                 )
 
