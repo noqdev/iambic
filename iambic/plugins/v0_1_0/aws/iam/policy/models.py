@@ -450,6 +450,7 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
 
 class ManagedPolicyRef(AccessModel, ExpiryModel):
     policy_arn: constr(regex=ARN_RE)
+    policy_name: str
 
     @property
     def resource_type(self):

@@ -71,7 +71,6 @@ async def get_app(okta_organization: OktaOrganization, app_id: str) -> App:
         id=app_raw.id,
         idp_name=okta_organization.idp_name,
         name=app_raw.label,
-        app_id=app_raw.id,
         attributes=dict(),
         extra=dict(
             okta_app_id=app_raw.id,
