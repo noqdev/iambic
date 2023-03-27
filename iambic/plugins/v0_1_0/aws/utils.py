@@ -105,28 +105,42 @@ async def paginated_search(
 def get_identity_arn(caller_identity: dict) -> str:
     arn = caller_identity.get("Arn")
     arn_split_by_colon = arn.split(":")
-    if len(arn_split_by_colon) > 5:  # magic number 5 is where the resource index is
-        resource_path_split_by_slash = arn_split_by_colon[5].split("/")
-        if (
-            len(resource_path_split_by_slash) > 1
-        ):  # magic number 1 is where the role_name index is
-            maybe_assumed_role = resource_path_split_by_slash[0]
-            role_name = resource_path_split_by_slash[1]
-            if maybe_assumed_role == "assumed-role" and not role_name.startswith(
-                "AWSReservedSSO_"
-            ):
-                # We attempt to derived IAM role principals from Assumed-role session principals
-                # AWS Identity Center generated roles can have a path that is under path
-                # aws-reserved/sso.amazonaws.com/us-west-2/
-                # Path information is not contained within the caller_identity dictionary
-                # In the event if we see prefix with AWSReservedSSO_, we fall back to
-                # assumed-role session principals
-                # See https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_principal.html#Principal_specifying
-                identity_arn_with_session_name = arn.replace(":sts:", ":iam:").replace(
-                    "assumed-role", "role"
-                )
-                return "/".join(identity_arn_with_session_name.split("/")[:-1])
-    return arn
+    resource_path_split_by_slash = []
+    maybe_assumed_role = ""
+    role_name = ""
+
+    if len(arn_split_by_colon) < 6:
+        # magic number 6 is the expected number of parts for sts caller identity arn
+        # https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html
+        return arn
+
+    resource_path_split_by_slash = arn_split_by_colon[5].split("/")
+
+    if len(resource_path_split_by_slash) < 2:
+        # magic number 2 is from the format of assumed-role/role-name/role-session-name format
+        return arn
+
+    maybe_assumed_role = resource_path_split_by_slash[0]
+    role_name = resource_path_split_by_slash[1]
+
+    if maybe_assumed_role != "assumed-role":
+        # for example, user-like arn
+        return arn
+
+    if maybe_assumed_role == "assumed-role" and role_name.startswith("AWSReservedSSO_"):
+        return arn
+
+    # We attempt to derived IAM role principals from Assumed-role session principals
+    # AWS Identity Center generated roles can have a path that is under path
+    # aws-reserved/sso.amazonaws.com/us-west-2/
+    # Path information is not contained within the caller_identity dictionary
+    # In the event if we see prefix with AWSReservedSSO_, we fall back to
+    # assumed-role session principals
+    # See https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_principal.html#Principal_specifying
+    identity_arn_with_session_name = arn.replace(":sts:", ":iam:").replace(
+        "assumed-role", "role"
+    )
+    return "/".join(identity_arn_with_session_name.split("/")[:-1])
 
 
 def get_current_role_arn(sts_client) -> str:
