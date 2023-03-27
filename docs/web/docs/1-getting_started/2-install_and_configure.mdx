@@ -6,14 +6,22 @@ toc_max_heading_level: 5
 
 import AsciinemaWidget from '../../src/components/AsciinemaWidget';
 
+### Prerequisites
+
+Before starting the setup wizard, you will need the following information:
+
+- Your AWS account ID(s)
+- The ID of the AWS organization you wish to manage (if applicable)
+- AWS IAM credentials with administrative privileges on the AWS account(s) you wish to manage
+- An understanding of [AWS Hub and Spoke Roles](/reference/aws_hub_and_spoke_roles)
+
 ### Set up a local Git repository
 
-To get started with IAMbic, you need to create a local Git repository. This repository will store IAMbic templates for importing your cloud resources.
-When you're ready to deploy IAMbic more broadly, create a [GitHub repository](https://docs.github.com/en/get-started/quickstart/create-a-repo).
-GitHub is recommended because Noq provides GitHub workflows that keep IAM identities and permissions
-updated within your repository.
+To get started with IAMbic, create a local Git repository to store IAMbic templates for importing your cloud resources.
+For production usage, a [GitHub repository](https://docs.github.com/en/get-started/quickstart/create-a-repo) is recommended
+because IAMbic provides GitHub workflows that keep IAM identities and permissions updated within your repository.
 
-1. Open a terminal and run the following commands to create a new directory, initialize a Git repository, and set up a `.gitignore` file:
+1. Open a terminal and run the following commands to create a new directory, initialize a Git repository, and set up a .gitignore file:
 
 ```bash
 mkdir iambic-templates
@@ -46,15 +54,18 @@ Please visit our [installation guide](/reference/installation/) for alternative 
 
 ### Configure AWS IAM credentials
 
-Configure AWS credentials before running IAMbic. You can accomplish this by either setting environment variables with your credentials, setting an AWS_PROFILE, or another supported method.
-Please reference the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html) for more details.
+Before running IAMbic, configure your AWS credentials.
+You can set environment variables with your credentials, set an AWS_PROFILE, or use another supported method.
+Refer to the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html)
+for more details.
 
-We recommend using an AWS IAM identity (user or role) with administrative privileges
-to use the Iambic Setup Wizard. A list of specific permissions is provided [here](/reference/aws_permissions_for_setup_wizard).
+We recommend using an AWS IAM identity (user or role) with administrative privileges to use the Iambic
+Setup Wizard. Refer to the list of [specific permissions](/reference/aws_permissions_for_setup_wizard)
+required for the wizard.
 
 ### Configuring IAMbic
 
-Run `iambic setup` for a guided configuration process. This will create a `iambic_config.yaml` file in your current directory.
+Run the following command to launch the Iambic Setup Wizard and configure IAMbic:
 
 ```bash
 iambic setup
@@ -62,15 +73,14 @@ iambic setup
 
 <AsciinemaWidget src="/recordings/iambic_setup.cast" rows={30} idleTimeLimit={3} preload={true} />
 
-
-Alternatively, you can [create the configuration by hand](/how_to_guides/manually_create_the_configuration).
-
+Alternatively, you can [create the configuration manually](/how_to_guides/manually_create_the_configuration).
 
 ### Next Steps
 
-Now that you have IAMbic installed and configured, you're ready to move on to the next steps. At this point, your experience will vary depending on the goals you want to achieve. You may configure any number of these identitiy providers to work with IAMbic.
+Now that you have IAMbic installed and configured, you're ready to move on to the next steps.
+Depending on your goals, you may configure IAMbic to work with any number of identity providers.
 
 - [Continue with AWS IAM](./aws)
 - [Continue with Okta Organizations](./okta)
+- [Continue with Azure Active Directory](./azure_ad)
 - [Continue with Google Groups](./google)
-

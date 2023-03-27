@@ -40,16 +40,23 @@ You will then practice using IAMbic to to create, manipulate, and expire a test 
 
 ### 1. Configure IAMbic for AWS
 
-Configure IAMbic by creating a local git repository and running `iambic setup`. You'll need to set up
-an AWS Organization (Which will load all accounts for that organization into your Iambic configuration file),
-or the AWS accounts that you wish to manage. For more specific guidance on `iambic setup`, please read our [Install and Configure](/getting_started/install_and_configure) guide.
+IAMbic is built around a Hub and Spoke model for managing IAM across multiple AWS accounts.
+This means that IAMbic creates a hub role in your primary AWS account and assumes a spoke role across
+each of your accounts to retrieve resources or manage those accounts. You can learn more about this model in our
+[AWS Hub and Spoke Roles documentation](reference/aws_hub_and_spoke_roles).
 
-If you'd prefer to manually write a configuration, please follow the guidance
-[here](/how_to_guides/manually_create_the_configuration).
+To configure IAMbic for your AWS accounts, you first need to create a local Git repository and run `iambic setup`.
+During the setup process, you will need to set up an AWS Organization (which loads all accounts for that
+organization into your Iambic configuration file) or specify the individual AWS accounts that you wish to
+manage. You can find more specific guidance on how to run iambic setup in our
+[Install and Configure](/getting_started/install_and_configure) guide.
 
-After configuring IAMbic, you should see your accounts referenced in your repository under `iambic_config.yaml`.
-Feel free to move this file around in the repository. When IAMbic is run, it will look for the configuration
-by referencing the `template_type` and it expects to find a template_type of `NOQ::Core::Config`.
+If you'd prefer to manually write a configuration, please follow the guidance in our
+[How-To Guides](/how_to_guides/manually_create_the_configuration) section.
+
+Once you have configured IAMbic, you should see your accounts listed in your repository under
+`iambic_config.yaml`. You can move this file around in your repository if needed. When you run IAMbic,
+it will look for the configuration by referencing the template_type, which should be set to NOQ::Core::Config.
 
 ### 2. Import AWS Resources
 
