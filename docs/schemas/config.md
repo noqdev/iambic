@@ -1,0 +1,49 @@
+# Config
+
+*A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.*
+
+## Properties
+
+- **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+- **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+  - **Items**
+- **`template_type`** *(string)*: Default: `"NOQ::Core::Config"`.
+- **`owner`** *(string)*
+- **`iambic_managed`**: Controls the directionality of Iambic changes. Default: `"undefined"`.
+  - **All of**
+    - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
+- **`version`** *(string)*: Do not change! The version of iambic this repo is compatible with.
+- **`plugins`** *(array)*: The plugins used by your IAMbic template repo. Default: `[{"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/aws", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/google_workspace", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/okta", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/github", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/azure_ad", "version": "v0.1.0"}]`.
+  - **Items**: Refer to *[#/definitions/PluginDefinition](#definitions/PluginDefinition)*.
+- **`extends`** *(array)*: Default: `[]`.
+  - **Items**: Refer to *[#/definitions/ExtendsConfig](#definitions/ExtendsConfig)*.
+- **`secrets`** *(object)*: Secrets should only be used in memory and never serialized out. Default: `{}`.
+- **`plugin_instances`** *(array)*: A list of the plugin instances parsed as part of the plugin paths.
+  - **Items**: Refer to *[#/definitions/ProviderPlugin](#definitions/ProviderPlugin)*.
+- **`core`**: Core configuration options for iambic. Default: `{"minimum_ulimit": 64000}`.
+  - **All of**
+    - : Refer to *[#/definitions/CoreConfig](#definitions/CoreConfig)*.
+## Definitions
+
+- <a id="definitions/IambicManaged"></a>**`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+- <a id="definitions/PluginType"></a>**`PluginType`**: An enumeration. Must be one of: `["DIRECTORY_PATH"]`.
+- <a id="definitions/PluginDefinition"></a>**`PluginDefinition`** *(object)*
+  - **`type`**: Refer to *[#/definitions/PluginType](#definitions/PluginType)*.
+  - **`location`** *(string)*: The location of the plugin. For a DIRECTORY_PATH, this is the path to the plugin. For a GIT plugin, this is the git url.
+  - **`version`** *(string)*
+- <a id="definitions/ExtendsConfigKey"></a>**`ExtendsConfigKey`**: An enumeration. Must be one of: `["AWS_SECRETS_MANAGER", "LOCAL_FILE"]`.
+- <a id="definitions/ExtendsConfig"></a>**`ExtendsConfig`** *(object)*
+  - **`key`**: Refer to *[#/definitions/ExtendsConfigKey](#definitions/ExtendsConfigKey)*.
+  - **`value`** *(string)*
+  - **`assume_role_arn`** *(string)*
+  - **`external_id`** *(string)*
+- <a id="definitions/ProviderPlugin"></a>**`ProviderPlugin`** *(object)*
+  - **`version`** *(string)*: The version of the plugin.
+  - **`config_name`** *(string)*: The name of the provider configuration in the iambic config file.
+  - **`requires_secret`** *(boolean)*: Whether or not the provider requires a secret to be passed in. Default: `false`.
+  - **`provider_config`**: The Pydantic model that is attached to the Config.This will contain the provider specific configuration.These are things like the AWSAccount model, OktaOrganization or GoogleProject.
+  - **`templates`** *(array)*: The list of templates used for this provider.
+    - **Items**
+- <a id="definitions/CoreConfig"></a>**`CoreConfig`** *(object)*
+  - **`minimum_ulimit`** *(integer)*: Default: `64000`.

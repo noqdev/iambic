@@ -35,7 +35,7 @@ class MemberDataType(Enum):
 
 
 class Member(BaseModel, ExpiryModel):
-    id: str
+    id: Optional[str] = None
     name: str
     data_type: MemberDataType
     """TODO: validate name
@@ -87,8 +87,8 @@ class Member(BaseModel, ExpiryModel):
 
 class GroupTemplateProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the group", max_length=256)
-    mail_nickname: str = Field(
-        ...,
+    mail_nickname: Optional[str] = Field(
+        None,
         description="Mail nickname of the group",
         regex=r"^[!#$%&'*+-./0-9=?A-Z^_`a-z{|}~]{1,64}$",
     )
@@ -113,6 +113,11 @@ class GroupTemplateProperties(ExpiryModel, BaseModel):
     members: Optional[List[Member]] = Field(
         [], description="A list of users in the group"
     )
+
+    def __init__(self, **data):
+        if "mail_nickname" not in data:
+            data["mail_nickname"] = data.get("name")
+        super().__init__(**data)
 
     @property
     def resource_type(self) -> str:
@@ -160,6 +165,7 @@ class AzureActiveDirectoryGroupTemplate(ExpiryModel, AzureADTemplate):
             create_group,
             delete_group,
             get_group,
+            resolve_member_ids,
             update_group_attributes,
             update_group_members,
         )
@@ -211,6 +217,10 @@ class AzureActiveDirectoryGroupTemplate(ExpiryModel, AzureADTemplate):
         tasks = []
 
         await self.remove_expired_resources()
+
+        self.properties.members = await resolve_member_ids(
+            azure_ad_organization, self.properties.members
+        )
 
         if not group_exists and not self.deleted:
             log_str = "New resource found in code."

@@ -10,7 +10,6 @@ def test_merge_template_access_rules():
         identifier="bar",
         file_path="foo",
         name="engineering",
-        idp_name="3ks9",
         members=existing_members,
     )
     new_members = [
@@ -22,7 +21,6 @@ def test_merge_template_access_rules():
         identifier="bar",
         file_path="foo",
         name="engineering",
-        idp_name="3ks9",
         members=new_members,
     )
     merged_document: OktaGroupTemplateProperties = merge_model(

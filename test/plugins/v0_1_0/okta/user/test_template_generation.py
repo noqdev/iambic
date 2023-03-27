@@ -63,10 +63,13 @@ async def test_collect_org_apps(
     username = "example_username"
     user_properties = OktaUserTemplateProperties(
         username=username,
-        idp_name=okta_organization.idp_name,
         profile={"login": username},
     )
-    template = OktaUserTemplate(file_path="example", properties=user_properties)
+    template = OktaUserTemplate(
+        file_path="example",
+        idp_name=okta_organization.idp_name,
+        properties=user_properties,
+    )
     okta_user = await create_user(
         template,
         mock_okta_organization,

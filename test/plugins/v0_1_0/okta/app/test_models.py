@@ -28,7 +28,6 @@ def test_members_sorting():
     ]
     properties_1 = OktaAppTemplateProperties(
         name="example_app",
-        idp_name="example.org",
         id="example.org-example_app",
         assignments=assignments,
     )
@@ -80,10 +79,13 @@ async def test_apply_app_assignment(
     app_properties = OktaAppTemplateProperties(
         id=okta_app.id,
         name=okta_app.name,
-        idp_name=okta_app.idp_name,
         assignments=[Assignment(group=okta_group.name)],
     )
-    template = OktaAppTemplate(file_path=test_template_path, properties=app_properties)
+    template = OktaAppTemplate(
+        file_path=test_template_path,
+        properties=app_properties,
+        idp_name=okta_app.idp_name,
+    )
     template.write()
     okta_config = OktaConfig(organizations=[okta_organization])
     template_change_details = await template.apply(okta_config)

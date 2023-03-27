@@ -62,10 +62,6 @@ class User(UserSimple):
 
 class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the group")
-    idp_name: str = Field(
-        ...,
-        description="Name of the identity provider that's associated with the group",
-    )
     group_id: str = Field(
         "", description="Unique Group ID for the group. Usually it's {idp-name}-{name}"
     )
@@ -96,6 +92,10 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
     owner: Optional[str] = Field(None, description="Owner of the group")
     properties: OktaGroupTemplateProperties = Field(
         ..., description="Properties for the Okta Group"
+    )
+    idp_name: str = Field(
+        ...,
+        description="Name of the identity provider that's associated with the group",
     )
 
     async def apply(self, config: OktaConfig) -> TemplateChangeDetails:
@@ -162,7 +162,7 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
         self.file_path = os.path.expanduser(
             os.path.join(
                 repo_dir,
-                f"resources/okta/group/{self.properties.idp_name}/{file_name}",
+                f"resources/okta/group/{self.idp_name}/{file_name}",
             )
         )
 
@@ -178,7 +178,7 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
     ) -> AccountChangeDetails:
         proposed_group = self.apply_resource_dict(okta_organization)
         change_details = AccountChangeDetails(
-            account=self.properties.idp_name,
+            account=self.idp_name,
             resource_id=self.properties.group_id,
             new_value=proposed_group,  # TODO fix
             proposed_changes=[],
@@ -187,7 +187,7 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
         log_params = dict(
             resource_type=self.properties.resource_type,
             resource_id=self.properties.name,
-            organization=str(self.properties.idp_name),
+            organization=str(self.idp_name),
         )
 
         current_group: Optional[Group] = await get_group(
@@ -225,7 +225,7 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
 
             current_group: Group = await create_group(
                 group_name=self.properties.name,
-                idp_name=self.properties.idp_name,
+                idp_name=self.idp_name,
                 description=self.properties.description,
                 okta_organization=okta_organization,
             )

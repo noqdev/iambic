@@ -40,8 +40,8 @@ async def list_users(
 
 async def get_user(
     azure_ad_organization: AzureADOrganization,
-    user_id: str = None,
-    username: str = None,
+    user_id: Optional[str] = None,
+    username: Optional[str] = None,
     allow_template_ref: bool = False,
 ) -> UserTemplateProperties:
     """
@@ -78,7 +78,7 @@ async def get_user(
 async def create_user(
     azure_ad_organization: AzureADOrganization,
     username: str,
-    mail_nickname: str,
+    mail_nickname: Optional[str],
     display_name: str,
 ) -> Optional[UserTemplateProperties]:
     """

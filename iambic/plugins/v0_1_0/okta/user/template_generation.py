@@ -37,7 +37,7 @@ async def update_or_create_user_template(
         existing_template_map,
         discovered_template.resource_id,
         OktaUserTemplate,
-        {},
+        {"idp_name": discovered_template.idp_name},
         discovered_template.properties,
         [],
     )
@@ -53,9 +53,9 @@ async def collect_org_users(exe_message: ExecutionMessage, config: OktaConfig):
     for user in users:
         okta_user = OktaUserTemplate(
             file_path="unset",
+            idp_name=user.idp_name,
             properties=OktaUserTemplateProperties(
                 username=user.username,
-                idp_name=user.idp_name,
                 user_id=user.user_id,
                 status=user.status.value,
                 profile=user.profile,

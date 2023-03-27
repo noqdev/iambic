@@ -44,9 +44,11 @@ def mock_application(
     username = "example_username"
     idp_name = "example.org"
     user_properties = OktaUserTemplateProperties(
-        username=username, idp_name=idp_name, profile={"login": username}
+        username=username, profile={"login": username}
     )
-    template = OktaUserTemplate(file_path="example", properties=user_properties)
+    template = OktaUserTemplate(
+        file_path="example", idp_name=idp_name, properties=user_properties
+    )
 
     okta_user = asyncio.run(create_user(template, mock_okta_organization))
 

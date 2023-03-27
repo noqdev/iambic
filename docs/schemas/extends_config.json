@@ -1,0 +1,35 @@
+{
+  "title": "ExtendsConfig",
+  "type": "object",
+  "properties": {
+    "key": {
+      "$ref": "#/definitions/ExtendsConfigKey"
+    },
+    "value": {
+      "title": "Value",
+      "type": "string"
+    },
+    "assume_role_arn": {
+      "title": "Assume Role Arn",
+      "type": "string"
+    },
+    "external_id": {
+      "title": "External Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "key",
+    "value"
+  ],
+  "definitions": {
+    "ExtendsConfigKey": {
+      "title": "ExtendsConfigKey",
+      "description": "An enumeration.",
+      "enum": [
+        "AWS_SECRETS_MANAGER",
+        "LOCAL_FILE"
+      ]
+    }
+  }
+}
