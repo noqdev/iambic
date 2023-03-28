@@ -62,7 +62,7 @@ test:
 
 .PHONY: functional_test
 functional_test:
-	pytest --cov-report html --cov iambic --cov-report lcov:cov_functional_tests.lcov --cov-report xml:cov_functional_tests.xml --cov-report html:cov_functional_tests.html  functional_tests/aws --ignore functional_tests/test_github_cicd.py -s -n auto --dist loadscope
+	pytest --cov-report html --cov iambic --cov-report lcov:cov_functional_tests.lcov --cov-report xml:cov_functional_tests.xml --cov-report html:cov_functional_tests.html  functional_tests --ignore functional_tests/test_github_cicd.py -s -n auto --dist loadscope
 # 	pytest --cov-report html --cov iambic functional_tests -s
 # 	pytest --cov-report html --cov iambic functional_tests/aws/role/test_create_template.py -s
 # 	pytest --cov-report html --cov iambic functional_tests/aws/managed_policy/test_template_expiration.py -s
