@@ -97,6 +97,9 @@ async def generate_group_templates(
         resource_template = await update_or_create_group_template(
             group, existing_template_map
         )
+        if not resource_template:
+            # Template not updated. Most likely because it's an `enforced` template.
+            continue
         all_resource_ids.add(resource_template.resource_id)
 
     # Delete templates that no longer exist

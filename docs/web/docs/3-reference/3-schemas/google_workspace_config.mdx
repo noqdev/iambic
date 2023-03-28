@@ -1,0 +1,46 @@
+# GoogleWorkspaceConfig
+
+## Properties
+
+- **`workspaces`** *(array)*
+  - **Items**: Refer to *[#/definitions/GoogleProject](#definitions/GoogleProject)*.
+## Definitions
+
+
+<a id="definitions/GoogleSubject"></a>
+
+- **`GoogleSubject`** *(object)*
+  - **`domain`** *(string)*
+  - **`service_account`** *(string)*
+
+<a id="definitions/Variable"></a>
+
+- **`Variable`** *(object)*
+  - **`key`** *(string)*
+  - **`value`** *(string)*
+
+<a id="definitions/IambicManaged"></a>
+
+- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+
+<a id="definitions/GoogleProject"></a>
+
+- **`GoogleProject`** *(object)*
+  - **`project_id`** *(string)*
+  - **`project_name`** *(string)*
+  - **`subjects`** *(array)*
+    - **Items**: Refer to *[#/definitions/GoogleSubject](#definitions/GoogleSubject)*.
+  - **`type`** *(string)*
+  - **`private_key_id`** *(string)*
+  - **`private_key`** *(string)*
+  - **`client_email`** *(string)*
+  - **`client_id`** *(string)*
+  - **`auth_uri`** *(string)*
+  - **`token_uri`** *(string)*
+  - **`auth_provider_x509_cert_url`** *(string)*
+  - **`client_x509_cert_url`** *(string)*
+  - **`variables`** *(array)*: A list of variables to be used when creating templates. Default: `[]`.
+    - **Items**: Refer to *[#/definitions/Variable](#definitions/Variable)*.
+  - **`iambic_managed`**: Controls the directionality of iambic changes. Default: `"undefined"`.
+    - **All of**
+      - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.

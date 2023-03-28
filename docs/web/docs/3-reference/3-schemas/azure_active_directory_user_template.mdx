@@ -25,9 +25,18 @@ configurations for other models used in IAMbic.*
     - : Refer to *[#/definitions/UserTemplateProperties](#definitions/UserTemplateProperties)*.
 ## Definitions
 
-- <a id="definitions/IambicManaged"></a>**`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
-- <a id="definitions/UserStatus"></a>**`UserStatus`**: An enumeration. Must be one of: `["active", "provisioned", "deprovisioned"]`.
-- <a id="definitions/UserTemplateProperties"></a>**`UserTemplateProperties`** *(object)*: A base model class that provides additional helper methods and
+
+<a id="definitions/IambicManaged"></a>
+
+- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+
+<a id="definitions/UserStatus"></a>
+
+- **`UserStatus`**: An enumeration. Must be one of: `["active", "provisioned", "deprovisioned"]`.
+
+<a id="definitions/UserTemplateProperties"></a>
+
+- **`UserTemplateProperties`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic.
   - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
   - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.

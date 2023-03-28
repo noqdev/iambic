@@ -60,7 +60,7 @@
       ]
     },
     "properties": {
-      "$ref": "#/definitions/GroupTemplateProperties"
+      "$ref": "#/definitions/GroupProperties"
     }
   },
   "required": [
@@ -252,8 +252,8 @@
         "ANYONE_CAN_VIEW"
       ]
     },
-    "GroupTemplateProperties": {
-      "title": "GroupTemplateProperties",
+    "GroupProperties": {
+      "title": "GroupProperties",
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {

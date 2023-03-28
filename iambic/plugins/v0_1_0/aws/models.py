@@ -348,7 +348,7 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
         return session
 
     async def set_identity_center_details(
-        self, set_identity_center_map: bool = True
+        self, set_identity_center_map: bool = True, batch_size: int = 35
     ) -> None:
         if self.identity_center_details:
             region = self.identity_center_details.region_name
@@ -388,7 +388,13 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
                 InstanceArn=self.identity_center_details.instance_arn,
             )
             if permission_set_arns:
-                permission_set_detail_semaphore = NoqSemaphore(boto_crud_call, 35)
+                # WARNING
+                # current implementation does not do well if there is permission set
+                # destruction interleave between earlier paginated_search and the sub-
+                # sequent describe-permission-set
+                permission_set_detail_semaphore = NoqSemaphore(
+                    boto_crud_call, batch_size
+                )
                 permission_set_details = await permission_set_detail_semaphore.process(
                     [
                         {
