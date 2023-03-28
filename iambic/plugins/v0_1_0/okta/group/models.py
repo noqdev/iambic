@@ -117,7 +117,8 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
             return template_changes
 
         for okta_organization in config.organizations:
-            # if evaluate_on_google_account(self, account):
+            if self.idp_name != okta_organization.idp_name:
+                continue
             if ctx.execute:
                 log_str = "Applying changes to resource."
             else:

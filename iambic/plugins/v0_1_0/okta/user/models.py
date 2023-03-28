@@ -99,6 +99,8 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
             return template_changes
 
         for okta_organization in config.organizations:
+            if self.idp_name != okta_organization.idp_name:
+                continue
             if ctx.execute:
                 log_str = "Applying changes to resource."
             else:

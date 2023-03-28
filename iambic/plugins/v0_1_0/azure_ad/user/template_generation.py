@@ -97,6 +97,9 @@ async def generate_user_templates(
         resource_template = await update_or_create_user_template(
             user, existing_template_map
         )
+        if not resource_template:
+            # Template not updated. Most likely because it's an `enforced` template.
+            continue
         all_resource_ids.add(resource_template.resource_id)
 
     # Delete templates that no longer exist
