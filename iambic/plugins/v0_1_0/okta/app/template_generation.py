@@ -84,6 +84,9 @@ async def generate_app_templates(
         resource_template = await update_or_create_app_template(
             app, existing_template_map
         )
+        if not resource_template:
+            # Template not updated. Most likely because it's a write_only template.
+            continue
         all_resource_ids.add(resource_template.resource_id)
 
     # Delete templates that no longer exist

@@ -17,7 +17,7 @@ from iambic.config.utils import (
 from iambic.config.wizard import ConfigurationWizard
 from iambic.core.context import ctx
 from iambic.core.git import clone_git_repos
-from iambic.core.iambic_enum import Command
+from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage, TemplateChangeDetails
 from iambic.core.parser import load_templates
@@ -145,12 +145,45 @@ def run_clone_repos(repo_dir: str = str(pathlib.Path.cwd())):
     default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
+def apply_iambic_managed(
+    repo_dir: str,
+):
+    run_apply_iambic_managed(repo_dir)
+
+
+def run_apply_iambic_managed(
+    repo_dir: str,
+):
+    # Gather all templates that are managed by iambic
+    config_path = asyncio.run(resolve_config_template_path(repo_dir))
+    config = asyncio.run(load_config(config_path))
+    template_paths = asyncio.run(gather_templates(repo_dir))
+    templates = load_templates(template_paths)
+    iambic_managed_templates = [
+        t.file_path for t in templates if t.iambic_managed == IambicManaged.WRITE_ONLY
+    ]
+    if not iambic_managed_templates:
+        return
+    ctx.eval_only = False  # Forced apply
+    run_apply(config, iambic_managed_templates)
+
+
+@cli.command()
+@click.option(
+    "--repo-dir",
+    "-d",
+    "repo_dir",
+    required=False,
+    type=click.Path(exists=True),
+    default=os.getenv("IAMBIC_REPO_DIR"),
+    help="The repo directory containing the templates. Example: ~/iambic-templates",
+)
 @click.option(
     "--force",
     "-f",
     is_flag=True,
     show_default=True,
-    help="Apply changes without asking for permission?",
+    help="Apply changes without asking for permission",
 )
 @click.argument(
     "templates",

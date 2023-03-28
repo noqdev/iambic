@@ -37,6 +37,18 @@
             "justMyCode": true
         },
         {
+            "name": "Iambic: Apply IAMbic Managed Templates",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "args": [
+                "apply-iambic-managed",
+            ],
+            "envFile": "${workspaceFolder}/.env",
+            "justMyCode": true
+        },
+        {
             "name": "Iambic: Git-Apply",
             "type": "python",
             "request": "launch",

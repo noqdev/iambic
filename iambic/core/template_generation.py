@@ -6,6 +6,7 @@ from typing import Union
 import xxhash
 
 from iambic.core import noq_json as json
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import AccessModelMixin, BaseModel, BaseTemplate, ProviderChild
 from iambic.core.parser import load_templates
@@ -481,6 +482,9 @@ def create_or_update_template(
     # iambic-specific knowledge requires us to load the existing template
     # because it will not be reflected by AWS API.
     if existing_template := existing_template_map.get(identifier, None):
+        if existing_template.iambic_managed == IambicManaged.WRITE_ONLY:
+            # If the template is marked as WRITE_ONLY, we should not update it during import.
+            return
         merged_template = merge_model(
             new_template, existing_template, all_provider_children
         )
