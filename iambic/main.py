@@ -240,6 +240,9 @@ def run_apply(
         execution_id=str(uuid.uuid4()), command=Command.APPLY
     )
     if not templates:
+        if not enforced_only:
+            log.error("Please pass in specific templates to apply.")
+            return template_changes
         templates = asyncio.run(gather_templates(repo_dir))
     templates = load_templates(templates)
     if enforced_only:
