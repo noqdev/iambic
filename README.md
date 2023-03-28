@@ -26,7 +26,7 @@ Here are some examples showcasing IAMbic's capabilities:
 
 Create a Cloudwatch role with static permissions across three accounts, dynamically generating role names based on the account the role is deployed to. This template would
 result in the creation of three roles: "dev_cloudwatch",
-"staging_cloudwatch", and "prod_cloudwatch" on the respective AWS accounts.
+"staging_cloudwatch", and "prod_cloudwatch" on the respective AWS accounts. See the [Getting Started guide for AWS](https://iambic.org/getting_started/aws) for more information.
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
@@ -72,7 +72,7 @@ properties:
 
 ### AWS Dynamic Permissions
 
-Create a BackendDeveloperRole with varying permissions based on the AWS account:
+Create a BackendDeveloperRole with varying permissions based on the AWS account. See the [Getting Started guide for AWS](https://iambic.org/getting_started/aws) for more information.
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
@@ -127,10 +127,11 @@ properties:
 
 ### Okta Application Assignments
 
-Manage Okta application assignments, including expiration dates for specific users:
+Manage Okta application assignments, including expiration dates for specific users. See the [Getting Started guide for Okta](https://iambic.org/getting_started/okta) for more information.
 
 ```yaml
 template_type: NOQ::Okta::App
+idp_name: development
 properties:
   name: Salesforce.com
   assignments:
@@ -138,20 +139,19 @@ properties:
     - user: username2@example.com
     - user: username3@example.com
       expires_at: 2023-09-01T00:00 UTC
-  idp_name: development
   status: ACTIVE
 ```
 
 ### Okta Group Assignments
 
-Easily manage Okta group assignments with expiration dates for members:
+Easily manage Okta group assignments with expiration dates for members. See the [Getting Started guide for Okta](https://iambic.org/getting_started/okta) for more information.
 
 ```yaml
 template_type: NOQ::Okta::Group
+idp_name: main
 properties:
   name: engineering_interns
   description: Engineering Interns
-  idp_name: main
   members:
     - username: intern1@example.com
       expires_at: 2023-09-01 # Interns last day
@@ -160,11 +160,10 @@ properties:
 
 ```
 
-### Okta User Attributes (TODO)
-
 ### Google Group Assignments
 
-Manage Google Workspace group assignments, including temporary access for external users:
+Manage Google Workspace group assignments, including temporary access for external users. See the [Getting Started guide for Google
+Workspace](https://iambic.org/getting_started/google) for more information.
 
 ```yaml
 template_type: NOQ::GoogleWorkspace::Group
@@ -179,6 +178,22 @@ properties:
     - email: external_user@gmail.com
     - email: some_engineer@example.com
       expires_at: 2023-03-05
+```
+
+### Azure Active Directory Group Assignments
+
+Manage Azure Active Directory users, groups, and group assignments, including temporary access for external users. See the [Getting Started guide for Azure AD](https://iambic.org/getting_started/azure_ad) for more information.
+
+```yaml
+template_type: NOQ::AzureAD::Group
+idp_name: development
+properties:
+  name: iambic_test_group
+  description: A test group to use with IAMbic
+  members:
+    - name: user@example.com
+      data_type: user
+      expires_at: tomorrow
 ```
 
 ## IAMbic - Beta Software
@@ -206,11 +221,5 @@ IAMbic is licensed under the AGPL-3.0 license. Commercial licenses and support a
 ### Provider Plugins
 
 Provider Plugins (Such as the AWS, Okta, Azure Active Directory, and Google Workspace plugins) are licensed under Apache 2. You are free to write your own provider plugins for internal services without releasing its source code.
-
-### License
-
-IAMbic is licensed with AGPLv3.
-
-IAMBic plugins are licensed under Apache License, Version 2.0.
 
 For more information, please visit [iambic.org](https://iambic.org/license).
