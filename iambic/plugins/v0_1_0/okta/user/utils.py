@@ -131,13 +131,18 @@ async def change_user_status(
     if user.status == new_status:
         return response
 
+    if user.status:
+        current_status = user.status.value
+    else:
+        current_status = None
+
     response.append(
         ProposedChange(
             change_type=ProposedChangeType.UPDATE,
             resource_id=user.user_id,
             resource_type=user.resource_type,
             attribute="status",
-            current_value=user.status,
+            current_value=current_status,
             new_value=new_status,
         )
     )
