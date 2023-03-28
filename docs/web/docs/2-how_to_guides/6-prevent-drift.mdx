@@ -1,0 +1,58 @@
+---
+title: Preventing Drift
+---
+
+IAMbic provides a two-way sync between your Git repository and your cloud environment, ensuring that changes made in Git are reflected in the cloud,
+and visa-versa.
+
+However, there may be instances where you want to prevent out-of-band changes to resources that should only be managed through IAMbic.
+This is where `iambic_managed: enforced` mode comes in.
+
+By adding `iambic_managed: enforced` at the top-level of an IAMbic template, IAMbic will ensure that any out-of-band changes to the resource are
+reverted to the state that is defined in Git.
+
+## Example use cases:
+
+1. IT administrators mistakenly added a user to the sensitive `cloud_admins` group in Okta. Typically, months could pass before
+we detect this change. If we specify `iambic_managed: enforced` in this particular template,
+IAMbic ensures that the state of the cloud represents what is in Git.
+
+```yaml
+template_type: NOQ::Okta::Group
+iambic_managed: enforced
+idp_name: development
+properties:
+  name: cloud_admins
+  description: Cloud Administrators
+  members:
+    - username: user1@example.com
+    - username: user2@example.com
+```
+
+2. DevOps maintains team roles across multiple AWS accounts, but a user with IAM permissions on one of the accounts makes changes to to these
+roles in the cloud console. It's difficult to ensure that these permissions are always in sync with IaC, and it's likely that removing the
+permissions would cause disruption or breakage.
+
+Here is an example of a read_only role with `iambic_managed` mode set to `enforced`:
+
+```yaml
+template_type: NOQ::AWS::IAM::Role
+iambic_managed: enforced
+identifier: '{{account_name}}_readonly'
+properties:
+  description: Standard ReadOnly Role
+  assume_role_policy_document:
+    statement:
+      - action:
+          - sts:AssumeRole
+          - sts:TagSession
+        effect: Allow
+        principal:
+          aws: arn:aws:iam::12345:role/role1
+    version: '2012-10-17'
+  managed_policies:
+    - policy_arn: arn:aws:iam::aws:policy/ReadOnlyAccess
+  role_name: '{{account_name}}_readonly'
+  tags:
+    - key: owner
+      value: cloud_admins@example.com
