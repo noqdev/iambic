@@ -1,0 +1,86 @@
+{
+  "title": "AzureADConfig",
+  "type": "object",
+  "properties": {
+    "organizations": {
+      "title": "Organizations",
+      "description": "A list of Azure Active Directory organizations.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/AzureADOrganization"
+      }
+    }
+  },
+  "required": [
+    "organizations"
+  ],
+  "definitions": {
+    "IambicManaged": {
+      "title": "IambicManaged",
+      "description": "An enumeration.",
+      "enum": [
+        "undefined",
+        "read_and_write",
+        "import_only",
+        "disabled"
+      ]
+    },
+    "AzureADOrganization": {
+      "title": "AzureADOrganization",
+      "type": "object",
+      "properties": {
+        "idp_name": {
+          "title": "Idp Name",
+          "type": "string"
+        },
+        "tenant_id": {
+          "title": "Tenant Id",
+          "type": "string"
+        },
+        "client_id": {
+          "title": "Client Id",
+          "type": "string"
+        },
+        "client_secret": {
+          "title": "Client Secret",
+          "type": "string",
+          "writeOnly": true,
+          "format": "password"
+        },
+        "request_timeout": {
+          "title": "Request Timeout",
+          "default": 60,
+          "type": "integer"
+        },
+        "client": {
+          "title": "Client"
+        },
+        "access_token": {
+          "title": "Access Token",
+          "default": "",
+          "type": "string"
+        },
+        "iambic_managed": {
+          "default": "undefined",
+          "allOf": [
+            {
+              "$ref": "#/definitions/IambicManaged"
+            }
+          ]
+        },
+        "require_user_mfa_on_create": {
+          "title": "Require User Mfa On Create",
+          "description": "If true, at next sign-in, the user must perform a multi-factor authentication (MFA) before being forced to change their password.",
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "idp_name",
+        "tenant_id",
+        "client_id",
+        "client_secret"
+      ]
+    }
+  }
+}

@@ -64,7 +64,7 @@
       "type": "string"
     },
     "properties": {
-      "$ref": "#/definitions/AWSIdentityCenterPermissionSetProperties"
+      "$ref": "#/definitions/PermissionSetProperties"
     },
     "access_rules": {
       "title": "Accessrules",
@@ -776,8 +776,8 @@
         "value"
       ]
     },
-    "AWSIdentityCenterPermissionSetProperties": {
-      "title": "AWSIdentityCenterPermissionSetProperties",
+    "PermissionSetProperties": {
+      "title": "PermissionSetProperties",
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
