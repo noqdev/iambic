@@ -145,7 +145,7 @@ def setup_iambic_test_details(request, data: dict):
     for aws_account in IAMBIC_TEST_DETAILS.config.aws.accounts:
         if aws_account.identity_center_details:
             IAMBIC_TEST_DETAILS.identity_center_account = aws_account
-            asyncio.run(aws_account.set_identity_center_details())
+            asyncio.run(aws_account.set_identity_center_details(batch_size=5))
             break
 
     def teardown():

@@ -33,17 +33,22 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
         asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
         sleep(5)
         asyncio.run(
-            IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
+            IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details(
+                batch_size=5
+            )
         )
 
     @classmethod
     def tearDownClass(cls):
         sleep(5)
-        asyncio.run(
-            IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
-        )
         cls.template.deleted = True
         asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
+        sleep(5)
+        asyncio.run(
+            IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details(
+                batch_size=5
+            )
+        )
 
     async def test_update_description(self):
         self.template.properties.description = "Updated description"
