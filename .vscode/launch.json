@@ -81,6 +81,19 @@
             "justMyCode": true
         },
         {
+            "name": "Iambic: Apply IAMbic Enforced-Mode Templates",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "args": [
+                "apply",
+                "--enforced-only"
+            ],
+            "envFile": "${workspaceFolder}/.env",
+            "justMyCode": true
+        },
+        {
             "name": "Iambic: Git-Apply",
             "type": "python",
             "request": "launch",

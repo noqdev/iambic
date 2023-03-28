@@ -10,6 +10,10 @@ from iambic.core.models import ExecutionMessage
 
 
 class ConfigDiscoveryTestCase(IsolatedAsyncioTestCase):
+    # this test suite cannot tolerate parallel modification of cloud resources
+    # for example, in the middle of getting ready, if a collect_aws_permission_sets
+    # interleaves with permission set removal, it will fail.
+
     async def test_aws_account_name_updated(self):
         exe_message = ExecutionMessage(
             execution_id=str(uuid.uuid4()),
@@ -43,6 +47,7 @@ class ConfigDiscoveryTestCase(IsolatedAsyncioTestCase):
         await config.run_discover_upstream_config_changes(
             exe_message, IAMBIC_TEST_DETAILS.template_dir_path
         )
+
         self.assertEqual(len(config.aws.accounts), original_aws_count)
         self.assertIn(
             removed_account.account_id,

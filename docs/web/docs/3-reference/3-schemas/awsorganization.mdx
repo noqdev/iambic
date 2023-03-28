@@ -21,13 +21,25 @@
   - **Items**: Refer to *[#/definitions/AWSOrgAccountRule](#definitions/AWSOrgAccountRule)*.
 ## Definitions
 
-- <a id="definitions/RegionName"></a>**`RegionName`**: An enumeration. Must be one of: `["us-east-1", "us-west-1", "us-west-2", "eu-west-1", "eu-west-2", "eu-central-1", "ap-southeast-1", "ap-southeast-2", "ap-northeast-1", "ap-northeast-2", "sa-east-1"]`.
-- <a id="definitions/AWSIdentityCenter"></a>**`AWSIdentityCenter`** *(object)*
+
+<a id="definitions/RegionName"></a>
+
+- **`RegionName`**: An enumeration. Must be one of: `["us-east-1", "us-west-1", "us-west-2", "eu-west-1", "eu-west-2", "eu-central-1", "ap-southeast-1", "ap-southeast-2", "ap-northeast-1", "ap-northeast-2", "sa-east-1"]`.
+
+<a id="definitions/AWSIdentityCenter"></a>
+
+- **`AWSIdentityCenter`** *(object)*
   - **`region`**: Region identity center is configured on. Default: `"us-east-1"`.
     - **All of**
       - : Refer to *[#/definitions/RegionName](#definitions/RegionName)*.
-- <a id="definitions/IambicManaged"></a>**`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
-- <a id="definitions/BaseAWSOrgRule"></a>**`BaseAWSOrgRule`** *(object)*: A base model class that provides additional helper methods and
+
+<a id="definitions/IambicManaged"></a>
+
+- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+
+<a id="definitions/BaseAWSOrgRule"></a>
+
+- **`BaseAWSOrgRule`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic.
   - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
   - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
@@ -35,7 +47,10 @@ configurations for other models used in IAMbic.
   - **`iambic_managed`**: Controls the directionality of iambic changes. Default: `"undefined"`.
     - **All of**
       - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
-- <a id="definitions/AWSOrgAccountRule"></a>**`AWSOrgAccountRule`** *(object)*: A base model class that provides additional helper methods and
+
+<a id="definitions/AWSOrgAccountRule"></a>
+
+- **`AWSOrgAccountRule`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic.
   - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
   - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
