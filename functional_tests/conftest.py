@@ -111,7 +111,10 @@ def generate_templates_fixture(request):
         load_config(IAMBIC_TEST_DETAILS.config_path)
     )
 
-    if not FUNCTIONAL_TEST_TEMPLATE_DIR:
+    session = request.node
+    aws_node_ids = [item.nodeid for item in session.items if "aws" in item.nodeid]
+
+    if not FUNCTIONAL_TEST_TEMPLATE_DIR and len(aws_node_ids) > 0:
         exe_message = ExecutionMessage(
             execution_id=str(uuid.uuid4()), command=Command.IMPORT
         )
