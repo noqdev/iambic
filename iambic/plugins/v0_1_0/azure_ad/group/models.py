@@ -197,8 +197,10 @@ class GroupTemplateProperties(ExpiryModel, BaseModel):
     @classmethod
     def from_azure_response(cls, azure_response: dict):
         azure_response = normalize_dict_keys(azure_response)
+        # Filter unwanted keys
         group_id = azure_response.pop("id")
         name = azure_response.pop("display_name")
+        azure_response = {x: y for x, y in azure_response.items() if not x.startswith('@odata')}
         return cls(
             group_id=group_id,
             name=name,
