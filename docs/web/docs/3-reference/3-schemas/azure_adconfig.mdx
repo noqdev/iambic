@@ -1,0 +1,27 @@
+# AzureADConfig
+
+## Properties
+
+- **`organizations`** *(array)*: A list of Azure Active Directory organizations.
+  - **Items**: Refer to *[#/definitions/AzureADOrganization](#definitions/AzureADOrganization)*.
+## Definitions
+
+
+<a id="definitions/IambicManaged"></a>
+
+- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+
+<a id="definitions/AzureADOrganization"></a>
+
+- **`AzureADOrganization`** *(object)*
+  - **`idp_name`** *(string)*
+  - **`tenant_id`** *(string)*
+  - **`client_id`** *(string)*
+  - **`client_secret`** *(string)*
+  - **`request_timeout`** *(integer)*: Default: `60`.
+  - **`client`**
+  - **`access_token`** *(string)*: Default: `""`.
+  - **`iambic_managed`**: Default: `"undefined"`.
+    - **All of**
+      - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
+  - **`require_user_mfa_on_create`** *(boolean)*: If true, at next sign-in, the user must perform a multi-factor authentication (MFA) before being forced to change their password. Default: `false`.

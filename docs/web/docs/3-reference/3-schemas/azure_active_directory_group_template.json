@@ -152,7 +152,6 @@
         }
       },
       "required": [
-        "id",
         "name",
         "data_type"
       ]
@@ -271,8 +270,7 @@
         }
       },
       "required": [
-        "name",
-        "mail_nickname"
+        "name"
       ]
     }
   }

@@ -7,14 +7,14 @@ toc_max_heading_level: 5
 Template Language
 -----------------
 
-IAMbic's powerful templatizing feature allows you to use double curly brackets to 
-reference attributes. The backend employs Jinja2 templating to load each template 
+IAMbic's powerful templatizing feature allows you to use double curly brackets to
+reference attributes. The backend employs Jinja2 templating to load each template
 and apply the following variables:
 
 * `account_name`: always set to the name of the account being processed.
 * `account_id`: always set to the account ID of the account being processed.
 
-In addition to the hard-coded references always available for substitutions, you 
+In addition to the hard-coded references always available for substitutions, you
 can define your own variables to be substituted for each account.
 
 For example, the AWSAccount model, which defines AWS accounts:
@@ -31,7 +31,7 @@ class AWSAccount:
     spoke_role_arn
 ```
 
-has an optional variables field that can store a list of Variable model objects. Each Variable 
+has an optional variables field that can store a list of Variable model objects. Each Variable
 model object is a simple object that declares a key and a value:
 
 ```
@@ -73,7 +73,7 @@ properties:
 
 ```
 
-In the example above, we use the {{account_name}} placeholder to dynamically set the identifier and role_name 
+In the example above, we use the {{account_name}} placeholder to dynamically set the identifier and role_name
 fields for each account managed by IAMbic. If IAMbic manages 10 accounts, this role would exist in all ten accounts.
 
 For a closer look, let's examine the first few accounts and their templatized role identifiers using the {{account_name}} substitution:
@@ -88,5 +88,5 @@ For a closer look, let's examine the first few accounts and their templatized ro
     identifier: staging_readonly
     ...
 
-Templatizing each template ensures the presence of a group resource or any resource across a set of accounts. 
+Templatizing each template ensures the presence of a group resource or any resource across a set of accounts.
 To control which account has the role, use the included_accounts and excluded_accounts attributes.

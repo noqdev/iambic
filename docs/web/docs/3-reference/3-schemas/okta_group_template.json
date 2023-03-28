@@ -64,13 +64,19 @@
       "description": "Properties for the Okta Group",
       "allOf": [
         {
-          "$ref": "#/definitions/OktaGroupTemplateProperties"
+          "$ref": "#/definitions/GroupProperties"
         }
       ]
+    },
+    "idp_name": {
+      "title": "Idpname",
+      "description": "Name of the identity provider that's associated with the group",
+      "type": "string"
     }
   },
   "required": [
-    "properties"
+    "properties",
+    "idp_name"
   ],
   "definitions": {
     "IambicManaged": {
@@ -156,8 +162,8 @@
         "username"
       ]
     },
-    "OktaGroupTemplateProperties": {
-      "title": "OktaGroupTemplateProperties",
+    "GroupProperties": {
+      "title": "GroupProperties",
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
@@ -203,11 +209,6 @@
           "description": "Name of the group",
           "type": "string"
         },
-        "idp_name": {
-          "title": "Idpname",
-          "description": "Name of the identity provider that's associated with the group",
-          "type": "string"
-        },
         "group_id": {
           "title": "Groupid",
           "description": "Unique Group ID for the group. Usually it's {idp-name}-{name}",
@@ -235,8 +236,7 @@
         }
       },
       "required": [
-        "name",
-        "idp_name"
+        "name"
       ]
     }
   }
