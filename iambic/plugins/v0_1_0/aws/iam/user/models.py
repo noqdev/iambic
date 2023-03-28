@@ -35,6 +35,10 @@ AWS_IAM_USER_TEMPLATE_TYPE = "NOQ::AWS::IAM::User"
 
 class Group(ExpiryModel, AccessModel):
     group_name: str
+    arn: str = Field("", description="ARN of the group", exclude=True)
+    create_date: str = Field("", description="Date the group was created", exclude=True)
+    group_id: str = Field("", description="ID of the group", exclude=True)
+    path: str = Field("", description="Path of the group", exclude=True)
 
     @property
     def resource_type(self):

@@ -64,7 +64,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
     template_type = OKTA_APP_TEMPLATE_TYPE
     properties: AppProperties = Field(..., description="Properties for the Okta App")
     owner: Optional[str] = Field(None, description="Owner of the app")
-    idp_name: str = Field(
+    idp_name: Optional[str] = Field(
         ...,
         description="Name of the identity provider that's associated with the group",
     )

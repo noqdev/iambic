@@ -289,10 +289,12 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
     assume_role_arn: Optional[str] = Field(
         None,
         description="The role arn to assume into when making calls to the account",
+        exclude=True,
     )
     role_access_tag: Optional[str] = Field(
         None,
         description="The role access tag to use when making calls to the account",
+        exclude=True,
     )
 
     class Config:
@@ -554,6 +556,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
     org_name: Optional[str] = Field(
         None,
         description="Optional friendly name for the organization",
+        exclude=True,
     )
     org_id: str = Field(
         None,
