@@ -114,6 +114,73 @@ class GroupTemplateProperties(ExpiryModel, BaseModel):
         [], description="A list of users in the group"
     )
 
+    classification: Optional[str] = Field(
+        None, description="Classification of the group", exclude=True,
+    )
+    created_date_time: Optional[str] = Field(
+        None, description="Date and time when the group was created", exclude=True,
+    )
+    creation_options: Optional[List[str]] = Field(
+        None, description="Specifies the group type and its membership", exclude=True,
+    )
+    deleted_date_time: Optional[str] = Field(
+        None, description="Date and time when the group was deleted", exclude=True,
+    )
+    expiration_date_time: Optional[str] = Field(
+        None, description="Date and time when the group expires", exclude=True,
+    )
+    membership_rule_processing_state: Optional[str] = Field(
+        None,
+        description="Indicates whether the group is a dynamic group or not",
+        exclude=True,
+    )
+    on_premises_domain_name: Optional[str] = Field(
+        None, description="Domain name of the group", exclude=True,
+    )
+    on_premises_last_sync_date_time: Optional[str] = Field(
+        None, description="Date and time when the group was last synced", exclude=True,
+    )
+    on_premises_net_bios_name: Optional[str] = Field(
+        None, description="NetBIOS name of the group", exclude=True,
+    )
+    on_premises_provisioning_errors: Optional[List[str]] = Field(
+        None, description="Provisioning errors of the group", exclude=True,
+    )
+    on_premises_sam_account_name: Optional[str] = Field(
+        None, description="SAM account name of the group", exclude=True,
+    )
+    on_premises_security_identifier: Optional[str] = Field(
+        None, description="Security identifier of the group", exclude=True,
+    )
+    on_premises_sync_enabled: Optional[bool] = Field(
+        None, description="Indicates whether the group is synced or not", exclude=True,
+    )
+    preferred_data_location: Optional[str] = Field(
+        None, description="Preferred data location of the group", exclude=True,
+    )
+    preferred_language: Optional[str] = Field(
+        None, description="Preferred language of the group", exclude=True,
+    )
+    proxy_addresses: Optional[List[str]] = Field(
+        None, description="Proxy addresses of the group", exclude=True,
+    )
+    renewed_date_time: Optional[str] = Field(
+        None, description="Date and time when the group was renewed", exclude=True,
+    )
+    resource_behavior_options: Optional[List[str]] = Field(
+        None, description="Resource behavior options of the group", exclude=True,
+    )
+    resource_provisioning_options: Optional[List[str]] = Field(
+        None, description="Resource provisioning options of the group", exclude=True,
+    )
+    security_identifier: Optional[str] = Field(
+        None, description="Security identifier of the group", exclude=True,
+    )
+    theme: Optional[str] = Field(None, description="Theme of the group", exclude=True,)
+    visibility: Optional[str] = Field(
+        None, description="Visibility of the group", exclude=True,
+    )
+
     def __init__(self, **data):
         if "mail_nickname" not in data:
             data["mail_nickname"] = data.get("name")
