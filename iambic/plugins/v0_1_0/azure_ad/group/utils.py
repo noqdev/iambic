@@ -63,9 +63,6 @@ async def list_group_members(
             return_exceptions=True,
         )
     )
-    invalid = [m for m in user_members if isinstance(m, ValidationError)]
-    if invalid:
-        log.error(f"Validation errors: {invalid}")
     group.members = [
         Member(id=member.user_id, name=member.username, data_type=MemberDataType.USER)
         for member in user_members

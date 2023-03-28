@@ -291,11 +291,6 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
         description="The role arn to assume into when making calls to the account",
         exclude=True,
     )
-    role_access_tag: Optional[str] = Field(
-        None,
-        description="The role access tag to use when making calls to the account",
-        exclude=True,
-    )
 
     class Config:
         fields = {"hub_session_info": {"exclude": True}}
