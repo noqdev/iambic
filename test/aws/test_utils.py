@@ -6,7 +6,7 @@ import yaml
 from iambic.core.context import ctx
 from iambic.core.utils import evaluate_on_provider
 from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate
-from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.models import AwsAccount
 
 TEMPLATE_UNDER_TEST = """
 template_type: NOQ::AWS::IAM::Role
@@ -44,22 +44,22 @@ def eval_only_context():
     [
         (
             resource_under_test,
-            AWSAccount(account_id="123456789012", account_name="something"),
+            AwsAccount(account_id="123456789012", account_name="something"),
             False,
         ),
         (
             resource_under_test,
-            AWSAccount(account_id="123456789012", account_name="dev"),
+            AwsAccount(account_id="123456789012", account_name="dev"),
             True,
         ),
         (
             resource_under_test,
-            AWSAccount(account_id="123456789012", account_name="development"),
+            AwsAccount(account_id="123456789012", account_name="development"),
             False,
         ),
         (
             resource_under_test,
-            AWSAccount(account_id="123456789012", account_name="regex1"),
+            AwsAccount(account_id="123456789012", account_name="regex1"),
             True,
         ),
     ],

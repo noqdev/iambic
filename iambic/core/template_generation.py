@@ -16,7 +16,7 @@ from iambic.core.utils import (
     is_regex_match,
     sanitize_string,
 )
-from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.models import AwsAccount
 
 
 async def get_existing_template_map(repo_dir: str, template_type: str) -> dict:
@@ -32,8 +32,8 @@ async def get_existing_template_map(repo_dir: str, template_type: str) -> dict:
     return {template.resource_id: template for template in templates}
 
 
-def templatize_resource(aws_account: AWSAccount, resource):
-    # TODO: Move away from AWSAccount to a provider agnostic implementation
+def templatize_resource(aws_account: AwsAccount, resource):
+    # TODO: Move away from AwsAccount to a provider agnostic implementation
     resource_type = type(resource)
 
     if isinstance(resource, dict) or isinstance(resource, list):
@@ -73,7 +73,7 @@ def base_group_int_attribute(account_vals: dict) -> dict[int, list[dict[str, str
 
 
 async def base_group_str_attribute(
-    aws_account_map: dict[str, AWSAccount], account_resources: list[dict]
+    aws_account_map: dict[str, AwsAccount], account_resources: list[dict]
 ) -> dict[str, list]:
     """Groups a string attribute by a shared name across of aws_accounts
 
@@ -83,7 +83,7 @@ async def base_group_str_attribute(
     Call group_int_or_str_attribute instead unless you need to transform this response.
     An example would be grouping role names for generating the template where you need to keep the file_path ref.
 
-    :param aws_account_map: dict(account_id:str = AWSAccount)
+    :param aws_account_map: dict(account_id:str = AwsAccount)
     :param account_resources: list[dict(account_id:str, resources=list[dict(resource_val: str, **)])]
     :return: dict(attribute_val: str = list[dict(resource_val: str, account_id: str, **)])
     """
@@ -98,7 +98,7 @@ async def base_group_str_attribute(
     The reverse of resource_val_map which is an int representing the elem with a list of all resource_val reprs
         Under elem_resource_val_map
     """
-    # TODO: Move away from AWSAccount to a provider agnostic implementation
+    # TODO: Move away from AwsAccount to a provider agnostic implementation
     for account_resource_elem, account_resource in enumerate(account_resources):
         account_resources[account_resource_elem]["resource_val_map"] = dict()
         account_resources[account_resource_elem]["elem_resource_val_map"] = dict()
@@ -195,7 +195,7 @@ async def base_group_str_attribute(
 
 
 async def base_group_dict_attribute(
-    aws_account_map: dict[str, AWSAccount],
+    aws_account_map: dict[str, AwsAccount],
     account_resources: list[dict],
     prefer_templatized=False,  # clarification that this keyword parameter has no impact at the moment
 ) -> list[dict]:
@@ -204,7 +204,7 @@ async def base_group_dict_attribute(
     Call group_dict_attribute instead unless you need to transform this response.
     An example would be tags which also contain access_rules.
 
-    :param aws_account_map: dict(account_id:str = AWSAccount)
+    :param aws_account_map: dict(account_id:str = AwsAccount)
     :param account_resources: list[dict(account_id:str, resources=list[dict])]
     :return: list[dict(included_accounts: str, resource_val=list[dict]|dict)]
     """
@@ -216,7 +216,7 @@ async def base_group_dict_attribute(
     Create a reverse of resource_hash_map which is an int representing the elem with a list of all resource_hash reprs
         Under elem_resource_hash_map
     """
-    # TODO: Move away from AWSAccount to a provider agnostic implementation
+    # TODO: Move away from AwsAccount to a provider agnostic implementation
     hash_map = dict()
 
     for account_resource_elem, account_resource in enumerate(account_resources):
@@ -333,7 +333,7 @@ async def base_group_dict_attribute(
 
 
 async def set_included_accounts_for_grouped_attribute(
-    aws_account_map: dict[str, AWSAccount],
+    aws_account_map: dict[str, AwsAccount],
     number_of_accounts_resource_on: int,
     grouped_attribute,
 ) -> Union[list, dict]:
@@ -344,7 +344,7 @@ async def set_included_accounts_for_grouped_attribute(
     :param grouped_attribute:
     :return:
     """
-    # TODO: Move away from AWSAccount to a provider agnostic implementation
+    # TODO: Move away from AwsAccount to a provider agnostic implementation
     if isinstance(grouped_attribute, dict):  # via base_group_str_attribute
         for k, resource_vals in grouped_attribute.items():
             if len(resource_vals) == number_of_accounts_resource_on:
@@ -376,7 +376,7 @@ async def set_included_accounts_for_grouped_attribute(
 
 
 async def group_int_or_str_attribute(
-    aws_account_map: dict[str, AWSAccount],
+    aws_account_map: dict[str, AwsAccount],
     number_of_accounts_resource_on: int,
     account_resources: Union[dict, list[dict]],
     key: Union[int, str],
@@ -389,7 +389,7 @@ async def group_int_or_str_attribute(
     :param key: Used to form the list[dict] response when there are multiple values for the attribute.
     :return:
     """
-    # TODO: Move away from AWSAccount to a provider agnostic implementation
+    # TODO: Move away from AwsAccount to a provider agnostic implementation
     if isinstance(account_resources, list):
         grouped_attribute = await base_group_str_attribute(
             aws_account_map, account_resources
@@ -415,7 +415,7 @@ async def group_int_or_str_attribute(
 
 
 async def group_dict_attribute(
-    aws_account_map: dict[str, AWSAccount],
+    aws_account_map: dict[str, AwsAccount],
     number_of_accounts_resource_on: int,
     account_resources: list[dict],
     is_dict_attr: bool = True,
@@ -430,7 +430,7 @@ async def group_dict_attribute(
     :return:
     """
 
-    # TODO: Move away from AWSAccount to a provider agnostic implementation
+    # TODO: Move away from AwsAccount to a provider agnostic implementation
     response = []
     grouped_attributes = await set_included_accounts_for_grouped_attribute(
         aws_account_map,

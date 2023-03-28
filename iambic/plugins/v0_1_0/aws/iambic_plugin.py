@@ -22,14 +22,14 @@ from iambic.plugins.v0_1_0.aws.iam.user.models import AwsIamUserTemplate
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AwsIdentityCenterPermissionSetTemplate,
 )
-from iambic.plugins.v0_1_0.aws.models import AWSAccount, AWSOrganization
+from iambic.plugins.v0_1_0.aws.models import AwsAccount, AwsOrganization
 
 
-class AWSConfig(BaseModel):
-    organizations: list[AWSOrganization] = Field(
+class AwsConfig(BaseModel):
+    organizations: list[AwsOrganization] = Field(
         [], description="A list of AWS Organizations to be managed by iambic"
     )
-    accounts: list[AWSAccount] = Field(
+    accounts: list[AwsAccount] = Field(
         [], description="A list of AWS Accounts to be managed by iambic"
     )
     min_accounts_required_for_wildcard_included_accounts: int = Field(
@@ -102,7 +102,7 @@ class AWSConfig(BaseModel):
 IAMBIC_PLUGIN = ProviderPlugin(
     config_name="aws",
     version=PLUGIN_VERSION,
-    provider_config=AWSConfig,
+    provider_config=AwsConfig,
     async_apply_callable=apply,
     async_import_callable=import_aws_resources,
     async_load_callable=load,

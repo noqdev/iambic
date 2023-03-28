@@ -24,7 +24,7 @@ from iambic.plugins.v0_1_0.aws.iam.group.utils import (
 )
 from iambic.plugins.v0_1_0.aws.iam.models import Path
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
-from iambic.plugins.v0_1_0.aws.models import AccessModel, AWSAccount, AWSTemplate
+from iambic.plugins.v0_1_0.aws.models import AccessModel, AwsAccount, AWSTemplate
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
 
 AWS_IAM_GROUP_TEMPLATE_TYPE = "NOQ::AWS::IAM::Group"
@@ -84,7 +84,7 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
         description="Properties of the group",
     )
 
-    def _is_iambic_import_only(self, aws_account: AWSAccount):
+    def _is_iambic_import_only(self, aws_account: AwsAccount):
         return (
             "aws-service-group" in self.properties.path
             or aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
@@ -92,7 +92,7 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
         )
 
     async def _apply_to_account(  # noqa: C901
-        self, aws_account: AWSAccount
+        self, aws_account: AwsAccount
     ) -> AccountChangeDetails:
         boto3_session = await aws_account.get_boto3_session()
         client = boto3_session.client(

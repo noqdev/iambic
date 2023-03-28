@@ -18,8 +18,8 @@
 * [OktaAppTemplate](schemas/okta_app_template.md)
 
 # Config Models
-* [AWSAccount](schemas/awsaccount.md)
-* [AWSOrganization](schemas/awsorganization.md)
+* [AwsAccount](schemas/awsaccount.md)
+* [AwsOrganization](schemas/awsorganization.md)
 * [Config](schemas/config.md)
 * [ExtendsConfig](schemas/extends_config.md)
 * [Variable](schemas/variable.md)

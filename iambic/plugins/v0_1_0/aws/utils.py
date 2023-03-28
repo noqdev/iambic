@@ -14,7 +14,7 @@ from iambic.core.logger import log
 from iambic.core.utils import aio_wrapper
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.v0_1_0.aws.iambic_plugin import AwsConfig
 
 
 def calculate_import_preference(existing_template):
@@ -271,11 +271,11 @@ async def set_org_account_variables(client, account: dict) -> dict:
     return account
 
 
-async def get_aws_account_map(config: AWSConfig) -> dict:
+async def get_aws_account_map(config: AwsConfig) -> dict:
     """Returns a map containing all enabled account configs across all provided config instances
 
     :param config:
-    :return: dict(account_id:str = AWSAccount)
+    :return: dict(account_id:str = AwsAccount)
     """
     aws_account_map = dict()
     for aws_account in config.accounts:

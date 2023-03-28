@@ -9,8 +9,8 @@ from botocore.stub import Stubber
 from moto import mock_s3
 
 from iambic.core.iambic_enum import IambicManaged
-from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
-from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.iambic_plugin import AwsConfig
+from iambic.plugins.v0_1_0.aws.models import AwsAccount
 from iambic.plugins.v0_1_0.aws.utils import (
     boto3_retry,
     create_assume_role_session,
@@ -211,30 +211,30 @@ class TestCreateAssumeRoleSession(IsolatedAsyncioTestCase):
 
 class TestGetAWSAccountMap(IsolatedAsyncioTestCase):
     async def test_get_aws_account_map(self):
-        # Create example AWSConfig
+        # Create example AwsConfig
         accounts = [
-            AWSAccount(
+            AwsAccount(
                 account_id="123456789012",
                 iambic_managed=IambicManaged.READ_AND_WRITE,
                 account_name="test_account_2",
             ),
-            AWSAccount(
+            AwsAccount(
                 account_id="223456789012",
                 iambic_managed=IambicManaged.READ_AND_WRITE,
                 account_name="test_account_3",
             ),
-            AWSAccount(
+            AwsAccount(
                 account_id="323456789012",
                 iambic_managed=IambicManaged.READ_AND_WRITE,
                 account_name="test_account_4",
             ),
-            AWSAccount(
+            AwsAccount(
                 account_id="423456789012",
                 iambic_managed=IambicManaged.READ_AND_WRITE,
                 account_name="test_account_5",
             ),
         ]
-        config = AWSConfig(accounts=accounts)
+        config = AwsConfig(accounts=accounts)
 
         # Call the get_aws_account_map function
         account_map = await get_aws_account_map(config)
@@ -246,30 +246,30 @@ class TestGetAWSAccountMap(IsolatedAsyncioTestCase):
             self.assertEqual(account_map[account.account_id], account)
 
     async def test_get_aws_account_map_iambic_managed_disabled(self):
-        # Create example AWSConfig
+        # Create example AwsConfig
         accounts = [
-            AWSAccount(
+            AwsAccount(
                 account_id="123456789012",
                 iambic_managed=IambicManaged.READ_AND_WRITE,
                 account_name="test_account_2",
             ),
-            AWSAccount(
+            AwsAccount(
                 account_id="223456789012",
                 iambic_managed=IambicManaged.DISABLED,
                 account_name="test_account_3",
             ),
-            AWSAccount(
+            AwsAccount(
                 account_id="323456789012",
                 iambic_managed=IambicManaged.READ_AND_WRITE,
                 account_name="test_account_4",
             ),
-            AWSAccount(
+            AwsAccount(
                 account_id="423456789012",
                 iambic_managed=IambicManaged.READ_AND_WRITE,
                 account_name="test_account_5",
             ),
         ]
-        config = AWSConfig(accounts=accounts)
+        config = AwsConfig(accounts=accounts)
 
         # Call the get_aws_account_map function
         account_map = await get_aws_account_map(config)
@@ -282,35 +282,35 @@ class TestGetAWSAccountMap(IsolatedAsyncioTestCase):
                 self.assertEqual(account_map[account.account_id], account)
 
     async def test_get_aws_account_map_duplicate_account_id(self):
-        # Create example AWSConfig
+        # Create example AwsConfig
         accounts = [
-            AWSAccount(
+            AwsAccount(
                 account_id="123456789012",
                 iambic_managed=IambicManaged.READ_AND_WRITE,
                 account_name="test_account_2",
             ),
-            AWSAccount(
+            AwsAccount(
                 account_id="123456789012",
                 iambic_managed=IambicManaged.READ_AND_WRITE,
                 account_name="test_account_2_duplicate",
             ),
-            AWSAccount(
+            AwsAccount(
                 account_id="223456789012",
                 iambic_managed=IambicManaged.READ_AND_WRITE,
                 account_name="test_account_3",
             ),
-            AWSAccount(
+            AwsAccount(
                 account_id="323456789012",
                 iambic_managed=IambicManaged.READ_AND_WRITE,
                 account_name="test_account_4",
             ),
-            AWSAccount(
+            AwsAccount(
                 account_id="423456789012",
                 iambic_managed=IambicManaged.READ_AND_WRITE,
                 account_name="test_account_5",
             ),
         ]
-        config = AWSConfig()
+        config = AwsConfig()
         config.accounts = accounts
 
         # Call the get_aws_account_map function and check for ValueError due to duplicate account_id

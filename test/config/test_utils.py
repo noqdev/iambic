@@ -10,10 +10,10 @@ import pytest
 from iambic.config.dynamic_config import Config
 from iambic.config.utils import check_and_update_resource_limit
 from iambic.core.iambic_enum import IambicManaged
-from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+from iambic.plugins.v0_1_0.aws.iambic_plugin import AwsConfig
 from iambic.plugins.v0_1_0.aws.models import (
-    AWSAccount,
-    AWSOrganization,
+    AwsAccount,
+    AwsOrganization,
     BaseAWSOrgRule,
     get_hub_role_arn,
     get_spoke_role_arn,
@@ -35,9 +35,9 @@ def repo_path(request):
 @pytest.fixture
 def config(repo_path):
     account_id = "123456789012"
-    aws_config = AWSConfig(
+    aws_config = AwsConfig(
         organizations=[
-            AWSOrganization(
+            AwsOrganization(
                 org_id="test_org_uuid",
                 org_name="test_org_name",
                 default_rule=BaseAWSOrgRule(),
@@ -47,7 +47,7 @@ def config(repo_path):
             ),
         ],
         accounts=[
-            AWSAccount(
+            AwsAccount(
                 account_id=account_id,
                 org_id="test_org_uuid",
                 account_name="test_account_name",

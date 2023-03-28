@@ -48,7 +48,7 @@ from iambic.core.utils import (
 
 if TYPE_CHECKING:
     from iambic.config.dynamic_config import Config
-    from iambic.plugins.v0_1_0.aws.models import AWSAccount
+    from iambic.plugins.v0_1_0.aws.models import AwsAccount
 
     MappingIntStrAny = typing.Mapping[int | str, Any]
     AbstractSetIntStr = typing.AbstractSet[int | str]
@@ -154,14 +154,14 @@ class BaseModel(IambicPydanticBaseModel):
 
     def get_attribute_val_for_account(
         self,
-        aws_account: AWSAccount,
+        aws_account: AwsAccount,
         attr: str,
         as_boto_dict: bool = True,
     ):
         """
         Retrieve the value of an attribute for a specific AWS account.
 
-        :param aws_account: The AWSAccount object for which the attribute value should be retrieved.
+        :param aws_account: The AwsAccount object for which the attribute value should be retrieved.
         :param attr: The attribute name (supports nested attributes via dot notation, e.g., properties.tags).
         :param as_boto_dict: If True, the value will be transformed to a boto dictionary if applicable.
         :return: The attribute value for the specified AWS account.
@@ -197,7 +197,7 @@ class BaseModel(IambicPydanticBaseModel):
         else:
             return matching_definitions
 
-    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
+    def _apply_resource_dict(self, aws_account: AwsAccount = None) -> dict:
         exclude_keys = {
             "deleted",
             "expires_at",
@@ -233,7 +233,7 @@ class BaseModel(IambicPydanticBaseModel):
 
         return {self.case_convention(k): v for k, v in resource_dict.items()}
 
-    def apply_resource_dict(self, aws_account: AWSAccount) -> dict:
+    def apply_resource_dict(self, aws_account: AwsAccount) -> dict:
         response = self._apply_resource_dict(aws_account)
         variables = {var.key: var.value for var in aws_account.variables}
         variables["account_id"] = aws_account.account_id

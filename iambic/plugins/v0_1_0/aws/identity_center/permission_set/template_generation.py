@@ -31,7 +31,7 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
     get_permission_set_details,
     get_permission_set_users_and_groups,
 )
-from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.models import AwsAccount
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
@@ -41,7 +41,7 @@ from iambic.plugins.v0_1_0.aws.utils import (
 # TODO: Update partial import to support permission set only being deleted on a single org
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.v0_1_0.aws.iambic_plugin import AwsConfig
 
 RESOURCE_DIR = ["identity_center", "permission_set"]
 
@@ -67,7 +67,7 @@ def get_templated_permission_set_file_path(
 
 
 async def gather_permission_set_names(
-    aws_accounts: list[AWSAccount],
+    aws_accounts: list[AwsAccount],
     detect_messages: list[PermissionSetMessageDetails],
 ) -> list[str]:
     sso_admin_client_map = {
@@ -142,7 +142,7 @@ def _sorted_and_clean_access_rules(unsorted_rules: list) -> list:
 
 
 async def create_templated_permission_set(  # noqa: C901
-    aws_account_map: dict[str, AWSAccount],
+    aws_account_map: dict[str, AwsAccount],
     permission_set_name: str,
     permission_set_refs: list[dict],
     permission_set_dir: str,
@@ -373,7 +373,7 @@ async def create_templated_permission_set(  # noqa: C901
 
 async def collect_aws_permission_sets(
     exe_message: ExecutionMessage,
-    config: AWSConfig,
+    config: AwsConfig,
     base_output_dir: str,
     detect_messages: list[PermissionSetMessageDetails] = None,
 ):
@@ -504,7 +504,7 @@ async def collect_aws_permission_sets(
 
 async def generate_aws_permission_set_templates(
     exe_message: ExecutionMessage,
-    config: AWSConfig,
+    config: AwsConfig,
     base_output_dir: str,
     detect_messages: list[PermissionSetMessageDetails] = None,
 ):

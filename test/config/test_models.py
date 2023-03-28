@@ -4,11 +4,11 @@ import pytest
 from pydantic import ValidationError
 
 from iambic.config.dynamic_config import Config
-from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+from iambic.plugins.v0_1_0.aws.iambic_plugin import AwsConfig
 from iambic.plugins.v0_1_0.aws.models import (
     AWSIdentityCenter,
     AWSOrgAccountRule,
-    AWSOrganization,
+    AwsOrganization,
     BaseAWSOrgRule,
 )
 
@@ -33,7 +33,7 @@ def test_combine_extended_configs(config_file_path):
 
 def test_aws_config_instantiate_with_organizations():
     organizations = [
-        AWSOrganization(
+        AwsOrganization(
             org_id="o-123456789",
             org_account_id="123456789012",
             identity_center=AWSIdentityCenter(
@@ -44,13 +44,13 @@ def test_aws_config_instantiate_with_organizations():
             hub_role_arn="arn:aws:iam::123456789012:role/hub_role",
         )
     ]
-    config = AWSConfig(organizations=organizations)
+    config = AwsConfig(organizations=organizations)
     assert config.organizations == organizations
 
 
 def test_aws_config_raises_error_for_multiple_configured():
     organizations = [
-        AWSOrganization(
+        AwsOrganization(
             org_id="o-123456789",
             org_account_id="123456789012",
             identity_center=AWSIdentityCenter(
@@ -60,7 +60,7 @@ def test_aws_config_raises_error_for_multiple_configured():
             account_rules=[AWSOrgAccountRule(account_id="123456789012")],
             hub_role_arn="arn:aws:iam::123456789012:role/hub_role",
         ),
-        AWSOrganization(
+        AwsOrganization(
             org_id="o-234567891",
             org_account_id="234567890123",
             identity_center=AWSIdentityCenter(
@@ -72,8 +72,8 @@ def test_aws_config_raises_error_for_multiple_configured():
         ),
     ]
     with pytest.raises(ValidationError) as e:
-        AWSConfig(organizations=organizations)
+        AwsConfig(organizations=organizations)
     assert str(e.value) == (
-        "1 validation error for AWSConfig\norganizations\n  Only one AWS "
+        "1 validation error for AwsConfig\norganizations\n  Only one AWS "
         "Organization is supported at this time. (type=value_error)"
     )

@@ -46,7 +46,7 @@ class ProviderPlugin(PydanticBaseModel):
     provider_config: Any = Field(
         description="The Pydantic model that is attached to the Config."
         "This will contain the provider specific configuration."
-        "These are things like the AWSAccount model, OktaOrganization or GoogleProject."
+        "These are things like the AwsAccount model, OktaOrganization or GoogleProject."
     )
     async_load_callable: Any = Field(
         description="The function that is called to load any dynamic metadata used by the provider."

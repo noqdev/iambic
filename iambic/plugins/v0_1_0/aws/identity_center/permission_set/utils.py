@@ -11,7 +11,7 @@ from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper, async_batch_processor, plugin_apply_wrapper
-from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.models import AwsAccount
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, legacy_paginated_search
 
 
@@ -32,7 +32,7 @@ async def get_permission_set_details(
         return {}
 
 
-async def generate_permission_set_map(aws_accounts: list[AWSAccount], templates: list):
+async def generate_permission_set_map(aws_accounts: list[AwsAccount], templates: list):
     """Generates the map of permission sets for AWS accounts that are referenced in at least 1 template
 
     :param aws_accounts:

@@ -27,7 +27,7 @@ from iambic.plugins.v0_1_0.aws.iam.user.utils import (
     delete_iam_user,
     get_user,
 )
-from iambic.plugins.v0_1_0.aws.models import AccessModel, AWSAccount, AWSTemplate, Tag
+from iambic.plugins.v0_1_0.aws.models import AccessModel, AwsAccount, AWSTemplate, Tag
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
 
 AWS_IAM_USER_TEMPLATE_TYPE = "NOQ::AWS::IAM::User"
@@ -126,7 +126,7 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
         description="Properties of the user",
     )
 
-    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
+    def _apply_resource_dict(self, aws_account: AwsAccount = None) -> dict:
         response = super(AwsIamUserTemplate, self)._apply_resource_dict(aws_account)
         if "Tags" not in response:
             response["Tags"] = []
@@ -141,14 +141,14 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
 
         return response
 
-    def _is_iambic_import_only(self, aws_account: AWSAccount):
+    def _is_iambic_import_only(self, aws_account: AwsAccount):
         return (
             aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
             or self.iambic_managed == IambicManaged.IMPORT_ONLY
         )
 
     async def _apply_to_account(  # noqa: C901
-        self, aws_account: AWSAccount
+        self, aws_account: AwsAccount
     ) -> AccountChangeDetails:
         boto3_session = await aws_account.get_boto3_session()
         client = boto3_session.client(

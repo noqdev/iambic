@@ -53,13 +53,13 @@ from iambic.plugins.v0_1_0.aws.iam.role.models import (
     AWS_IAM_ROLE_TEMPLATE_TYPE,
     AwsIamRoleTemplate,
 )
-from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+from iambic.plugins.v0_1_0.aws.iambic_plugin import AwsConfig
 from iambic.plugins.v0_1_0.aws.models import (
     ARN_RE,
     IAMBIC_SPOKE_ROLE_NAME,
-    AWSAccount,
+    AwsAccount,
     AWSIdentityCenter,
-    AWSOrganization,
+    AwsOrganization,
     BaseAWSOrgRule,
     Partition,
     get_hub_role_arn,
@@ -616,7 +616,7 @@ class ConfigurationWizard:
 
         ctx.command = current_command
 
-    async def sync_config_aws_accounts(self, accounts: list[AWSAccount]):
+    async def sync_config_aws_accounts(self, accounts: list[AwsAccount]):
         if not (
             len(self.config.aws.accounts)
             > self.config.aws.min_accounts_required_for_wildcard_included_accounts
@@ -745,9 +745,10 @@ class ConfigurationWizard:
             not self.config.aws.accounts and not self.config.aws.organizations
         )
         requires_sync = bool(
-            not is_hub_account and (
-                    len(self.config.aws.accounts)
-                    > self.config.aws.min_accounts_required_for_wildcard_included_accounts
+            not is_hub_account
+            and (
+                len(self.config.aws.accounts)
+                > self.config.aws.min_accounts_required_for_wildcard_included_accounts
             )
         )
 
@@ -839,7 +840,7 @@ class ConfigurationWizard:
                 )
                 return
 
-        account = AWSAccount(
+        account = AwsAccount(
             account_id=account_id,
             account_name=account_name,
             spoke_role_arn=get_spoke_role_arn(account_id),
@@ -850,9 +851,7 @@ class ConfigurationWizard:
             account.hub_role_arn = get_hub_role_arn(account_id)
         # account.partition = set_aws_account_partition(account.partition)
 
-        confirm_command_exe(
-            "AWS Account", Operation.ADDED, requires_sync=requires_sync
-        )
+        confirm_command_exe("AWS Account", Operation.ADDED, requires_sync=requires_sync)
 
         self.config.aws.accounts.append(account)
 
@@ -1026,7 +1025,7 @@ class ConfigurationWizard:
             log.error("Failed to create the required IAMbic roles. Exiting.")
             sys.exit(0)
 
-        aws_org = AWSOrganization(
+        aws_org = AwsOrganization(
             org_id=org_id,
             org_account_id=account_id,
             region=org_region,
@@ -1601,7 +1600,7 @@ class ConfigurationWizard:
                 region=region,
             )
 
-    def configuration_wizard_change_detection_setup(self, aws_org: AWSOrganization):
+    def configuration_wizard_change_detection_setup(self, aws_org: AwsOrganization):
         if not questionary.confirm(
             "To setup change detection for iambic requires "
             "creating CloudFormation stacks "
@@ -1659,7 +1658,7 @@ class ConfigurationWizard:
             log.info("The config wizard requires the IAMbic AWS plugin.")
             return
         elif not self.config.aws:
-            self.config.aws = AWSConfig()
+            self.config.aws = AwsConfig()
 
         while True:
             choices = ["AWS", "Done"]

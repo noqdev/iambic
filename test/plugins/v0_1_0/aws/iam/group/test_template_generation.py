@@ -21,8 +21,8 @@ from iambic.plugins.v0_1_0.aws.iam.group.template_generation import (
     generate_group_resource_file_for_all_accounts,
     get_response_dir,
 )
-from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
-from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.iambic_plugin import AwsConfig
+from iambic.plugins.v0_1_0.aws.models import AwsAccount
 
 TEST_TEMPLATE_DIR = "resources/aws/iam/group"
 TEST_TEMPLATE_PATH = "resources/aws/iam/group/example_groupname.yaml"
@@ -59,7 +59,7 @@ def mock_execution_message():
 
 @pytest.fixture
 def mock_aws_account():
-    account = AWSAccount(
+    account = AwsAccount(
         account_id="123456789012",
         account_name="example_account",
         hub_role_arn="arn:aws:iam::123456789012:role/example-hub-role",
@@ -124,7 +124,7 @@ async def test_collect_aws_groups(
     mock_aws_account,
 ):
     _, templates_base_dir = mock_fs
-    config = AWSConfig(accounts=[mock_aws_account])
+    config = AwsConfig(accounts=[mock_aws_account])
     await collect_aws_groups(mock_execution_message, config, templates_base_dir)
     output_path = (
         f"{templates_base_dir}/.iambic/fake_execution_id/iam/group/output.json"
@@ -143,7 +143,7 @@ async def test_generate_aws_group_templates(
     mock_aws_account,
 ):
     _, templates_base_dir = mock_fs
-    config = AWSConfig(accounts=[mock_aws_account])
+    config = AwsConfig(accounts=[mock_aws_account])
     # have to call collect_aws_groups to prep the cloud response
     await collect_aws_groups(mock_execution_message, config, templates_base_dir)
     # actually call the function being tested

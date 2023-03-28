@@ -28,19 +28,19 @@ from iambic.plugins.v0_1_0.aws.iam.policy.utils import (
     get_managed_policy_across_accounts,
     list_managed_policies,
 )
-from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.models import AwsAccount
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
 )
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.v0_1_0.aws.iambic_plugin import AwsConfig
 
 RESOURCE_DIR = ["iam", "managed_policy"]
 
 
-def get_response_dir(exe_message: ExecutionMessage, aws_account: AWSAccount) -> str:
+def get_response_dir(exe_message: ExecutionMessage, aws_account: AwsAccount) -> str:
     if exe_message.provider_id:
         return exe_message.get_directory(*RESOURCE_DIR)
     else:
@@ -55,7 +55,7 @@ def get_templated_managed_policy_file_path(
     managed_policy_dir: str,
     policy_name: str,
     included_accounts: list[str],
-    account_map: dict[str, AWSAccount],
+    account_map: dict[str, AwsAccount],
 ):
     if len(included_accounts) > 1:
         separator = "multi_account"
@@ -75,7 +75,7 @@ def get_templated_managed_policy_file_path(
 
 async def generate_account_managed_policy_resource_files(
     exe_message: ExecutionMessage,
-    aws_account: AWSAccount,
+    aws_account: AwsAccount,
 ) -> dict:
     account_resource_dir = get_response_dir(exe_message, aws_account)
     resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
@@ -122,7 +122,7 @@ async def generate_account_managed_policy_resource_files(
 
 async def generate_managed_policy_resource_file_for_all_accounts(
     exe_message: ExecutionMessage,
-    aws_accounts: list[AWSAccount],
+    aws_accounts: list[AwsAccount],
     policy_path: str,
     policy_name: str,
 ) -> list:
@@ -178,12 +178,12 @@ async def generate_managed_policy_resource_file_for_all_accounts(
 
 
 async def create_templated_managed_policy(  # noqa: C901
-    aws_account_map: dict[str, AWSAccount],
+    aws_account_map: dict[str, AwsAccount],
     managed_policy_name: str,
     managed_policy_refs: list[dict],
     managed_policy_dir: str,
     existing_template_map: dict,
-    config: AWSConfig,
+    config: AwsConfig,
 ):
     min_accounts_required_for_wildcard_included_accounts = (
         config.min_accounts_required_for_wildcard_included_accounts
@@ -300,7 +300,7 @@ async def create_templated_managed_policy(  # noqa: C901
 
 async def collect_aws_managed_policies(
     exe_message: ExecutionMessage,
-    config: AWSConfig,
+    config: AwsConfig,
     base_output_dir: str,
     detect_messages: list[ManagedPolicyMessageDetails] = None,
 ):
@@ -437,7 +437,7 @@ async def collect_aws_managed_policies(
 
 async def generate_aws_managed_policy_templates(
     exe_message: ExecutionMessage,
-    config: AWSConfig,
+    config: AwsConfig,
     base_output_dir: str,
     detect_messages: list[ManagedPolicyMessageDetails] = None,
 ):

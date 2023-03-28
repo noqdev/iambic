@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from iambic.core.template_generation import merge_model
 from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate, RoleProperties
-from iambic.plugins.v0_1_0.aws.models import AWSAccount, Description
+from iambic.plugins.v0_1_0.aws.models import AwsAccount, Description
 
 
-def test_merge_role_template_without_sid(aws_accounts: list[AWSAccount]):
+def test_merge_role_template_without_sid(aws_accounts: list[AwsAccount]):
     existing_properties = {
         "role_name": "bar",
         "inline_policies": [
@@ -56,7 +56,7 @@ def test_merge_role_template_without_sid(aws_accounts: list[AWSAccount]):
     )
 
 
-def test_merge_role_template_access_rules(aws_accounts: list[AWSAccount]):
+def test_merge_role_template_access_rules(aws_accounts: list[AwsAccount]):
     existing_properties = {
         "role_name": "bar",
         "inline_policies": [
@@ -126,7 +126,7 @@ def test_merge_role_template_access_rules(aws_accounts: list[AWSAccount]):
     assert merged_document.access_rules == existing_document.access_rules
 
 
-def test_merge_role_with_forked_policy(aws_accounts: list[AWSAccount]):
+def test_merge_role_with_forked_policy(aws_accounts: list[AwsAccount]):
     prod_accounts = [
         account.account_name
         for account in aws_accounts
@@ -209,7 +209,7 @@ def test_merge_role_with_forked_policy(aws_accounts: list[AWSAccount]):
             assert sorted(inline_policy.included_accounts) == sorted(non_prod_accounts)
 
 
-def test_merge_role_with_access_preservation(aws_accounts: list[AWSAccount]):
+def test_merge_role_with_access_preservation(aws_accounts: list[AwsAccount]):
     prod_accounts = [
         account.account_name
         for account in aws_accounts
@@ -308,7 +308,7 @@ def test_merge_role_with_access_preservation(aws_accounts: list[AWSAccount]):
             assert inline_policy.expires_at == non_prod_expires_at
 
 
-def test_merge_role_with_assignment_resolution(aws_accounts: list[AWSAccount]):
+def test_merge_role_with_assignment_resolution(aws_accounts: list[AwsAccount]):
     account_names = [account.account_name for account in aws_accounts]
     non_prod_accounts = [
         account_name for account_name in account_names if "prod" not in account_name
@@ -370,7 +370,7 @@ def test_merge_role_with_assignment_resolution(aws_accounts: list[AWSAccount]):
     assert "prod*" in inline_policy.included_accounts
 
 
-def test_merge_role_with_new_excluded_account(aws_accounts: list[AWSAccount]):
+def test_merge_role_with_new_excluded_account(aws_accounts: list[AwsAccount]):
     prod_accounts = [
         account.account_name
         for account in aws_accounts
@@ -429,7 +429,7 @@ def test_merge_role_with_new_excluded_account(aws_accounts: list[AWSAccount]):
     assert inline_policy.excluded_accounts == [removed_account]
 
 
-def test_merge_role_with_multiple_access_removals(aws_accounts: list[AWSAccount]):
+def test_merge_role_with_multiple_access_removals(aws_accounts: list[AwsAccount]):
     all_accounts = [account.account_name for account in aws_accounts]
     dev_accounts = [account for account in all_accounts if "dev" in account]
     non_dev_accounts = [account for account in all_accounts if "dev" not in account]

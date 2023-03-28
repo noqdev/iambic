@@ -32,7 +32,7 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
 )
 from iambic.plugins.v0_1_0.aws.models import (
     AccessModel,
-    AWSAccount,
+    AwsAccount,
     AWSTemplate,
     Description,
     ExpiryModel,
@@ -41,7 +41,7 @@ from iambic.plugins.v0_1_0.aws.models import (
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.v0_1_0.aws.iambic_plugin import AwsConfig
 
 AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE = (
     "NOQ::AWS::IdentityCenter::PermissionSet"
@@ -237,7 +237,7 @@ class AwsIdentityCenterPermissionSetTemplate(
 
     async def _access_rules_for_account(  # noqa: C901
         self,
-        aws_account: AWSAccount,
+        aws_account: AwsAccount,
         account_id: str,
         account_name: str,
         reverse_user_map: dict[str, str],
@@ -349,7 +349,7 @@ class AwsIdentityCenterPermissionSetTemplate(
                 "group": list(group_assignments),
             }
 
-    async def _verbose_access_rules(self, aws_account: AWSAccount) -> list[dict]:
+    async def _verbose_access_rules(self, aws_account: AwsAccount) -> list[dict]:
         """
         Generates the list of access rules across all accounts for the org.
         Fans out calls to _access_rules_for_account and formats the results.
@@ -399,14 +399,14 @@ class AwsIdentityCenterPermissionSetTemplate(
 
         return response
 
-    def _is_read_only(self, aws_account: AWSAccount):
+    def _is_read_only(self, aws_account: AwsAccount):
         return bool(
             aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
             or self.iambic_managed == IambicManaged.IMPORT_ONLY
         )
 
     async def _apply_to_account(  # noqa: C901
-        self, aws_account: AWSAccount
+        self, aws_account: AwsAccount
     ) -> AccountChangeDetails:
         """Apply the permission set to the given AWS account
 
@@ -730,7 +730,7 @@ class AwsIdentityCenterPermissionSetTemplate(
         # If changes are detected they are to be executed then call provision_permission_set
         return account_change_details
 
-    async def apply(self, config: AWSConfig) -> TemplateChangeDetails:
+    async def apply(self, config: AwsConfig) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
             resource_id=self.resource_id,

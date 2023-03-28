@@ -31,19 +31,19 @@ from iambic.plugins.v0_1_0.aws.iam.group.utils import (
     get_group_managed_policies,
     list_groups,
 )
-from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.models import AwsAccount
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
 )
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.v0_1_0.aws.iambic_plugin import AwsConfig
 
 RESOURCE_DIR = ["iam", "group"]
 
 
-def get_response_dir(exe_message: ExecutionMessage, aws_account: AWSAccount) -> str:
+def get_response_dir(exe_message: ExecutionMessage, aws_account: AwsAccount) -> str:
     if exe_message.provider_id:
         return exe_message.get_directory(*RESOURCE_DIR)
     else:
@@ -78,7 +78,7 @@ def get_templated_group_file_path(
 
 async def generate_account_group_resource_files(
     exe_message: ExecutionMessage,
-    aws_account: AWSAccount,
+    aws_account: AwsAccount,
 ) -> dict:
     account_group_response_dir = get_response_dir(exe_message, aws_account)
     group_resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
@@ -121,7 +121,7 @@ async def generate_account_group_resource_files(
 
 
 async def generate_group_resource_file_for_all_accounts(
-    exe_message: ExecutionMessage, aws_accounts: list[AWSAccount], group_name: str
+    exe_message: ExecutionMessage, aws_accounts: list[AwsAccount], group_name: str
 ) -> list:
     account_group_response_dir_map = {
         aws_account.account_id: get_response_dir(exe_message, aws_account)
@@ -169,7 +169,7 @@ async def generate_group_resource_file_for_all_accounts(
 
 
 async def set_group_resource_inline_policies(
-    group_name: str, group_resource_path: str, aws_account: AWSAccount
+    group_name: str, group_resource_path: str, aws_account: AwsAccount
 ):
     iam_client = await aws_account.get_boto3_client("iam")
     group_inline_policies = await get_group_inline_policies(group_name, iam_client)
@@ -183,7 +183,7 @@ async def set_group_resource_inline_policies(
 
 
 async def set_group_resource_managed_policies(
-    group_name: str, group_resource_path: str, aws_account: AWSAccount
+    group_name: str, group_resource_path: str, aws_account: AwsAccount
 ):
     iam_client = await aws_account.get_boto3_client("iam")
     group_managed_policies = await get_group_managed_policies(group_name, iam_client)
@@ -205,12 +205,12 @@ async def _account_id_to_group_map(group_refs):
 
 
 async def create_templated_group(  # noqa: C901
-    aws_account_map: dict[str, AWSAccount],
+    aws_account_map: dict[str, AwsAccount],
     group_name: str,
     group_refs: list[dict],
     group_dir: str,
     existing_template_map: dict,
-    config: AWSConfig,
+    config: AwsConfig,
 ) -> AwsIamGroupTemplate:
     account_id_to_group_map = await _account_id_to_group_map(group_refs)
     num_of_accounts = len(group_refs)
@@ -314,7 +314,7 @@ async def create_templated_group(  # noqa: C901
 
 async def collect_aws_groups(
     exe_message: ExecutionMessage,
-    config: AWSConfig,
+    config: AwsConfig,
     base_output_dir: str,
     detect_messages: list[GroupMessageDetails] = None,
 ):
@@ -449,7 +449,7 @@ async def collect_aws_groups(
 
 async def generate_aws_group_templates(
     exe_message: ExecutionMessage,
-    config: AWSConfig,
+    config: AwsConfig,
     base_output_dir: str,
     detect_messages: list[GroupMessageDetails] = None,
 ):

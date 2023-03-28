@@ -14,12 +14,12 @@ from iambic.plugins.v0_1_0.aws.iam.role.template_generation import (
     get_template_dir,
 )
 from iambic.plugins.v0_1_0.aws.iam.role.utils import list_roles
-from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.models import AwsAccount
 
 
 def attach_access_rule(
     role_template: AwsIamRoleTemplate,
-    aws_account: AWSAccount,
+    aws_account: AwsAccount,
     exclude_accounts: int = 0,
 ) -> AwsIamRoleTemplate:
     users = [

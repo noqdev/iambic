@@ -11,7 +11,7 @@ from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper, plugin_apply_wrapper
-from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.models import AwsAccount
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, paginated_search
 
 
@@ -110,9 +110,9 @@ async def get_user(user_name: str, iam_client, include_policies: bool = True) ->
 
 
 async def get_user_across_accounts(
-    aws_accounts: list[AWSAccount], user_name: str, include_policies: bool = True
+    aws_accounts: list[AwsAccount], user_name: str, include_policies: bool = True
 ) -> dict:
-    async def get_user_for_account(aws_account: AWSAccount):
+    async def get_user_for_account(aws_account: AwsAccount):
         iam_client = await aws_account.get_boto3_client("iam")
         return {
             aws_account.account_id: await get_user(

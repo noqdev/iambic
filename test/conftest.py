@@ -17,23 +17,23 @@ from iambic.config.dynamic_config import (
 )
 from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
-from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
-from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.iambic_plugin import AwsConfig
+from iambic.plugins.v0_1_0.aws.models import AwsAccount
 
 
 @pytest.fixture(scope="session")
 def aws_accounts():
     return [
-        AWSAccount(account_id="123456789010", account_name="dev1"),
-        AWSAccount(account_id="123456789011", account_name="dev2"),
-        AWSAccount(account_id="123456789012", account_name="staging1"),
-        AWSAccount(account_id="123456789013", account_name="staging2"),
-        AWSAccount(account_id="123456789014", account_name="qa1"),
-        AWSAccount(account_id="123456789015", account_name="qa2"),
-        AWSAccount(account_id="123456789016", account_name="prod1"),
-        AWSAccount(account_id="123456789017", account_name="prod2"),
-        AWSAccount(account_id="123456789018", account_name="prod3"),
-        AWSAccount(account_id="123456789019", account_name="test"),
+        AwsAccount(account_id="123456789010", account_name="dev1"),
+        AwsAccount(account_id="123456789011", account_name="dev2"),
+        AwsAccount(account_id="123456789012", account_name="staging1"),
+        AwsAccount(account_id="123456789013", account_name="staging2"),
+        AwsAccount(account_id="123456789014", account_name="qa1"),
+        AwsAccount(account_id="123456789015", account_name="qa2"),
+        AwsAccount(account_id="123456789016", account_name="prod1"),
+        AwsAccount(account_id="123456789017", account_name="prod2"),
+        AwsAccount(account_id="123456789018", account_name="prod3"),
+        AwsAccount(account_id="123456789019", account_name="test"),
     ]
 
 
@@ -225,7 +225,7 @@ def test_config(test_config_path_two_accounts_plus_org):
         file_path=config_path,
         plugins=base_config.plugins,
         plugin_instances=all_plugins,
-        aws=AWSConfig(
+        aws=AwsConfig(
             region_name="us-west-2",
         ),
     )
@@ -242,7 +242,7 @@ def test_config(test_config_path_two_accounts_plus_org):
 
 @pytest.fixture(scope="function")
 def mock_aws_account_rw_secretsmanager_session(test_config):
-    test_config.aws = AWSAccount(
+    test_config.aws = AwsAccount(
         account_id="123456789012",
         account_name="test",
         iambic_managed="read_and_write",

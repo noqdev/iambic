@@ -38,7 +38,7 @@ from iambic.plugins.v0_1_0.aws.iam.role.utils import (
 )
 from iambic.plugins.v0_1_0.aws.models import (
     AccessModel,
-    AWSAccount,
+    AwsAccount,
     AWSTemplate,
     Description,
     Tag,
@@ -181,7 +181,7 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
         sorted_v = sorted(v, key=lambda d: d.access_model_sort_weight())
         return sorted_v
 
-    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
+    def _apply_resource_dict(self, aws_account: AwsAccount = None) -> dict:
         response = super(AwsIamRoleTemplate, self)._apply_resource_dict(aws_account)
         response.pop("RoleAccess", None)
         if "Tags" not in response:
@@ -209,7 +209,7 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
 
         return response
 
-    def _is_iambic_import_only(self, aws_account: AWSAccount):
+    def _is_iambic_import_only(self, aws_account: AwsAccount):
         return (
             "aws-service-role" in self.properties.path
             or aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
@@ -217,7 +217,7 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
         )
 
     async def _apply_to_account(  # noqa: C901
-        self, aws_account: AWSAccount
+        self, aws_account: AwsAccount
     ) -> AccountChangeDetails:
         boto3_session = await aws_account.get_boto3_session()
         client = boto3_session.client(

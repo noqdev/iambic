@@ -14,7 +14,7 @@ from iambic.core.utils import aio_wrapper, plugin_apply_wrapper
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, paginated_search
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.aws.models import AWSAccount
+    from iambic.plugins.v0_1_0.aws.models import AwsAccount
 
 
 async def get_group_inline_policy_names(group_name: str, iam_client):
@@ -95,9 +95,9 @@ async def get_group(group_name: str, iam_client, include_policies: bool = True) 
 
 
 async def get_group_across_accounts(
-    aws_accounts: list[AWSAccount], group_name: str, include_policies: bool = True
+    aws_accounts: list[AwsAccount], group_name: str, include_policies: bool = True
 ) -> dict:
-    async def get_group_for_account(aws_account: AWSAccount):
+    async def get_group_for_account(aws_account: AwsAccount):
         iam_client = await aws_account.get_boto3_client("iam")
         return {
             aws_account.account_id: await get_group(

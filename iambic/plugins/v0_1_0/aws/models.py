@@ -43,7 +43,7 @@ from iambic.plugins.v0_1_0.aws.utils import (
 yaml = YAML()
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.v0_1_0.aws.iambic_plugin import AwsConfig
 
 ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\*$"
 
@@ -262,7 +262,7 @@ class IdentityCenterDetails(PydanticBaseModel):
         return resource_map.get(resource_id)[name_map[resource_type]]
 
 
-class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
+class AwsAccount(ProviderChild, BaseAWSAccountAndOrgModel):
     account_id: constr(min_length=12, max_length=12) = Field(
         None, description="The AWS Account ID"
     )
@@ -450,7 +450,7 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
         else:
             exclude = required_exclude
 
-        resp = super(AWSAccount, self).dict(
+        resp = super(AwsAccount, self).dict(
             include=include,
             exclude=exclude,
             by_alias=by_alias,
@@ -540,7 +540,7 @@ class AWSIdentityCenter(PydanticBaseModel):
         return self.region if isinstance(self.region, str) else self.region.value
 
 
-class AWSOrganization(BaseAWSAccountAndOrgModel):
+class AwsOrganization(BaseAWSAccountAndOrgModel):
     org_id: str = Field(
         None,
         description="A unique identifier designating the identity of the organization",
@@ -566,8 +566,8 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
 
     async def _create_org_account_instance(
         self, account: dict, session: boto3.Session
-    ) -> Optional[AWSAccount]:
-        """Create an AWSAccount instance from an AWS Organization account and account dict
+    ) -> Optional[AwsAccount]:
+        """Create an AwsAccount instance from an AWS Organization account and account dict
 
         Evaluate rules to determine if the account should be added to the config and if it is a read-only account.
         """
@@ -590,7 +590,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         else:
             identity_center_details = None
 
-        aws_account = AWSAccount(
+        aws_account = AwsAccount(
             account_id=account_id,
             account_name=account_name,
             org_id=self.org_id,
@@ -612,7 +612,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
                 error=err,
             )
 
-    async def get_accounts(self) -> list[AWSAccount]:
+    async def get_accounts(self) -> list[AwsAccount]:
         """Get all accounts in an AWS Organization
 
         Also extends variables for accounts that are already in the config.
@@ -673,7 +673,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         else:
             exclude = {"boto3_session_map"}
 
-        resp = super(AWSOrganization, self).dict(
+        resp = super(AwsOrganization, self).dict(
             include=include,
             exclude=exclude,
             by_alias=by_alias,
@@ -691,10 +691,10 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
 class AWSTemplate(BaseTemplate, ExpiryModel):
     identifier: str
 
-    async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
+    async def _apply_to_account(self, aws_account: AwsAccount) -> AccountChangeDetails:
         raise NotImplementedError
 
-    async def apply(self, config: AWSConfig) -> TemplateChangeDetails:
+    async def apply(self, config: AwsConfig) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
             resource_id=self.resource_id,

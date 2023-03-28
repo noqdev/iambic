@@ -49,13 +49,13 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generatio
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
     generate_permission_set_map,
 )
-from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.models import AwsAccount
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.v0_1_0.aws.iambic_plugin import AwsConfig
 
 
-async def load(config: AWSConfig) -> AWSConfig:
+async def load(config: AwsConfig) -> AwsConfig:
     config_account_idx_map = {
         account.account_id: idx for idx, account in enumerate(config.accounts)
     }
@@ -106,7 +106,7 @@ async def load(config: AWSConfig) -> AWSConfig:
 
 async def apply(
     exe_message: ExecutionMessage,
-    config: AWSConfig,
+    config: AwsConfig,
     templates: list[BaseTemplate],
     remote_worker=None,
 ) -> list[TemplateChangeDetails]:
@@ -159,7 +159,7 @@ async def apply(
 
 async def import_service_resources(
     exe_message: ExecutionMessage,
-    config: AWSConfig,
+    config: AwsConfig,
     base_output_dir: str,
     service_name: str,
     async_collector_callables: list,
@@ -217,7 +217,7 @@ async def import_service_resources(
 
 async def import_identity_center_resources(
     exe_message: ExecutionMessage,
-    config: AWSConfig,
+    config: AwsConfig,
     base_output_dir: str,
     messages: list = None,
     remote_worker=None,
@@ -255,7 +255,7 @@ async def import_identity_center_resources(
 
 async def import_aws_resources(
     exe_message: ExecutionMessage,
-    config: AWSConfig,
+    config: AwsConfig,
     base_output_dir: str,
     messages: list = None,
     remote_worker=None,
@@ -297,7 +297,7 @@ async def import_aws_resources(
 
 
 async def detect_changes(  # noqa: C901
-    config: AWSConfig, repo_dir: str
+    config: AwsConfig, repo_dir: str
 ) -> Union[str, None]:
     if not config.sqs_cloudtrail_changes_queues:
         log.debug("No cloudtrail changes queue arn found. Returning")
@@ -524,7 +524,7 @@ async def detect_changes(  # noqa: C901
         return commit_message
 
 
-async def decode_aws_secret(config: AWSConfig, extend: ExtendsConfig) -> dict:
+async def decode_aws_secret(config: AwsConfig, extend: ExtendsConfig) -> dict:
     if extend.key.value != ExtendsConfigKey.AWS_SECRETS_MANAGER.value:
         return {}
 
@@ -548,7 +548,7 @@ async def decode_aws_secret(config: AWSConfig, extend: ExtendsConfig) -> dict:
             ][0]
             boto3_session = await hub_account.get_boto3_session()
 
-        secret_account = AWSAccount(
+        secret_account = AwsAccount(
             account_id=secret_account_id,
             account_name="Secret_Account",
             spoke_role_arn=assume_role_arn,
@@ -580,9 +580,9 @@ async def decode_aws_secret(config: AWSConfig, extend: ExtendsConfig) -> dict:
 
 async def discover_new_aws_accounts(
     exe_message: ExecutionMessage,
-    config: AWSConfig,
+    config: AwsConfig,
     config_account_idx_map: dict[str, int],
-    orgs_accounts: list[list[AWSAccount]],
+    orgs_accounts: list[list[AwsAccount]],
     repo_dir: str,
     remote_worker=None,
 ) -> bool:
@@ -621,9 +621,9 @@ async def discover_new_aws_accounts(
 
 
 async def discover_aws_account_attribute_changes(
-    config: AWSConfig,
+    config: AwsConfig,
     config_account_idx_map: dict[str, int],
-    orgs_accounts: list[list[AWSAccount]],
+    orgs_accounts: list[list[AwsAccount]],
 ) -> bool:
     run_import = False
     for org_accounts in orgs_accounts:
@@ -671,7 +671,7 @@ async def discover_aws_account_attribute_changes(
 
 async def aws_account_update_and_discovery(
     exe_message: ExecutionMessage,
-    config: AWSConfig,
+    config: AwsConfig,
     repo_dir: str,
     remote_worker=None,
 ):
@@ -683,7 +683,7 @@ async def aws_account_update_and_discovery(
     are found, the function imports the AWS resources and regenerates the AWS templates.
 
     Args:
-    - config (AWSConfig): The AWS configuration object.
+    - config (AwsConfig): The AWS configuration object.
     - repo_dir (str): The directory path for the repository.
 
     Returns:

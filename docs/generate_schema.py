@@ -12,11 +12,11 @@ from iambic.plugins.v0_1_0.aws.iam.group.models import AwsIamGroupTemplate
 from iambic.plugins.v0_1_0.aws.iam.policy.models import AwsIamManagedPolicyTemplate
 from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate
 from iambic.plugins.v0_1_0.aws.iam.user.models import AwsIamUserTemplate
-from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+from iambic.plugins.v0_1_0.aws.iambic_plugin import AwsConfig
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AwsIdentityCenterPermissionSetTemplate,
 )
-from iambic.plugins.v0_1_0.aws.models import AWSAccount, AWSOrganization
+from iambic.plugins.v0_1_0.aws.models import AwsAccount, AwsOrganization
 from iambic.plugins.v0_1_0.azure_ad.group.models import (
     AzureActiveDirectoryGroupTemplate,
 )
@@ -93,9 +93,9 @@ def generate_docs():
     okta_template_models = [OktaGroupTemplate, OktaUserTemplate, OktaAppTemplate]
     config_models = [
         Config,
-        AWSConfig,
-        AWSAccount,
-        AWSOrganization,
+        AwsConfig,
+        AwsAccount,
+        AwsOrganization,
         OktaConfig,
         AzureADConfig,
         GoogleWorkspaceConfig,

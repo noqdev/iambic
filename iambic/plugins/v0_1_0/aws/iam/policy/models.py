@@ -29,7 +29,7 @@ from iambic.plugins.v0_1_0.aws.iam.policy.utils import (
 from iambic.plugins.v0_1_0.aws.models import (
     ARN_RE,
     AccessModel,
-    AWSAccount,
+    AwsAccount,
     AWSTemplate,
     Description,
     Tag,
@@ -47,7 +47,7 @@ class Principal(BaseModel):
 
     def _apply_resource_dict(
         self,
-        aws_account: AWSAccount = None,
+        aws_account: AwsAccount = None,
     ) -> dict:
         resource_dict = super(Principal, self)._apply_resource_dict(aws_account)
         if aws_val := resource_dict.pop("aws", resource_dict.pop("Aws", None)):
@@ -218,11 +218,11 @@ class ManagedPolicyDocument(AccessModel):
         description="List of policy statements",
     )
 
-    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> str:
+    def _apply_resource_dict(self, aws_account: AwsAccount = None) -> str:
         resource_dict = super()._apply_resource_dict(aws_account)
         return json.dumps(resource_dict)
 
-    def apply_resource_dict(self, aws_account: AWSAccount) -> dict:
+    def apply_resource_dict(self, aws_account: AwsAccount) -> dict:
         response = json.loads(self._apply_resource_dict(aws_account))
         variables = {var.key: var.value for var in aws_account.variables}
         variables["account_id"] = aws_account.account_id
@@ -306,24 +306,24 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
         description="The properties of the managed policy",
     )
 
-    def _is_iambic_import_only(self, aws_account: AWSAccount):
+    def _is_iambic_import_only(self, aws_account: AwsAccount):
         return (
             aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
             or self.iambic_managed == IambicManaged.IMPORT_ONLY
             or ctx.eval_only
         )
 
-    def get_arn_for_account(self, aws_account: AWSAccount) -> str:
+    def get_arn_for_account(self, aws_account: AwsAccount) -> str:
         path = self.get_attribute_val_for_account(aws_account, "properties.path", False)
         policy_name = self.properties.policy_name
         return f"arn:{aws_account.partition.value}:iam::{aws_account.account_id}:policy{path}{policy_name}"
 
-    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
+    def _apply_resource_dict(self, aws_account: AwsAccount = None) -> dict:
         resource_dict = super()._apply_resource_dict(aws_account)
         resource_dict["Arn"] = self.get_arn_for_account(aws_account)
         return resource_dict
 
-    async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
+    async def _apply_to_account(self, aws_account: AwsAccount) -> AccountChangeDetails:
         boto3_session = await aws_account.get_boto3_session()
         client = boto3_session.client(
             "iam", config=botocore.client.Config(max_pool_connections=50)

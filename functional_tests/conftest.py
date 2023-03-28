@@ -13,7 +13,7 @@ from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
-from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.models import AwsAccount
 
 if not os.environ.get("GITHUB_ACTIONS", None):
     # We will select a particular AWS_PROFILE to run on developer local machine
@@ -81,7 +81,7 @@ class IambicTestDetails:
     config_path: str = None
     template_dir_path: str = None
     config: Config = None
-    identity_center_account: AWSAccount = None
+    identity_center_account: AwsAccount = None
 
 
 IAMBIC_TEST_DETAILS = IambicTestDetails()

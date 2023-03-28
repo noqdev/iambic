@@ -33,19 +33,19 @@ from iambic.plugins.v0_1_0.aws.iam.role.utils import (
     list_role_tags,
     list_roles,
 )
-from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.models import AwsAccount
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
 )
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.v0_1_0.aws.iambic_plugin import AwsConfig
 
 RESOURCE_DIR = ["iam", "role"]
 
 
-def get_response_dir(exe_message: ExecutionMessage, aws_account: AWSAccount) -> str:
+def get_response_dir(exe_message: ExecutionMessage, aws_account: AwsAccount) -> str:
     if exe_message.provider_id:
         return exe_message.get_directory(*RESOURCE_DIR)
     else:
@@ -80,7 +80,7 @@ def get_templated_role_file_path(
 
 async def generate_account_role_resource_files(
     exe_message: ExecutionMessage,
-    aws_account: AWSAccount,
+    aws_account: AwsAccount,
 ) -> dict:
     account_resource_dir = get_response_dir(exe_message, aws_account)
     role_resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
@@ -124,7 +124,7 @@ async def generate_account_role_resource_files(
 
 async def generate_role_resource_file_for_all_accounts(
     exe_message: ExecutionMessage,
-    aws_accounts: list[AWSAccount],
+    aws_accounts: list[AwsAccount],
     role_name: str,
 ) -> list:
     account_resource_dir_map = {
@@ -173,7 +173,7 @@ async def generate_role_resource_file_for_all_accounts(
 
 
 async def set_role_resource_tags(
-    role_name: str, role_resource_path: str, aws_account: AWSAccount
+    role_name: str, role_resource_path: str, aws_account: AwsAccount
 ):
     iam_client = await aws_account.get_boto3_client("iam")
     role_tags = await list_role_tags(role_name, iam_client)
@@ -181,7 +181,7 @@ async def set_role_resource_tags(
 
 
 async def set_role_resource_inline_policies(
-    role_name: str, role_resource_path: str, aws_account: AWSAccount
+    role_name: str, role_resource_path: str, aws_account: AwsAccount
 ):
     iam_client = await aws_account.get_boto3_client("iam")
     role_inline_policies = await get_role_inline_policies(role_name, iam_client)
@@ -195,7 +195,7 @@ async def set_role_resource_inline_policies(
 
 
 async def set_role_resource_managed_policies(
-    role_name: str, role_resource_path: str, aws_account: AWSAccount
+    role_name: str, role_resource_path: str, aws_account: AwsAccount
 ):
     iam_client = await aws_account.get_boto3_client("iam")
     role_managed_policies = await get_role_managed_policies(role_name, iam_client)
@@ -231,12 +231,12 @@ async def _account_id_to_role_map(role_refs):
 
 
 async def create_templated_role(  # noqa: C901
-    aws_account_map: dict[str, AWSAccount],
+    aws_account_map: dict[str, AwsAccount],
     role_name: str,
     role_refs: list[dict],
     role_dir: str,
     existing_template_map: dict,
-    config: AWSConfig,
+    config: AwsConfig,
 ) -> AwsIamRoleTemplate:
     account_id_to_role_map = await _account_id_to_role_map(role_refs)
     num_of_accounts = len(role_refs)
@@ -420,7 +420,7 @@ async def create_templated_role(  # noqa: C901
 
 async def collect_aws_roles(
     exe_message: ExecutionMessage,
-    config: AWSConfig,
+    config: AwsConfig,
     base_output_dir: str,
     detect_messages: list[RoleMessageDetails] = None,
 ):
@@ -549,7 +549,7 @@ async def collect_aws_roles(
 
 async def generate_aws_role_templates(
     exe_message: ExecutionMessage,
-    config: AWSConfig,
+    config: AwsConfig,
     base_output_dir: str,
     detect_messages: list[RoleMessageDetails] = None,
 ):

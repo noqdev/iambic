@@ -8,14 +8,14 @@ If you've seen how permission sets are implemented you're probably wondering why
 ### IAMbic design
 Due to limitations with the AWS API (see below for more details) permission sets are handled differently than other resources.
 
-After the full list of templates have been collected and all aws accounts have been set in the config `AWSAccount.identity_center_details.set_identity_center_details` is called.
+After the full list of templates have been collected and all aws accounts have been set in the config `AwsAccount.identity_center_details.set_identity_center_details` is called.
 
 This method generates various maps used that are required for interfacing with permission sets.
 This includes a map of the permission sets, the Identity Center users, the Identity Center groups, and the org accounts.
 
-For example, the permission set map is an attribute under the account instance `AWSAccount.identity_center_details.permission_set_map`.
+For example, the permission set map is an attribute under the account instance `AwsAccount.identity_center_details.permission_set_map`.
 That attribute is referenced when updating or removing an existing permission set.
-There is also a method `AWSAccount.identity_center_details.set_identity_center_details` that is called lazily when a permission set template is being used.
+There is also a method `AwsAccount.identity_center_details.set_identity_center_details` that is called lazily when a permission set template is being used.
 
 
 ### Why are Identity Center resources referenced as part of the account the org is in instead of the actual org in app code?

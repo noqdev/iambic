@@ -8,10 +8,10 @@ from iambic.core.iambic_enum import IambicManaged
 from iambic.core.template_generation import merge_model
 from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate
 from iambic.plugins.v0_1_0.aws.iam.role.template_generation import create_templated_role
-from iambic.plugins.v0_1_0.aws.models import AWSAccount, Description
+from iambic.plugins.v0_1_0.aws.models import AwsAccount, Description
 
 
-def get_aws_account_map(aws_accounts: list[AWSAccount]) -> dict[str, AWSAccount]:
+def get_aws_account_map(aws_accounts: list[AwsAccount]) -> dict[str, AwsAccount]:
     account_map = {}
     for account in aws_accounts:
         account_map[account.account_name] = account
@@ -33,12 +33,12 @@ def test_role():
 
 @pytest.fixture
 def test_account():
-    return AWSAccount(account_id="123456789011", account_name="dev", assume_role_arn="")
+    return AwsAccount(account_id="123456789011", account_name="dev", assume_role_arn="")
 
 
 @pytest.fixture
 def test_account_2():
-    return AWSAccount(
+    return AwsAccount(
         account_id="123456789012", account_name="dev_2", assume_role_arn=""
     )
 
@@ -65,7 +65,7 @@ async def test_create_template_role(
 ):
     test_role_name = "test_role"
     test_account_id = "123456789012"
-    test_account = AWSAccount(
+    test_account = AwsAccount(
         account_id=test_account_id, account_name="dev", assume_role_arn=""
     )
     test_aws_account_map = get_aws_account_map([test_account])
@@ -250,7 +250,7 @@ async def test_noop_merge_template_role_with_non_standard_account_name(
     """
     Check that an account that hits on a wildcard for included account is not explicitly added to included accounts
     """
-    non_standard_account = AWSAccount(
+    non_standard_account = AwsAccount(
         account_id="123456789013",
         account_name="@!#!@#)(%*#R)QWITFGO)FG+=0984",
         assume_role_arn="",
@@ -330,7 +330,7 @@ async def test_merge_template_role_with_excluded_accounts_rule_preservation(
     """
     Check that an excluded account rule with a wildcard is preserved
     """
-    test_account_3 = AWSAccount(
+    test_account_3 = AwsAccount(
         account_id="123456789013",
         account_name="prod",
         assume_role_arn="",
@@ -384,7 +384,7 @@ async def test_merge_template_role_with_wildcard_include_and_excluded_accounts_r
     """
     Check that an excluded account rule with a wildcard is preserved
     """
-    test_account_3 = AWSAccount(
+    test_account_3 = AwsAccount(
         account_id="123456789013",
         account_name="prod",
         assume_role_arn="",
@@ -434,10 +434,10 @@ async def test_merge_template_role_with_new_include_account(
     Check that an account that hits on a wildcard for included account is not explicitly added to included accounts
     """
 
-    test_account = AWSAccount(
+    test_account = AwsAccount(
         account_id="123456789011", account_name="dev", assume_role_arn=""
     )
-    test_account_2 = AWSAccount(
+    test_account_2 = AwsAccount(
         account_id="123456789012", account_name="dev_2", assume_role_arn=""
     )
     test_aws_account_map = {
