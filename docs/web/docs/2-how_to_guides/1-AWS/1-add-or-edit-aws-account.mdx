@@ -20,7 +20,7 @@ The exception to this is if the resource already exists on the account or `iambi
 
 For example, if you have a template that creates the IAM role `engineering` in all accounts, that role will be created on the new account.
 However, if the `engineering` role already exists on the new account, it will not be overwritten.
-If another you have another IAM role template called `qa-intern` to be deployed in all accounts, and it does not exist on the new account, it will be created.
+If you have another IAM role template called `qa-intern` to be deployed in all accounts, and it does not exist on the new account, it will be created.
 
 After templates are applied to the new account, IAMbic will run an import to pull in all resources unique to that account if `iambic_managed` is not set to `disabled`.
 
