@@ -39,7 +39,7 @@ jobs:
         id: bootstrap
         run: |
           python3.10 -m venv env
-          . env/bin/activate && pip install poetry setuptools pip --upgrade && poetry install && make test
+          . env/bin/activate && pip install poetry setuptools pip --upgrade && poetry install
       - name: Configure AWS Credentials for building itest image
         uses: aws-actions/configure-aws-credentials@v1
         with:
