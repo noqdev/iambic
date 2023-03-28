@@ -8,6 +8,7 @@ from functional_tests.aws.permission_set.utils import (
     generate_permission_set_template_from_base,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+from iambic.output.text import screen_render_resource_changes
 
 
 class CreatePermissionSetTestCase(IsolatedAsyncioTestCase):
@@ -23,7 +24,8 @@ class CreatePermissionSetTestCase(IsolatedAsyncioTestCase):
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
     async def test_create_permission_set(self):
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
         await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
 
         self.assertIn(
@@ -35,7 +37,8 @@ class CreatePermissionSetTestCase(IsolatedAsyncioTestCase):
         self.template = attach_access_rule(
             self.template, IAMBIC_TEST_DETAILS.identity_center_account
         )
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
         await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
 
         self.assertIn(

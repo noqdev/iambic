@@ -7,6 +7,7 @@ import dateparser
 
 from functional_tests.aws.role.utils import generate_role_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.role.models import PermissionBoundary
 from iambic.plugins.v0_1_0.aws.iam.role.utils import get_role_across_accounts
@@ -38,7 +39,8 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
     # empty tag string value is a valid input
     async def test_update_tag_with_empty_string(self):
         self.template.properties.tags = [Tag(key="test", value="")]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
 
         account_role_mapping = await get_role_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.role_name, False
@@ -68,6 +70,7 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
             template_change_details = await self.template.apply(
                 IAMBIC_TEST_DETAILS.config.aws
             )
+            screen_render_resource_changes([template_change_details])
         except Exception as e:
             # because it should still crash
             # FIXME check assert here
@@ -100,7 +103,8 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
 
     async def test_update_description(self):
         self.template.properties.description = "Updated description"
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
 
         account_role_mapping = await get_role_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.role_name, False
@@ -120,7 +124,8 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
         self.template.properties.permissions_boundary = PermissionBoundary(
             policy_arn=view_policy_arn
         )
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
 
         account_role_mapping = await get_role_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.role_name, False
@@ -138,7 +143,8 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
     async def test_update_managed_policies(self):
         if self.template.properties.managed_policies:
             self.template.properties.managed_policies = []
-            await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+            changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+            screen_render_resource_changes([changes])
 
             account_role_mapping = await get_role_across_accounts(
                 IAMBIC_TEST_DETAILS.config.aws.accounts,
@@ -173,7 +179,8 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
                 )
 
         self.template.properties.managed_policies = []
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
 
         account_role_mapping = await get_role_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts,
@@ -192,7 +199,8 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
         self.template.included_accounts = ["*"]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
 
         account_role_mapping = await get_role_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.role_name, False
@@ -231,6 +239,7 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
             )
         )
         r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([r])
         self.assertEqual(len(r.proposed_changes), 2)
 
         # Set expiration
@@ -240,4 +249,5 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
             "yesterday", settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True}
         )
         r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([r])
         self.assertEqual(len(r.proposed_changes), 1)

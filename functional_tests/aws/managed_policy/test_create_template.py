@@ -8,6 +8,7 @@ from functional_tests.aws.managed_policy.utils import (
 from functional_tests.aws.role.utils import get_modifiable_role
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.utils import aio_wrapper
+from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.iam.policy.utils import (
     get_managed_policy_across_accounts,
     get_managed_policy_attachments,
@@ -33,7 +34,8 @@ class CreateManagedPolicyTestCase(IsolatedAsyncioTestCase):
         self.template.included_accounts = ["*"]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
 
         account_mp_mapping = await get_managed_policy_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.path, self.policy_name
@@ -54,7 +56,8 @@ class CreateManagedPolicyTestCase(IsolatedAsyncioTestCase):
         self.template.included_accounts = [included_account]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
 
         account_mp_mapping = await get_managed_policy_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.path, self.policy_name
@@ -80,7 +83,8 @@ class CreateManagedPolicyTestCase(IsolatedAsyncioTestCase):
 
         self.template.included_accounts = [included_account]
         self.template.excluded_accounts = []
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
 
         role = await get_modifiable_role(iam_client)
         role_name = role["RoleName"]
