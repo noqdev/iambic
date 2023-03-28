@@ -199,6 +199,8 @@ async def delete_user(
             resource_type=user.resource_type,
             attribute="user",
             change_summary={"user": user.username},
+            current_value=user.username,
+            new_value=None,
         )
     ]
 

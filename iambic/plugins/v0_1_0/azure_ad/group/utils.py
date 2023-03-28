@@ -298,6 +298,8 @@ async def update_group_members(
                 change_summary={
                     "MembersToRemove": [member.dict() for member in members_to_remove]
                 },
+                current_value=[member.name for member in cloud_group.members],
+                new_value=[member.name for member in members_to_remove],
             )
         )
 
@@ -311,6 +313,8 @@ async def update_group_members(
                 change_summary={
                     "MembersToAdd": [member.dict() for member in members_to_add]
                 },
+                current_value=[member.name for member in cloud_group.members],
+                new_value=[member.name for member in members_to_add],
             )
         )
 
@@ -377,6 +381,8 @@ async def delete_group(
             resource_type=group.resource_type,
             attribute="group",
             change_summary={"group": group.name},
+            current_value=group.name,
+            new_value=None,
         )
     ]
 

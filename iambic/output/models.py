@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 
 import pathlib
 from typing import Any, Dict, List, Set
@@ -65,15 +66,15 @@ class ProposedChangeDiff(ProposedChange):
                     change_from = x[2]
                     change_to = x[2]
                 if change_to:
-                    diff_plus_minus += f"(Remove) {label}: \n{yaml.dump(change_from)}\n(Add) {yaml.dump(change_to)}\n"
+                    diff_plus_minus += f"{label}:\n-(From)\n{json.dumps(change_from, indent=2)}\n+(To)\n{json.dumps(change_to, indent=2)}"
                 else:
-                    diff_plus_minus += f"(Remove) {label}: \n{yaml.dump(change_from)}\n"
+                    diff_plus_minus += f"{label}:\n-(Remove)\n{json.dumps(change_from, indent=2)}"
                 diff_plus_minus.rstrip('\n')
             elif x[0] == "add":
-                diff_plus_minus += f"(Add) {label}: \n{yaml.dump([y[1] for y in x[2]])}\n"
+                diff_plus_minus += f"{label}:\n+(Add)\n{json.dumps([y[1] for y in x[2]], indent=2)}"
                 diff_plus_minus.rstrip('\n')
             elif x[0] == "remove":
-                diff_plus_minus += f"(Remove) {label}: \n{yaml.dump([y[1] for y in x[2]])}\n"
+                diff_plus_minus += f"{label}:\n-(Remove)\n{json.dumps([y[1] for y in x[2]], indent=2)}"
                 diff_plus_minus.rstrip('\n')
         return diff_plus_minus
 
