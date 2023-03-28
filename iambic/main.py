@@ -36,7 +36,7 @@ os.environ.setdefault("IAMBIC_REPO_DIR", str(pathlib.Path.cwd()))
 
 def output_proposed_changes(
     template_changes: list[TemplateChangeDetails],
-    output_path: str = "proposed_changes.yaml",
+    output_path: str = "proposed_changes.txt",
     exit_on_error: bool = True,
 ):
     if output_path is None:
