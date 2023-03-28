@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Callable, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 import botocore
 from pydantic import Field, validator
@@ -35,6 +35,15 @@ AWS_IAM_USER_TEMPLATE_TYPE = "NOQ::AWS::IAM::User"
 
 class Group(ExpiryModel, AccessModel):
     group_name: str
+    
+    # All excluded fields are populated by the API and not required in the template
+    # We are not tracking those, but we do allow them to be imported in order to
+    # pass validation.
+    arn: Optional[str] = Field("", description="ARN of the group", exclude=True)
+    create_date: Optional[str] = Field("", description="Date the group was created", exclude=True)
+    group_id: Optional[str] = Field("", description="ID of the group", exclude=True)
+    path: Optional[str] = Field("", description="Path of the group", exclude=True)
+    extra: Any = Field(None, description=("Extra attributes to store"), exclude=True)
 
     @property
     def resource_type(self):

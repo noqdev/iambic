@@ -5,6 +5,7 @@ import functools
 from typing import TYPE_CHECKING, List, Optional
 
 from aiohttp import ClientResponseError
+from pydantic import ValidationError
 
 from iambic.core.context import ctx
 from iambic.core.logger import log

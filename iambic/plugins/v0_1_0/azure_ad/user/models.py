@@ -35,7 +35,7 @@ class UserStatus(Enum):
 
 
 class UserTemplateProperties(BaseModel, ExpiryModel):
-    user_id: Optional[str]
+    user_id: Optional[str] = Field("", description="Unique identifier for the user")
     username: str
     display_name: str
     mail_nickname: Optional[str]
@@ -44,6 +44,16 @@ class UserTemplateProperties(BaseModel, ExpiryModel):
     domain: Optional[str]
     fullname: Optional[str]
     status: Optional[UserStatus]
+
+    business_phones: Optional[list[str]] = Field([], description="List of business phone numbers", exclude=True)
+    id: Optional[str] = Field(None, description="Unique identifier for the user", exclude=True)
+    job_title: Optional[str] = Field(None, description="Job title of the user", exclude=True)
+    mail: Optional[str] = Field(None, description="Email address of the user", exclude=True)
+    mobile_phone: Optional[str] = Field(None, description="Mobile phone number of the user", exclude=True)
+    office_location: Optional[str] = Field(None, description="Office location of the user", exclude=True)
+    preferred_language: Optional[str] = Field(None, description="Preferred language of the user", exclude=True)
+    surname: Optional[str] = Field(None, description="Surname of the user", exclude=True)
+    user_principal_name: Optional[str] = Field(None, description="User principal name of the user", exclude=True)
 
     @property
     def resource_type(self) -> str:
@@ -55,8 +65,13 @@ class UserTemplateProperties(BaseModel, ExpiryModel):
 
     @classmethod
     def from_azure_response(cls, azure_response: dict) -> UserTemplateProperties:
+        unwanted_keys = [
+            "password_profile",
+        ]
         azure_response = normalize_dict_keys(azure_response)
-        azure_response.pop("password_profile", None)
+        # Filter unwanted keys
+        azure_response = {x: y for x, y in azure_response.items() if x not in unwanted_keys}
+        azure_response = {x: y for x, y in azure_response.items() if not x.startswith('@odata')}
 
         return cls(
             user_id=azure_response.get("id"),

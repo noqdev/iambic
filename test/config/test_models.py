@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from iambic.config.dynamic_config import Config
+from iambic.core.iambic_enum import IambicManaged
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import (
     AWSIdentityCenter,
@@ -39,7 +40,7 @@ def test_aws_config_instantiate_with_organizations():
             identity_center=AWSIdentityCenter(
                 account_id="123456789012", region="us-west-2"
             ),
-            default_rule=BaseAWSOrgRule(enabled=True),
+            default_rule=BaseAWSOrgRule(iambic_managed=IambicManaged.UNDEFINED),
             account_rules=[AWSOrgAccountRule(account_id="123456789012")],
             hub_role_arn="arn:aws:iam::123456789012:role/hub_role",
         )
@@ -56,7 +57,7 @@ def test_aws_config_raises_error_for_multiple_configured():
             identity_center=AWSIdentityCenter(
                 account_id="123456789012", region="us-west-2"
             ),
-            default_rule=BaseAWSOrgRule(enabled=True),
+            default_rule=BaseAWSOrgRule(iambic_managed=IambicManaged.UNDEFINED),
             account_rules=[AWSOrgAccountRule(account_id="123456789012")],
             hub_role_arn="arn:aws:iam::123456789012:role/hub_role",
         ),
@@ -66,7 +67,7 @@ def test_aws_config_raises_error_for_multiple_configured():
             identity_center=AWSIdentityCenter(
                 account_id="234567890123", region="us-west-2"
             ),
-            default_rule=BaseAWSOrgRule(enabled=True),
+            default_rule=BaseAWSOrgRule(iambic_managed=IambicManaged.UNDEFINED),
             account_rules=[AWSOrgAccountRule(account_id="234567890123")],
             hub_role_arn="arn:aws:iam::234567890123:role/hub_role",
         ),

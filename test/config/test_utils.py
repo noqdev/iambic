@@ -51,7 +51,6 @@ def config(repo_path):
                 account_id=account_id,
                 org_id="test_org_uuid",
                 account_name="test_account_name",
-                role_access_tag="",
                 iambic_managed=IambicManaged.READ_AND_WRITE,
                 spoke_role_arn=get_spoke_role_arn(account_id),
             ),
@@ -73,7 +72,6 @@ def config(repo_path):
                 ]
             }
         },
-        role_access_tag="noq-authorized",
         variables=[],
         slack_app="",
         sqs={},
