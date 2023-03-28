@@ -2530,6 +2530,22 @@ files = [
 mock-generator = ">=2.4,<3.0"
 
 [[package]]
+name = "pytest-rerunfailures"
+version = "11.1.2"
+description = "pytest plugin to re-run tests to eliminate flaky failures"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "pytest-rerunfailures-11.1.2.tar.gz", hash = "sha256:55611661e873f1cafa384c82f08d07883954f4b76435f4b8a5b470c1954573de"},
+    {file = "pytest_rerunfailures-11.1.2-py3-none-any.whl", hash = "sha256:d21fe2e46d9774f8ad95f1aa799544ae95cac3a223477af94aa985adfae92b7e"},
+]
+
+[package.dependencies]
+packaging = ">=17.1"
+pytest = ">=5.3"
+
+[[package]]
 name = "pytest-xdist"
 version = "3.2.1"
 description = "pytest xdist plugin for distributed testing, most importantly across multiple CPUs"
@@ -3729,4 +3745,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "7112cf37aa214db868956ee17b5a83610fe7e7094f12e104b0620e3b33843800"
+content-hash = "d6f77fb3ca47d5afc69d54d48b9c337cf12cc59bd89a63fa17c978c8727285d1"
