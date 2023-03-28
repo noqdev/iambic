@@ -47,7 +47,10 @@ class ProposedChangeDiff(ProposedChange):
             self.current_value = {}
         if self.new_value is None:
             self.new_value = {}
-        self.diff = list(diff(self.current_value.get(object_attribute, {}), self.new_value))
+        if isinstance(self.current_value, dict):
+            self.diff = list(diff(self.current_value.get(object_attribute, {}), self.new_value))
+        else:
+            self.diff = list(diff(self.current_value, self.new_value))
         
     @property
     def diff_plus_minus(self) -> List[str]:

@@ -24,7 +24,7 @@ from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage, TemplateChangeDetails
 from iambic.core.parser import load_templates
 from iambic.core.utils import exceptions_in_proposed_changes, gather_templates, init_writable_directory
-from iambic.output.text import file_render_resource_changes
+from iambic.output.text import file_render_resource_changes, screen_render_resource_changes
 from iambic.request_handler.expire_resources import flag_expired_resources
 from iambic.request_handler.git_apply import apply_git_changes
 from iambic.request_handler.git_plan import plan_git_changes
@@ -253,6 +253,8 @@ def run_apply(
     template_changes = asyncio.run(config.run_apply(exe_message, templates))
     output_proposed_changes(template_changes)
 
+    screen_render_resource_changes(template_changes)
+
     if ctx.eval_only and template_changes and click.confirm("Proceed?"):
         ctx.eval_only = False
         template_changes = asyncio.run(config.run_apply(exe_message, templates))
@@ -281,6 +283,7 @@ def run_git_apply(
         )
     )
     output_proposed_changes(template_changes, output_path, exit_on_error=False)
+    screen_render_resource_changes(template_changes)
     return template_changes
 
 
@@ -334,6 +337,7 @@ def run_git_plan(
     check_and_update_resource_limit(config)
     template_changes = asyncio.run(plan_git_changes(config_path, repo_dir))
     output_proposed_changes(template_changes, output_path, exit_on_error=False)
+    screen_render_resource_changes(template_changes)
     return template_changes
 
 
@@ -348,9 +352,9 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
     )
     asyncio.run(flag_expired_resources(templates))
     ctx.eval_only = True
-    output_proposed_changes(
-        asyncio.run(config.run_apply(exe_message, load_templates(templates)))
-    )
+    template_changes = asyncio.run(config.run_apply(exe_message, load_templates(templates)))
+    output_proposed_changes(template_changes)
+    screen_render_resource_changes(template_changes)
 
 
 @cli.command()
