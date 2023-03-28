@@ -291,7 +291,6 @@ async def maybe_delete_group(
             attribute="group",
             change_summary={"group": group.properties.name},
             current_value=group.properties.name,
-            new_value=None,
         )
     )
     if ctx.execute:
