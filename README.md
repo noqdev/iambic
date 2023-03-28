@@ -12,7 +12,7 @@ Easily manage and streamline cloud Identity and Access Management (IAM) with IAM
 - **[Temporary Access, Permissions, and Identities](https://iambic.org/getting_started/aws#32---create-temporary-expiring-iam-permissions)**: Declaratively define and automate expiration dates for resources, permissions, and access rules.
 - **Centralized Management**: IAMbic keeps Git updated with the latest, complete state of your cloud environment, maintaining a single source of truth for auditing and compliance across multiple cloud providers in Git.
 - **Extendable**: Integrate with various clouds and applications through a powerful plugin architecture.
-- **Auditable**: Track changes to IAM policies, permissions, and rules with Git history. For AWS, IAmbic annotate out-of-band commits with details from CloudTrail.
+- **Auditable**: Track changes to IAM policies, permissions, and rules with Git history. For AWS, IAmbic annotates out-of-band commits with details from CloudTrail.
 
 ## Getting Started
 
@@ -180,9 +180,23 @@ properties:
       expires_at: 2023-03-05
 ```
 
-### Azure Active Directory Group Assignments
+## Azure Active Directory Users
 
-Manage Azure Active Directory users, groups, and group assignments, including temporary access for external users. See the [Getting Started guide for Azure AD](https://iambic.org/getting_started/azure_ad) for more information.
+Manage Azure Active Directory users and their attributes. See the [Getting Started guide for Azure AD](https://iambic.org/getting_started/azure_ad) for more information.
+
+```yaml
+expires_at: 2025-01-01
+template_type: NOQ::AzureAD::User
+idp_name: development
+properties:
+  display_name: Example User
+  given_name: Example
+  username: user@example.com
+```
+
+### Azure Active Directory Groups and Group Assignments
+
+Manage Azure Active Directory groups and group assignments, including temporary access for external users. See the [Getting Started guide for Azure AD](https://iambic.org/getting_started/azure_ad) for more information.
 
 ```yaml
 template_type: NOQ::AzureAD::Group
