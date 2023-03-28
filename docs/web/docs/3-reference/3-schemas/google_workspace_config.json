@@ -1,0 +1,154 @@
+{
+  "title": "GoogleWorkspaceConfig",
+  "type": "object",
+  "properties": {
+    "workspaces": {
+      "title": "Workspaces",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/GoogleProject"
+      }
+    }
+  },
+  "required": [
+    "workspaces"
+  ],
+  "definitions": {
+    "GoogleSubject": {
+      "title": "GoogleSubject",
+      "type": "object",
+      "properties": {
+        "domain": {
+          "title": "Domain",
+          "type": "string"
+        },
+        "service_account": {
+          "title": "Service Account",
+          "type": "string"
+        }
+      },
+      "required": [
+        "domain",
+        "service_account"
+      ]
+    },
+    "Variable": {
+      "title": "Variable",
+      "type": "object",
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ]
+    },
+    "IambicManaged": {
+      "title": "IambicManaged",
+      "description": "An enumeration.",
+      "enum": [
+        "undefined",
+        "read_and_write",
+        "import_only",
+        "disabled"
+      ]
+    },
+    "GoogleProject": {
+      "title": "GoogleProject",
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "title": "Project Id",
+          "type": "string"
+        },
+        "project_name": {
+          "title": "Project Name",
+          "type": "string"
+        },
+        "subjects": {
+          "title": "Subjects",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/GoogleSubject"
+          }
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "private_key_id": {
+          "title": "Private Key Id",
+          "type": "string"
+        },
+        "private_key": {
+          "title": "Private Key",
+          "type": "string",
+          "writeOnly": true,
+          "format": "password"
+        },
+        "client_email": {
+          "title": "Client Email",
+          "type": "string"
+        },
+        "client_id": {
+          "title": "Client Id",
+          "type": "string"
+        },
+        "auth_uri": {
+          "title": "Auth Uri",
+          "type": "string"
+        },
+        "token_uri": {
+          "title": "Token Uri",
+          "type": "string"
+        },
+        "auth_provider_x509_cert_url": {
+          "title": "Auth Provider X509 Cert Url",
+          "type": "string"
+        },
+        "client_x509_cert_url": {
+          "title": "Client X509 Cert Url",
+          "type": "string"
+        },
+        "variables": {
+          "title": "Variables",
+          "description": "A list of variables to be used when creating templates",
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Variable"
+          }
+        },
+        "iambic_managed": {
+          "description": "Controls the directionality of iambic changes",
+          "default": "undefined",
+          "allOf": [
+            {
+              "$ref": "#/definitions/IambicManaged"
+            }
+          ]
+        }
+      },
+      "required": [
+        "project_id",
+        "subjects",
+        "type",
+        "private_key_id",
+        "private_key",
+        "client_email",
+        "client_id",
+        "auth_uri",
+        "token_uri",
+        "auth_provider_x509_cert_url",
+        "client_x509_cert_url"
+      ]
+    }
+  }
+}

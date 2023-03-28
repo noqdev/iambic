@@ -550,6 +550,9 @@ async def generate_aws_permission_set_templates(
             resource_dir,
             existing_template_map,
         )
+        if not resource_template:
+            # Template not updated. Most likely because it's an `enforced` template.
+            continue
         all_resource_ids.add(resource_template.resource_id)
 
     if not detect_messages:

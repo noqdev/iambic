@@ -59,17 +59,23 @@
       ]
     },
     "properties": {
-      "$ref": "#/definitions/OktaUserTemplateProperties"
+      "$ref": "#/definitions/UserProperties"
     },
     "force_delete": {
       "title": "Forcedelete",
       "description": "If `self.deleted` is true, the user will be force deleted from Okta. ",
       "default": false,
       "type": "boolean"
+    },
+    "idp_name": {
+      "title": "Idpname",
+      "description": "Name of the identity provider that's associated with the user",
+      "type": "string"
     }
   },
   "required": [
-    "properties"
+    "properties",
+    "idp_name"
   ],
   "definitions": {
     "IambicManaged": {
@@ -96,8 +102,8 @@
         "password_expired"
       ]
     },
-    "OktaUserTemplateProperties": {
-      "title": "OktaUserTemplateProperties",
+    "UserProperties": {
+      "title": "UserProperties",
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
@@ -118,11 +124,6 @@
         "username": {
           "title": "Username",
           "description": "Username of the user",
-          "type": "string"
-        },
-        "idp_name": {
-          "title": "Idpname",
-          "description": "Name of the identity provider that's associated with the user",
           "type": "string"
         },
         "user_id": {
@@ -152,7 +153,6 @@
       },
       "required": [
         "username",
-        "idp_name",
         "profile"
       ]
     }

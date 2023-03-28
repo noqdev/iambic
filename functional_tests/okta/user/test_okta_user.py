@@ -29,7 +29,13 @@ properties:
         temp_templates_directory,
         f"resources/okta/user/development/{username}.yaml",
     )
-
+    os.makedirs(
+        os.path.join(
+            temp_templates_directory,
+            "resources/okta/user/development/",
+        ),
+        exist_ok=True,
+    )
     with open(test_user_fp, "w") as temp_file:
         temp_file.write(iambic_functional_test_user_yaml)
 

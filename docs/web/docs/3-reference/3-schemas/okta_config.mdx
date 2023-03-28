@@ -1,0 +1,24 @@
+# OktaConfig
+
+## Properties
+
+- **`organizations`** *(array)*: A list of Okta organizations.
+  - **Items**: Refer to *[#/definitions/OktaOrganization](#definitions/OktaOrganization)*.
+## Definitions
+
+
+<a id="definitions/IambicManaged"></a>
+
+- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+
+<a id="definitions/OktaOrganization"></a>
+
+- **`OktaOrganization`** *(object)*
+  - **`idp_name`** *(string)*
+  - **`org_url`** *(string)*
+  - **`api_token`** *(string)*
+  - **`request_timeout`** *(integer)*: Default: `60`.
+  - **`client`**
+  - **`iambic_managed`**: Controls the directionality of iambic changes. Default: `"import_only"`.
+    - **All of**
+      - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.

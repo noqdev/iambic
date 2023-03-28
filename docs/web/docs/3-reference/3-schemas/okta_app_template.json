@@ -64,13 +64,19 @@
       "description": "Properties for the Okta App",
       "allOf": [
         {
-          "$ref": "#/definitions/OktaAppTemplateProperties"
+          "$ref": "#/definitions/AppProperties"
         }
       ]
+    },
+    "idp_name": {
+      "title": "Idpname",
+      "description": "Name of the identity provider that's associated with the group",
+      "type": "string"
     }
   },
   "required": [
-    "properties"
+    "properties",
+    "idp_name"
   ],
   "definitions": {
     "IambicManaged": {
@@ -145,8 +151,8 @@
         }
       }
     },
-    "OktaAppTemplateProperties": {
-      "title": "OktaAppTemplateProperties",
+    "AppProperties": {
+      "title": "AppProperties",
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
@@ -200,11 +206,6 @@
             }
           ]
         },
-        "idp_name": {
-          "title": "Idpname",
-          "description": "Name of the identity provider that's associated with the group",
-          "type": "string"
-        },
         "id": {
           "title": "Id",
           "description": "Unique App ID for the app. Usually it's {idp-name}-{name}",
@@ -237,8 +238,7 @@
         }
       },
       "required": [
-        "name",
-        "idp_name"
+        "name"
       ]
     }
   }
