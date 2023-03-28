@@ -269,6 +269,8 @@ async def update_app_assignments(
                         "group_assignments_to_unassign": group_assignments_to_unassign,
                     }
                 },
+                current_value=current_user_assignments + current_group_assignments,
+                new_value = desired_user_assignments + desired_group_assignments,
             )
         )
 
@@ -417,6 +419,7 @@ async def update_app_name(
             resource_type=app.resource_type,
             resource_id=app.resource_id,
             attribute="app_name",
+            current_value=app.name,
             new_value=new_name,
         )
     )
@@ -467,6 +470,8 @@ async def maybe_delete_app(
             resource_type=app.resource_type,
             attribute="app",
             change_summary={"app": app.name},
+            current_value=app.name,
+            new_value=None,
         )
     )
     if ctx.execute:

@@ -137,6 +137,7 @@ async def change_user_status(
             resource_id=user.user_id,
             resource_type=user.resource_type,
             attribute="status",
+            current_value=user.status,
             new_value=new_status,
         )
     )
@@ -186,6 +187,8 @@ async def update_user_profile(
                 "current_profile": current_profile,
                 "new_profile": new_profile,
             },
+            current_value=current_profile,
+            new_value=new_profile,
         )
     )
     if ctx.execute:
@@ -261,6 +264,8 @@ async def update_user_status(
                 "current_status": current_status,
                 "proposed_status": new_status,
             },
+            current_value=current_status,
+            new_value=new_status,
         )
     )
     if ctx.execute:
@@ -369,6 +374,8 @@ async def maybe_deprovision_user(
             resource_type=user.resource_type,
             attribute="user",
             change_summary={"user": user.username},
+            current_value=user.username,
+            new_value=None,
         )
     )
     if ctx.execute:

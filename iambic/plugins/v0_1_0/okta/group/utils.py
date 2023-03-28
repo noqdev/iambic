@@ -328,6 +328,7 @@ async def update_group_name(
             resource_id=group.group_id,
             resource_type=group.resource_type,
             attribute="group_name",
+            current_value=group.name,
             new_value=new_name,
         )
     )
@@ -405,6 +406,8 @@ async def update_group_description(
                 "current_description": group.description,
                 "proposed_description": new_description,
             },
+            current_value=group.description,
+            new_value=new_description,
         )
     )
     if ctx.execute:
@@ -467,6 +470,8 @@ async def update_group_members(
                 resource_type=group.resource_type,
                 attribute="users",
                 change_summary={"UsersToRemove": list(users_to_remove)},
+                current_value=current_user_usernames,
+                new_value=users_to_remove,
             )
         )
 
@@ -478,6 +483,8 @@ async def update_group_members(
                 resource_type=group.resource_type,
                 attribute="users",
                 change_summary={"UsersToAdd": list(users_to_add)},
+                current_value=current_user_usernames,
+                new_value=users_to_add,
             )
         )
 
@@ -564,6 +571,8 @@ async def maybe_delete_group(
             resource_type=group.resource_type,
             attribute="group",
             change_summary={"group": group.name},
+            current_value=group.name,
+            new_value=None,
         )
     )
     if ctx.execute:
