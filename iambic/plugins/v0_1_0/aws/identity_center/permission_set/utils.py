@@ -512,24 +512,26 @@ async def apply_account_assignments(
     for assignment_id, assignment in existing_assignment_map.items():
         if not template_assignment_map.get(assignment_id):
             log_str = "Stale assignments discovered."
+            resource_type="arn:aws:iam::aws:user" if assignment["resource_type"] == "USER" else "arn:aws:iam::aws:group",
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DELETE,
                     account=assignment["account_name"],
                     resource_id=assignment["resource_name"],
-                    resource_type=assignment["resource_type"],
+                    resource_type=resource_type,
                     attribute="account_assignment",
                 )
             ]
             response.extend(proposed_changes)
             if ctx.execute:
                 log_str = f"{log_str} Removing account assignment..."
+                resource_type="arn:aws:iam::aws:user" if assignment["resource_type"] == "USER" else "arn:aws:iam::aws:group",
                 apply_awaitable = delete_account_assignment(
                     identity_center_client,
                     account_id=assignment["account_id"],
                     instance_arn=instance_arn,
                     permission_set_arn=permission_set_arn,
-                    resource_type=assignment["resource_type"],
+                    resource_type=resource_type,
                     resource_id=assignment["resource_id"],
                     resource_name=assignment["resource_name"],
                     log_params=log_params,
@@ -539,12 +541,13 @@ async def apply_account_assignments(
 
     for assignment_id, assignment in template_assignment_map.items():
         if not existing_assignment_map.get(assignment_id):
+            resource_type="arn:aws:iam::aws:user" if assignment["resource_type"] == "USER" else "arn:aws:iam::aws:group",
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
                     account=assignment["account_name"],
                     resource_id=assignment["resource_name"],
-                    resource_type=assignment["resource_type"],
+                    resource_type=resource_type,
                     attribute="account_assignment",
                 )
             ]
@@ -553,12 +556,13 @@ async def apply_account_assignments(
             log_str = "New account assignments discovered."
             if ctx.execute:
                 log_str = f"{log_str} Creating account assignment..."
+                resource_type="arn:aws:iam::aws:user" if assignment["resource_type"] == "USER" else "arn:aws:iam::aws:group",
                 apply_awaitable = create_account_assignment(
                     identity_center_client,
                     account_id=assignment["account_id"],
                     instance_arn=instance_arn,
                     permission_set_arn=permission_set_arn,
-                    resource_type=assignment["resource_type"],
+                    resource_type=resource_type,
                     resource_id=assignment["resource_id"],
                     resource_name=assignment["resource_name"],
                     log_params=log_params,
