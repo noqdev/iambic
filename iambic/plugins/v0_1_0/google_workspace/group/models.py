@@ -152,12 +152,14 @@ class GoogleWorkspaceGroupTemplate(GoogleTemplate, ExpiryModel):
                     "Resource is marked for deletion, but does not exist in the cloud. Skipping.",
                 )
                 return change_details
-            change_details.proposed_changes.append(
-                ProposedChange(
-                    change_type=ProposedChangeType.CREATE,
-                    resource_id=self.properties.email,
-                    resource_type=self.properties.resource_type,
-                )
+            change_details.extend_changes(
+                [
+                    ProposedChange(
+                        change_type=ProposedChangeType.CREATE,
+                        resource_id=self.properties.email,
+                        resource_type=self.properties.resource_type,
+                    )
+                ]
             )
             log_str = "New resource found in code."
             if not ctx.execute:
@@ -242,7 +244,7 @@ class GoogleWorkspaceGroupTemplate(GoogleTemplate, ExpiryModel):
 
         changes_made = await asyncio.gather(*tasks)
         if any(changes_made):
-            change_details.proposed_changes.extend(
+            change_details.extend_changes(
                 list(chain.from_iterable(changes_made))
             )
 
