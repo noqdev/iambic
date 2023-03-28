@@ -89,8 +89,6 @@ class TestGenerateGroupTemplates(IsolatedAsyncioTestCase):
     async def test_generate_group_templates_with_groups(self):
         groups = [
             {
-                "resource_id": "group1@example.com",
-                "resource_type": "google:group:template",
                 "properties": {
                     "name": "Group 1",
                     "email": "group1@example.com",
@@ -193,8 +191,6 @@ class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
 
         group = GoogleWorkspaceGroupTemplate(
             file_path="unset",
-            resource_id="group1@example.com",
-            resource_type="google:group:template",
             properties={
                 "name": "Group 1",
                 "email": "group1@example.com",
@@ -215,8 +211,6 @@ class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
         group_dir = "test_group_dir"
         discovered_group_template = GoogleWorkspaceGroupTemplate(
             file_path="unset",
-            resource_id="group1@example.com",
-            resource_type="google:group:template",
             properties={
                 "name": "Group 1",
                 "email": "group1@example.com",

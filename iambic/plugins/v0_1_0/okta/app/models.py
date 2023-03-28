@@ -40,6 +40,7 @@ class AppProperties(ExpiryModel, BaseModel):
     id: Optional[str] = Field(
         None, description="Unique App ID for the app. Usually it's {idp-name}-{name}"
     )
+    file_path: str = Field("", description="Path to the template file", exclude=True)
     description: Optional[str] = Field("", description="Description of the app")
     extra: Any = Field(None, description=("Extra attributes to store"))
     created: Optional[str] = Field("", description="Date the app was created")
@@ -51,7 +52,7 @@ class AppProperties(ExpiryModel, BaseModel):
 
     @property
     def resource_id(self) -> str:
-        return self.app_id
+        return self.id
 
     @validator("assignments")
     def sort_groups(cls, v: list[Assignment]):
@@ -267,7 +268,6 @@ async def get_app_template(okta_app) -> OktaAppTemplate:
             status=okta_app.status,
             id=okta_app.id,
             file_path="{}.yaml".format(okta_app.name),
-            attributes=dict(),
             assignments=okta_app.assignments,
         ),
     )

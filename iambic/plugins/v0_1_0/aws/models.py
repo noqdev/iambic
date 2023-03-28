@@ -9,7 +9,7 @@ import boto3
 import botocore
 from aws_error_utils.aws_error_utils import errors
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, constr, validator
+from pydantic import Extra, Field, constr, validator
 from ruamel.yaml import YAML, yaml_object
 
 from iambic.core.context import ctx
@@ -173,6 +173,7 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
 
     class Config:
         fields = {"boto3_session_map": {"exclude": True}}
+        extra = Extra.forbid
 
     @property
     def region_name(self):
@@ -285,9 +286,15 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
         None,
         description="(Auto-populated) The role arn to assume into when making calls to the account",
     )
+    assume_role_arn: Optional[str] = Field(
+        None,
+        description="The role arn to assume into when making calls to the account",
+        exclude=True,
+    )
 
     class Config:
         fields = {"hub_session_info": {"exclude": True}}
+        extra = Extra.forbid
 
     async def get_boto3_session(self, region_name: str = None):
         region_name = region_name or self.region_name
@@ -547,6 +554,11 @@ class AWSIdentityCenter(PydanticBaseModel):
 
 
 class AWSOrganization(BaseAWSAccountAndOrgModel):
+    org_name: Optional[str] = Field(
+        None,
+        description="Optional friendly name for the organization",
+        exclude=True,
+    )
     org_id: str = Field(
         None,
         description="A unique identifier designating the identity of the organization",
@@ -559,7 +571,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         description="The AWS Account ID and region of the AWS Identity Center instance to use for this organization",
     )
     default_rule: BaseAWSOrgRule = Field(
-        BaseAWSOrgRule(enabled=True),
+        BaseAWSOrgRule(iambic_managed=IambicManaged.UNDEFINED),
         description="The rule used to determine how an organization account should be handled if the account was not found in account_rules.",
     )
     account_rules: Optional[List[AWSOrgAccountRule]] = Field(

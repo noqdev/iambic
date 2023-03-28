@@ -39,6 +39,19 @@ class UserSimple(BaseModel, ExpiryModel):
     username: str
     status: Optional[UserStatus] = UserStatus.active
 
+    background_check_status: Optional[bool] = Field(False, description="Background check status for the group", exclude=True)
+    created: Optional[str] = Field(None, description="Created date for the group", exclude=True)
+    domain: Optional[str] = Field(None, description="Domain for the group", exclude=True)
+    extra: Any = Field(None, description=("Extra attributes to store"), exclude=True)
+    fullname: Optional[str] = Field(None, description="Full name for the group", exclude=True)
+    groups: Optional[List[str]] = Field(None, description="Groups for the group", exclude=True)
+    idp_name: Optional[str] = Field(None, description="IDP name for the group", exclude=True)
+    profile: Optional[Any] = Field(None, description="Profile for the group", exclude=True)
+    status: Optional[UserStatus] = Field(None, description="Status for the group", exclude=True)
+    updated: Optional[str] = Field(None, description="Updated date for the group", exclude=True)
+    user_id: Optional[str] = Field(None, description="User ID for the group", exclude=True)
+
+
     @property
     def resource_type(self) -> str:
         return "okta:user"
@@ -65,10 +78,15 @@ class GroupProperties(ExpiryModel, BaseModel):
     group_id: str = Field(
         "", description="Unique Group ID for the group. Usually it's {idp-name}-{name}"
     )
+    file_path: str = Field("", description="File path of the group", exclude=True)
     description: Optional[str] = Field("", description="Description of the group")
     extra: Any = Field(None, description=("Extra attributes to store"))
     members: List[UserSimple] = Field([], description="Users in the group")
-
+    identifier: Optional[str] = Field(
+        None, description="Identifier for the group. Usually it's the group name",
+        exclude=True,
+    )
+    
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
         return {"extra", "metadata_commented_dict"}

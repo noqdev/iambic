@@ -29,7 +29,7 @@ from deepdiff.model import PrettyOrderedSet
 from git import Repo
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, root_validator, schema, validate_model, validator
+from pydantic import Extra, Field, root_validator, schema,  validate_model, validator
 from pydantic.fields import ModelField
 
 from iambic.core.iambic_enum import Command, ExecutionStatus, IambicManaged
@@ -354,6 +354,7 @@ class TemplateChangeDetails(PydanticBaseModel):
 
     class Config:
         json_encoders = {PrettyOrderedSet: list}
+        extra = Extra.forbid
 
     def extend_changes(self, changes: list[ProposedChange]):
         for change in changes:
@@ -583,6 +584,7 @@ class ExpiryModel(IambicPydanticBaseModel):
             datetime.datetime: simplify_dt,
             datetime.date: simplify_dt,
         }
+        extra = Extra.forbid
 
     @validator("expires_at", pre=True)
     def parse_expires_at(cls, value):
