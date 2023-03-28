@@ -94,7 +94,7 @@ async def generate_user_templates(
             user, existing_template_map
         )
         if not resource_template:
-            # Template not updated. Most likely because it's a write_only template.
+            # Template not updated. Most likely because it's an `enforced` template.
             continue
         all_resource_ids.add(resource_template.resource_id)
 

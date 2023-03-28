@@ -482,8 +482,8 @@ def create_or_update_template(
     # iambic-specific knowledge requires us to load the existing template
     # because it will not be reflected by AWS API.
     if existing_template := existing_template_map.get(identifier, None):
-        if existing_template.iambic_managed == IambicManaged.WRITE_ONLY:
-            # If the template is marked as WRITE_ONLY, we should not update it during import.
+        if existing_template.iambic_managed == IambicManaged.ENFORCED:
+            # If the template is marked as ENFORCED, we should not update it during import.
             return
         merged_template = merge_model(
             new_template, existing_template, all_provider_children
@@ -975,8 +975,8 @@ def delete_orphaned_templates(
     """
     for existing_template in existing_templates:
         if existing_template.resource_id not in resource_ids:
-            if existing_template.iambic_managed == IambicManaged.WRITE_ONLY:
-                # If the template is marked as WRITE_ONLY, we should not delete it.
+            if existing_template.iambic_managed == IambicManaged.ENFORCED:
+                # If the template is marked as ENFORCED, we should not delete it.
                 continue
             log.warning(
                 "Removing template that references deleted resource",

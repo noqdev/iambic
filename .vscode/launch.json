@@ -37,13 +37,14 @@
             "justMyCode": true
         },
         {
-            "name": "Iambic: Apply IAMbic Managed Templates",
+            "name": "Iambic: Apply IAMbic Enforced-Mode Templates",
             "type": "python",
             "request": "launch",
             "module": "iambic.main",
             "console": "integratedTerminal",
             "args": [
-                "apply-iambic-managed",
+                "apply",
+                "--enforced-only"
             ],
             "envFile": "${workspaceFolder}/.env",
             "justMyCode": true
