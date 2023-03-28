@@ -57,6 +57,7 @@ async def get_user(
     """
     assert user_id or username
 
+
     if user_id:
         async with GlobalRetryController(
             fn_identifier="azure_ad.get_user"

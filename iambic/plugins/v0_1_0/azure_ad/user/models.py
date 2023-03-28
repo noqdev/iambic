@@ -54,7 +54,6 @@ class UserTemplateProperties(BaseModel, ExpiryModel):
     preferred_language: Optional[str] = Field(None, description="Preferred language of the user", exclude=True)
     surname: Optional[str] = Field(None, description="Surname of the user", exclude=True)
     user_principal_name: Optional[str] = Field(None, description="User principal name of the user", exclude=True)
-    loc: Optional[list] = Field([], description="Location of the user", exclude=True)
 
     @property
     def resource_type(self) -> str:
@@ -66,8 +65,13 @@ class UserTemplateProperties(BaseModel, ExpiryModel):
 
     @classmethod
     def from_azure_response(cls, azure_response: dict) -> UserTemplateProperties:
+        unwanted_keys = [
+            "password_profile",
+        ]
         azure_response = normalize_dict_keys(azure_response)
-        azure_response.pop("password_profile", None)
+        # Filter unwanted keys
+        azure_response = {x: y for x, y in azure_response.items() if x not in unwanted_keys}
+        azure_response = {x: y for x, y in azure_response.items() if not x.startswith('@odata')}
 
         return cls(
             user_id=azure_response.get("id"),
