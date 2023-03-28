@@ -381,6 +381,10 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
                 InstanceArn=self.identity_center_details.instance_arn,
             )
             if permission_set_arns:
+                # WARNING
+                # current implementation does not do well if there is permission set
+                # destruction interleave between earlier paginated_search and the sub-
+                # sequent describe-permission-set
                 permission_set_detail_semaphore = NoqSemaphore(
                     boto_crud_call, batch_size
                 )
