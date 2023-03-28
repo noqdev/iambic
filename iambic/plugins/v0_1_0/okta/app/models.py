@@ -40,7 +40,7 @@ class AppProperties(ExpiryModel, BaseModel):
     id: Optional[str] = Field(
         None, description="Unique App ID for the app. Usually it's {idp-name}-{name}"
     )
-    file_path: Optional[str] = Field(None, description="Path to the template file")
+    file_path: str = Field("", description="Path to the template file")
     description: Optional[str] = Field("", description="Description of the app")
     extra: Any = Field(None, description=("Extra attributes to store"))
     created: Optional[str] = Field("", description="Date the app was created")
@@ -64,7 +64,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
     template_type = OKTA_APP_TEMPLATE_TYPE
     properties: AppProperties = Field(..., description="Properties for the Okta App")
     owner: Optional[str] = Field(None, description="Owner of the app")
-    idp_name: Optional[str] = Field(
+    idp_name: str = Field(
         ...,
         description="Name of the identity provider that's associated with the group",
     )
