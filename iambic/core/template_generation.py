@@ -975,6 +975,9 @@ def delete_orphaned_templates(
     """
     for existing_template in existing_templates:
         if existing_template.resource_id not in resource_ids:
+            if existing_template.iambic_managed == IambicManaged.WRITE_ONLY:
+                # If the template is marked as WRITE_ONLY, we should not delete it.
+                continue
             log.warning(
                 "Removing template that references deleted resource",
                 resource_type=existing_template.resource_type,
