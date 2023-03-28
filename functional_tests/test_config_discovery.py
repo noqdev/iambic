@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import asyncio
 import uuid
 from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.config.dynamic_config import load_config
 from iambic.core.iambic_enum import Command
-from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
 
 
@@ -27,23 +25,9 @@ class ConfigDiscoveryTestCase(IsolatedAsyncioTestCase):
         new_name = "new_name"
         config.aws.accounts[0].account_name = new_name
 
-        max_attempts = 3
-        cur_attempt = 0
-        last_exception = None
-        while cur_attempt < max_attempts:
-            cur_attempt += 1
-            try:
-                await config.run_discover_upstream_config_changes(
-                    exe_message, IAMBIC_TEST_DETAILS.template_dir_path
-                )
-                break
-            except Exception as exc_info:
-                last_exception = exc_info
-                await asyncio.sleep(10)
-        else:
-            if last_exception:
-                raise last_exception
-            log.info(f"test_aws_account_name_updated took {cur_attempt + 1} tries")
+        await config.run_discover_upstream_config_changes(
+            exe_message, IAMBIC_TEST_DETAILS.template_dir_path
+        )
 
         account_names = [account.account_name for account in config.aws.accounts]
         self.assertIn(original_name, account_names)
@@ -60,23 +44,9 @@ class ConfigDiscoveryTestCase(IsolatedAsyncioTestCase):
             provider_type="aws",
         )
 
-        max_attempts = 3
-        cur_attempt = 0
-        last_exception = None
-        while cur_attempt < max_attempts:
-            cur_attempt += 1
-            try:
-                await config.run_discover_upstream_config_changes(
-                    exe_message, IAMBIC_TEST_DETAILS.template_dir_path
-                )
-                break
-            except Exception as exc_info:
-                last_exception = exc_info
-                await asyncio.sleep(10)
-        else:
-            if last_exception:
-                raise last_exception
-            log.info(f"test_aws_account_discovered took {cur_attempt + 1} tries")
+        await config.run_discover_upstream_config_changes(
+            exe_message, IAMBIC_TEST_DETAILS.template_dir_path
+        )
 
         self.assertEqual(len(config.aws.accounts), original_aws_count)
         self.assertIn(
