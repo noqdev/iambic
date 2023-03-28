@@ -3,7 +3,6 @@ on:
   pull_request:
   push:
     branches: [main]
-    tags: ["*"]
 jobs:
   run-unit-test:
     runs-on: self-hosted
