@@ -12,6 +12,7 @@ from iambic.plugins.v0_1_0.aws.iam.group.models import AwsIamGroupTemplate
 from iambic.plugins.v0_1_0.aws.iam.policy.models import AwsIamManagedPolicyTemplate
 from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate
 from iambic.plugins.v0_1_0.aws.iam.user.models import AwsIamUserTemplate
+from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AwsIdentityCenterPermissionSetTemplate,
 )
@@ -42,6 +43,7 @@ def create_model_schemas(
     re_pattern_add_newline_before_header = (
         r"^(?P<stars>\*\*)(?P<text>.*)$"  # Add newline before headers to fix markdown
     )
+    re_pattern_replace_br = r"<br>"  # Replace <br> with <br \>
     re_pattern_move_links = r"^(-\s*)(<a.*?>.*?</a>)(.*?\s)"  # Moves link references before the line, to be compatible with docusaurus markdown
 
     for model in model_schemas:
@@ -68,6 +70,8 @@ def create_model_schemas(
                 text,
                 flags=re.MULTILINE,
             )
+
+            text = re.sub(re_pattern_replace_br, r"<br \>", text)
             f.write(text)
 
     return schema_md_str
@@ -89,7 +93,7 @@ def generate_docs():
     okta_template_models = [OktaGroupTemplate, OktaUserTemplate, OktaAppTemplate]
     config_models = [
         Config,
-        # AWSConfig, TODO: There's a problem parsing the AWSConfig schema into Markdown
+        AWSConfig,
         AWSAccount,
         AWSOrganization,
         OktaConfig,
