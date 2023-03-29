@@ -231,7 +231,7 @@ If you have any questions or feedback, please reach out to us on [Slack](https:/
 
 ### IAMbic (This repo)
 
-IAMbic is licensed under the AGPL-3.0 license. Commercial licenses and support are also available from Noq Software, Inc.
+IAMbic is licensed under the Apache-2.0 license. Commercial licenses and support are also available from Noq Software, Inc.
 
 ### Provider Plugins
 
