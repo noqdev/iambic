@@ -155,7 +155,7 @@ async def apply_user_tags(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.DETACH,
-                resource_type="arn:aws:iam::aws:user",
+                resource_type="aws:iam:user",
                 resource_id=user_name,
                 attribute="tags",
                 change_summary={"TagKeys": tags_to_remove},
@@ -182,7 +182,7 @@ async def apply_user_tags(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.ATTACH,
-                resource_type="arn:aws:iam::aws:user",
+                resource_type="aws:iam:user",
                 resource_id=user_name,
                 attribute="tags",
                 new_value=tag,
@@ -230,7 +230,7 @@ async def apply_user_permission_boundary(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.ATTACH,
-                resource_type="arn:aws:iam::aws:policy",
+                resource_type="aws:policy_document",
                 resource_id=template_boundary_policy_arn,
                 attribute="permission_boundary",
             )
@@ -264,7 +264,7 @@ async def apply_user_permission_boundary(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.DETACH,
-                resource_type="arn:aws:iam::aws:policy",
+                resource_type="aws:policy_document",
                 resource_id=existing_boundary_policy_arn,
                 attribute="permission_boundary",
             )
@@ -321,7 +321,7 @@ async def apply_user_managed_policies(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.ATTACH,
-                resource_type="arn:aws:iam::aws:policy",
+                resource_type="aws:policy_document",
                 resource_id=policy_arn,
                 attribute="managed_policies",
             )
@@ -342,7 +342,7 @@ async def apply_user_managed_policies(
                     [
                         ProposedChange(
                             change_type=ProposedChangeType.ATTACH,
-                            resource_type="arn:aws:iam::aws:policy",
+                            resource_type="aws:policy_document",
                             resource_id=policy_arn,
                             attribute="managed_policies",
                         )
@@ -365,7 +365,7 @@ async def apply_user_managed_policies(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.DETACH,
-                resource_type="arn:aws:iam::aws:policy",
+                resource_type="aws:policy_document",
                 resource_id=policy_arn,
                 attribute="managed_policies",
             )
@@ -387,7 +387,7 @@ async def apply_user_managed_policies(
                         [
                             ProposedChange(
                                 change_type=ProposedChangeType.DETACH,
-                                resource_type="arn:aws:iam::aws:policy",
+                                resource_type="aws:policy_document",
                                 resource_id=policy_arn,
                                 attribute="managed_policies",
                             )
@@ -431,7 +431,7 @@ async def apply_user_inline_policies(
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DELETE,
-                    resource_type="arn:aws:iam::aws:policy",
+                    resource_type="aws:policy_document",
                     resource_id=policy_name,
                     attribute="inline_policies",
                 )
@@ -475,7 +475,7 @@ async def apply_user_inline_policies(
                 proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.UPDATE,
-                        resource_type="arn:aws:iam::aws:policy",
+                        resource_type="aws:policy_document",
                         resource_id=policy_name,
                         attribute="inline_policies",
                         change_summary=policy_drift,
@@ -489,7 +489,7 @@ async def apply_user_inline_policies(
                 proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.CREATE,
-                        resource_type="arn:aws:iam::aws:policy",
+                        resource_type="aws:policy_document",
                         resource_id=policy_name,
                         attribute="inline_policies",
                         new_value=policy_document,
@@ -537,7 +537,7 @@ async def apply_user_groups(
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
-                    resource_type="arn:aws:iam::aws:group",
+                    resource_type="aws:iam:group",
                     resource_id=group,
                     attribute="groups",
                 )
@@ -562,7 +562,7 @@ async def apply_user_groups(
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DELETE,
-                    resource_type="arn:aws:iam::aws:group",
+                    resource_type="aws:iam:group",
                     resource_id=group,
                     attribute="groups",
                 )

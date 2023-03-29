@@ -218,7 +218,7 @@ async def apply_permission_set_aws_managed_policies(
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.ATTACH,
-                    resource_type="arn:aws:iam::aws:policy",
+                    resource_type="aws:policy_document",
                     resource_id=policy_arn,
                     attribute="managed_policies",
                 )
@@ -247,7 +247,7 @@ async def apply_permission_set_aws_managed_policies(
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DETACH,
-                    resource_type="arn:aws:iam::aws:policy",
+                    resource_type="aws:policy_document",
                     resource_id=policy_arn,
                     attribute="managed_policies",
                 )
@@ -321,7 +321,7 @@ async def apply_permission_set_customer_managed_policies(
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.ATTACH,
-                    resource_type="arn:aws:iam::aws:policy",
+                    resource_type="aws:policy_document",
                     resource_id=f"{policy['Path']}{policy['Name']}",
                     attribute="customer_managed_policies",
                 )
@@ -354,7 +354,7 @@ async def apply_permission_set_customer_managed_policies(
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DETACH,
-                    resource_type="arn:aws:iam::aws:policy",
+                    resource_type="aws:policy_document",
                     resource_id=f"{policy['Path']}{policy['Name']}",
                     attribute="customer_managed_policies",
                 )
@@ -609,7 +609,7 @@ async def apply_permission_set_inline_policy(
                     change_type=ProposedChangeType.UPDATE,
                     attribute="inline_policy_document",
                     resource_id=permission_set_arn,
-                    resource_type="arn:aws:iam::aws:permission-set",
+                    resource_type="aws:identity_center:permission_set",
                     change_summary=policy_drift,
                     current_value=existing_inline_policy,
                     new_value=template_inline_policy,
@@ -619,7 +619,7 @@ async def apply_permission_set_inline_policy(
             response.append(
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
-                    resource_type="arn:aws:iam::aws:permission-set",
+                    resource_type="aws:identity_center:permission_set",
                     resource_id=permission_set_arn,
                     attribute="inline_policy_document",
                     new_value=template_inline_policy,
@@ -642,7 +642,7 @@ async def apply_permission_set_inline_policy(
             ProposedChange(
                 change_type=ProposedChangeType.DELETE,
                 attribute="inline_policy",
-                resource_type="arn:aws:iam::aws:permission-set",
+                resource_type="aws:identity_center:permission_set",
                 resource_id=permission_set_arn,
                 current_value=existing_inline_policy,
             )
@@ -688,7 +688,7 @@ async def apply_permission_set_permission_boundary(
                 ProposedChange(
                     change_type=ProposedChangeType.UPDATE,
                     attribute="permissions_boundary",
-                    resource_type="arn:aws:iam::aws:permission-set",
+                    resource_type="aws:identity_center:permission_set",
                     resource_id=permission_set_arn,
                     change_summary=policy_drift,
                     current_value=existing_permission_boundary,
@@ -699,7 +699,7 @@ async def apply_permission_set_permission_boundary(
             response.append(
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
-                    resource_type="arn:aws:iam::aws:permission-set",
+                    resource_type="aws:identity_center:permission_set",
                     resource_id=permission_set_arn,
                     attribute="permissions_boundary",
                     new_value=template_permission_boundary,
@@ -721,7 +721,7 @@ async def apply_permission_set_permission_boundary(
         response.append(
             ProposedChange(
                 change_type=ProposedChangeType.DELETE,
-                resource_type="arn:aws:iam::aws:permission-set",
+                resource_type="aws:identity_center:permission_set",
                 resource_id=permission_set_arn,
                 attribute="permissions_boundary",
                 current_value=existing_permission_boundary,
@@ -765,7 +765,7 @@ async def apply_permission_set_tags(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.DETACH,
-                resource_type="arn:aws:iam::aws:permission-set",
+                resource_type="aws:identity_center:permission_set",
                 resource_id=permission_set_arn,
                 attribute="tags",
                 change_summary={"TagKeys": tags_to_remove},
@@ -788,7 +788,7 @@ async def apply_permission_set_tags(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.ATTACH,
-                resource_type="arn:aws:iam::aws:permission-set",
+                resource_type="aws:identity_center:permission_set",
                 resource_id=permission_set_arn,
                 attribute="tags",
                 new_value=tag,
