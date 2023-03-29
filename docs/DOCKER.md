@@ -29,7 +29,7 @@ To run the container locally, run the following commands:
 
 ```bash
 # Refresh AWS Credentials with a specific profile
-noq file arn:aws:iam::940552945933:role/NoqCentralRoleCorpNoqDev -p arn:aws:iam::940552945933:role/NoqCentralRoleCorpNoqDev -f
+noq file arn:aws:iam::123456789012:role/roleName -p arn:aws:iam::123456789012:role/roleName -f
 # Build the container
 docker-compose build
 

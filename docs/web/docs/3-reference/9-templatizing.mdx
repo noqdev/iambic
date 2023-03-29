@@ -62,14 +62,14 @@ properties:
           - sts:TagSession
         effect: Allow
         principal:
-          aws: arn:aws:iam::4567890123456:role/NoqCentralRoleCorpNoqDev
+          aws: arn:aws:iam::4567890123456:role/ExampleRole2
     version: '2012-10-17'
   managed_policies:
     - policy_arn: arn:aws:iam::{{account_id}}:policy/ReadOnlyAccess
   role_name: '{{account_name}}_readonly'
   tags:
     - key: noq-tra-supported-groups
-      value: noq_admins@noq.dev
+      value: group@example.com
 
 ```
 
