@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from okta.client import Client as OktaClient
 from pydantic import BaseModel, Extra, Field, SecretStr, validator
 
 from iambic.core.iambic_enum import IambicManaged

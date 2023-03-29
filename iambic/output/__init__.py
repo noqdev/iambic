@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 import pathlib
+
 from jinja2 import Environment, FileSystemLoader
+
 from iambic.output.filters import (
     rich_format,
     rich_text,

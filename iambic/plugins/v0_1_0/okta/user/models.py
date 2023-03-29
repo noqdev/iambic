@@ -263,9 +263,7 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
 
         changes_made = await asyncio.gather(*tasks)
         if any(changes_made):
-            change_details.extend_changes(
-                list(chain.from_iterable(changes_made))
-            )
+            change_details.extend_changes(list(chain.from_iterable(changes_made)))
 
         if ctx.execute:
             log.debug(

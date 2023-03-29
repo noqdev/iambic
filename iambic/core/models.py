@@ -29,7 +29,7 @@ from deepdiff.model import PrettyOrderedSet
 from git import Repo
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Extra, Field, root_validator, schema,  validate_model, validator
+from pydantic import Extra, Field, root_validator, schema, validate_model, validator
 from pydantic.fields import ModelField
 
 from iambic.core.iambic_enum import Command, ExecutionStatus, IambicManaged

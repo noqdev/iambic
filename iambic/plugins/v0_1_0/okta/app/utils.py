@@ -5,7 +5,6 @@ import functools
 from typing import TYPE_CHECKING, List
 
 import okta.models as models
-
 from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
@@ -266,7 +265,7 @@ async def update_app_assignments(
                     }
                 },
                 current_value=current_user_assignments + current_group_assignments,
-                new_value = desired_user_assignments + desired_group_assignments,
+                new_value=desired_user_assignments + desired_group_assignments,
             )
         )
 
