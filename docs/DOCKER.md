@@ -3,7 +3,7 @@
 
 Iambic ships with a docker container and a docker-compose.yaml file that can be ran either locally, in AWS Lambda, GitHub Actions, and potentially other places.
 
-The container is purpose built to support Python 3.10 in AWS Lambda because at the current time, AWS Lambda does not support Python 3.10 (See: <https://github.com/aws/aws-lambda-base-images/issues/31>). See the Dockerfile for more information.
+The container is purpose built to support Python 3.11 in AWS Lambda because at the current time, AWS Lambda does not support Python 3.11 (See: <https://github.com/aws/aws-lambda-base-images/issues/31>). See the Dockerfile for more information.
 
 The Dockerfile ships with [AWSLambdaric](https://docs.aws.amazon.com/lambda/latest/dg/images-test.html), which allows us to test Lambda functions locally. The actual Iambic Lambda Python code is in iambic/lambda/app.py.
 
