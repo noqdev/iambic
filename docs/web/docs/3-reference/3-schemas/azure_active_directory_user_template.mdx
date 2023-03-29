@@ -1,0 +1,58 @@
+# AzureActiveDirectoryUserTemplate
+
+*A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.*
+
+## Properties
+
+- **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+- **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+  - **Items**
+- **`template_type`** *(string)*: Default: `"NOQ::AzureAD::User"`.
+- **`owner`** *(string)*
+- **`iambic_managed`**: Controls the directionality of Iambic changes. Default: `"undefined"`.
+  - **All of**
+    - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
+- **`idp_name`** *(string)*: Name of the identity provider that's associated with the resource.
+- **`expires_at`**: The date and time the resource will be/was set to deleted.
+  - **Any of**
+    - *string*
+    - *string*
+    - *string*
+- **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+- **`properties`**: Properties for the Azure AD User.
+  - **All of**
+    - : Refer to *[#/definitions/UserTemplateProperties](#definitions/UserTemplateProperties)*.
+## Definitions
+
+
+<a id="definitions/IambicManaged"></a>
+
+- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+
+<a id="definitions/UserStatus"></a>
+
+- **`UserStatus`**: An enumeration. Must be one of: `["active", "provisioned", "deprovisioned"]`.
+
+<a id="definitions/UserTemplateProperties"></a>
+
+- **`UserTemplateProperties`** *(object)*: A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
+  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
+  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
+    - **Items**
+  - **`expires_at`**: The date and time the resource will be/was set to deleted.
+    - **Any of**
+      - *string*
+      - *string*
+      - *string*
+  - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+  - **`user_id`** *(string)*
+  - **`username`** *(string)*
+  - **`display_name`** *(string)*
+  - **`mail_nickname`** *(string)*
+  - **`given_name`** *(string)*
+  - **`employee_id`** *(string)*
+  - **`domain`** *(string)*
+  - **`fullname`** *(string)*
+  - **`status`**: Refer to *[#/definitions/UserStatus](#definitions/UserStatus)*.

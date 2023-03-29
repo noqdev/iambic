@@ -21,6 +21,7 @@ from iambic.core.template_generation import (
 from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import ManagedPolicyMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.policy.models import (
+    AWS_MANAGED_POLICY_TEMPLATE_TYPE,
     AwsIamManagedPolicyTemplate,
     ManagedPolicyProperties,
 )
@@ -320,7 +321,7 @@ async def collect_aws_managed_policies(
             return
 
     existing_template_map = await get_existing_template_map(
-        base_output_dir, "NOQ::AWS::IAM::ManagedPolicy"
+        base_output_dir, AWS_MANAGED_POLICY_TEMPLATE_TYPE
     )
 
     log.info(
@@ -443,7 +444,7 @@ async def generate_aws_managed_policy_templates(
 ):
     aws_account_map = await get_aws_account_map(config)
     existing_template_map = await get_existing_template_map(
-        base_output_dir, "NOQ::IAM::ManagedPolicy"
+        base_output_dir, AWS_MANAGED_POLICY_TEMPLATE_TYPE
     )
     resource_dir = get_template_dir(base_output_dir)
     account_managed_policies = await exe_message.get_sub_exe_files(
@@ -482,6 +483,9 @@ async def generate_aws_managed_policy_templates(
             existing_template_map,
             config,
         )
+        if not resource_template:
+            # Template not updated. Most likely because it's an `enforced` template.
+            continue
         all_resource_ids.add(resource_template.resource_id)
 
     if not detect_messages:

@@ -6,6 +6,7 @@ import pathlib
 import sys
 import uuid
 import warnings
+from typing import Optional
 
 import click
 
@@ -17,7 +18,7 @@ from iambic.config.utils import (
 from iambic.config.wizard import ConfigurationWizard
 from iambic.core.context import ctx
 from iambic.core.git import clone_git_repos
-from iambic.core.iambic_enum import Command
+from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage, TemplateChangeDetails
 from iambic.core.parser import load_templates
@@ -150,14 +151,20 @@ def run_clone_repos(repo_dir: str = str(pathlib.Path.cwd())):
     "-f",
     is_flag=True,
     show_default=True,
-    help="Apply changes without asking for permission?",
+    help="Apply changes without asking for permission",
 )
 @click.argument(
     "templates",
-    required=True,
+    required=False,
     envvar="IAMBIC_TEMPLATE_PATH",
     type=click.Path(exists=True),
     nargs=-1,
+)
+@click.option(
+    "--enforced-only",
+    "-e",
+    is_flag=True,
+    help="Apply Iambic templates that are in `enforced` mode",
 )
 @click.option(
     "--allow-dirty",
@@ -192,45 +199,61 @@ def apply(
     repo_dir: str,
     force: bool,
     templates: list[str],
+    enforced_only: bool,
     allow_dirty: bool,
     from_sha: str,
     to_sha: str,
     plan_output: str,
 ):
-    try:
-        if from_sha:
-            assert to_sha, "to_sha is required when from_sha is provided"
-            assert (
-                not templates
-            ), "templates cannot be provided when from_sha is provided"
-            run_git_apply(
-                allow_dirty,
-                from_sha,
-                to_sha,
-                repo_dir=repo_dir,
-                output_path=plan_output,
-            )
-        else:
-            assert templates, "templates is a required argument"
-            assert not to_sha, "to_sha is not supported with templates"
-            assert not from_sha, "from_sha is not supported with templates"
-            ctx.eval_only = not force
-            config_path = asyncio.run(resolve_config_template_path(repo_dir))
-            config = asyncio.run(load_config(config_path))
-            run_apply(config, templates)
-    except AssertionError as err:
-        log.error("Invalid arguments", error=repr(err))
+    if from_sha:
+        if not to_sha:
+            log.error("to_sha is required when from_sha is provided")
+            return
+        if templates:
+            log.error("templates cannot be provided when from_sha is provided")
+            return
+        run_git_apply(
+            allow_dirty,
+            from_sha,
+            to_sha,
+            repo_dir=repo_dir,
+            output_path=plan_output,
+        )
+    else:
+        if to_sha or from_sha:
+            log.error("to_sha and from_sha are not supported with templates")
+            return
+        ctx.eval_only = not force
+        config_path = asyncio.run(resolve_config_template_path(repo_dir))
+        config = asyncio.run(load_config(config_path))
+        run_apply(config, templates, repo_dir=repo_dir, enforced_only=enforced_only)
 
 
-def run_apply(config: Config, templates: list[str]) -> list[TemplateChangeDetails]:
+def run_apply(
+    config: Config,
+    templates: Optional[list[str]],
+    repo_dir: str = str(pathlib.Path.cwd()),
+    enforced_only: bool = False,
+    output_path: str = "proposed_changes.yaml",
+) -> list[TemplateChangeDetails]:
     template_changes = []
     exe_message = ExecutionMessage(
         execution_id=str(uuid.uuid4()), command=Command.APPLY
     )
+    if not templates:
+        if not enforced_only:
+            log.error("Please pass in specific templates to apply.")
+            return template_changes
+        templates = asyncio.run(gather_templates(repo_dir))
     templates = load_templates(templates)
+    if enforced_only:
+        templates = [t for t in templates if t.iambic_managed == IambicManaged.ENFORCED]
+    if not templates:
+        log.info("No templates found")
+        return template_changes
     asyncio.run(flag_expired_resources([template.file_path for template in templates]))
     template_changes = asyncio.run(config.run_apply(exe_message, templates))
-    output_proposed_changes(template_changes)
+    output_proposed_changes(template_changes, output_path=output_path)
 
     if ctx.eval_only and template_changes and click.confirm("Proceed?"):
         ctx.eval_only = False
