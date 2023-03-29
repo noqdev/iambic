@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 from typing import Callable, Optional, Union
 
-import botocore
 from pydantic import Field, validator
 
 from iambic.core.context import ctx
@@ -150,10 +149,7 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
     async def _apply_to_account(  # noqa: C901
         self, aws_account: AWSAccount
     ) -> AccountChangeDetails:
-        boto3_session = await aws_account.get_boto3_session()
-        client = boto3_session.client(
-            "iam", config=botocore.client.Config(max_pool_connections=50)
-        )
+        client = await aws_account.get_boto3_client("iam")
         self = await remove_expired_resources(
             self, self.resource_type, self.resource_id
         )

@@ -4,7 +4,6 @@ import asyncio
 import json
 from typing import Callable, List, Optional, Union
 
-import botocore
 from jinja2 import BaseLoader, Environment
 from pydantic import Field, constr, validator
 
@@ -324,10 +323,7 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
         return resource_dict
 
     async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
-        boto3_session = await aws_account.get_boto3_session()
-        client = boto3_session.client(
-            "iam", config=botocore.client.Config(max_pool_connections=50)
-        )
+        client = await aws_account.get_boto3_client("iam")
         account_policy = self.apply_resource_dict(aws_account)
         policy_name = account_policy["PolicyName"]
         account_change_details = AccountChangeDetails(

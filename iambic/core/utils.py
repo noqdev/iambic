@@ -211,7 +211,7 @@ class NoqSemaphore:
 async def async_batch_processor(
     tasks: list,
     batch_size: int,
-    seconds_between_process: int = 1,
+    seconds_between_process: Union[int, float] = 1,
     return_exceptions: bool = False,
 ) -> list:
     """
@@ -231,7 +231,8 @@ async def async_batch_processor(
         if len(response) == len(tasks):
             return response
 
-        await asyncio.sleep(seconds_between_process)
+        if seconds_between_process:
+            await asyncio.sleep(seconds_between_process)
 
     return response
 
