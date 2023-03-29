@@ -19,7 +19,7 @@ update_template_yaml = """  - resource_id: t1000
             Statement:
               - Effect: Allow
                 Principal:
-                  AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                  AWS: arn:aws:iam::123456789012:role/NoqCentralRole
                 Action:
                   - sts:AssumeRole
                   - sts:TagSession
@@ -61,24 +61,24 @@ update_template_yaml = """  - resource_id: t1000
               Statement:
                 - Effect: Allow
                   Principal:
-                    AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                    AWS: arn:aws:iam::123456789012:role/NoqCentralRole
                   Action:
                     - s3:ListBucket
                 - Effect: Allow
                   Principal:
-                    AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                    AWS: arn:aws:iam::123456789012:role/NoqCentralRole
                   Action:
                     - s3:CreateBucket
             - PolicyName: spoke-acct-policy-333
               Statement:
                 - Effect: Allow
                   Principal:
-                    AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                    AWS: arn:aws:iam::123456789012:role/NoqCentralRole
                   Action:
                     - s3:DeleteBucket
                 - Effect: Allow
                   Principal:
-                    AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                    AWS: arn:aws:iam::123456789012:role/NoqCentralRole
                   Action:
                     - s3:ListBucket
           AssumeRolePolicyDocument:
@@ -86,7 +86,7 @@ update_template_yaml = """  - resource_id: t1000
             Statement:
               - Effect: Allow
                 Principal:
-                  AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                  AWS: arn:aws:iam::123456789012:role/NoqCentralRole
                 Action:
                   - sts:AssumeRole
                   - sts:TagSession
@@ -104,12 +104,12 @@ update_template_yaml = """  - resource_id: t1000
               Statement:
                 - Effect: Allow
                   Principal:
-                    AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                    AWS: arn:aws:iam::123456789012:role/NoqCentralRole
                   Action:
                     - s3:ListBucket
                 - Effect: Allow
                   Principal:
-                    AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                    AWS: arn:aws:iam::123456789012:role/NoqCentralRole
                   Action:
                     - s3:CreateBucket
           - change_type: Create
@@ -119,12 +119,12 @@ update_template_yaml = """  - resource_id: t1000
               Statement:
                 - Effect: Allow
                   Principal:
-                    AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                    AWS: arn:aws:iam::123456789012:role/NoqCentralRole
                   Action:
                     - s3:DeleteBucket
                 - Effect: Allow
                   Principal:
-                    AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                    AWS: arn:aws:iam::123456789012:role/NoqCentralRole
                   Action:
                     - s3:ListBucket
         exceptions_seen: []
