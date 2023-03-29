@@ -1,0 +1,22 @@
+name: Run Iambic Enforce
+on:
+  workflow_dispatch:
+  schedule:
+    - cron:  '0 */1 * * *' # import at minute 0 past every one hour
+jobs:
+  iambic-import:
+    runs-on: ubuntu-latest
+    environment: production
+    name: Enforce Iambic Managed templates
+    timeout-minutes: 60 # Setting this to 60 min for now. If this takes longer, it needs better performance improvement
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: trigger_workflow
+        id: trigger_workflow
+        run: |
+          echo "trigger workflow"

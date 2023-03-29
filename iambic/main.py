@@ -234,6 +234,7 @@ def run_apply(
     templates: Optional[list[str]],
     repo_dir: str = str(pathlib.Path.cwd()),
     enforced_only: bool = False,
+    output_path: str = "proposed_changes.yaml",
 ) -> list[TemplateChangeDetails]:
     template_changes = []
     exe_message = ExecutionMessage(
@@ -252,7 +253,7 @@ def run_apply(
         return template_changes
     asyncio.run(flag_expired_resources([template.file_path for template in templates]))
     template_changes = asyncio.run(config.run_apply(exe_message, templates))
-    output_proposed_changes(template_changes)
+    output_proposed_changes(template_changes, output_path=output_path)
 
     if ctx.eval_only and template_changes and click.confirm("Proceed?"):
         ctx.eval_only = False

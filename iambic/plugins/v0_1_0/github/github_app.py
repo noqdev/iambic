@@ -25,8 +25,10 @@ from iambic.core.logger import log
 from iambic.plugins.v0_1_0.github.github import (
     HandleIssueCommentReturnCode,
     _handle_detect_changes_from_eventbridge,
+    _handle_enforce,
     _handle_expire,
     _handle_import,
+    github_app_workflow_wrapper,
     handle_iambic_git_apply,
     handle_iambic_git_plan,
     iambic_app,
@@ -285,7 +287,14 @@ def handle_workflow_run(
     default_branch = templates_repo.default_branch
 
     workflow_func: Callable = WORKFLOW_DISPATCH_MAP[workflow_path]
-    return workflow_func(repo_url, default_branch)
+    return workflow_func(
+        github_client,
+        templates_repo,
+        repo_name,
+        repo_url,
+        default_branch,
+        proposed_changes_path=getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH,
+    )
 
 
 EVENT_DISPATCH_MAP: dict[str, Callable] = {
@@ -303,9 +312,18 @@ COMMENT_DISPATCH_MAP: dict[str, Callable] = {
 }
 
 WORKFLOW_DISPATCH_MAP: dict[str, Callable] = {
-    ".github/workflows/iambic-expire.yml": _handle_expire,
-    ".github/workflows/iambic-import.yml": _handle_import,
-    ".github/workflows/iambic-detect.yml": _handle_detect_changes_from_eventbridge,
+    ".github/workflows/iambic-enforce.yml": github_app_workflow_wrapper(
+        _handle_enforce, "enforce"
+    ),
+    ".github/workflows/iambic-expire.yml": github_app_workflow_wrapper(
+        _handle_expire, "expire"
+    ),
+    ".github/workflows/iambic-import.yml": github_app_workflow_wrapper(
+        _handle_import, "import"
+    ),
+    ".github/workflows/iambic-detect.yml": github_app_workflow_wrapper(
+        _handle_detect_changes_from_eventbridge, "detect"
+    ),
 }
 
 
