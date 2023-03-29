@@ -106,6 +106,7 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
         account_change_details = AccountChangeDetails(
             account=str(aws_account),
             resource_id=group_name,
+            resource_type=self.resource_type,
             new_value=dict(**account_group),
             proposed_changes=[],
             exceptions_seen=[],

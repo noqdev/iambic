@@ -16,11 +16,11 @@ from . import get_update_template, get_templates_mixed
             get_templates_mixed(),
             [
                 "aws:iam:role // product-dev_iambic_test_role",
-                "design-prod - (006933239187)",
-                "Iambic Standalone Org - (566255053759)",
+                "design-prod - (234567890123)",
+                "Iambic Standalone Org - (456789012356)",
                 "aws:iam:role // design-dev_iambic_test_role",
                 "aws:iam:role // design-workspaces_iambic_test_role",
-                "design-prod - (006933239187)",
+                "design-prod - (234567890123)",
             ]
         ),
         (
@@ -38,7 +38,6 @@ def test_screen_render_resource_changes(
 ):
     rendered_text = screen_render_resource_changes(template_change_details)
     output = rendered_text
-    print(output)
     for expected_output in expected_outputs:
         assert expected_output in output
 
@@ -50,11 +49,11 @@ def test_screen_render_resource_changes(
             get_templates_mixed(),
             [
                 "aws:iam:role // product-dev_iambic_test_role",
-                "design-prod - (006933239187)",
-                "Iambic Standalone Org - (566255053759)",
+                "design-prod - (234567890123)",
+                "Iambic Standalone Org - (456789012356)",
                 "aws:iam:role // design-dev_iambic_test_role",
                 "aws:iam:role // design-workspaces_iambic_test_role",
-                "design-prod - (006933239187)",
+                "design-prod - (234567890123)",
             ]
         ),
         (

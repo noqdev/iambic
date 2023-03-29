@@ -168,6 +168,7 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
         account_change_details = AccountChangeDetails(
             account=str(aws_account),
             resource_id=user_name,
+            resource_type=self.resource_type,
             new_value=dict(**account_user),
             proposed_changes=[],
             exceptions_seen=[],

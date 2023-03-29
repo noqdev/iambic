@@ -231,6 +231,7 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
         account_change_details = AccountChangeDetails(
             account=str(aws_account),
             resource_id=role_name,
+            resource_type=self.resource_type,
             new_value=dict(**account_role),
             proposed_changes=[],
             exceptions_seen=[],
