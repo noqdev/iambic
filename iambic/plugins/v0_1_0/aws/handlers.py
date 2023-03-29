@@ -14,7 +14,7 @@ from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
 from iambic.core.parser import load_templates
-from iambic.core.utils import gather_templates, yaml
+from iambic.core.utils import async_batch_processor, gather_templates, yaml
 from iambic.plugins.v0_1_0.aws.event_bridge.models import (
     GroupMessageDetails,
     ManagedPolicyMessageDetails,
@@ -101,6 +101,13 @@ async def load(config: AWSConfig) -> AWSConfig:
             for account in config.accounts:
                 if account.account_id != hub_account.account_id:
                     account.hub_session_info = hub_session_info
+
+    # Preload the iam client to improve performance
+    await asyncio.gather(
+        *[account.get_boto3_client("iam") for account in config.accounts],
+        return_exceptions=True,
+    )
+
     return config
 
 
@@ -134,19 +141,23 @@ async def apply(
         for template in templates
         if template.template_type == AWS_MANAGED_POLICY_TEMPLATE_TYPE
     ]:
-        template_changes.extend(await asyncio.gather(*managed_policy_tasks))
+        template_changes.extend(
+            await async_batch_processor(managed_policy_tasks, 50, 0)
+        )
         if len(template_changes) > len(managed_policy_tasks):
             # There are other template changes that could rely on the managed policy
             # Give a few seconds to allow the managed policies to be created in AWS
             await asyncio.sleep(10)
 
     template_changes.extend(
-        await asyncio.gather(
-            *[
+        await async_batch_processor(
+            [
                 template.apply(config)
                 for template in templates
                 if template.template_type != AWS_MANAGED_POLICY_TEMPLATE_TYPE
-            ]
+            ],
+            50,
+            0,
         )
     )
 
