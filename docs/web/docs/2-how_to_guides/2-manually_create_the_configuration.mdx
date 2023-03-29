@@ -142,7 +142,7 @@ secrets:
 ### Configuration Reference Keys
 
 #### template_type
-The template_type field specifies the type of template, which is `NOQ::Core::Config`.
+The `template_type` field specifies the type of template, which is `NOQ::Core::Config`.
 
 #### extends
 The extends field can be used to merge an additional configuration into the current configuration.
@@ -150,17 +150,17 @@ This is useful if you want to merge secrets from a separate configuration file i
 or if you want to leverage AWS Secrets Manager to store secrets.
 
 #### version
-The version field specifies the version number of the YAML configuration.
+The `version` field specifies the version number of the YAML configuration.
 
 #### aws
-The aws field is used to specify AWS accounts and organizations that IAMbic has access to.
+The `aws` field is used to specify AWS accounts and organizations that IAMbic has access to.
 This field can contain two nested lists: `organizations` and/or `accounts`.
 
 #### aws.organizations
-The organizations list is used to specify one or more organization entities within AWS.
+The `organizations` list is used to specify one or more organization entities within AWS.
  IAMbic can inspect organization entities to parse all attached accounts.
 
 #### aws.accounts
-The accounts list is used to specify one or more AWS accounts that IAMbic should synchronize.
+The `accounts` list is used to specify one or more AWS accounts that IAMbic should synchronize.
 
 For more information about hub and spoke roles for AWS, see the [Hub and Spoke roles](/reference/aws_hub_and_spoke_roles) documentation.
