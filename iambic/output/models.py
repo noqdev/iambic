@@ -15,7 +15,6 @@ from iambic.core.models import (
     ProposedChangeType,
     TemplateChangeDetails,
 )
-from iambic.core.utils import yaml
 
 
 class ProposedChangeDiff(ProposedChange):
