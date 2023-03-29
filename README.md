@@ -46,7 +46,7 @@ properties:
           - sts:TagSession
         effect: Allow
         principal:
-          aws: arn:aws:iam::123456789012:role/NoqCentralRole
+          aws: arn:aws:iam::123456789012:role/ExampleRole
     version: '2012-10-17'
   inline_policies:
     policy_name: cloudwatch_logs
@@ -92,7 +92,7 @@ properties:
           - sts:TagSession
         effect: Allow
         principal:
-          aws: arn:aws:iam::123456789012:role/NoqCentralRole
+          aws: arn:aws:iam::123456789012:role/ExampleRole
     version: '2012-10-17'
   inline_policies:
     - policy_name: s3_policy

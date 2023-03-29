@@ -5,8 +5,8 @@ services:
     # locally.
     image: public.ecr.aws/iambic/iambic:latest
     environment:
-      - IAMBIC_CONFIG=arn:aws:secretsmanager:us-west-2:759357822767:secret:dev/iambic-full
-      - IAMBIC_CONFIG_ASSUME_ROLE=arn:aws:iam::759357822767:role/IambicSpokeRole
+      - IAMBIC_CONFIG
+      - IAMBIC_CONFIG_ASSUME_ROLE
       - AWS_ACCESS_KEY_ID
       - AWS_SECRET_ACCESS_KEY
       - AWS_SESSION_TOKEN
