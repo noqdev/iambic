@@ -104,7 +104,7 @@ async def load(config: AWSConfig) -> AWSConfig:
 
     # Preload the iam client to improve performance
     await asyncio.gather(
-        *[account.get_boto3_client("iam") for account in config.accounts]
+        *[account.get_boto3_client("iam") for account in config.accounts], return_exceptions=True
     )
 
     return config
