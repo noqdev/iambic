@@ -1,3 +1,5 @@
+[![Supported Versions](https://img.shields.io/pypi/pyversions/iambic-core.svg)](https://pypi.org/project/iambic-core)
+
 # IAMbic: Cloud IAM as Code
 
 "IAMbic: the Terraform of Cloud IAM"
