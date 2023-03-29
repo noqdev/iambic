@@ -14,7 +14,7 @@ from iambic.plugins.v0_1_0.okta.group.utils import list_all_users
 from iambic.plugins.v0_1_0.okta.user.models import (
     OKTA_USER_TEMPLATE_TYPE,
     OktaUserTemplate,
-    OktaUserTemplateProperties,
+    UserProperties,
 )
 
 if TYPE_CHECKING:
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 def get_resource_dir_args() -> list:
-    return ["users"]
+    return ["user"]
 
 
 def get_response_dir(exe_message: ExecutionMessage) -> str:
@@ -32,13 +32,12 @@ def get_response_dir(exe_message: ExecutionMessage) -> str:
 async def update_or_create_user_template(
     discovered_template: OktaUserTemplate, existing_template_map: dict
 ) -> OktaUserTemplate:
-
     return create_or_update_template(
         discovered_template.file_path,
         existing_template_map,
         discovered_template.resource_id,
         OktaUserTemplate,
-        {},
+        {"idp_name": discovered_template.idp_name},
         discovered_template.properties,
         [],
     )
@@ -54,9 +53,9 @@ async def collect_org_users(exe_message: ExecutionMessage, config: OktaConfig):
     for user in users:
         okta_user = OktaUserTemplate(
             file_path="unset",
-            properties=OktaUserTemplateProperties(
+            idp_name=user.idp_name,
+            properties=UserProperties(
                 username=user.username,
-                idp_name=user.idp_name,
                 user_id=user.user_id,
                 status=user.status.value,
                 profile=user.profile,
@@ -94,6 +93,9 @@ async def generate_user_templates(
         resource_template = await update_or_create_user_template(
             user, existing_template_map
         )
+        if not resource_template:
+            # Template not updated. Most likely because it's an `enforced` template.
+            continue
         all_resource_ids.add(resource_template.resource_id)
 
     # Delete templates that no longer exist

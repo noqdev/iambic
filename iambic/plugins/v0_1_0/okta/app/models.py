@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 from pydantic import Field, validator
 
-from iambic.core.context import ExecutionContext, ctx
+from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -34,17 +34,13 @@ OKTA_GET_APP_SEMAPHORE = NoqSemaphore(get_app, 10)
 OKTA_APP_TEMPLATE_TYPE = "NOQ::Okta::App"
 
 
-class OktaAppTemplateProperties(ExpiryModel, BaseModel):
+class AppProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the app")
-    owner: Optional[str] = Field(None, description="Owner of the app")
     status: Optional[Status] = Field(None, description="Status of the app")
-    idp_name: str = Field(
-        ...,
-        description="Name of the identity provider that's associated with the group",
-    )
     id: Optional[str] = Field(
         None, description="Unique App ID for the app. Usually it's {idp-name}-{name}"
     )
+    file_path: str = Field("", description="Path to the template file", exclude=True)
     description: Optional[str] = Field("", description="Description of the app")
     extra: Any = Field(None, description=("Extra attributes to store"))
     created: Optional[str] = Field("", description="Date the app was created")
@@ -56,7 +52,7 @@ class OktaAppTemplateProperties(ExpiryModel, BaseModel):
 
     @property
     def resource_id(self) -> str:
-        return self.app_id
+        return self.id
 
     @validator("assignments")
     def sort_groups(cls, v: list[Assignment]):
@@ -66,13 +62,14 @@ class OktaAppTemplateProperties(ExpiryModel, BaseModel):
 
 class OktaAppTemplate(BaseTemplate, ExpiryModel):
     template_type = OKTA_APP_TEMPLATE_TYPE
-    properties: OktaAppTemplateProperties = Field(
-        ..., description="Properties for the Okta App"
+    properties: AppProperties = Field(..., description="Properties for the Okta App")
+    owner: Optional[str] = Field(None, description="Owner of the app")
+    idp_name: str = Field(
+        ...,
+        description="Name of the identity provider that's associated with the group",
     )
 
-    async def apply(
-        self, config: OktaConfig, context: ExecutionContext
-    ) -> TemplateChangeDetails:
+    async def apply(self, config: OktaConfig) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
             resource_id=self.properties.id,
@@ -91,12 +88,14 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
             return template_changes
 
         for okta_organization in config.organizations:
-            if context.execute:
+            if self.idp_name != okta_organization.idp_name:
+                continue
+            if ctx.execute:
                 log_str = "Applying changes to resource."
             else:
                 log_str = "Detecting changes for resource."
             log.info(log_str, idp_name=okta_organization.idp_name, **log_params)
-            tasks.append(self._apply_to_account(okta_organization, context))
+            tasks.append(self._apply_to_account(okta_organization))
 
         account_changes = await asyncio.gather(*tasks)
         template_changes.proposed_changes = [
@@ -107,7 +106,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
 
         proposed_changes = [x for x in account_changes if x.proposed_changes]
 
-        if proposed_changes and context.execute:
+        if proposed_changes and ctx.execute:
             log.info(
                 "Successfully applied all or some resource changes to all Okta organizations. Any unapplied resources will have an accompanying error message.",
                 **log_params,
@@ -133,19 +132,18 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
     def set_default_file_path(self, repo_dir: str):
         file_name = f"{self.properties.name}.yaml"
         self.file_path = os.path.expanduser(
-            os.path.join(
-                repo_dir, f"resources/okta/apps/{self.properties.idp_name}/{file_name}"
-            )
+            os.path.join(repo_dir, f"resources/okta/app/{self.idp_name}/{file_name}")
         )
 
     def apply_resource_dict(
-        self, okta_organization: OktaOrganization, context: ExecutionContext
+        self,
+        okta_organization: OktaOrganization,
     ):
         return {
             "name": self.properties.name,
-            "owner": self.properties.owner,
+            "owner": self.owner,
             "status": self.properties.status,
-            "idp_name": self.properties.idp_name,
+            "idp_name": self.idp_name,
             "description": self.properties.description,
             "extra": self.properties.extra,
             "created": self.properties.created,
@@ -153,11 +151,12 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
         }
 
     async def _apply_to_account(
-        self, okta_organization: OktaOrganization, context: ExecutionContext
+        self,
+        okta_organization: OktaOrganization,
     ) -> AccountChangeDetails:
-        proposed_app = self.apply_resource_dict(okta_organization, context)
+        proposed_app = self.apply_resource_dict(okta_organization)
         change_details = AccountChangeDetails(
-            account=self.properties.idp_name,
+            account=self.idp_name,
             resource_id=self.properties.id,
             resource_type=self.properties.resource_type,
             new_value=proposed_app,
@@ -167,7 +166,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
         log_params = dict(
             resource_type=self.properties.resource_type,
             resource_id=self.properties.name,
-            organization=str(self.properties.idp_name),
+            organization=str(self.idp_name),
         )
 
         current_app_task = await OKTA_GET_APP_SEMAPHORE.process(
@@ -212,7 +211,6 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
                     self.properties.name,
                     okta_organization,
                     log_params,
-                    context,
                 ),
                 update_app_assignments(
                     current_app,
@@ -223,25 +221,23 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
                     ],
                     okta_organization,
                     log_params,
-                    context,
                 ),
                 maybe_delete_app(
                     self.deleted,
                     current_app,
                     okta_organization,
                     log_params,
-                    context,
                 ),
             ]
         )
 
         changes_made = await asyncio.gather(*tasks)
         if any(changes_made):
-            change_details.proposed_changes.extend(
+            change_details.extend_changes(
                 list(chain.from_iterable(changes_made))
             )
 
-        if context.execute:
+        if ctx.execute:
             log.debug(
                 "Successfully finished execution for resource",
                 changes_made=bool(change_details.proposed_changes),
@@ -267,13 +263,12 @@ async def get_app_template(okta_app) -> OktaAppTemplate:
     app = OktaAppTemplate(
         file_path=f"resources/okta/apps/{okta_app.idp_name}/{file_name}",
         template_type="NOQ::Okta::App",
-        properties=OktaAppTemplateProperties(
+        idp_name=okta_app.idp_name,
+        properties=AppProperties(
             name=okta_app.name,
             status=okta_app.status,
-            idp_name=okta_app.idp_name,
             id=okta_app.id,
             file_path="{}.yaml".format(okta_app.name),
-            attributes=dict(),
             assignments=okta_app.assignments,
         ),
     )

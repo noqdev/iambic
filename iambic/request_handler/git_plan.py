@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from iambic.core.context import ExecutionContext
+from iambic.core.context import ctx
 from iambic.core.models import TemplateChangeDetails
 from iambic.request_handler.git_apply import apply_git_changes
 
@@ -20,6 +20,10 @@ async def plan_git_changes(
     :param repo_dir:
     :return:
     """
-    eval_only_ctx = ExecutionContext()
-    eval_only_ctx.eval_only = True
-    return await apply_git_changes(config_path, repo_dir, context=eval_only_ctx)
+    ctx_eval_only_original_value = ctx.eval_only
+    ctx.eval_only = True
+    try:
+        changes = await apply_git_changes(config_path, repo_dir)
+    finally:
+        ctx.eval_only = ctx_eval_only_original_value
+        return changes

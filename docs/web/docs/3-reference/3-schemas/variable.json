@@ -1,0 +1,18 @@
+{
+  "title": "Variable",
+  "type": "object",
+  "properties": {
+    "key": {
+      "title": "Key",
+      "type": "string"
+    },
+    "value": {
+      "title": "Value",
+      "type": "string"
+    }
+  },
+  "required": [
+    "key",
+    "value"
+  ]
+}

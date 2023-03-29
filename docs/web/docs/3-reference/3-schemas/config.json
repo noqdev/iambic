@@ -1,0 +1,239 @@
+{
+  "title": "Config",
+  "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+  "type": "object",
+  "properties": {
+    "metadata_commented_dict": {
+      "title": "Metadatacommenteddict",
+      "description": "yaml inline comments",
+      "default": {},
+      "type": "object"
+    },
+    "metadata_iambic_fields": {
+      "title": "Metadataiambicfields",
+      "description": "metadata for iambic",
+      "default": [],
+      "type": "array",
+      "items": {},
+      "uniqueItems": true
+    },
+    "template_type": {
+      "title": "Templatetype",
+      "default": "NOQ::Core::Config",
+      "type": "string"
+    },
+    "owner": {
+      "title": "Owner",
+      "type": "string"
+    },
+    "iambic_managed": {
+      "description": "Controls the directionality of Iambic changes",
+      "default": "undefined",
+      "allOf": [
+        {
+          "$ref": "#/definitions/IambicManaged"
+        }
+      ]
+    },
+    "version": {
+      "title": "Version",
+      "description": "Do not change! The version of iambic this repo is compatible with.",
+      "type": "string"
+    },
+    "plugins": {
+      "title": "Plugins",
+      "description": "The plugins used by your IAMbic template repo.",
+      "default": [
+        {
+          "type": "DIRECTORY_PATH",
+          "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/aws",
+          "version": "v0.1.0"
+        },
+        {
+          "type": "DIRECTORY_PATH",
+          "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/google_workspace",
+          "version": "v0.1.0"
+        },
+        {
+          "type": "DIRECTORY_PATH",
+          "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/okta",
+          "version": "v0.1.0"
+        },
+        {
+          "type": "DIRECTORY_PATH",
+          "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/github",
+          "version": "v0.1.0"
+        },
+        {
+          "type": "DIRECTORY_PATH",
+          "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/azure_ad",
+          "version": "v0.1.0"
+        }
+      ],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/PluginDefinition"
+      }
+    },
+    "extends": {
+      "title": "Extends",
+      "default": [],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ExtendsConfig"
+      }
+    },
+    "secrets": {
+      "title": "Secrets",
+      "description": "Secrets should only be used in memory and never serialized out",
+      "default": {},
+      "type": "object"
+    },
+    "plugin_instances": {
+      "title": "Plugininstances",
+      "description": "A list of the plugin instances parsed as part of the plugin paths.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ProviderPlugin"
+      }
+    },
+    "core": {
+      "title": "Core",
+      "description": "Core configuration options for iambic.",
+      "default": {
+        "minimum_ulimit": 64000
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/CoreConfig"
+        }
+      ]
+    }
+  },
+  "required": [
+    "version"
+  ],
+  "definitions": {
+    "IambicManaged": {
+      "title": "IambicManaged",
+      "description": "An enumeration.",
+      "enum": [
+        "undefined",
+        "read_and_write",
+        "import_only",
+        "disabled"
+      ]
+    },
+    "PluginType": {
+      "title": "PluginType",
+      "description": "An enumeration.",
+      "enum": [
+        "DIRECTORY_PATH"
+      ]
+    },
+    "PluginDefinition": {
+      "title": "PluginDefinition",
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/PluginType"
+        },
+        "location": {
+          "title": "Location",
+          "description": "The location of the plugin. For a DIRECTORY_PATH, this is the path to the plugin. For a GIT plugin, this is the git url.",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "location",
+        "version"
+      ]
+    },
+    "ExtendsConfigKey": {
+      "title": "ExtendsConfigKey",
+      "description": "An enumeration.",
+      "enum": [
+        "AWS_SECRETS_MANAGER",
+        "LOCAL_FILE"
+      ]
+    },
+    "ExtendsConfig": {
+      "title": "ExtendsConfig",
+      "type": "object",
+      "properties": {
+        "key": {
+          "$ref": "#/definitions/ExtendsConfigKey"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        },
+        "assume_role_arn": {
+          "title": "Assume Role Arn",
+          "type": "string"
+        },
+        "external_id": {
+          "title": "External Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ]
+    },
+    "ProviderPlugin": {
+      "title": "ProviderPlugin",
+      "type": "object",
+      "properties": {
+        "version": {
+          "title": "Version",
+          "description": "The version of the plugin.",
+          "type": "string"
+        },
+        "config_name": {
+          "title": "Config Name",
+          "description": "The name of the provider configuration in the iambic config file.",
+          "type": "string"
+        },
+        "requires_secret": {
+          "title": "Requires Secret",
+          "description": "Whether or not the provider requires a secret to be passed in.",
+          "default": false,
+          "type": "boolean"
+        },
+        "provider_config": {
+          "title": "Provider Config",
+          "description": "The Pydantic model that is attached to the Config.This will contain the provider specific configuration.These are things like the AWSAccount model, OktaOrganization or GoogleProject."
+        },
+        "templates": {
+          "title": "Templates",
+          "description": "The list of templates used for this provider.",
+          "type": "array",
+          "items": {}
+        }
+      },
+      "required": [
+        "version",
+        "config_name",
+        "templates"
+      ]
+    },
+    "CoreConfig": {
+      "title": "CoreConfig",
+      "type": "object",
+      "properties": {
+        "minimum_ulimit": {
+          "title": "Minimum Ulimit",
+          "default": 64000,
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

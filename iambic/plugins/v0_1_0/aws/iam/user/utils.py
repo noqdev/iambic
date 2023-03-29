@@ -7,7 +7,7 @@ from typing import Union
 
 from deepdiff import DeepDiff
 
-from iambic.core.context import ExecutionContext
+from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper, plugin_apply_wrapper
@@ -136,7 +136,6 @@ async def apply_user_tags(
     template_tags: list[dict],
     existing_tags: list[dict],
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     existing_tag_map = {tag["Key"]: tag.get("Value") for tag in existing_tags}
     template_tag_map = {tag["Key"]: tag.get("Value") for tag in template_tags}
@@ -156,6 +155,8 @@ async def apply_user_tags(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.DETACH,
+                resource_type="aws:iam:user",
+                resource_id=user_name,
                 attribute="tags",
                 change_summary={"TagKeys": tags_to_remove},
             )
@@ -163,7 +164,7 @@ async def apply_user_tags(
 
         response.extend(proposed_changes)
 
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Removing tags..."
 
             apply_awaitable = boto_crud_call(
@@ -181,13 +182,15 @@ async def apply_user_tags(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.ATTACH,
+                resource_type="aws:iam:user",
+                resource_id=user_name,
                 attribute="tags",
                 new_value=tag,
             )
             for tag in tags_to_apply
         ]
         response.extend(proposed_changes)
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Adding tags..."
             apply_awaitable = boto_crud_call(
                 iam_client.tag_user, UserName=user_name, Tags=tags_to_apply
@@ -209,7 +212,6 @@ async def apply_user_permission_boundary(
     template_permission_boundary: dict,
     existing_permission_boundary: dict,
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     tasks = []
     response = []
@@ -228,13 +230,14 @@ async def apply_user_permission_boundary(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.ATTACH,
+                resource_type="aws:policy_document",
                 resource_id=template_boundary_policy_arn,
                 attribute="permission_boundary",
             )
         ]
         response.extend(proposed_changes)
 
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Attaching permission boundary..."
 
             tasks = [
@@ -261,13 +264,14 @@ async def apply_user_permission_boundary(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.DETACH,
+                resource_type="aws:policy_document",
                 resource_id=existing_boundary_policy_arn,
                 attribute="permission_boundary",
             )
         ]
         response.extend(proposed_changes)
 
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Detaching permission boundary..."
 
             tasks.extend(
@@ -299,7 +303,6 @@ async def apply_user_managed_policies(
     template_policies: list[dict],
     existing_policies: list[dict],
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     tasks = []
     response = []
@@ -318,6 +321,7 @@ async def apply_user_managed_policies(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.ATTACH,
+                resource_type="aws:policy_document",
                 resource_id=policy_arn,
                 attribute="managed_policies",
             )
@@ -325,7 +329,7 @@ async def apply_user_managed_policies(
         ]
         response.extend(proposed_changes)
 
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Attaching managed policies..."
 
             tasks = [
@@ -338,6 +342,7 @@ async def apply_user_managed_policies(
                     [
                         ProposedChange(
                             change_type=ProposedChangeType.ATTACH,
+                            resource_type="aws:policy_document",
                             resource_id=policy_arn,
                             attribute="managed_policies",
                         )
@@ -360,6 +365,7 @@ async def apply_user_managed_policies(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.DETACH,
+                resource_type="aws:policy_document",
                 resource_id=policy_arn,
                 attribute="managed_policies",
             )
@@ -367,7 +373,7 @@ async def apply_user_managed_policies(
         ]
         response.extend(proposed_changes)
 
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Detaching managed policies..."
 
             tasks.extend(
@@ -381,6 +387,7 @@ async def apply_user_managed_policies(
                         [
                             ProposedChange(
                                 change_type=ProposedChangeType.DETACH,
+                                resource_type="aws:policy_document",
                                 resource_id=policy_arn,
                                 attribute="managed_policies",
                             )
@@ -405,7 +412,6 @@ async def apply_user_inline_policies(
     template_policies: list[dict],
     existing_policies: list[dict],
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     tasks = []
     response = []
@@ -425,13 +431,14 @@ async def apply_user_inline_policies(
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DELETE,
+                    resource_type="aws:policy_document",
                     resource_id=policy_name,
                     attribute="inline_policies",
                 )
             ]
             response.extend(proposed_changes)
 
-            if context.execute:
+            if ctx.execute:
                 log_str = f"{log_str} Removing inline policy..."
 
                 apply_awaitable = boto_crud_call(
@@ -468,6 +475,7 @@ async def apply_user_inline_policies(
                 proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.UPDATE,
+                        resource_type="aws:policy_document",
                         resource_id=policy_name,
                         attribute="inline_policies",
                         change_summary=policy_drift,
@@ -481,6 +489,7 @@ async def apply_user_inline_policies(
                 proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.CREATE,
+                        resource_type="aws:policy_document",
                         resource_id=policy_name,
                         attribute="inline_policies",
                         new_value=policy_document,
@@ -489,7 +498,7 @@ async def apply_user_inline_policies(
             response.extend(proposed_changes)
 
             log_str = f"{resource_existence} inline policies discovered."
-            if context.execute and policy_document:
+            if ctx.execute and policy_document:
                 log_str = f"{log_str} {boto_action} inline policy..."
 
                 apply_awaitable = boto_crud_call(
@@ -515,7 +524,6 @@ async def apply_user_groups(
     template_groups: list[dict],
     existing_groups: list[dict],
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     tasks = []
     response = []
@@ -529,12 +537,13 @@ async def apply_user_groups(
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
+                    resource_type="aws:iam:group",
                     resource_id=group,
                     attribute="groups",
                 )
             ]
             response.extend(proposed_changes)
-            if context.execute:
+            if ctx.execute:
                 log_str = f"{log_str} Adding user to group..."
                 apply_awaitable = boto_crud_call(
                     iam_client.add_user_to_group,
@@ -553,12 +562,13 @@ async def apply_user_groups(
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DELETE,
+                    resource_type="aws:iam:group",
                     resource_id=group,
                     attribute="groups",
                 )
             ]
             response.extend(proposed_changes)
-            if context.execute:
+            if ctx.execute:
                 log_str = f"{log_str} Removing user from group..."
                 apply_awaitable = boto_crud_call(
                     iam_client.remove_user_from_group,

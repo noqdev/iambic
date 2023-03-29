@@ -6,20 +6,20 @@ update_template_yaml = """  - resource_id: t1000
     resource_type: aws:iam:role
     template_path: resources/aws/roles/demo-1/t1000.yaml
     proposed_changes:
-      - account: demo-1 - (972417093400)
+      - account: demo-1 - (123456789012)
         resource_id: t1000
         current_value:
           Path: /
           RoleName: t1000
           RoleId: AROA6E2ETJ4MF7DDR6RK6
-          Arn: arn:aws:iam::972417093400:role/t1000
+          Arn: arn:aws:iam::123456789012:role/t1000
           CreateDate: '2021-10-18T21:04:09+00:00'
           AssumeRolePolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Principal:
-                  AWS: arn:aws:iam::694815895589:role/NoqCentralRole
+                  AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
                 Action:
                   - sts:AssumeRole
                   - sts:TagSession
@@ -58,12 +58,35 @@ update_template_yaml = """  - resource_id: t1000
           ManagedPolicies: []
           InlinePolicies:
             - PolicyName: spoke-acct-policy
+              Statement:
+                - Effect: Allow
+                  Principal:
+                    AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                  Action:
+                    - s3:ListBucket
+                - Effect: Allow
+                  Principal:
+                    AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                  Action:
+                    - s3:CreateBucket
+            - PolicyName: spoke-acct-policy-333
+              Statement:
+                - Effect: Allow
+                  Principal:
+                    AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                  Action:
+                    - s3:DeleteBucket
+                - Effect: Allow
+                  Principal:
+                    AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                  Action:
+                    - s3:ListBucket
           AssumeRolePolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Principal:
-                  AWS: arn:aws:iam::694815895589:role/NoqCentralRole
+                  AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
                 Action:
                   - sts:AssumeRole
                   - sts:TagSession
@@ -77,8 +100,33 @@ update_template_yaml = """  - resource_id: t1000
           - change_type: Create
             attribute: inline_policies
             resource_id: spoke-acct-policy
-            resource_type: aws:iam:role
-            new_value: {}
+            new_value:
+              Statement:
+                - Effect: Allow
+                  Principal:
+                    AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                  Action:
+                    - s3:ListBucket
+                - Effect: Allow
+                  Principal:
+                    AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                  Action:
+                    - s3:CreateBucket
+          - change_type: Create
+            attribute: inline_policies
+            resource_id: spoke-acct-policy-333
+            new_value:
+              Statement:
+                - Effect: Allow
+                  Principal:
+                    AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                  Action:
+                    - s3:DeleteBucket
+                - Effect: Allow
+                  Principal:
+                    AWS: arn:aws:iam::1234567890123:role/NoqCentralRole
+                  Action:
+                    - s3:ListBucket
         exceptions_seen: []
     exceptions_seen: []
 """

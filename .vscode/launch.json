@@ -13,6 +13,50 @@
             "justMyCode": false
         },
         {
+            "name": "Iambic: Functional Tests",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "args": [
+                "--disable-warnings",
+                "--cov=iambic",
+                "--cov-report=term-missing",
+                "--cov-report=html",
+                "--cov-report=xml",
+                "--cov-branch",
+                "--cov-fail-under=100",
+                "--junitxml=functional_tests/results.xml",
+                "--color=yes",
+                "--verbose",
+                "${workspaceFolder}/functional_tests",
+            ],
+            "envFile": "${workspaceFolder}/.env",
+            "justMyCode": false
+        },
+        {
+            "name": "Iambic: Specific Functional Test",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
+            "args": [
+                "--disable-warnings",
+                "--cov=iambic",
+                "--cov-report=term-missing",
+                "--cov-report=html",
+                "--cov-report=xml",
+                "--cov-branch",
+                "--cov-fail-under=100",
+                "--junitxml=functional_tests/results.xml",
+                "--color=yes",
+                "--verbose",
+                "${workspaceFolder}/functional_tests/test_google_workspace.py::test_google",
+            ],
+            "justMyCode": false
+        },
+        {
             "name": "Iambic: Plan",
             "type": "python",
             "request": "launch",
@@ -32,6 +76,19 @@
             "console": "integratedTerminal",
             "args": [
                 "apply",
+            ],
+            "envFile": "${workspaceFolder}/.env",
+            "justMyCode": true
+        },
+        {
+            "name": "Iambic: Apply IAMbic Enforced-Mode Templates",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "args": [
+                "apply",
+                "--enforced-only"
             ],
             "envFile": "${workspaceFolder}/.env",
             "justMyCode": true

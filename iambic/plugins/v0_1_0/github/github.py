@@ -21,12 +21,13 @@ from github.PullRequest import PullRequest
 import iambic.output.markdown
 from iambic.config.dynamic_config import load_config
 from iambic.config.utils import resolve_config_template_path
+from iambic.core.context import ctx
 from iambic.core.git import Repo, clone_git_repo, get_remote_default_branch
 from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage, TemplateChangeDetails
 from iambic.core.utils import yaml
-from iambic.main import run_detect, run_expire, run_git_apply, run_git_plan
+from iambic.main import run_apply, run_detect, run_expire, run_git_apply, run_git_plan
 
 iambic_app = __import__("iambic.lambda.app", globals(), locals(), [], 0)
 lambda_run_handler = getattr(iambic_app, "lambda").app.run_handler
@@ -291,7 +292,6 @@ def get_session_name(repo_name: str, pull_request_number: str) -> str:
 def handle_issue_comment(
     github_client: github.Github, context: dict[str, Any]
 ) -> HandleIssueCommentReturnCode:
-
     comment_body = context["event"]["comment"]["body"]
     log_params = {"COMMENT_DISPATCH_MAP_KEYS": COMMENT_DISPATCH_MAP.keys()}
     log.info("COMMENT_DISPATCH_MAP keys", **log_params)
@@ -401,14 +401,7 @@ def handle_iambic_git_apply(
         )
         copy_data_to_data_directory()
 
-        for i in range(5):
-            pull_request = templates_repo.get_pull(pull_number)
-            if pull_request.mergeable_state != MERGEABLE_STATE_CLEAN:
-                log.info("PR not merge-able yet, sleep for 5 seconds")
-                time.sleep(5)
-
-        pull_request = templates_repo.get_pull(pull_number)
-        pull_request.merge(sha=merge_sha)
+        maybe_merge(templates_repo, pull_number, merge_sha)
         return HandleIssueCommentReturnCode.MERGED
 
     except Exception as e:
@@ -422,6 +415,34 @@ def handle_iambic_git_apply(
         raise e
 
 
+def maybe_merge(
+    templates_repo: github.Repo,
+    # pull_request: PullRequest,
+    pull_number: int,
+    merge_sha: str,
+    max_attempts: int = 5,
+    sleep_interval: float = 5,
+):
+    """Attempts to merge the PR at specific sha, this function will retry a few times because
+    desired sha maybe not available yet"""
+    attempts = 0
+    merge_status = None
+    last_known_traceback = None
+    while attempts < max_attempts:
+        pull_request = templates_repo.get_pull(pull_number)
+        try:
+            merge_status = pull_request.merge(sha=merge_sha)
+            break
+        except github.GithubException:
+            last_known_traceback = traceback.format_exc()
+            attempts += 1
+            time.sleep(sleep_interval)
+    if merge_status is None:
+        raise RuntimeError(
+            f"Fail to merge PR. Target sha is {merge_sha}. last_known_trace_back is {last_known_traceback}"
+        )
+
+
 def _post_artifact_to_companion_repository(
     github_client: github.Github,
     templates_repo: github.Repo,
@@ -429,6 +450,7 @@ def _post_artifact_to_companion_repository(
     op_name: str,
     proposed_changes_path: str,
     markdown_summary: str,
+    default_base_name: str = "proposed_changes.yaml",
 ):
     url = None
     try:
@@ -439,10 +461,11 @@ def _post_artifact_to_companion_repository(
             gist_repo_name = f"{templates_repo.full_name}-gist"
             gist_repo = github_client.get_repo(gist_repo_name)
             now_timestamp = datetime.datetime.now()
+            pr_prefix = f"pr-{pull_number}" if pull_number else "no-pr"
             yaml_repo_path = (
-                f"pr-{pull_number}/{op_name}/{now_timestamp}/proposed_changes.yaml"
+                f"{pr_prefix}/{op_name}/{now_timestamp}/{default_base_name}"
             )
-            md_repo_path = f"pr-{pull_number}/{op_name}/{now_timestamp}/summary.md"
+            md_repo_path = f"{pr_prefix}/{op_name}/{now_timestamp}/summary.md"
             gist_repo.create_file(yaml_repo_path, op_name, "".join(lines))
             result = gist_repo.create_file(md_repo_path, op_name, markdown_summary)
             url = result["content"].html_url
@@ -504,6 +527,74 @@ def handle_iambic_git_plan(
         raise e
 
 
+def github_app_workflow_wrapper(workflow_func: Callable, ux_op_name: str) -> Callable:
+    def wrapped_workflow_func(
+        github_client: github.Github,
+        templates_repo: github.Repo,
+        repo_name: str,
+        repo_url: str,
+        default_branch: str,
+        proposed_changes_path: str = None,
+    ):
+        pull_number = (
+            0  # 0 is not a valid pull number in github. workflow implementation
+        )
+        # does not have an associated PR. This is the path of least resistance adaption
+        # for stable session name
+        session_name = get_session_name(repo_name, pull_number)
+        os.environ["IAMBIC_SESSION_NAME"] = session_name
+
+        try:
+            if proposed_changes_path:
+                # code smell to have to change a module variable
+                # to control the destination of proposed_changes.yaml
+                # It's questionable if we still need to depend on the lambda interface
+                # because lambda interface was created to dynamic populate template config
+                # but templates config is now already stored in the templates repo itself.
+                getattr(
+                    iambic_app, "lambda"
+                ).app.PLAN_OUTPUT_PATH = proposed_changes_path
+
+            template_changes = workflow_func(repo_url, default_branch)
+            _process_template_changes(
+                github_client,
+                templates_repo,
+                None,
+                pull_number,
+                proposed_changes_path,
+                template_changes,
+                f"{ux_op_name}",  # TODO this can probably be improved for user-experience
+            )
+        except Exception as e:
+            captured_traceback = traceback.format_exc()
+            log.error("fault", exception=captured_traceback)
+            try:
+                temp_dir = tempfile.mkdtemp(suffix=None, prefix=None, dir=None)
+                with open(f"{temp_dir}/crash.txt", "w") as f:
+                    f.write(captured_traceback)
+                _post_artifact_to_companion_repository(
+                    github_client,
+                    templates_repo,
+                    pull_number,
+                    f"{ux_op_name}",
+                    f"{temp_dir}/crash.txt",
+                    captured_traceback,
+                    default_base_name="crash.txt",
+                )
+            except Exception:
+                captured_traceback = traceback.format_exc()
+                log.error(
+                    "fail to post exception to companion repo",
+                    exception=captured_traceback,
+                )
+            finally:
+                if temp_dir:
+                    shutil.rmtree(temp_dir)
+            raise e
+
+    return wrapped_workflow_func
+
+
 def _process_template_changes(
     github_client: github.Github,
     templates_repo: github.Repo,
@@ -514,7 +605,7 @@ def _process_template_changes(
     op_name: str,  # Examples are "plan", "apply"
 ):
     html_url = ""
-    if len(template_changes) > 0:
+    if template_changes and len(template_changes) > 0:
         rendered_content = iambic.output.markdown.gh_render_resource_changes(
             template_changes
         )
@@ -530,9 +621,10 @@ def _process_template_changes(
         rendered_content = "no changes detected"
 
     rendered_content = f"""Reacting to `{op_name}`\n\n{rendered_content}\n\n <a href="{html_url}">Run</a>"""
-    _post_render_content_as_pr_comment(
-        pull_request, rendered_content, blob_html_url=html_url
-    )
+    if pull_request:
+        _post_render_content_as_pr_comment(
+            pull_request, rendered_content, blob_html_url=html_url
+        )
 
 
 def handle_pull_request(github_client: github.Github, context: dict[str, Any]) -> None:
@@ -563,7 +655,6 @@ def handle_pull_request(github_client: github.Github, context: dict[str, Any]) -
 def handle_detect_changes_from_eventbridge(
     github_client: github.Github, context: dict[str, Any]
 ) -> None:
-
     # we need a different github token because we will need to push to main without PR
     github_token = context["iambic"]["GH_OVERRIDE_TOKEN"]
     repository_url = context["event"]["repository"]["clone_url"]
@@ -575,8 +666,9 @@ def handle_detect_changes_from_eventbridge(
     _handle_detect_changes_from_eventbridge(repo_url, default_branch)
 
 
-def _handle_detect_changes_from_eventbridge(repo_url: str, default_branch: str) -> None:
-
+def _handle_detect_changes_from_eventbridge(
+    repo_url: str, default_branch: str
+) -> list[TemplateChangeDetails]:
     try:
         repo = prepare_local_repo_for_new_commits(
             repo_url, get_lambda_repo_path(), "detect"
@@ -593,10 +685,10 @@ def _handle_detect_changes_from_eventbridge(repo_url: str, default_branch: str) 
     except Exception as e:
         log.error("fault", exception=str(e))
         raise e
+    return []
 
 
 def handle_import(github_client: github.Github, context: dict[str, Any]) -> None:
-
     # we need a different github token because we will need to push to main without PR
     github_token = context["iambic"]["GH_OVERRIDE_TOKEN"]
 
@@ -609,7 +701,7 @@ def handle_import(github_client: github.Github, context: dict[str, Any]) -> None
     _handle_import(repo_url, default_branch)
 
 
-def _handle_import(repo_url: str, default_branch: str) -> None:
+def _handle_import(repo_url: str, default_branch: str) -> list[TemplateChangeDetails]:
     try:
         exe_message = ExecutionMessage(
             execution_id=str(uuid.uuid4()), command=Command.IMPORT
@@ -629,10 +721,34 @@ def _handle_import(repo_url: str, default_branch: str) -> None:
     except Exception as e:
         log.error("fault", exception=str(e))
         raise e
+    return []
+
+
+def _handle_enforce(repo_url: str, default_branch: str) -> list[TemplateChangeDetails]:
+    try:
+        local_repo_path = get_lambda_repo_path()
+        _ = prepare_local_repo_for_new_commits(repo_url, local_repo_path, "enforce")
+        config_path = asyncio.run(resolve_config_template_path(local_repo_path))
+        config = asyncio.run(load_config(config_path))
+        # we are not restoring teh original ctx because we expect
+        # this is called in a completely separate process
+        ctx.eval_only = False
+        # running in enforce option mean we are only writing to the cloud.
+        # there will be no templates being changed in the git context
+        template_changes = run_apply(
+            config,
+            [],
+            repo_dir=local_repo_path,
+            enforced_only=True,
+            output_path=getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH,
+        )
+        return template_changes
+    except Exception as e:
+        log.error("fault", exception=str(e))
+        raise e
 
 
 def handle_expire(github_client: github.Github, context: dict[str, Any]) -> None:
-
     # we need a different github token because we will need to push to main without PR
     github_token = context["iambic"]["GH_OVERRIDE_TOKEN"]
 
@@ -645,8 +761,7 @@ def handle_expire(github_client: github.Github, context: dict[str, Any]) -> None
     _handle_expire(repo_url, default_branch)
 
 
-def _handle_expire(repo_url: str, default_branch: str) -> None:
-
+def _handle_expire(repo_url: str, default_branch: str) -> list[TemplateChangeDetails]:
     try:
         repo = prepare_local_repo_for_new_commits(
             repo_url, get_lambda_repo_path(), "expire"
@@ -679,6 +794,7 @@ def _handle_expire(repo_url: str, default_branch: str) -> None:
     except Exception as e:
         log.error("fault", exception=str(e))
         raise e
+    return []
 
 
 EVENT_DISPATCH_MAP: dict[str, Callable] = {

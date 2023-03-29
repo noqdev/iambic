@@ -7,11 +7,12 @@ from typing import TYPE_CHECKING, List, Optional, Union
 
 import boto3
 import botocore
+from aws_error_utils.aws_error_utils import errors
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, constr, validator
+from pydantic import Extra, Field, constr, validator
 from ruamel.yaml import YAML, yaml_object
 
-from iambic.core.context import ExecutionContext
+from iambic.core.context import ctx
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -172,6 +173,7 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
 
     class Config:
         fields = {"boto3_session_map": {"exclude": True}}
+        extra = Extra.forbid
 
     @property
     def region_name(self):
@@ -284,9 +286,15 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
         None,
         description="(Auto-populated) The role arn to assume into when making calls to the account",
     )
+    assume_role_arn: Optional[str] = Field(
+        None,
+        description="The role arn to assume into when making calls to the account",
+        exclude=True,
+    )
 
     class Config:
         fields = {"hub_session_info": {"exclude": True}}
+        extra = Extra.forbid
 
     async def get_boto3_session(self, region_name: str = None):
         region_name = region_name or self.region_name
@@ -340,7 +348,7 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
         return session
 
     async def set_identity_center_details(
-        self, set_identity_center_map: bool = True
+        self, set_identity_center_map: bool = True, batch_size: int = 35
     ) -> None:
         if self.identity_center_details:
             region = self.identity_center_details.region_name
@@ -350,10 +358,16 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
             identity_store_client = await self.get_boto3_client(
                 "identitystore", region_name=region
             )
-
-            identity_center_instances = await boto_crud_call(
-                identity_center_client.list_instances
-            )
+            try:
+                identity_center_instances = await boto_crud_call(
+                    identity_center_client.list_instances
+                )
+            except errors.AccessDeniedException as err:
+                raise Exception(
+                    "Please ensure you've specified the correct AWS Identity Center region in "
+                    "IAMbic's configuration and that the spoke role has the correct permissions. ",
+                    f"Original Exception: {err}",
+                )
 
             if not identity_center_instances.get("Instances"):
                 raise ValueError("No Identity Center instances found")
@@ -374,7 +388,13 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
                 InstanceArn=self.identity_center_details.instance_arn,
             )
             if permission_set_arns:
-                permission_set_detail_semaphore = NoqSemaphore(boto_crud_call, 35)
+                # WARNING
+                # current implementation does not do well if there is permission set
+                # destruction interleave between earlier paginated_search and the sub-
+                # sequent describe-permission-set
+                permission_set_detail_semaphore = NoqSemaphore(
+                    boto_crud_call, batch_size
+                )
                 permission_set_details = await permission_set_detail_semaphore.process(
                     [
                         {
@@ -534,6 +554,11 @@ class AWSIdentityCenter(PydanticBaseModel):
 
 
 class AWSOrganization(BaseAWSAccountAndOrgModel):
+    org_name: Optional[str] = Field(
+        None,
+        description="Optional friendly name for the organization",
+        exclude=True,
+    )
     org_id: str = Field(
         None,
         description="A unique identifier designating the identity of the organization",
@@ -546,7 +571,7 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         description="The AWS Account ID and region of the AWS Identity Center instance to use for this organization",
     )
     default_rule: BaseAWSOrgRule = Field(
-        BaseAWSOrgRule(enabled=True),
+        BaseAWSOrgRule(iambic_managed=IambicManaged.UNDEFINED),
         description="The rule used to determine how an organization account should be handled if the account was not found in account_rules.",
     )
     account_rules: Optional[List[AWSOrgAccountRule]] = Field(
@@ -684,14 +709,10 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
 class AWSTemplate(BaseTemplate, ExpiryModel):
     identifier: str
 
-    async def _apply_to_account(
-        self, aws_account: AWSAccount, context: ExecutionContext
-    ) -> AccountChangeDetails:
+    async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
         raise NotImplementedError
 
-    async def apply(
-        self, config: AWSConfig, context: ExecutionContext
-    ) -> TemplateChangeDetails:
+    async def apply(self, config: AWSConfig) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
             resource_id=self.resource_id,
@@ -702,13 +723,13 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
             resource_type=self.resource_type, resource_id=self.resource_id
         )
         for account in config.accounts:
-            if evaluate_on_provider(self, account, context):
-                if context.execute:
+            if evaluate_on_provider(self, account):
+                if ctx.execute:
                     log_str = "Applying changes to resource."
                 else:
                     log_str = "Detecting changes for resource."
                 log.info(log_str, account=str(account), **log_params)
-                tasks.append(self._apply_to_account(account, context))
+                tasks.append(self._apply_to_account(account))
 
         account_changes: list[AccountChangeDetails] = await asyncio.gather(*tasks)
         template_changes.proposed_changes = [
@@ -725,12 +746,12 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
 
         proposed_changes = [x for x in account_changes if x.proposed_changes]
 
-        if proposed_changes and context.execute:
+        if proposed_changes and ctx.execute:
             log.info(
                 "Successfully applied all or some resource changes to all aws_accounts. Any unapplied resources will have an accompanying error message.",
                 **log_params,
             )
-        elif proposed_changes and not context.execute:
+        elif proposed_changes and not ctx.execute:
             log.info(
                 "Successfully detected all or some required resource changes on all aws_accounts. Any unapplied resources will have an accompanying error message.",
                 **log_params,

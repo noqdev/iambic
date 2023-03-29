@@ -6,7 +6,7 @@ from typing import Union
 import xxhash
 
 from iambic.core import noq_json as json
-from iambic.core.context import ctx
+from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import AccessModelMixin, BaseModel, BaseTemplate, ProviderChild
 from iambic.core.parser import load_templates
@@ -473,7 +473,6 @@ def create_or_update_template(
     properties,
     all_provider_children: list[ProviderChild],
 ):
-
     new_template = template_cls(
         file_path=file_path,
         properties=properties,
@@ -483,6 +482,9 @@ def create_or_update_template(
     # iambic-specific knowledge requires us to load the existing template
     # because it will not be reflected by AWS API.
     if existing_template := existing_template_map.get(identifier, None):
+        if existing_template.iambic_managed == IambicManaged.ENFORCED:
+            # If the template is marked as ENFORCED, we should not update it during import.
+            return
         merged_template = merge_model(
             new_template, existing_template, all_provider_children
         )
@@ -572,9 +574,7 @@ def update_access_attributes(
         return new_model, existing_model
     else:
         for child in all_provider_children:
-            currently_evaluated = evaluate_on_provider(
-                existing_model, child, ctx, False
-            )
+            currently_evaluated = evaluate_on_provider(existing_model, child, False)
             evaluated_on_new_model = bool(
                 child.preferred_identifier in new_model.included_children
             )
@@ -941,7 +941,6 @@ def merge_model(
             else:
                 setattr(merged_model, key, new_value)
         elif isinstance(existing_value, BaseModel):
-
             if isinstance(new_value, BaseModel):
                 setattr(
                     merged_model,
@@ -976,6 +975,9 @@ def delete_orphaned_templates(
     """
     for existing_template in existing_templates:
         if existing_template.resource_id not in resource_ids:
+            if existing_template.iambic_managed == IambicManaged.ENFORCED:
+                # If the template is marked as ENFORCED, we should not delete it.
+                continue
             log.warning(
                 "Removing template that references deleted resource",
                 resource_type=existing_template.resource_type,

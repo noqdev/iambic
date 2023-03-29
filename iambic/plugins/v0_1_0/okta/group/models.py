@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 from pydantic import Field, validator
 
-from iambic.core.context import ExecutionContext, ctx
+from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import (
@@ -39,6 +39,19 @@ class UserSimple(BaseModel, ExpiryModel):
     username: str
     status: Optional[UserStatus] = UserStatus.active
 
+    background_check_status: Optional[bool] = Field(False, description="Background check status for the group", exclude=True)
+    created: Optional[str] = Field(None, description="Created date for the group", exclude=True)
+    domain: Optional[str] = Field(None, description="Domain for the group", exclude=True)
+    extra: Any = Field(None, description=("Extra attributes to store"), exclude=True)
+    fullname: Optional[str] = Field(None, description="Full name for the group", exclude=True)
+    groups: Optional[List[str]] = Field(None, description="Groups for the group", exclude=True)
+    idp_name: Optional[str] = Field(None, description="IDP name for the group", exclude=True)
+    profile: Optional[Any] = Field(None, description="Profile for the group", exclude=True)
+    status: Optional[UserStatus] = Field(None, description="Status for the group", exclude=True)
+    updated: Optional[str] = Field(None, description="Updated date for the group", exclude=True)
+    user_id: Optional[str] = Field(None, description="User ID for the group", exclude=True)
+
+
     @property
     def resource_type(self) -> str:
         return "okta:user"
@@ -60,20 +73,20 @@ class User(UserSimple):
     extra: Any = Field(None, description=("Extra attributes to store"))
 
 
-class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
+class GroupProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the group")
-    owner: Optional[str] = Field(None, description="Owner of the group")
-    idp_name: str = Field(
-        ...,
-        description="Name of the identity provider that's associated with the group",
-    )
     group_id: str = Field(
         "", description="Unique Group ID for the group. Usually it's {idp-name}-{name}"
     )
+    file_path: str = Field("", description="File path of the group", exclude=True)
     description: Optional[str] = Field("", description="Description of the group")
     extra: Any = Field(None, description=("Extra attributes to store"))
     members: List[UserSimple] = Field([], description="Users in the group")
-
+    identifier: Optional[str] = Field(
+        None, description="Identifier for the group. Usually it's the group name",
+        exclude=True,
+    )
+    
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
         return {"extra", "metadata_commented_dict"}
@@ -94,13 +107,16 @@ class OktaGroupTemplateProperties(ExpiryModel, BaseModel):
 
 class OktaGroupTemplate(BaseTemplate, ExpiryModel):
     template_type = OKTA_GROUP_TEMPLATE_TYPE
-    properties: OktaGroupTemplateProperties = Field(
+    owner: Optional[str] = Field(None, description="Owner of the group")
+    properties: GroupProperties = Field(
         ..., description="Properties for the Okta Group"
     )
+    idp_name: str = Field(
+        ...,
+        description="Name of the identity provider that's associated with the group",
+    )
 
-    async def apply(
-        self, config: OktaConfig, context: ExecutionContext
-    ) -> TemplateChangeDetails:
+    async def apply(self, config: OktaConfig) -> TemplateChangeDetails:
         tasks = []
         template_changes = TemplateChangeDetails(
             resource_id=self.properties.group_id,
@@ -119,13 +135,14 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
             return template_changes
 
         for okta_organization in config.organizations:
-            # if evaluate_on_google_account(self, account):
-            if context.execute:
+            if self.idp_name != okta_organization.idp_name:
+                continue
+            if ctx.execute:
                 log_str = "Applying changes to resource."
             else:
                 log_str = "Detecting changes for resource."
             log.info(log_str, idp_name=okta_organization.idp_name, **log_params)
-            tasks.append(self._apply_to_account(okta_organization, context))
+            tasks.append(self._apply_to_account(okta_organization))
 
         account_changes = await asyncio.gather(*tasks)
         template_changes.proposed_changes = [
@@ -136,7 +153,7 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
 
         proposed_changes = [x for x in account_changes if x.proposed_changes]
 
-        if proposed_changes and context.execute:
+        if proposed_changes and ctx.execute:
             log.info(
                 "Successfully applied all or some resource changes to all Okta organizations. Any unapplied resources will have an accompanying error message.",
                 **log_params,
@@ -164,13 +181,11 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
         self.file_path = os.path.expanduser(
             os.path.join(
                 repo_dir,
-                f"resources/okta/groups/{self.properties.idp_name}/{file_name}",
+                f"resources/okta/group/{self.idp_name}/{file_name}",
             )
         )
 
-    def apply_resource_dict(
-        self, okta_organization: OktaOrganization, context: ExecutionContext
-    ):
+    def apply_resource_dict(self, okta_organization: OktaOrganization):
         return {
             "name": self.properties.name,
             "description": self.properties.description,
@@ -178,11 +193,11 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
         }
 
     async def _apply_to_account(
-        self, okta_organization: OktaOrganization, context: ExecutionContext
+        self, okta_organization: OktaOrganization
     ) -> AccountChangeDetails:
-        proposed_group = self.apply_resource_dict(okta_organization, context)
+        proposed_group = self.apply_resource_dict(okta_organization)
         change_details = AccountChangeDetails(
-            account=self.properties.idp_name,
+            account=self.idp_name,
             resource_id=self.properties.group_id,
             resource_type=self.properties.resource_type,
             new_value=proposed_group,  # TODO fix
@@ -192,7 +207,7 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
         log_params = dict(
             resource_type=self.properties.resource_type,
             resource_id=self.properties.name,
-            organization=str(self.properties.idp_name),
+            organization=str(self.idp_name),
         )
 
         current_group: Optional[Group] = await get_group(
@@ -209,18 +224,20 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
         group_exists = bool(current_group)
         tasks = []
 
-        await self.remove_expired_resources(context)
+        await self.remove_expired_resources()
 
         if not group_exists and not self.deleted:
-            change_details.proposed_changes.append(
-                ProposedChange(
-                    change_type=ProposedChangeType.CREATE,
-                    resource_id=self.properties.group_id,
-                    resource_type=self.properties.resource_type,
-                )
+            change_details.extend_changes(
+                [
+                    ProposedChange(
+                        change_type=ProposedChangeType.CREATE,
+                        resource_id=self.properties.group_id,
+                        resource_type=self.properties.resource_type,
+                    )
+                ]
             )
             log_str = "New resource found in code."
-            if not context.execute:
+            if not ctx.execute:
                 log.info(log_str, **log_params)
                 # Exit now because apply functions won't work if resource doesn't exist
                 return change_details
@@ -230,10 +247,9 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
 
             current_group: Group = await create_group(
                 group_name=self.properties.name,
-                idp_name=self.properties.idp_name,
+                idp_name=self.idp_name,
                 description=self.properties.description,
                 okta_organization=okta_organization,
-                context=context,
             )
             if current_group:
                 change_details.current_value = current_group
@@ -246,14 +262,12 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
                     self.properties.name,
                     okta_organization,
                     log_params,
-                    context,
                 ),
                 update_group_description(
                     current_group,
                     self.properties.description,
                     okta_organization,
                     log_params,
-                    context,
                 ),
                 update_group_members(
                     current_group,
@@ -264,14 +278,12 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
                     ],
                     okta_organization,
                     log_params,
-                    context,
                 ),
                 maybe_delete_group(
                     self.deleted,
                     current_group,
                     okta_organization,
                     log_params,
-                    context,
                 ),
                 # TODO
                 # upgrade_group_application_assignments
@@ -280,11 +292,11 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
 
         changes_made = await asyncio.gather(*tasks)
         if any(changes_made):
-            change_details.proposed_changes.extend(
+            change_details.extend_changes(
                 list(chain.from_iterable(changes_made))
             )
 
-        if context.execute:
+        if ctx.execute:
             log.debug(
                 "Successfully finished execution for resource",
                 changes_made=bool(change_details.proposed_changes),

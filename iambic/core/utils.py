@@ -20,7 +20,6 @@ from ruamel.yaml import YAML
 
 from iambic.core import noq_json as json
 from iambic.core.aio_utils import gather_limit
-from iambic.core.context import ExecutionContext
 from iambic.core.exceptions import RateLimitException
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
@@ -36,7 +35,6 @@ __WRITABLE_DIRECTORY__ = pathlib.Path.home()
 
 
 def init_writable_directory() -> None:
-
     # use during development
     __WRITABLE_DIRECTORY__ = pathlib.Path.home()
 
@@ -182,11 +180,11 @@ class NoqSemaphore:
         """Makes a reusable semaphore that wraps a provided function.
         Useful for batch processing things that could be rate limited.
 
-        Example prints hello there 3 times in quick succession, waits 3 seconds then processes another 3:
+        Example logs hello there 3 times in quick succession, waits 3 seconds then processes another 3:
             from datetime import datetime
 
             async def hello_there():
-                print(f"Hello there - {datetime.utcnow()}")
+                log.info(f"Hello there - {datetime.utcnow()}")
                 await asyncio.sleep(3)
 
             hello_there_semaphore = NoqSemaphore(hello_there, 3)
@@ -213,7 +211,7 @@ class NoqSemaphore:
 async def async_batch_processor(
     tasks: list,
     batch_size: int,
-    seconds_between_process: int = 1,
+    seconds_between_process: Union[int, float] = 1,
     return_exceptions: bool = False,
 ) -> list:
     """
@@ -233,7 +231,8 @@ async def async_batch_processor(
         if len(response) == len(tasks):
             return response
 
-        await asyncio.sleep(seconds_between_process)
+        if seconds_between_process:
+            await asyncio.sleep(seconds_between_process)
 
     return response
 
@@ -323,7 +322,6 @@ def sort_dict(original, prioritize=None):
 
 
 def transform_comments(yaml_dict):
-
     comment_dict = {}
     yaml_dict["metadata_commented_dict"] = comment_dict
     for key, comment in yaml_dict.ca.items.items():
@@ -363,7 +361,6 @@ yaml.width = 4096
 def evaluate_on_provider(
     resource,
     provider_details,
-    context: ExecutionContext,
     exclude_import_only: bool = True,
 ) -> bool:
     """
@@ -377,7 +374,6 @@ def evaluate_on_provider(
     Args:
     - resource: The resource to be evaluated.
     - provider_details: The provider details to use for the evaluation.
-    - context (ExecutionContext): The execution context for the evaluation.
     - exclude_import_only (bool, optional): A flag indicating whether to exclude resources that are marked as
         import-only. Default is True.
 
@@ -436,11 +432,11 @@ def evaluate_on_provider(
     return False
 
 
-def apply_to_provider(resource, provider_details, context: ExecutionContext) -> bool:
+def apply_to_provider(resource, provider_details) -> bool:
     if hasattr(resource, "deleted") and resource.deleted:
         return False
 
-    return evaluate_on_provider(resource, provider_details, context)
+    return evaluate_on_provider(resource, provider_details)
 
 
 def is_regex_match(regex, test_string):
@@ -616,3 +612,48 @@ def simplify_dt(_dt: Union[datetime, date]) -> str:
     else:
         dt_str += " UTC"
     return dt_str
+
+
+def normalize_dict_keys(
+    obj, case_convention=camel_to_snake, skip_formatting_keys: list = None
+):
+    if not skip_formatting_keys:
+        skip_formatting_keys = ["condition"]
+    if isinstance(obj, dict):
+        new_obj = dict()
+        for k, v in obj.items():
+            k = case_convention(k)
+            if isinstance(v, list):
+                new_obj[k] = [
+                    normalize_dict_keys(x, case_convention, skip_formatting_keys)
+                    for x in v
+                ]
+            else:
+                new_obj[k] = (
+                    normalize_dict_keys(v, case_convention, skip_formatting_keys)
+                    if k not in skip_formatting_keys
+                    else v
+                )
+        return new_obj
+    elif isinstance(obj, list):
+        return [
+            normalize_dict_keys(x, case_convention, skip_formatting_keys) for x in obj
+        ]
+    else:
+        return obj
+
+
+def exceptions_in_proposed_changes(obj) -> bool:
+    if isinstance(obj, dict):
+        if obj.get("exceptions_seen"):
+            return True
+
+        new_obj = dict()
+        for k, v in obj.items():
+            if isinstance(v, list):
+                new_obj[k] = any(exceptions_in_proposed_changes(x) for x in v)
+            elif isinstance(v, dict):
+                new_obj[k] = exceptions_in_proposed_changes(v)
+        return any(list(new_obj.values())) if new_obj else False
+    elif isinstance(obj, list):
+        return any(exceptions_in_proposed_changes(x) for x in obj)

@@ -7,7 +7,7 @@ from typing import Union
 
 from deepdiff import DeepDiff
 
-from iambic.core.context import ExecutionContext
+from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper, plugin_apply_wrapper
@@ -147,7 +147,6 @@ async def apply_role_tags(
     template_tags: list[dict],
     existing_tags: list[dict],
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     existing_tag_map = {tag["Key"]: tag.get("Value") for tag in existing_tags}
     template_tag_map = {tag["Key"]: tag.get("Value") for tag in template_tags}
@@ -166,7 +165,7 @@ async def apply_role_tags(
         tag["Key"] for tag in existing_tags if tag["Key"] not in template_tag_map.keys()
     ]:
         log_str = "Stale tags discovered."
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Removing tags..."
 
             async def untag_role():
@@ -183,6 +182,8 @@ async def apply_role_tags(
                     ProposedChange(
                         change_type=ProposedChangeType.DETACH,
                         attribute="tags",
+                        resource_type="aws:iam:role",
+                        resource_id=role_name,
                         change_summary={"TagKeys": tags_to_remove},
                         exceptions_seen=exceptions,
                     )
@@ -194,6 +195,8 @@ async def apply_role_tags(
                 ProposedChange(
                     change_type=ProposedChangeType.DETACH,
                     attribute="tags",
+                    resource_type="aws:iam:role",
+                    resource_id=role_name,
                     change_summary={"TagKeys": tags_to_remove},
                 )
             )
@@ -203,7 +206,7 @@ async def apply_role_tags(
     if tags_to_apply:
         log_str = "New tags discovered in AWS."
 
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Adding tags..."
 
             async def tag_role():
@@ -220,6 +223,8 @@ async def apply_role_tags(
                         ProposedChange(
                             change_type=ProposedChangeType.ATTACH,
                             attribute="tags",
+                            resource_type="aws:iam:role",
+                            resource_id=role_name,
                             new_value=tag,
                             exceptions_seen=exceptions,
                         )
@@ -233,12 +238,14 @@ async def apply_role_tags(
                     ProposedChange(
                         change_type=ProposedChangeType.ATTACH,
                         attribute="tags",
+                        resource_type="aws:iam:role",
+                        resource_id=role_name,
                         new_value=tag,
                     )
                 )
         log.info(log_str, tags=tags_to_apply, **log_params)
 
-    if tasks and context.execute:
+    if tasks and ctx.execute:
         results: list[list[ProposedChange]] = await asyncio.gather(
             *tasks, return_exceptions=True
         )
@@ -254,7 +261,6 @@ async def update_assume_role_policy(
     template_policy_document: dict,
     existing_policy_document: str,
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     response = []
     policy_drift = None
@@ -283,6 +289,8 @@ async def update_assume_role_policy(
                 ProposedChange(
                     change_type=ProposedChangeType.UPDATE,
                     attribute="assume_role_policy_document",
+                    resource_type="aws:iam:role",
+                    resource_id=role_name,
                     change_summary=policy_drift,
                     current_value=existing_policy_document,
                     new_value=template_policy_document,
@@ -293,11 +301,13 @@ async def update_assume_role_policy(
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
                     attribute="assume_role_policy_document",
+                    resource_type="aws:iam:role",
+                    resource_id=role_name,
                     new_value=template_policy_document,
                 )
             )
 
-        if context.execute:
+        if ctx.execute:
             boto_action = "Creating" if existing_policy_document else "Updating"
             log_str = f"{log_str} {boto_action} AssumeRolePolicyDocument..."
             await boto_crud_call(
@@ -316,7 +326,6 @@ async def apply_role_managed_policies(
     template_policies: list[dict],
     existing_policies: list[dict],
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     tasks = []
     response = []
@@ -335,11 +344,12 @@ async def apply_role_managed_policies(
             response.append(
                 ProposedChange(
                     change_type=ProposedChangeType.ATTACH,
+                    resource_type="aws:policy_document",
                     resource_id=policy_arn,
                     attribute="managed_policies",
                 )
             )
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Attaching managed policies..."
             tasks = [
                 boto_crud_call(
@@ -363,11 +373,12 @@ async def apply_role_managed_policies(
             response.append(
                 ProposedChange(
                     change_type=ProposedChangeType.DETACH,
+                    resource_type="aws:policy_document",
                     resource_id=policy_arn,
                     attribute="managed_policies",
                 )
             )
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Detaching managed policies..."
             tasks.extend(
                 [
@@ -393,7 +404,6 @@ async def apply_role_permission_boundary(
     template_permission_boundary: dict,
     existing_permission_boundary: dict,
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     tasks = []
     response = []
@@ -413,12 +423,13 @@ async def apply_role_permission_boundary(
             ProposedChange(
                 change_type=ProposedChangeType.ATTACH,
                 resource_id=template_boundary_policy_arn,
+                resource_type="aws:policy_document",
                 attribute="permission_boundary",
             )
         ]
         response.extend(proposed_changes)
 
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Attaching permission boundary..."
 
             tasks = [
@@ -445,13 +456,14 @@ async def apply_role_permission_boundary(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.DETACH,
+                resource_type="aws:policy_document",
                 resource_id=existing_boundary_policy_arn,
                 attribute="permission_boundary",
             )
         ]
         response.extend(proposed_changes)
 
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Detaching permission boundary..."
 
             tasks.extend(
@@ -483,7 +495,6 @@ async def apply_role_inline_policies(
     template_policies: list[dict],
     existing_policies: list[dict],
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     tasks = []
     response = []
@@ -499,15 +510,16 @@ async def apply_role_inline_policies(
     for policy_name in existing_policy_map.keys():
         if not template_policy_map.get(policy_name):
             log_str = "Stale inline policies discovered."
-            if context.execute:
-                log_str = f"{log_str} Removing inline policy..."
-                response.append(
-                    ProposedChange(
-                        change_type=ProposedChangeType.DELETE,
-                        resource_id=policy_name,
-                        attribute="inline_policies",
-                    )
+            response.append(
+                ProposedChange(
+                    change_type=ProposedChangeType.DELETE,
+                    resource_type="aws:policy_document",
+                    resource_id=policy_name,
+                    attribute="inline_policies",
                 )
+            )
+            if ctx.execute:
+                log_str = f"{log_str} Removing inline policy..."
                 tasks.append(
                     boto_crud_call(
                         iam_client.delete_role_policy,
@@ -542,6 +554,7 @@ async def apply_role_inline_policies(
                 response.append(
                     ProposedChange(
                         change_type=ProposedChangeType.UPDATE,
+                        resource_type="aws:policy_document",
                         resource_id=policy_name,
                         attribute="inline_policies",
                         change_summary=policy_drift,
@@ -555,6 +568,7 @@ async def apply_role_inline_policies(
                 response.append(
                     ProposedChange(
                         change_type=ProposedChangeType.CREATE,
+                        resource_type="aws:policy_document",
                         resource_id=policy_name,
                         attribute="inline_policies",
                         new_value=policy_document,
@@ -562,7 +576,7 @@ async def apply_role_inline_policies(
                 )
 
             log_str = f"{resource_existence} inline policies discovered."
-            if context.execute and policy_document:
+            if ctx.execute and policy_document:
                 log_str = f"{log_str} {boto_action} inline policy..."
                 tasks.append(
                     boto_crud_call(

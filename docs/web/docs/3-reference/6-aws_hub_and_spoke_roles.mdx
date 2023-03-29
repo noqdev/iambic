@@ -1,0 +1,79 @@
+---
+title: AWS Hub and Spoke Roles
+---
+
+# AWS Hub and Spoke Roles
+
+IAMbic uses a Hub-and-Spoke model to manage AWS resources. If you use AWS Organizations with IAMbic,
+your AWS Organizations management account will serve as the Hub account. However, if you use individual AWS accounts,
+you need to specify the account that will serve as the Hub account. In this case, IAMbic will create an
+IambicHubRole on the Hub account and an IambicSpokeRole role on all of your AWS accounts. IambicSpokeRole will be
+assumed by the IambicHubRole to perform actions on each respective account.
+
+## Hub Role Permissions
+
+The `IambicHubRole` should have permission to assume any IambicSpokeRole
+in the environment, and to list all accounts in AWS Organizations.
+
+See the [IambicHubRole Cloudformation template](https://github.com/noqdev/iambic/blob/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates/IambicHubRole.yml)
+for more details.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "organizations:ListAccounts",
+        "organizations:ListTagsForResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "sts:AssumeRole",
+        "sts:TagSession"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+## Spoke Role Permissions
+
+Each AWS account should have an IAMbicSpokeRole.
+The IAMbic setup wizard will guide you in creating a Cloudformation StackSet to automatically configure each
+account with this role.
+
+See the [IambicSpokeRole Cloudformation template](https://github.com/noqdev/iambic/blob/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates/IambicSpokeRole.yml)
+for more details.
+
+The IAMbicSpokeRole should have the following policy attached: `arn:aws:iam::aws:policy/ReadOnlyAccess`,
+and the following permissions:
+
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:Describe*",
+        "identitystore:*",
+        "organizations:describe*",
+        "organizations:list*",
+        "iam:*",
+        "sso:*",
+        "secretsmanager:CreateSecret"
+      ],
+      "Resource": [
+        "*"
+      ]
+    }
+  ]
+}
+```

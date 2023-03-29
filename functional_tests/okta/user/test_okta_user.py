@@ -6,7 +6,6 @@ import random
 import time
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.parser import load_templates
 from iambic.main import run_apply
@@ -16,9 +15,9 @@ def test_okta_user():
     temp_templates_directory = IAMBIC_TEST_DETAILS.template_dir_path
     username = f"iambic_functional_test_user_{random.randint(0, 1000000)}"
     iambic_functional_test_user_yaml = f"""template_type: NOQ::Okta::User
+idp_name: development
 properties:
   username: {username}
-  idp_name: development
   profile:
     firstName: iambic
     lastName: {username}
@@ -28,9 +27,15 @@ properties:
 """
     test_user_fp = os.path.join(
         temp_templates_directory,
-        f"resources/okta/users/development/{username}.yaml",
+        f"resources/okta/user/development/{username}.yaml",
     )
-
+    os.makedirs(
+        os.path.join(
+            temp_templates_directory,
+            "resources/okta/user/development/",
+        ),
+        exist_ok=True,
+    )
     with open(test_user_fp, "w") as temp_file:
         temp_file.write(iambic_functional_test_user_yaml)
 
@@ -51,9 +56,9 @@ properties:
     assert user_template.properties.profile["firstName"] == "TestNameChange"
 
     # set the template to import_only
-    proposed_changes_yaml_path = "{0}/proposed_changes.yaml".format(os.getcwd())
-    if os.path.isfile(proposed_changes_yaml_path):
-        os.remove(proposed_changes_yaml_path)
+    proposed_changes_path = "{0}/proposed_changes.json".format(os.getcwd())
+    if os.path.isfile(proposed_changes_path):
+        os.remove(proposed_changes_path)
     else:
         assert (
             False  # Previous changes are not being written out to proposed_changes.yaml
@@ -63,8 +68,8 @@ properties:
     user_template.properties.profile["firstName"] = "shouldNotWork"
     user_template.write()
     run_apply(IAMBIC_TEST_DETAILS.config, [test_user_fp])
-    if os.path.isfile(proposed_changes_yaml_path):
-        assert os.path.getsize(proposed_changes_yaml_path) == 0
+    if os.path.isfile(proposed_changes_path):
+        assert os.path.getsize(proposed_changes_path) == 2  # {} is 2 bytes
     else:
         # this is acceptable as well because there are no changes to be made.
         pass

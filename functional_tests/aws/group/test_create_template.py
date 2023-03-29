@@ -5,7 +5,7 @@ from unittest import IsolatedAsyncioTestCase
 from functional_tests.aws.group.utils import generate_group_template_from_base
 from functional_tests.aws.user.utils import get_modifiable_user
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.core.context import ctx
+from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.iam.group.utils import get_group_across_accounts
 from iambic.plugins.v0_1_0.aws.iam.user.utils import get_user_groups
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call
@@ -23,13 +23,18 @@ class CreateGroupTestCase(IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(
+            IAMBIC_TEST_DETAILS.config.aws,
+        )
 
     async def test_create_group_all_accounts(self):
         self.template.included_accounts = ["*"]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        changes = await self.template.apply(
+            IAMBIC_TEST_DETAILS.config.aws,
+        )
+        screen_render_resource_changes([changes])
 
         account_group_mapping = await get_group_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.group_name, False
@@ -50,7 +55,10 @@ class CreateGroupTestCase(IsolatedAsyncioTestCase):
         self.template.included_accounts = [included_account]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        changes = await self.template.apply(
+            IAMBIC_TEST_DETAILS.config.aws,
+        )
+        screen_render_resource_changes([changes])
 
         account_group_mapping = await get_group_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.group_name, False
@@ -76,7 +84,10 @@ class CreateGroupTestCase(IsolatedAsyncioTestCase):
 
         self.template.included_accounts = [included_account]
         self.template.excluded_accounts = []
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        changes = await self.template.apply(
+            IAMBIC_TEST_DETAILS.config.aws,
+        )
+        screen_render_resource_changes([changes])
 
         user = await get_modifiable_user(iam_client)
         user_name = user["UserName"]

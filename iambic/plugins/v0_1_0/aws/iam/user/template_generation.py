@@ -18,12 +18,12 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import UserMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.user.models import (
     AWS_IAM_USER_TEMPLATE_TYPE,
+    AwsIamUserTemplate,
     UserProperties,
-    UserTemplate,
 )
 from iambic.plugins.v0_1_0.aws.iam.user.utils import (
     get_user_across_accounts,
@@ -37,7 +37,6 @@ from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
-    normalize_boto3_resp,
 )
 
 if TYPE_CHECKING:
@@ -216,7 +215,7 @@ async def _account_id_to_user_map(user_refs):
     for user_ref in user_refs:
         async with aiofiles.open(user_ref["path"], mode="r") as f:
             content_dict = json.loads(await f.read())
-            account_id_to_user_map[user_ref["account_id"]] = normalize_boto3_resp(
+            account_id_to_user_map[user_ref["account_id"]] = normalize_dict_keys(
                 content_dict
             )
     return account_id_to_user_map
@@ -229,7 +228,7 @@ async def create_templated_user(  # noqa: C901
     user_dir: str,
     existing_template_map: dict,
     config: AWSConfig,
-) -> UserTemplate:
+) -> AwsIamUserTemplate:
     account_id_to_user_map = await _account_id_to_user_map(user_refs)
     num_of_accounts = len(user_refs)
 
@@ -390,7 +389,7 @@ async def create_templated_user(  # noqa: C901
         file_path,
         existing_template_map,
         user_name,
-        UserTemplate,
+        AwsIamUserTemplate,
         user_template_params,
         UserProperties(**user_template_properties),
         list(aws_account_map.values()),
@@ -578,6 +577,9 @@ async def generate_aws_user_templates(
             existing_template_map,
             config,
         )
+        if not resource_template:
+            # Template not updated. Most likely because it's an `enforced` template.
+            continue
         all_resource_ids.add(resource_template.resource_id)
 
     if not detect_messages:

@@ -4,6 +4,7 @@ import itertools
 from typing import Union
 
 import pytest
+from pydantic import Extra
 
 from iambic.core.models import AccessModelMixin, BaseModel
 from iambic.core.template_generation import (
@@ -14,7 +15,6 @@ from iambic.core.template_generation import (
 
 
 class SampleNote(BaseModel, AccessModelMixin):
-
     note: str
 
     @classmethod
@@ -59,11 +59,11 @@ class SampleNote(BaseModel, AccessModelMixin):
 
 
 class SampleModel(BaseModel):
-
     note: Union[str, SampleNote, list[SampleNote]]
 
     class Config:
         arbitrary_types_allowed = True
+        extra = Extra.forbid
 
     @property
     def resource_type(self):
@@ -128,7 +128,6 @@ async def test_group_dict_attribute(aws_accounts: list):
 
 @pytest.mark.asyncio
 async def test_base_group_str_attribute(aws_accounts: list):
-
     aws_account_map = {account.account_id: account for account in aws_accounts}
     # setup a scenario where a literal is both repeated and templatized
     repeated_literal = f"prefix-{aws_accounts[0].account_id}"
@@ -167,7 +166,6 @@ async def test_base_group_str_attribute(aws_accounts: list):
 
 @pytest.mark.asyncio
 async def test_base_group_str_attribute_incoming_permutations(aws_accounts: list):
-
     aws_account_map = {account.account_id: account for account in aws_accounts}
     # setup a scenario where a literal is both repeated and templatized
     repeated_literal = f"prefix-{aws_accounts[0].account_id}"

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Union
 
 from deepdiff import DeepDiff
 
-from iambic.core.context import ExecutionContext
+from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper, plugin_apply_wrapper
@@ -121,7 +121,6 @@ async def apply_group_managed_policies(
     template_policies: list[dict],
     existing_policies: list[dict],
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     tasks = []
     response = []
@@ -140,12 +139,13 @@ async def apply_group_managed_policies(
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.ATTACH,
+                    resource_type="aws:policy_document",
                     resource_id=policy_arn,
                     attribute="managed_policies",
                 )
             ]
             response.extend(proposed_changes)
-            if context.execute:
+            if ctx.execute:
                 log_str = f"{log_str} Attaching managed policies..."
                 apply_awaitable = boto_crud_call(
                     iam_client.attach_group_policy,
@@ -167,12 +167,13 @@ async def apply_group_managed_policies(
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DETACH,
+                    resource_type="aws:policy_document",
                     resource_id=policy_arn,
                     attribute="managed_policies",
                 )
             ]
             response.extend(proposed_changes)
-            if context.execute:
+            if ctx.execute:
                 log_str = f"{log_str} Detaching managed policies..."
                 apply_awaitable = boto_crud_call(
                     iam_client.detach_group_policy,
@@ -195,7 +196,6 @@ async def apply_group_inline_policies(
     template_policies: list[dict],
     existing_policies: list[dict],
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     tasks = []
     response = []
@@ -214,13 +214,14 @@ async def apply_group_inline_policies(
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DELETE,
+                    resource_type="aws:policy_document",
                     resource_id=policy_name,
                     attribute="inline_policies",
                 )
             ]
             response.extend(proposed_changes)
 
-            if context.execute:
+            if ctx.execute:
                 log_str = f"{log_str} Removing inline policy..."
 
                 apply_awaitable = boto_crud_call(
@@ -256,6 +257,7 @@ async def apply_group_inline_policies(
                 proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.UPDATE,
+                        resource_type="aws:policy_document",
                         resource_id=policy_name,
                         attribute="inline_policies",
                         change_summary=policy_drift,
@@ -269,6 +271,7 @@ async def apply_group_inline_policies(
                 proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.CREATE,
+                        resource_type="aws:policy_document",
                         resource_id=policy_name,
                         attribute="inline_policies",
                         new_value=policy_document,
@@ -277,7 +280,7 @@ async def apply_group_inline_policies(
             response.extend(proposed_changes)
 
             log_str = f"{resource_existence} inline policies discovered."
-            if context.execute and policy_document:
+            if ctx.execute and policy_document:
                 log_str = f"{log_str} {boto_action} inline policy..."
                 apply_awaitable = boto_crud_call(
                     iam_client.put_group_policy,

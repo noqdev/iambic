@@ -1,12 +1,10 @@
 from io import StringIO
 from typing import List
-from colors import color
 from rich.console import Console    
 from rich.style import Style
 from rich.text import Text
 from rich.table import Table
 from rich.tree import Tree
-from tabulate import tabulate
 from iambic.output.models import ActionSummary, ExceptionSummary
 
 
@@ -39,7 +37,7 @@ def rich_tree_summary(action_summary: ActionSummary):
             for change in account.changes:
                 change_tree = account_tree.add(f"{change.change.resource_type} // {change.change.resource_id}", expanded=True)
                 if change.change.diff:
-                    change_tree.add("* " + "\n* ".join(change.change.diff_resolved))
+                    change_tree.add(change.change.diff_plus_minus)
     console = Console(file=StringIO(), force_terminal=True)
     console.print(action_summary_tree)
     output = console.file.getvalue()
@@ -58,17 +56,8 @@ def rich_tree_exception(exceptions: ExceptionSummary):
                 change_tree.add(change.change.resource_type)
                 change_tree.add(str(change.change.change_type.value))
                 if change.change.diff:
-                    change_tree.add("* " + "\n* ".join(change.change.diff_resolved))
+                    change_tree.add("* " + "\n* ".join(change.change.diff_plus_minus))
     console = Console(file=StringIO(), force_terminal=True)
     console.print(exception_tree)
     output = console.file.getvalue()
     return output
-
-
-def ansi_format(value, style_str):
-    return color(value, style_str)
-
-
-def ansi_text_table(table_headers: List[str], table_data: List[List[str]]) -> str:
-    # color formatting
-    return tabulate(table_data, headers=table_headers, tablefmt="simple")    

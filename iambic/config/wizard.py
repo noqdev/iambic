@@ -51,7 +51,7 @@ from iambic.plugins.v0_1_0.aws.handlers import load as aws_load
 from iambic.plugins.v0_1_0.aws.iam.policy.models import PolicyDocument, PolicyStatement
 from iambic.plugins.v0_1_0.aws.iam.role.models import (
     AWS_IAM_ROLE_TEMPLATE_TYPE,
-    RoleTemplate,
+    AwsIamRoleTemplate,
 )
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import (
@@ -70,6 +70,9 @@ from iambic.plugins.v0_1_0.aws.utils import (
     get_identity_arn,
     is_valid_account_id,
 )
+from iambic.plugins.v0_1_0.azure_ad.handlers import import_azure_ad_resources
+from iambic.plugins.v0_1_0.azure_ad.iambic_plugin import AzureADConfig
+from iambic.plugins.v0_1_0.azure_ad.models import AzureADOrganization
 from iambic.plugins.v0_1_0.google_workspace.handlers import import_google_resources
 from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import (
     GoogleProject,
@@ -190,14 +193,24 @@ def set_required_text_value(human_readable_name: str, default_val: str = None):
             print("Please enter a valid response.")
 
 
-def set_okta_idp_name(default_val: str = None):
-    return set_required_text_value(
-        "What is the Okta Identity Provider Name?", default_val
-    )
+def set_idp_name(default_val: str = None):
+    return set_required_text_value("What is the Identity Provider Name?", default_val)
+
+
+def set_tenant_id(default_val: str = None):
+    return set_required_text_value("What is the Tenant ID?", default_val)
+
+
+def set_client_id(default_val: str = None):
+    return set_required_text_value("What is the Client ID?", default_val)
+
+
+def set_client_secret(default_val: str = None):
+    return set_required_text_value("What is the Client Secret?", default_val)
 
 
 def set_okta_org_url(default_val: str = None):
-    return set_required_text_value("What is the Okta Organization URL?", default_val)
+    return set_required_text_value("What is the Organization URL?", default_val)
 
 
 def set_okta_api_token(default_val: str = None):
@@ -229,10 +242,6 @@ def set_google_private_key(default_val: str = None):
 
 def set_google_private_key_id(default_val: str = None):
     return set_required_text_value("What is the Private Key ID?", default_val)
-
-
-def set_google_client_id(default_val: str = None):
-    return set_required_text_value("What is the Client ID?", default_val)
 
 
 def set_google_client_email(default_val: str = None):
@@ -608,8 +617,8 @@ class ConfigurationWizard:
         ctx.command = current_command
 
     async def sync_config_aws_accounts(self, accounts: list[AWSAccount]):
-        if (
-            not len(self.config.aws.accounts)
+        if not (
+            len(self.config.aws.accounts)
             > self.config.aws.min_accounts_required_for_wildcard_included_accounts
         ):
             await self.run_import_aws_resources()
@@ -679,6 +688,24 @@ class ConfigurationWizard:
 
         ctx.command = current_command
 
+    async def run_import_azure_ad_resources(self):
+        log.info("Importing Azure AD identities")
+        current_command = ctx.command
+        ctx.command = Command.IMPORT
+
+        exe_message = ExecutionMessage(
+            execution_id=str(uuid.uuid4()),
+            command=Command.IMPORT,
+            provider_type="azure_ad",
+        )
+        await import_azure_ad_resources(
+            exe_message,
+            self.config.azure_ad,
+            self.repo_dir,
+        )
+
+        ctx.command = current_command
+
     async def run_import_okta_resources(self):
         log.info("Importing Okta identities")
         current_command = ctx.command
@@ -697,7 +724,7 @@ class ConfigurationWizard:
 
         ctx.command = current_command
 
-    async def save_and_deploy_changes(self, role_template: RoleTemplate):
+    async def save_and_deploy_changes(self, role_template: AwsIamRoleTemplate):
         log.info(
             "Writing changes locally and deploying updates to AWS",
             role_name=role_template.properties.role_name,
@@ -705,7 +732,7 @@ class ConfigurationWizard:
 
         self.config.write()
         role_template.write(exclude_unset=False)
-        await role_template.apply(self.config.aws, ctx)
+        await role_template.apply(self.config.aws)
 
     def configuration_wizard_aws_account_add(self):  # noqa: C901
         if not self.has_cf_permissions:
@@ -717,6 +744,13 @@ class ConfigurationWizard:
         is_hub_account = bool(
             not self.config.aws.accounts and not self.config.aws.organizations
         )
+        requires_sync = bool(
+            not is_hub_account and (
+                    len(self.config.aws.accounts)
+                    > self.config.aws.min_accounts_required_for_wildcard_included_accounts
+            )
+        )
+
         if is_hub_account:
             account_id = self.hub_account_id
             account_name = set_required_text_value(
@@ -732,6 +766,18 @@ class ConfigurationWizard:
                 )
                 return
         else:
+            if requires_sync:
+                if not questionary.confirm(
+                    "Adding this account will require a sync to be ran.\n"
+                    "This is to apply any matching templates to the account if the resource does not already exist.\n"
+                    "Then, the account resources will be imported into Iambic.\n"
+                    "Proceed?"
+                ).unsafe_ask():
+                    log.info(
+                        "Unable to add the AWS account without creating the required role."
+                    )
+                    return
+
             account_id = questionary.text(
                 "What is the AWS Account ID? Usually this looks like `12345689012`"
             ).unsafe_ask()
@@ -805,7 +851,7 @@ class ConfigurationWizard:
         # account.partition = set_aws_account_partition(account.partition)
 
         confirm_command_exe(
-            "AWS Account", Operation.ADDED, requires_sync=is_hub_account
+            "AWS Account", Operation.ADDED, requires_sync=requires_sync
         )
 
         self.config.aws.accounts.append(account)
@@ -1033,7 +1079,7 @@ class ConfigurationWizard:
     def configuration_wizard_aws_organizations(self):
         # Currently only 1 org per config is supported.
         if questionary.confirm(
-            "If you would like to use AWS Organizations, the IAMbic hub account you configured must be in the same "
+            "If you would like to use AWS Organizations, the IAMbic hub account you configured must be the same "
             "AWS account as your AWS Organization.\nIs this the case?"
         ).unsafe_ask():
             if self.config.aws and self.config.aws.organizations:
@@ -1062,14 +1108,9 @@ class ConfigurationWizard:
             self.default_region,
         )
 
-        role_arn = get_spoke_role_arn(self.hub_account_id)
-
         question_text = "Create the secret"
         role_name = IAMBIC_SPOKE_ROLE_NAME
         role_account_id = self.hub_account_id
-
-        if role_name:
-            question_text += f" and update the {role_name} IAMbic template"
 
         if not questionary.confirm(f"{question_text}?").unsafe_ask():
             self.config.secrets = {}
@@ -1091,30 +1132,10 @@ class ConfigurationWizard:
             ExtendsConfig(
                 key=ExtendsConfigKey.AWS_SECRETS_MANAGER,
                 value=response["ARN"],
-                assume_role_arn=role_arn,
+                assume_role_arn=get_spoke_role_arn(self.hub_account_id),
             )
         ]
         self.config.write()
-
-        if role_arn:
-            role_template: RoleTemplate = self.existing_role_template_map.get(role_name)
-            role_template.properties.inline_policies.append(
-                PolicyDocument(
-                    policy_name="read_iambic_secrets",
-                    included_accounts=[role_account_id],
-                    statement=[
-                        PolicyStatement(
-                            effect="Allow",
-                            action=[
-                                "secretsmanager:GetSecretValue",
-                                "secretsmanager:PutSecretValue",
-                            ],
-                            resource=[response["ARN"]],
-                        )
-                    ],
-                )
-            )
-            asyncio.run(self.save_and_deploy_changes(role_template))
 
     def update_secret(self):
         if not self.config.secrets:
@@ -1123,6 +1144,11 @@ class ConfigurationWizard:
         if self.config.okta:
             self.config.secrets["okta"] = get_secret_dict_with_val(
                 self.config.okta, exclude={"client"}
+            )
+
+        if self.config.azure_ad:
+            self.config.secrets["azure_ad"] = get_secret_dict_with_val(
+                self.config.azure_ad
             )
 
         if self.config.google_workspace:
@@ -1153,7 +1179,7 @@ class ConfigurationWizard:
             "private_key_id": set_google_private_key_id(),
             "private_key": set_google_private_key(),
             "client_email": set_google_client_email(),
-            "client_id": set_google_client_id(),
+            "client_id": set_client_id(),
             "auth_uri": set_google_auth_uri(),
             "token_uri": set_google_token_uri(),
             "auth_provider_x509_cert_url": set_google_auth_provider_cert_url(),
@@ -1175,6 +1201,7 @@ class ConfigurationWizard:
                         )
                     ]
                 )
+            asyncio.run(self.run_import_google_workspace_resources())
             self.update_secret()
         else:
             self.config.google_workspace = GoogleWorkspaceConfig(
@@ -1184,10 +1211,9 @@ class ConfigurationWizard:
                     )
                 ]
             )
+            asyncio.run(self.run_import_google_workspace_resources())
             self.config.secrets = {"google_workspace": {"workspaces": [google_obj]}}
             self.create_secret()
-
-        asyncio.run(self.run_import_google_workspace_resources())
 
     def configuration_wizard_google_workspace_edit(self):
         project_ids = [
@@ -1264,9 +1290,7 @@ class ConfigurationWizard:
                     project_to_edit.client_email
                 )
             elif action == "Update Client ID":
-                project_to_edit.client_id = set_google_client_id(
-                    project_to_edit.client_id
-                )
+                project_to_edit.client_id = set_client_id(project_to_edit.client_id)
             elif action == "Update Auth URI":
                 project_to_edit.auth_uri = set_google_auth_uri(project_to_edit.auth_uri)
             elif action == "Update Token URI":
@@ -1316,7 +1340,7 @@ class ConfigurationWizard:
 
     def configuration_wizard_okta_organization_add(self):
         okta_obj = {
-            "idp_name": set_okta_idp_name(),
+            "idp_name": set_idp_name(),
             "org_url": set_okta_org_url(),
             "api_token": set_okta_api_token(),
         }
@@ -1334,6 +1358,7 @@ class ConfigurationWizard:
                         )
                     ]
                 )
+            asyncio.run(self.run_import_okta_resources())
             self.update_secret()
         else:
             self.config.okta = OktaConfig(
@@ -1344,9 +1369,8 @@ class ConfigurationWizard:
                 ]
             )
             self.config.secrets = {"okta": {"organizations": [okta_obj]}}
+            asyncio.run(self.run_import_okta_resources())
             self.create_secret()
-
-        asyncio.run(self.run_import_okta_resources())
 
     def configuration_wizard_okta_organization_edit(self):
         org_names = [org.idp_name for org in self.config.okta.organizations]
@@ -1390,7 +1414,7 @@ class ConfigurationWizard:
             if action == "Go back":
                 return
             elif action == "Update name":
-                org_to_edit.idp_name = set_okta_idp_name(org_to_edit.idp_name)
+                org_to_edit.idp_name = set_idp_name(org_to_edit.idp_name)
             elif action == "Update Organization URL":
                 org_to_edit.org_url = set_okta_org_url(org_to_edit.org_url)
             elif action == "Update API Token":
@@ -1402,7 +1426,6 @@ class ConfigurationWizard:
             ] = org_to_edit
 
             asyncio.run(self.run_import_okta_resources())
-
             self.update_secret()
             self.config.write()
 
@@ -1424,6 +1447,129 @@ class ConfigurationWizard:
                 self.configuration_wizard_okta_organization_edit()
         else:
             self.configuration_wizard_okta_organization_add()
+
+    def configuration_wizard_azure_ad_organization_add(self):
+        azure_ad_obj = {
+            "idp_name": set_idp_name(),
+            "tenant_id": set_tenant_id(),
+            "client_id": set_client_id(),
+            "client_secret": set_client_secret(),
+        }
+
+        confirm_command_exe("Azure AD Organization", Operation.ADDED)
+
+        if self.config.secrets:
+            if self.config.azure_ad and self.config.azure_ad.organizations:
+                self.config.azure_ad.organizations.append(
+                    AzureADOrganization(**azure_ad_obj)
+                )
+            else:
+                self.config.azure_ad = AzureADConfig(
+                    organizations=[
+                        AzureADOrganization(
+                            iambic_managed=IambicManaged.READ_AND_WRITE, **azure_ad_obj
+                        )
+                    ]
+                )
+
+            asyncio.run(self.run_import_azure_ad_resources())
+            self.update_secret()
+        else:
+            self.config.azure_ad = AzureADConfig(
+                organizations=[
+                    AzureADOrganization(
+                        iambic_managed=IambicManaged.READ_AND_WRITE, **azure_ad_obj
+                    )
+                ]
+            )
+            self.config.secrets = {
+                "azure_ad": get_secret_dict_with_val(self.config.azure_ad)
+            }
+
+            asyncio.run(self.run_import_azure_ad_resources())
+            self.create_secret()
+
+    def configuration_wizard_azure_ad_organization_edit(self):
+        org_names = [org.idp_name for org in self.config.azure_ad.organizations]
+        org_name_to_config_elem_map = {
+            org.idp_name: elem
+            for elem, org in enumerate(self.config.azure_ad.organizations)
+        }
+        if len(org_names) > 1:
+            action = questionary.select(
+                "Which Azure AD Organization would you like to edit?",
+                choices=["Go back", *org_names],
+            ).unsafe_ask()
+            if action == "Go back":
+                return
+            org_to_edit = next(
+                (
+                    org
+                    for org in self.config.azure_ad.organizations
+                    if org.idp_name == action
+                ),
+                None,
+            )
+            if not org_to_edit:
+                log.debug(
+                    "Could not find Azure AD Organization to edit", idp_name=action
+                )
+                return
+        else:
+            org_to_edit = self.config.azure_ad.organizations[0]
+
+        org_name = org_to_edit.idp_name
+        choices = [
+            "Go back",
+            "Update IDP name",
+            "Update Tenant ID",
+            "Update Client ID",
+            "Update Client Secret",
+        ]
+        while True:
+            action = questionary.select(
+                "What would you like to do?",
+                choices=choices,
+            ).unsafe_ask()
+            if action == "Go back":
+                return
+            elif action == "Update IDP name":
+                org_to_edit.idp_name = set_idp_name(org_to_edit.idp_name)
+            elif action == "Update Tenant ID":
+                org_to_edit.tenant_id = set_tenant_id(org_to_edit.tenant_id)
+            elif action == "Update Client ID":
+                org_to_edit.client_id = set_client_id(org_to_edit.client_id)
+            elif action == "Update Client Secret":
+                org_to_edit.client_secret = set_client_secret()
+
+            confirm_command_exe("Azure AD Organization", Operation.UPDATED)
+            self.config.azure_ad.organizations[
+                org_name_to_config_elem_map[org_name]
+            ] = org_to_edit
+
+            asyncio.run(self.run_import_azure_ad_resources())
+
+            self.update_secret()
+            self.config.write()
+
+    def configuration_wizard_azure_ad(self):
+        log.info(
+            "For details on how to retrieve the information required to add an Azure AD Organization "
+            "to IAMbic check out our docs: https://iambic.org/getting_started/azure_ad/"
+        )
+        if self.config.azure_ad:
+            action = questionary.select(
+                "What would you like to do?",
+                choices=["Go back", "Add", "Edit"],
+            ).unsafe_ask()
+            if action == "Go back":
+                return
+            elif action == "Add":
+                self.configuration_wizard_azure_ad_organization_add()
+            elif action == "Edit":
+                self.configuration_wizard_azure_ad_organization_edit()
+        else:
+            self.configuration_wizard_azure_ad_organization_add()
 
     def configuration_wizard_github_workflow(self):
         log.info(
@@ -1484,7 +1630,9 @@ class ConfigurationWizard:
         role_name = IAMBIC_SPOKE_ROLE_NAME
         hub_account_id = self.hub_account_id
         sqs_arn = f"arn:aws:sqs:us-east-1:{hub_account_id}:IAMbicChangeDetectionQueue"
-        role_template: RoleTemplate = self.existing_role_template_map.get(role_name)
+        role_template: AwsIamRoleTemplate = self.existing_role_template_map.get(
+            role_name
+        )
         role_template.properties.inline_policies.append(
             PolicyDocument(
                 policy_name="consume_iambic_changes",
@@ -1519,7 +1667,9 @@ class ConfigurationWizard:
             if secret_in_config:
                 secret_question_text = "This requires the ability to update the AWS Secrets Manager secret."
             else:
-                secret_question_text = "This requires permissions to update a role and create an AWS Secret."
+                secret_question_text = (
+                    "This requires permissions to create an AWS Secret."
+                )
 
             if self.config.aws.accounts or self.config.aws.organizations:
                 if not self.existing_role_template_map:
@@ -1532,6 +1682,8 @@ class ConfigurationWizard:
                 if self.existing_role_template_map:
                     choices = ["AWS"]
                     # Currently, the config wizard only support IAMbic plugins
+                    if "azure_ad" in self.config.__fields__:
+                        choices.append("Azure AD")
                     if "google_workspace" in self.config.__fields__:
                         choices.append("Google Workspace")
                     if "okta" in self.config.__fields__:
@@ -1572,6 +1724,11 @@ class ConfigurationWizard:
                         f"{secret_question_text} Proceed?"
                     ).unsafe_ask():
                         self.configuration_wizard_okta()
+                elif action == "Azure AD":
+                    if questionary.confirm(
+                        f"{secret_question_text} Proceed?"
+                    ).unsafe_ask():
+                        self.configuration_wizard_azure_ad()
                 elif action == "Generate Github Action Workflows":
                     self.configuration_wizard_github_workflow()
                 elif action == "Setup AWS change detection":

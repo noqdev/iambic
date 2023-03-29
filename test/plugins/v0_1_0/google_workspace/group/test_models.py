@@ -6,7 +6,7 @@ import pytest
 
 from iambic.core.template_generation import merge_model
 from iambic.plugins.v0_1_0.google_workspace.group.models import (
-    GroupTemplateProperties,
+    GroupProperties,
     get_group_template,
 )
 
@@ -63,7 +63,7 @@ def test_merge_list_group_members_expires_at():
             "expires_at": "in 3 days",
         }
     ]
-    existing_document = GroupTemplateProperties(
+    existing_document = GroupProperties(
         name="bar",
         domain="foo",
         description="baz",
@@ -78,16 +78,14 @@ def test_merge_list_group_members_expires_at():
             "email": "someone_else@example.com",
         },
     ]
-    new_document = GroupTemplateProperties(
+    new_document = GroupProperties(
         name="bar",
         domain="foo",
         description="baz",
         email="bar@example.com",
         members=new_members,
     )
-    merged_document: GroupTemplateProperties = merge_model(
-        new_document, existing_document, []
-    )
+    merged_document: GroupProperties = merge_model(new_document, existing_document, [])
     assert existing_members != new_members
     for member in merged_document.members:
         if member.email == "user@example.com":
@@ -95,12 +93,11 @@ def test_merge_list_group_members_expires_at():
 
 
 def test_members_sorting():
-
     members = [
         {"email": "user_1@example.org"},
         {"email": "user_2@example.org"},
     ]
-    properties_1 = GroupTemplateProperties(
+    properties_1 = GroupProperties(
         name="example_group",
         domain="example.org",
         email="example_group@example.org",

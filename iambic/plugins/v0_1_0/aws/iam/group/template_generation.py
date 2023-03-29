@@ -18,12 +18,12 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import GroupMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.group.models import (
     AWS_IAM_GROUP_TEMPLATE_TYPE,
+    AwsIamGroupTemplate,
     GroupProperties,
-    GroupTemplate,
 )
 from iambic.plugins.v0_1_0.aws.iam.group.utils import (
     get_group_across_accounts,
@@ -35,7 +35,6 @@ from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
-    normalize_boto3_resp,
 )
 
 if TYPE_CHECKING:
@@ -199,7 +198,7 @@ async def _account_id_to_group_map(group_refs):
         async with aiofiles.open(group_ref["path"], mode="r") as f:
             content_dict = json.loads(await f.read())
 
-            account_id_to_group_map[group_ref["account_id"]] = normalize_boto3_resp(
+            account_id_to_group_map[group_ref["account_id"]] = normalize_dict_keys(
                 content_dict
             )
     return account_id_to_group_map
@@ -212,7 +211,7 @@ async def create_templated_group(  # noqa: C901
     group_dir: str,
     existing_template_map: dict,
     config: AWSConfig,
-) -> GroupTemplate:
+) -> AwsIamGroupTemplate:
     account_id_to_group_map = await _account_id_to_group_map(group_refs)
     num_of_accounts = len(group_refs)
 
@@ -306,7 +305,7 @@ async def create_templated_group(  # noqa: C901
         file_path,
         existing_template_map,
         group_name,
-        GroupTemplate,
+        AwsIamGroupTemplate,
         group_template_params,
         GroupProperties(**group_template_properties),
         list(aws_account_map.values()),
@@ -491,6 +490,9 @@ async def generate_aws_group_templates(
             existing_template_map,
             config,
         )
+        if not resource_template:
+            # Template not updated. Most likely because it's an `enforced` template.
+            continue
         all_resource_ids.add(resource_template.resource_id)
 
     if not detect_messages:

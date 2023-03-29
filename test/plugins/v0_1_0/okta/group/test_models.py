@@ -9,24 +9,18 @@ from test.plugins.v0_1_0.okta.test_utils import (  # noqa: F401 # intentional fo
 
 import pytest
 
-from iambic.core.context import ExecutionContext
 from iambic.core.models import ProposedChangeType
-from iambic.plugins.v0_1_0.okta.group.models import (
-    OktaGroupTemplate,
-    OktaGroupTemplateProperties,
-)
+from iambic.plugins.v0_1_0.okta.group.models import GroupProperties, OktaGroupTemplate
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig
 
 
 def test_members_sorting():
-
     members = [
         {"username": "user_1@example.org"},
         {"username": "user_2@example.org"},
     ]
-    properties_1 = OktaGroupTemplateProperties(
+    properties_1 = GroupProperties(
         name="example_group",
-        idp_name="example.org",
         group_id="example.org-example_group",
         members=members,
     )
@@ -72,19 +66,16 @@ async def test_apply_create_group(
 ):
     test_template_path, temp_templates_directory = mock_fs
     idp_name = "example.org"
-    group_properties = OktaGroupTemplateProperties(
+    group_properties = GroupProperties(
         name="example_group",
-        idp_name=idp_name,
         description="example description",
     )
     template = OktaGroupTemplate(
-        file_path=test_template_path, properties=group_properties
+        file_path=test_template_path, idp_name=idp_name, properties=group_properties
     )
     template.write()
     okta_config = OktaConfig(organizations=[mock_okta_organization])
-    context = ExecutionContext()
-    context.eval_only = False
-    template_change_details = await template.apply(okta_config, context)
+    template_change_details = await template.apply(okta_config)
     assert (
         template_change_details.proposed_changes[0].proposed_changes[0].change_type
         == ProposedChangeType.CREATE

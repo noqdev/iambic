@@ -7,7 +7,7 @@ import dateparser
 
 from functional_tests.aws.group.utils import generate_group_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.core.context import ctx
+from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.iam.group.utils import get_group_across_accounts
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
 
@@ -27,17 +27,17 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
         cls.template.included_accounts = cls.all_account_ids[
             : len(cls.all_account_ids) // 2
         ]
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
 
     @classmethod
     def tearDownClass(cls):
         cls.template.deleted = True
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
 
     async def test_update_managed_policies(self):
         if self.template.properties.managed_policies:
             self.template.properties.managed_policies = []
-            await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+            await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
             account_group_mapping = await get_group_across_accounts(
                 IAMBIC_TEST_DETAILS.config.aws.accounts,
@@ -56,7 +56,8 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
         self.template.properties.managed_policies = [
             ManagedPolicyRef(policy_arn=policy_arn)
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
 
         account_group_mapping = await get_group_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts,
@@ -72,7 +73,8 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
                 )
 
         self.template.properties.managed_policies = []
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
 
         account_group_mapping = await get_group_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts,
@@ -91,7 +93,7 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
         self.template.included_accounts = ["*"]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
         account_group_mapping = await get_group_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.group_name, False
@@ -129,7 +131,8 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
                 ],
             )
         )
-        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes(([r]))
         self.assertEqual(len(r.proposed_changes), 2)
 
         # Set expiration
@@ -138,7 +141,8 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
         ].expires_at = dateparser.parse(
             "yesterday", settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True}
         )
-        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes(([r]))
         self.assertEqual(len(r.proposed_changes), 1)
 
 
@@ -157,18 +161,18 @@ class UpdateGroupBadInputTestCase(IsolatedAsyncioTestCase):
         cls.template.included_accounts = cls.all_account_ids[
             : len(cls.all_account_ids) // 2
         ]
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
 
     @classmethod
     def tearDownClass(cls):
         cls.template.deleted = True
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx))
+        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
 
     async def test_bad_input(self):
         self.template.included_accounts = ["*"]
         self.template.excluded_accounts = []
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
         account_group_mapping = await get_group_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts, self.group_name, False
@@ -199,5 +203,6 @@ class UpdateGroupBadInputTestCase(IsolatedAsyncioTestCase):
                 ],
             )
         )
-        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws, ctx)
+        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes(([r]))
         self.assertEqual(len(r.exceptions_seen), 2)

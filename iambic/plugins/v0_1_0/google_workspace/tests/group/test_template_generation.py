@@ -8,7 +8,9 @@ from pydantic import SecretStr
 
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.models import ExecutionMessage
-from iambic.plugins.v0_1_0.google_workspace.group.models import GroupTemplate
+from iambic.plugins.v0_1_0.google_workspace.group.models import (
+    GoogleWorkspaceGroupTemplate,
+)
 from iambic.plugins.v0_1_0.google_workspace.group.template_generation import (
     collect_project_groups,
     generate_domain_group_resource_files,
@@ -87,8 +89,6 @@ class TestGenerateGroupTemplates(IsolatedAsyncioTestCase):
     async def test_generate_group_templates_with_groups(self):
         groups = [
             {
-                "resource_id": "group1@example.com",
-                "resource_type": "google:group:template",
                 "properties": {
                     "name": "Group 1",
                     "email": "group1@example.com",
@@ -99,7 +99,9 @@ class TestGenerateGroupTemplates(IsolatedAsyncioTestCase):
             },
         ]
 
-        group_template = GroupTemplate(**groups[0], file_path="test_path.yaml")
+        group_template = GoogleWorkspaceGroupTemplate(
+            **groups[0], file_path="test_path.yaml"
+        )
 
         self.exe_message.get_sub_exe_files = AsyncMock(return_value=groups)
 
@@ -111,7 +113,6 @@ class TestGenerateGroupTemplates(IsolatedAsyncioTestCase):
         ) as mock_update_or_create_group_template, patch(
             "iambic.plugins.v0_1_0.google_workspace.group.template_generation.delete_orphaned_templates"
         ) as mock_delete_orphaned_templates:
-
             mock_update_or_create_group_template.return_value = group_template
             await generate_group_templates(
                 self.exe_message,
@@ -129,7 +130,7 @@ class TestGenerateGroupTemplates(IsolatedAsyncioTestCase):
 class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
     def test_get_resource_dir_args(self):
         domain = "example.com"
-        expected_args = ["groups", "example.com"]
+        expected_args = ["group", "example.com"]
         self.assertEqual(get_resource_dir_args(domain), expected_args)
 
     def test_get_response_dir(self):
@@ -143,7 +144,7 @@ class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
         google_project.project_id = "test_project_id"
         domain = "example.com"
 
-        expected_dir = "test_provider_id/groups/example.com/templates"
+        expected_dir = "test_provider_id/group/example.com/templates"
 
         assert get_response_dir(exe_message, google_project, domain).endswith(
             expected_dir
@@ -156,7 +157,7 @@ class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
             "test_base_dir",
             "resources",
             "google_workspace",
-            "groups",
+            "group",
             "example.com",
         )
         self.assertEqual(get_group_dir(base_dir, domain), expected_path)
@@ -174,7 +175,7 @@ class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
         "iambic.plugins.v0_1_0.google_workspace.group.template_generation.list_groups"
     )
     @patch(
-        "iambic.plugins.v0_1_0.google_workspace.group.template_generation.GroupTemplate.write"
+        "iambic.plugins.v0_1_0.google_workspace.group.template_generation.GoogleWorkspaceGroupTemplate.write"
     )
     async def test_generate_domain_group_resource_files(
         self, mock_group_write, mock_list_groups
@@ -188,10 +189,8 @@ class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
         project.project_id = "test_project_id"
         domain = "example.com"
 
-        group = GroupTemplate(
+        group = GoogleWorkspaceGroupTemplate(
             file_path="unset",
-            resource_id="group1@example.com",
-            resource_type="google:group:template",
             properties={
                 "name": "Group 1",
                 "email": "group1@example.com",
@@ -210,10 +209,8 @@ class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
     async def test_update_or_create_group_template(self):
         existing_template_map = {}
         group_dir = "test_group_dir"
-        discovered_group_template = GroupTemplate(
+        discovered_group_template = GoogleWorkspaceGroupTemplate(
             file_path="unset",
-            resource_id="group1@example.com",
-            resource_type="google:group:template",
             properties={
                 "name": "Group 1",
                 "email": "group1@example.com",
@@ -238,7 +235,7 @@ class TestTemplateGenerationFunctions(IsolatedAsyncioTestCase):
                 discovered_group_template.file_path,
                 existing_template_map,
                 discovered_group_template.resource_id,
-                GroupTemplate,
+                GoogleWorkspaceGroupTemplate,
                 {},
                 discovered_group_template.properties,
                 [],

@@ -7,7 +7,7 @@ from botocore.exceptions import ClientError
 from deepdiff import DeepDiff
 
 from iambic.core import noq_json as json
-from iambic.core.context import ExecutionContext
+from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import NoqSemaphore, aio_wrapper, plugin_apply_wrapper
@@ -144,7 +144,6 @@ async def apply_update_managed_policy(
     existing_policy_document: dict,
     iambic_import_only: bool,
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     response = []
     if isinstance(existing_policy_document, str):
@@ -168,6 +167,8 @@ async def apply_update_managed_policy(
                 change_type=ProposedChangeType.UPDATE,
                 attribute="policy_document",
                 change_summary=policy_drift,
+                resource_type="aws:policy_document",
+                resource_id=policy_arn,
                 current_value=existing_policy_document,
                 new_value=template_policy_document,
             )
@@ -175,7 +176,7 @@ async def apply_update_managed_policy(
         response.extend(proposed_changes)
 
         if not iambic_import_only:
-            if context.execute:
+            if ctx.execute:
                 apply_awaitable = new_policy_version(
                     iam_client,
                     policy_arn,
@@ -218,7 +219,6 @@ async def apply_managed_policy_tags(
     existing_tags: list[dict],
     iambic_import_only: bool,
     log_params: dict,
-    context: ExecutionContext,
 ) -> list[ProposedChange]:
     existing_tag_map = {tag["Key"]: tag.get("Value") for tag in existing_tags}
     template_tag_map = {tag["Key"]: tag.get("Value") for tag in template_tags}
@@ -238,6 +238,8 @@ async def apply_managed_policy_tags(
             ProposedChange(
                 change_type=ProposedChangeType.DETACH,
                 attribute="tags",
+                resource_type="aws:policy_document",
+                resource_id=policy_arn,
                 change_summary={"TagKeys": tags_to_remove},
             )
         ]
@@ -258,13 +260,15 @@ async def apply_managed_policy_tags(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.ATTACH,
+                resource_type="aws:policy_document",
+                resource_id=policy_arn,
                 attribute="tags",
                 new_value=tag,
             )
             for tag in tags_to_apply
         ]
         response.extend(proposed_changes)
-        if context.execute:
+        if ctx.execute:
             log_str = f"{log_str} Adding tags..."
             apply_awaitable = boto_crud_call(
                 iam_client.tag_policy, PolicyArn=policy_arn, Tags=tags_to_apply

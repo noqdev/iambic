@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections import defaultdict
 
 import okta.models
@@ -132,7 +134,6 @@ class FakeOktaClient:
             return (group, ResponseDetails(status=200, headers={}), defaultdict(list))
 
     async def delete_group(self, group_id: str):
-
         if group_id not in self.group_id_to_group:
             error_dict = defaultdict(list)
             error_dict["errorCode"] = "E0000007"

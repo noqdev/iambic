@@ -1,0 +1,92 @@
+---
+title: Template Variables
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+Template Language
+-----------------
+
+IAMbic's powerful templatizing feature allows you to use double curly brackets to
+reference attributes. The backend employs Jinja2 templating to load each template
+and apply the following variables:
+
+* `account_name`: always set to the name of the account being processed.
+* `account_id`: always set to the account ID of the account being processed.
+
+In addition to the hard-coded references always available for substitutions, you
+can define your own variables to be substituted for each account.
+
+For example, the AWSAccount model, which defines AWS accounts:
+
+```
+class AWSAccount:
+    account_id
+    org_id
+    account_name
+    partition
+    variables
+    hub_session_info
+    identity_center_details
+    spoke_role_arn
+```
+
+has an optional variables field that can store a list of Variable model objects. Each Variable
+model object is a simple object that declares a key and a value:
+
+```
+class Variable:
+    key
+    value
+```
+
+Specifying dedicated variables for each account enables customization of templates for each account.
+
+Here's an example of an AWS role and how to templatize it with IAMbic:
+
+```
+template_type: NOQ::AWS::IAM::Role
+identifier: '{{account_name}}_readonly'
+properties:
+  description: Standard ReadOnly Role
+  assume_role_policy_document:
+    statement:
+      - action:
+          - sts:AssumeRole
+          - sts:TagSession
+        effect: Allow
+        principal:
+          aws: arn:aws:iam::0123456789012:role/IambicHubRole
+      - action:
+          - sts:AssumeRole
+          - sts:TagSession
+        effect: Allow
+        principal:
+          aws: arn:aws:iam::4567890123456:role/NoqCentralRoleCorpNoqDev
+    version: '2012-10-17'
+  managed_policies:
+    - policy_arn: arn:aws:iam::{{account_id}}:policy/ReadOnlyAccess
+  role_name: '{{account_name}}_readonly'
+  tags:
+    - key: noq-tra-supported-groups
+      value: noq_admins@noq.dev
+
+```
+
+In the example above, we use the {{account_name}} placeholder to dynamically set the identifier and role_name
+fields for each account managed by IAMbic. If IAMbic manages 10 accounts, this role would exist in all ten accounts.
+
+For a closer look, let's examine the first few accounts and their templatized role identifiers using the {{account_name}} substitution:
+
+1. prod:
+    identifier: prod_readonly
+    ...
+2. dev:
+    identifier: dev_readonly
+    ...
+3. staging:
+    identifier: staging_readonly
+    ...
+
+Templatizing each template ensures the presence of a group resource or any resource across a set of accounts.
+To control which account has the role, use the included_accounts and excluded_accounts attributes.

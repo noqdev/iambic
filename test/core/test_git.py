@@ -47,7 +47,6 @@ TEST_TRACKING_BRANCH = "XYZ"
 
 @pytest.fixture
 def repo_with_single_commit():
-
     temp_templates_directory = tempfile.mkdtemp(
         prefix="iambic_test_temp_templates_directory"
     )
@@ -97,7 +96,6 @@ def test_get_remote_default_branch(repo_with_single_commit):
 
 @pytest.fixture
 def git_diff():
-
     temp_templates_directory = tempfile.mkdtemp(
         prefix="iambic_test_temp_templates_directory"
     )

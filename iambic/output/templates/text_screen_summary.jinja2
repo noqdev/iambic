@@ -8,30 +8,19 @@
 
 {{ "Exceptions" | rich_format("italic blue") }}
 * {{ iambic.num_exceptions | rich_format("blue") }} {{ "exceptions were recorded." | rich_format("blue") }}
-
 {% if iambic.num_templates > 0 -%}
-
 {{ "IAMbic Change Details" | rich_format("bold blue") }}
-
 {% for action_summary in iambic.action_summaries -%}
 {% if action_summary.num_templates > 0 -%}
-
-{{ action_summary | rich_tree_summary() }}
-
+{{ action_summary | rich_tree_summary }}
 {% endif -%}
-{% endfor %}
+{% endfor -%}
 {% endif -%}
-
-
 {% if iambic.num_exceptions > 0 -%}
-
 {{ "IAMbic Exceptions" | rich_format("bold blue") }}
-
 {% for exception in iambic.exceptions -%}
 {% if exception.num_templates > 0 -%}
-
 {{ exception | rich_tree_exception() }}
-
 {% endif -%}
-{% endfor %}
+{% endfor -%}
 {% endif -%}

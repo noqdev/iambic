@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 from pydantic import Field
 
-from iambic.core.context import ExecutionContext
 from iambic.core.models import (
     BaseModel,
     BaseTemplate,
@@ -45,9 +44,7 @@ class ExampleLocalDatabaseTemplate(BaseTemplate, ExpiryModel):
     def resource_id(self) -> str:
         return self.name
 
-    async def apply(
-        self, config: ExampleConfig, context: ExecutionContext
-    ) -> TemplateChangeDetails:
+    async def apply(self, config: ExampleConfig) -> TemplateChangeDetails:
         template_changes = TemplateChangeDetails(
             resource_id=self.resource_id,
             resource_type=self.template_type,

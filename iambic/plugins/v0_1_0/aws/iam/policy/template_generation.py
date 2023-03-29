@@ -18,11 +18,12 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     group_int_or_str_attribute,
 )
-from iambic.core.utils import NoqSemaphore, resource_file_upsert
+from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import ManagedPolicyMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.policy.models import (
+    AWS_MANAGED_POLICY_TEMPLATE_TYPE,
+    AwsIamManagedPolicyTemplate,
     ManagedPolicyProperties,
-    ManagedPolicyTemplate,
 )
 from iambic.plugins.v0_1_0.aws.iam.policy.utils import (
     get_managed_policy_across_accounts,
@@ -32,7 +33,6 @@ from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
-    normalize_boto3_resp,
 )
 
 if TYPE_CHECKING:
@@ -196,7 +196,7 @@ async def create_templated_managed_policy(  # noqa: C901
             content_dict = json.loads(await f.read())
             account_id_to_mp_map[
                 managed_policy_ref["account_id"]
-            ] = normalize_boto3_resp(content_dict)
+            ] = normalize_dict_keys(content_dict)
 
     # calculate preference based on existing template
     prefer_templatized = calculate_import_preference(
@@ -292,7 +292,7 @@ async def create_templated_managed_policy(  # noqa: C901
         file_path,
         existing_template_map,
         managed_policy_name,
-        ManagedPolicyTemplate,
+        AwsIamManagedPolicyTemplate,
         template_params,
         ManagedPolicyProperties(**template_properties),
         list(aws_account_map.values()),
@@ -321,7 +321,7 @@ async def collect_aws_managed_policies(
             return
 
     existing_template_map = await get_existing_template_map(
-        base_output_dir, "NOQ::AWS::IAM::ManagedPolicy"
+        base_output_dir, AWS_MANAGED_POLICY_TEMPLATE_TYPE
     )
 
     log.info(
@@ -444,7 +444,7 @@ async def generate_aws_managed_policy_templates(
 ):
     aws_account_map = await get_aws_account_map(config)
     existing_template_map = await get_existing_template_map(
-        base_output_dir, "NOQ::IAM::ManagedPolicy"
+        base_output_dir, AWS_MANAGED_POLICY_TEMPLATE_TYPE
     )
     resource_dir = get_template_dir(base_output_dir)
     account_managed_policies = await exe_message.get_sub_exe_files(
@@ -483,6 +483,9 @@ async def generate_aws_managed_policy_templates(
             existing_template_map,
             config,
         )
+        if not resource_template:
+            # Template not updated. Most likely because it's an `enforced` template.
+            continue
         all_resource_ids.add(resource_template.resource_id)
 
     if not detect_messages:

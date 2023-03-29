@@ -1,0 +1,42 @@
+{
+  "title": "GithubConfig",
+  "type": "object",
+  "properties": {
+    "commit_message_user_name": {
+      "title": "Commit Message User Name",
+      "description": "Commit message user name",
+      "default": "Iambic Automation",
+      "type": "string"
+    },
+    "commit_message_user_email": {
+      "title": "Commit Message User Email",
+      "description": "Commit message user email",
+      "default": "iambic-automation@iambic.org",
+      "type": "string"
+    },
+    "commit_message_for_detect": {
+      "title": "Commit Message For Detect",
+      "description": "Commit message to use during changes through detect operations",
+      "default": "Import changes from detect operation",
+      "type": "string"
+    },
+    "commit_message_for_import": {
+      "title": "Commit Message For Import",
+      "description": "Commit message to use during changes through import operations",
+      "default": "Import changes from import operation",
+      "type": "string"
+    },
+    "commit_message_for_expire": {
+      "title": "Commit Message For Expire",
+      "description": "Commit message to use during changes through expire operations",
+      "default": "Periodic Expiration",
+      "type": "string"
+    },
+    "commit_message_for_git_apply": {
+      "title": "Commit Message For Git Apply",
+      "description": "Commit message to use during changes through git-apply",
+      "default": "Replace relative time with absolute time",
+      "type": "string"
+    }
+  }
+}
