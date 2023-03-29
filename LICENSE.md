@@ -1,6 +1,3 @@
-IAMbic is licensed with Apache License, Version 2.0. IAMbic plugins (under iambic/plugins) are licensed under Apache License, Version 2.0.
-
-
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
