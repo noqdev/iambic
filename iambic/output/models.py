@@ -2,7 +2,7 @@ from __future__ import annotations
 import json
 
 import pathlib
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Optional, Set
 
 from dictdiffer import diff
 from pydantic import BaseModel as PydanticBaseModel
@@ -15,11 +15,12 @@ from iambic.core.models import (
     ProposedChangeType,
     TemplateChangeDetails,
 )
+from iambic.core.utils import camel_to_snake
 
 
 class ProposedChangeDiff(ProposedChange):
-    diff: str = Field(default=None)
-    diff_resolved: str = Field(default=None)
+    diff: Optional[str]
+    diff_resolved: Optional[str]
 
     field_map = {
         "inline_policies": "InlinePolicies",
@@ -42,7 +43,10 @@ class ProposedChangeDiff(ProposedChange):
 
     def __init__(self, proposed_change: ProposedChange) -> None:
         super().__init__(**proposed_change.dict())
-        object_attribute = self.field_map.get(self.attribute, self.attribute)
+        try:
+            object_attribute = camel_to_snake(self.attribute)
+        except TypeError:
+            object_attribute = None
         if self.current_value is None:
             self.current_value = {}
         if self.new_value is None:
@@ -79,12 +83,12 @@ class ProposedChangeDiff(ProposedChange):
 
 
 class ApplicableChange(PydanticBaseModel):
-    account: str = Field(default=None)
-    change: ProposedChange = Field(default=None)
-    template_change: TemplateChangeDetails = Field(default=None)
-    template_name: str = Field(default=None)
-    resource_id: str = Field(default=None)
-    resource_type: str = Field(default=None)
+    account: Optional[str]
+    change: Optional[ProposedChange]
+    template_change: Optional[TemplateChangeDetails]
+    template_name: Optional[str]
+    resource_id: Optional[str]
+    resource_type: Optional[str]
 
     def __hash__(self):
         return hash((self.resource_id, self.resource_type))
@@ -102,10 +106,10 @@ class ApplicableChange(PydanticBaseModel):
 
 
 class AccountSummary(PydanticBaseModel):
-    account: str = Field(default="NONE")
-    count: int = Field(default=0)
-    num_changes: int = Field(default=0)
-    changes: List[ProposedChange] = Field(default=[])
+    account: Optional[str] = Field(default="NONE")
+    count: Optional[int]
+    num_changes: Optional[int]
+    changes: Optional[List[ProposedChange]]
 
     def __hash__(self):
         return hash((self.account, self.num_changes))
@@ -123,11 +127,11 @@ class AccountSummary(PydanticBaseModel):
 
 
 class TemplateSummary(PydanticBaseModel):
-    template_path: str = Field(default="")
-    template_name: str = Field(default="")
-    count: int = Field(default=0)
-    num_accounts: int = Field(default=0)
-    accounts: List[AccountSummary] = Field(default=[])
+    template_path: Optional[str]
+    template_name: Optional[str]
+    count: Optional[int]
+    num_accounts: Optional[int]
+    accounts: Optional[List[AccountSummary]]
 
     def __hash__(self):
         return hash(self.template_path)
@@ -207,10 +211,10 @@ def get_applicable_changes(
 
 
 class ActionSummary(PydanticBaseModel):
-    action: str = Field(default="")
-    count: int = Field(default=0)
-    num_templates = Field(default=0)
-    templates: List[TemplateSummary] = Field(default=[])
+    action: Optional[str]
+    count: Optional[int]
+    num_templates: Optional[int]
+    templates: Optional[List[TemplateSummary]]
 
     @classmethod
     def compile_proposed_changes(
@@ -252,10 +256,10 @@ class ActionSummary(PydanticBaseModel):
 
 
 class ExceptionSummary(PydanticBaseModel):
-    action: str = Field(default="")
-    count: int = Field(default=0)
-    num_templates = Field(default=0)
-    templates: List[TemplateSummary] = Field(default=[])
+    action: Optional[str]
+    count: Optional[int]
+    num_templates: Optional[int]
+    templates: Optional[List[TemplateSummary]]
 
     @classmethod
     def compile_exceptions_seen(
@@ -295,12 +299,12 @@ class ExceptionSummary(PydanticBaseModel):
 
 
 class ActionSummaries(PydanticBaseModel):
-    num_actions: int = Field(default=0)
-    num_templates: int = Field(default=0)
-    num_accounts: int = Field(default=0)
-    num_exceptions: int = Field(default=0)
-    action_summaries: List[ActionSummary] = Field(default=[])
-    exceptions: List[ExceptionSummary] = Field(default=[])
+    num_actions: Optional[int]
+    num_templates: Optional[int]
+    num_accounts: Optional[int]
+    num_exceptions: Optional[int]
+    action_summaries: Optional[List[ActionSummary]]
+    exceptions: Optional[List[ExceptionSummary]]
 
     @classmethod
     def compile(cls, changes: List[TemplateChangeDetails]):
