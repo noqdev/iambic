@@ -182,6 +182,8 @@ async def apply_role_tags(
                     ProposedChange(
                         change_type=ProposedChangeType.DETACH,
                         attribute="tags",
+                        resource_type="aws:iam:role",
+                        resource_id=role_name,
                         change_summary={"TagKeys": tags_to_remove},
                         exceptions_seen=exceptions,
                     )
@@ -193,6 +195,8 @@ async def apply_role_tags(
                 ProposedChange(
                     change_type=ProposedChangeType.DETACH,
                     attribute="tags",
+                    resource_type="aws:iam:role",
+                    resource_id=role_name,
                     change_summary={"TagKeys": tags_to_remove},
                 )
             )
@@ -219,6 +223,8 @@ async def apply_role_tags(
                         ProposedChange(
                             change_type=ProposedChangeType.ATTACH,
                             attribute="tags",
+                            resource_type="aws:iam:role",
+                            resource_id=role_name,
                             new_value=tag,
                             exceptions_seen=exceptions,
                         )
@@ -232,6 +238,8 @@ async def apply_role_tags(
                     ProposedChange(
                         change_type=ProposedChangeType.ATTACH,
                         attribute="tags",
+                        resource_type="aws:iam:role",
+                        resource_id=role_name,
                         new_value=tag,
                     )
                 )
@@ -281,6 +289,8 @@ async def update_assume_role_policy(
                 ProposedChange(
                     change_type=ProposedChangeType.UPDATE,
                     attribute="assume_role_policy_document",
+                    resource_type="aws:iam:role",
+                    resource_id=role_name,
                     change_summary=policy_drift,
                     current_value=existing_policy_document,
                     new_value=template_policy_document,
@@ -291,6 +301,8 @@ async def update_assume_role_policy(
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
                     attribute="assume_role_policy_document",
+                    resource_type="aws:iam:role",
+                    resource_id=role_name,
                     new_value=template_policy_document,
                 )
             )
@@ -332,6 +344,7 @@ async def apply_role_managed_policies(
             response.append(
                 ProposedChange(
                     change_type=ProposedChangeType.ATTACH,
+                    resource_type="aws:policy_document",
                     resource_id=policy_arn,
                     attribute="managed_policies",
                 )
@@ -360,6 +373,7 @@ async def apply_role_managed_policies(
             response.append(
                 ProposedChange(
                     change_type=ProposedChangeType.DETACH,
+                    resource_type="aws:policy_document",
                     resource_id=policy_arn,
                     attribute="managed_policies",
                 )
@@ -409,6 +423,7 @@ async def apply_role_permission_boundary(
             ProposedChange(
                 change_type=ProposedChangeType.ATTACH,
                 resource_id=template_boundary_policy_arn,
+                resource_type="aws:policy_document",
                 attribute="permission_boundary",
             )
         ]
@@ -441,6 +456,7 @@ async def apply_role_permission_boundary(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.DETACH,
+                resource_type="aws:policy_document",
                 resource_id=existing_boundary_policy_arn,
                 attribute="permission_boundary",
             )
@@ -497,6 +513,7 @@ async def apply_role_inline_policies(
             response.append(
                 ProposedChange(
                     change_type=ProposedChangeType.DELETE,
+                    resource_type="aws:policy_document",
                     resource_id=policy_name,
                     attribute="inline_policies",
                 )
@@ -537,6 +554,7 @@ async def apply_role_inline_policies(
                 response.append(
                     ProposedChange(
                         change_type=ProposedChangeType.UPDATE,
+                        resource_type="aws:policy_document",
                         resource_id=policy_name,
                         attribute="inline_policies",
                         change_summary=policy_drift,
@@ -550,6 +568,7 @@ async def apply_role_inline_policies(
                 response.append(
                     ProposedChange(
                         change_type=ProposedChangeType.CREATE,
+                        resource_type="aws:policy_document",
                         resource_id=policy_name,
                         attribute="inline_policies",
                         new_value=policy_document,

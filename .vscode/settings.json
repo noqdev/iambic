@@ -1,8 +1,5 @@
 {
-    "python.testing.pytestArgs": [
-        ".",
-        "-s"
-    ],
+    "python.testing.pytestArgs": [],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "python.formatting.provider": "black",
@@ -11,12 +8,12 @@
         "-s",
         "./iambic",
         "-p",
-        "*_test.py"
+        "*_test.py",
     ],
     "coverage-gutters.coverageFileNames": [
         "cov_unit_tests.xml"
     ],
     "coverage-gutters.coverageBaseDir": ".",
     "coverage-gutters.showGutterCoverage": false,
-    "coverage-gutters.showLineCoverage": true
+    "coverage-gutters.showLineCoverage": true,
 }

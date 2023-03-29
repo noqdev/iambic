@@ -226,12 +226,14 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
         await self.remove_expired_resources()
 
         if not group_exists and not self.deleted:
-            change_details.proposed_changes.append(
-                ProposedChange(
-                    change_type=ProposedChangeType.CREATE,
-                    resource_id=self.properties.group_id,
-                    resource_type=self.properties.resource_type,
-                )
+            change_details.extend_changes(
+                [
+                    ProposedChange(
+                        change_type=ProposedChangeType.CREATE,
+                        resource_id=self.properties.group_id,
+                        resource_type=self.properties.resource_type,
+                    )
+                ]
             )
             log_str = "New resource found in code."
             if not ctx.execute:
@@ -289,7 +291,7 @@ class OktaGroupTemplate(BaseTemplate, ExpiryModel):
 
         changes_made = await asyncio.gather(*tasks)
         if any(changes_made):
-            change_details.proposed_changes.extend(
+            change_details.extend_changes(
                 list(chain.from_iterable(changes_made))
             )
 

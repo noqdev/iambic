@@ -10,6 +10,7 @@ from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
 from iambic.core.parser import load_templates
+from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.azure_ad.group.models import Member, MemberDataType
 from iambic.plugins.v0_1_0.azure_ad.group.utils import get_group
 from iambic.request_handler.expire_resources import flag_expired_resources
@@ -31,7 +32,8 @@ class UpdateMS365GroupTestCase(BaseMS365TestCase):
 
     async def test_update_description(self):
         self.template.properties.description = "Updated description"
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        screen_render_resource_changes([changes])
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -54,7 +56,8 @@ class UpdateMS365GroupTestCase(BaseMS365TestCase):
                 data_type=MemberDataType.USER,
             )
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        screen_render_resource_changes([changes])
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -74,7 +77,8 @@ class UpdateMS365GroupTestCase(BaseMS365TestCase):
                 data_type=MemberDataType.USER,
             )
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        screen_render_resource_changes([changes])
 
         self.template.properties.members = [
             member
@@ -109,7 +113,8 @@ class UpdateMS365GroupTestCase(BaseMS365TestCase):
                 data_type=MemberDataType.USER,
             ),
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        screen_render_resource_changes([changes])
 
         expired_member = self.template.properties.members[0].name
         cur_time = datetime.datetime.now(datetime.timezone.utc)
@@ -156,7 +161,8 @@ class UpdateSecurityGroupTestCase(BaseMS365TestCase):
 
     async def test_update_description(self):
         self.template.properties.description = "Updated description"
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        screen_render_resource_changes([changes])
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -180,7 +186,8 @@ class UpdateSecurityGroupTestCase(BaseMS365TestCase):
                 data_type=MemberDataType.GROUP,
             )
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        screen_render_resource_changes([changes])
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -207,7 +214,8 @@ class UpdateSecurityGroupTestCase(BaseMS365TestCase):
                 data_type=MemberDataType.GROUP,
             ),
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        screen_render_resource_changes([changes])
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -235,7 +243,8 @@ class UpdateSecurityGroupTestCase(BaseMS365TestCase):
                 data_type=MemberDataType.GROUP,
             ),
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        screen_render_resource_changes([changes])
 
         self.template.properties.members = [
             member

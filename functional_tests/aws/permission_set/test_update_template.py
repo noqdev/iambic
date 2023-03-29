@@ -9,6 +9,7 @@ from functional_tests.aws.permission_set.utils import (
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core import noq_json as json
+from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     PermissionSetAccess,
 )
@@ -52,7 +53,8 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
 
     async def test_update_description(self):
         self.template.properties.description = "Updated description"
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
         await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details(
             batch_size=5
         )
@@ -98,7 +100,8 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
 
         # test un-assignment
         self.template.access_rules = []
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
         cloud_access_rules = await get_permission_set_users_and_groups_as_access_rules(
             identity_center_client,
             IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.instance_arn,
@@ -114,6 +117,7 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
         template_change_details = await self.template.apply(
             IAMBIC_TEST_DETAILS.config.aws
         )
+        screen_render_resource_changes([template_change_details])
         self.assertEqual(
             len(template_change_details.exceptions_seen),
             1,

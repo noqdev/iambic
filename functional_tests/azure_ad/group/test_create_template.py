@@ -3,6 +3,7 @@ from __future__ import annotations
 from functional_tests.azure_ad.base_test_case import BaseMS365TestCase
 from functional_tests.azure_ad.group.utils import generate_group_template
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.azure_ad.group.models import Member, MemberDataType
 from iambic.plugins.v0_1_0.azure_ad.group.utils import get_group
 
@@ -26,7 +27,8 @@ class CreateGroupTestCase(BaseMS365TestCase):
                 data_type=MemberDataType.USER,
             )
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        template_change = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        screen_render_resource_changes([template_change])
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -42,6 +44,7 @@ class CreateGroupTestCase(BaseMS365TestCase):
         self.template.properties.security_enabled = True
 
         changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        screen_render_resource_changes([changes])
         self.assertEqual(len(changes.exceptions_seen), 0, changes.exceptions_seen)
 
         try:
@@ -67,7 +70,8 @@ class CreateGroupTestCase(BaseMS365TestCase):
         self.template.properties.group_types = []
         self.template.properties.mail_enabled = False
         self.template.properties.security_enabled = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        screen_render_resource_changes([changes])
 
         try:
             group = await get_group(self.org, group_name=self.group_name)
@@ -82,6 +86,7 @@ class CreateGroupTestCase(BaseMS365TestCase):
         self.template.properties.security_enabled = True
 
         changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.azure_ad)
+        screen_render_resource_changes([changes])
         self.assertGreaterEqual(len(changes.exceptions_seen), 1)
 
         # Should not exist

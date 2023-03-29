@@ -317,8 +317,8 @@ class ProposedChange(PydanticBaseModel):
     attribute: Optional[str]
     resource_id: Optional[str]
     resource_type: Optional[str]
-    current_value: Optional[Union[list, dict, str, int]]
-    new_value: Optional[Union[list, dict, str, int]]
+    current_value: Optional[Union[list, dict, str, int, None]]
+    new_value: Optional[Union[list, dict, str, int, None]]
     change_summary: Optional[dict]
     exceptions_seen: list[str] = Field(
         default=[]

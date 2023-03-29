@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import pathlib
 import sys
@@ -22,12 +23,8 @@ from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage, TemplateChangeDetails
 from iambic.core.parser import load_templates
-from iambic.core.utils import (
-    exceptions_in_proposed_changes,
-    gather_templates,
-    init_writable_directory,
-    yaml,
-)
+from iambic.core.utils import exceptions_in_proposed_changes, gather_templates, init_writable_directory
+from iambic.output.text import file_render_resource_changes, screen_render_resource_changes
 from iambic.request_handler.expire_resources import flag_expired_resources
 from iambic.request_handler.git_apply import apply_git_changes
 from iambic.request_handler.git_plan import plan_git_changes
@@ -39,18 +36,20 @@ os.environ.setdefault("IAMBIC_REPO_DIR", str(pathlib.Path.cwd()))
 
 def output_proposed_changes(
     template_changes: list[TemplateChangeDetails],
-    output_path: str = "proposed_changes.yaml",
+    output_path: str = "proposed_changes.txt",
     exit_on_error: bool = True,
 ):
+    if output_path is None:
+        output_path = "proposed_changes.txt"
     if template_changes:
         log.info(f"A detailed summary of changes has been saved to {output_path}")
+        file_render_resource_changes(output_path, template_changes)
 
-        with open(output_path, "w") as f:
-            f.write(
-                yaml.dump(
-                    [template_change.dict() for template_change in template_changes],
-                )
-            )
+    json_filepath = pathlib.Path(output_path).with_suffix(".json")
+    with open(str(json_filepath), "w") as fp:
+        json.dump(
+            [template_change.dict() for template_change in template_changes], fp
+        )
 
     if exceptions_in_proposed_changes([change.dict() for change in template_changes]):
         log.error(
@@ -255,6 +254,8 @@ def run_apply(
     template_changes = asyncio.run(config.run_apply(exe_message, templates))
     output_proposed_changes(template_changes, output_path=output_path)
 
+    screen_render_resource_changes(template_changes)
+
     if ctx.eval_only and template_changes and click.confirm("Proceed?"):
         ctx.eval_only = False
         template_changes = asyncio.run(config.run_apply(exe_message, templates))
@@ -283,6 +284,7 @@ def run_git_apply(
         )
     )
     output_proposed_changes(template_changes, output_path, exit_on_error=False)
+    screen_render_resource_changes(template_changes)
     return template_changes
 
 
@@ -336,6 +338,7 @@ def run_git_plan(
     check_and_update_resource_limit(config)
     template_changes = asyncio.run(plan_git_changes(config_path, repo_dir))
     output_proposed_changes(template_changes, output_path, exit_on_error=False)
+    screen_render_resource_changes(template_changes)
     return template_changes
 
 
@@ -350,9 +353,9 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
     )
     asyncio.run(flag_expired_resources(templates))
     ctx.eval_only = True
-    output_proposed_changes(
-        asyncio.run(config.run_apply(exe_message, load_templates(templates)))
-    )
+    template_changes = asyncio.run(config.run_apply(exe_message, load_templates(templates)))
+    output_proposed_changes(template_changes)
+    screen_render_resource_changes(template_changes)
 
 
 @cli.command()

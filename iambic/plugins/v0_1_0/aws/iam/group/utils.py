@@ -139,6 +139,7 @@ async def apply_group_managed_policies(
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.ATTACH,
+                    resource_type="aws:policy_document",
                     resource_id=policy_arn,
                     attribute="managed_policies",
                 )
@@ -166,6 +167,7 @@ async def apply_group_managed_policies(
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DETACH,
+                    resource_type="aws:policy_document",
                     resource_id=policy_arn,
                     attribute="managed_policies",
                 )
@@ -212,6 +214,7 @@ async def apply_group_inline_policies(
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DELETE,
+                    resource_type="aws:policy_document",
                     resource_id=policy_name,
                     attribute="inline_policies",
                 )
@@ -254,6 +257,7 @@ async def apply_group_inline_policies(
                 proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.UPDATE,
+                        resource_type="aws:policy_document",
                         resource_id=policy_name,
                         attribute="inline_policies",
                         change_summary=policy_drift,
@@ -267,6 +271,7 @@ async def apply_group_inline_policies(
                 proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.CREATE,
+                        resource_type="aws:policy_document",
                         resource_id=policy_name,
                         attribute="inline_policies",
                         new_value=policy_document,

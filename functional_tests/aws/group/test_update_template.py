@@ -7,6 +7,7 @@ import dateparser
 
 from functional_tests.aws.group.utils import generate_group_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.iam.group.utils import get_group_across_accounts
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
 
@@ -55,7 +56,8 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
         self.template.properties.managed_policies = [
             ManagedPolicyRef(policy_arn=policy_arn)
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
 
         account_group_mapping = await get_group_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts,
@@ -71,7 +73,8 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
                 )
 
         self.template.properties.managed_policies = []
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
 
         account_group_mapping = await get_group_across_accounts(
             IAMBIC_TEST_DETAILS.config.aws.accounts,
@@ -129,6 +132,7 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
             )
         )
         r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes(([r]))
         self.assertEqual(len(r.proposed_changes), 2)
 
         # Set expiration
@@ -138,6 +142,7 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
             "yesterday", settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True}
         )
         r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes(([r]))
         self.assertEqual(len(r.proposed_changes), 1)
 
 
@@ -199,4 +204,5 @@ class UpdateGroupBadInputTestCase(IsolatedAsyncioTestCase):
             )
         )
         r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes(([r]))
         self.assertEqual(len(r.exceptions_seen), 2)

@@ -232,7 +232,7 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
 
         changes_made = await asyncio.gather(*tasks)
         if any(changes_made):
-            change_details.proposed_changes.extend(
+            change_details.extend_changes(
                 list(chain.from_iterable(changes_made))
             )
 

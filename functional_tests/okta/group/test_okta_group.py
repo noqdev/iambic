@@ -53,9 +53,9 @@ properties:
     assert len(group_template.properties.members) == 2
 
     # set the template to import_only
-    proposed_changes_yaml_path = "{0}/proposed_changes.yaml".format(os.getcwd())
-    if os.path.isfile(proposed_changes_yaml_path):
-        os.remove(proposed_changes_yaml_path)
+    proposed_changes_path = "{0}/proposed_changes.json".format(os.getcwd())
+    if os.path.isfile(proposed_changes_path):
+        os.remove(proposed_changes_path)
     else:
         assert (
             False  # Previous changes are not being written out to proposed_changes.yaml
@@ -67,8 +67,8 @@ properties:
     ].username = "this_user_should_not_exist@example.com"
     group_template.write()
     run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
-    if os.path.isfile(proposed_changes_yaml_path):
-        assert os.path.getsize(proposed_changes_yaml_path) == 0
+    if os.path.isfile(proposed_changes_path):
+        assert os.path.getsize(proposed_changes_path) == 2  # empty json file
     else:
         # this is acceptable as well because there are no changes to be made.
         pass

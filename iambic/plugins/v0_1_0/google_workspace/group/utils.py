@@ -110,6 +110,8 @@ async def update_group_domain(
                     "current_domain": current_domain,
                     "proposed_domain": proposed_domain,
                 },
+                current_value=current_domain,
+                new_value=proposed_domain,
             )
         )
         log.info(
@@ -158,6 +160,8 @@ async def update_group_description(
                 "current_description": current_description,
                 "proposed_description": proposed_description,
             },
+            current_value=current_description,
+            new_value=proposed_description,
         )
     )
     if ctx.execute:
@@ -195,6 +199,7 @@ async def update_group_name(
             resource_id=group_email,
             resource_type="google:group:template",
             attribute="group_name",
+            current_value=current_name,
             new_value=proposed_name,
         )
     )
@@ -241,6 +246,7 @@ async def update_group_email(
             resource_id=current_email,
             resource_type="google:group:template",
             attribute="group_email",
+            current_value=current_email,
             new_value=proposed_email,
         )
     )
@@ -284,6 +290,7 @@ async def maybe_delete_group(
             resource_type=group.resource_type,
             attribute="group",
             change_summary={"group": group.properties.name},
+            current_value=group.properties.name,
         )
     )
     if ctx.execute:
@@ -369,6 +376,8 @@ async def update_group_members(
                 change_summary={
                     "UsersToRemove": [user.email for user in users_to_remove]
                 },
+                current_value=[user.email for user in current_members],
+                new_value=[user.email for user in proposed_members],
             )
         )
         if ctx.execute:
@@ -398,6 +407,8 @@ async def update_group_members(
                 resource_type="google:group:template",
                 attribute="users",
                 change_summary={"UsersToAdd": [user.email for user in users_to_add]},
+                current_value=[user.email for user in current_members],
+                new_value=[user.email for user in proposed_members],
             )
         )
         if ctx.execute:

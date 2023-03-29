@@ -167,6 +167,8 @@ async def apply_update_managed_policy(
                 change_type=ProposedChangeType.UPDATE,
                 attribute="policy_document",
                 change_summary=policy_drift,
+                resource_type="aws:policy_document",
+                resource_id=policy_arn,
                 current_value=existing_policy_document,
                 new_value=template_policy_document,
             )
@@ -236,6 +238,8 @@ async def apply_managed_policy_tags(
             ProposedChange(
                 change_type=ProposedChangeType.DETACH,
                 attribute="tags",
+                resource_type="aws:policy_document",
+                resource_id=policy_arn,
                 change_summary={"TagKeys": tags_to_remove},
             )
         ]
@@ -256,6 +260,8 @@ async def apply_managed_policy_tags(
         proposed_changes = [
             ProposedChange(
                 change_type=ProposedChangeType.ATTACH,
+                resource_type="aws:policy_document",
+                resource_id=policy_arn,
                 attribute="tags",
                 new_value=tag,
             )
