@@ -25,7 +25,7 @@ update_template_yaml = """  - resource_id: t1000
                   - sts:TagSession
               - Effect: Allow
                 Principal:
-                  AWS: arn:aws:iam::940552945933:role/NoqCentralRoleCorpNoqDev
+                  AWS: arn:aws:iam::234567890123:role/NoqCentralRoleCorpNoqDev
                 Action:
                   - sts:AssumeRole
                   - sts:TagSession
@@ -92,7 +92,7 @@ update_template_yaml = """  - resource_id: t1000
                   - sts:TagSession
               - Effect: Allow
                 Principal:
-                  AWS: arn:aws:iam::940552945933:role/NoqCentralRoleCorpNoqDev
+                  AWS: arn:aws:iam::234567890123:role/NoqCentralRoleCorpNoqDev
                 Action:
                   - sts:AssumeRole
                   - sts:TagSession
@@ -136,7 +136,7 @@ template_yaml = """  - resource_id: prod_iambic_test_role
     resource_type: aws:iam:role
     template_path: resources/aws/iam/role/design-prod/iambic_test_role_prod.yaml
     proposed_changes:
-      - account: design-prod - (006933239187)
+      - account: design-prod - (234567890123)
         resource_id: prod_iambic_test_role
         new_value:
           RoleName: prod_iambic_test_role
@@ -180,7 +180,7 @@ template_yaml = """  - resource_id: prod_iambic_test_role
     resource_type: aws:iam:role
     template_path: resources/aws/iam/role/all_accounts/iambic_test_role.yaml
     proposed_changes:
-      - account: product-dev - (572565049541)
+      - account: product-dev - (345678901235)
         resource_id: product-dev_iambic_test_role
         new_value:
           RoleName: product-dev_iambic_test_role
@@ -215,7 +215,7 @@ template_yaml = """  - resource_id: prod_iambic_test_role
             resource_id: product-dev_iambic_test_role
             resource_type: aws:iam:role
         exceptions_seen: []
-      - account: Iambic Standalone Org - (566255053759)
+      - account: Iambic Standalone Org - (456789012356)
         resource_id: IambicStandaloneOrg_iambic_test_role
         new_value:
           RoleName: IambicStandaloneOrg_iambic_test_role
@@ -250,7 +250,7 @@ template_yaml = """  - resource_id: prod_iambic_test_role
             resource_id: IambicStandaloneOrg_iambic_test_role
             resource_type: aws:iam:role
         exceptions_seen: []
-      - account: design-dev - (570737236821)
+      - account: design-dev - (567890123567)
         resource_id: design-dev_iambic_test_role
         new_value:
           RoleName: design-dev_iambic_test_role
@@ -285,7 +285,7 @@ template_yaml = """  - resource_id: prod_iambic_test_role
             resource_id: design-dev_iambic_test_role
             resource_type: aws:iam:role
         exceptions_seen: []
-      - account: design-tools - (728312732489)
+      - account: design-tools - (678901235678)
         resource_id: design-tools_iambic_test_role
         new_value:
           RoleName: design-tools_iambic_test_role
@@ -320,7 +320,7 @@ template_yaml = """  - resource_id: prod_iambic_test_role
             resource_id: design-tools_iambic_test_role
             resource_type: aws:iam:role
         exceptions_seen: []
-      - account: design-staging - (158048798909)
+      - account: design-staging - (789012356789)
         resource_id: design-staging_iambic_test_role
         new_value:
           RoleName: design-staging_iambic_test_role
@@ -355,7 +355,7 @@ template_yaml = """  - resource_id: prod_iambic_test_role
             resource_id: design-staging_iambic_test_role
             resource_type: aws:iam:role
         exceptions_seen: []
-      - account: design-prod - (006933239187)
+      - account: design-prod - (234567890123)
         resource_id: design-prod_iambic_test_role
         new_value:
           RoleName: design-prod_iambic_test_role
@@ -390,7 +390,7 @@ template_yaml = """  - resource_id: prod_iambic_test_role
             resource_id: design-prod_iambic_test_role
             resource_type: aws:iam:role
         exceptions_seen: []
-      - account: design-vpc - (172623945520)
+      - account: design-vpc - (890123567890)
         resource_id: design-vpc_iambic_test_role
         new_value:
           RoleName: design-vpc_iambic_test_role
@@ -425,7 +425,7 @@ template_yaml = """  - resource_id: prod_iambic_test_role
             resource_id: design-vpc_iambic_test_role
             resource_type: aws:iam:role
         exceptions_seen: []
-      - account: design-workspaces - (667373557420)
+      - account: design-workspaces - (901235678901)
         resource_id: design-workspaces_iambic_test_role
         new_value:
           RoleName: design-workspaces_iambic_test_role
@@ -460,7 +460,7 @@ template_yaml = """  - resource_id: prod_iambic_test_role
             resource_id: design-workspaces_iambic_test_role
             resource_type: aws:iam:role
         exceptions_seen: []
-      - account: design-test - (992251240124)
+      - account: design-test - (012356789012)
         resource_id: design-test_iambic_test_role
         new_value:
           RoleName: design-test_iambic_test_role
@@ -495,7 +495,7 @@ template_yaml = """  - resource_id: prod_iambic_test_role
             resource_id: design-test_iambic_test_role
             resource_type: aws:iam:role
         exceptions_seen: []
-      - account: product-prod - (883466000970)
+      - account: product-prod - (012356789010)
         resource_id: product-prod_iambic_test_role
         new_value:
           RoleName: product-prod_iambic_test_role
