@@ -59,6 +59,7 @@ def attach_access_rule(
 
 async def generate_permission_set_template_from_base(
     repo_dir: str,
+    extra_salt: str = "",
 ) -> AwsIdentityCenterPermissionSetTemplate:
     permission_sets = await gather_templates(
         repo_dir, AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
@@ -72,7 +73,9 @@ async def generate_permission_set_template_from_base(
         permission_set=permission_set_template.identifier,
     )
 
-    permission_set_template.identifier = f"iambic_test_{random.randint(0, 10000)}"
+    permission_set_template.identifier = (
+        f"iambic_test_{extra_salt}{random.randint(0, 10000)}"
+    )
     permission_set_template.file_path = (
         f"{permission_set_dir}/{permission_set_template.identifier}.yaml"
     )

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import asyncio
-from time import sleep
+import datetime
 from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.aws.permission_set.utils import (
@@ -25,30 +24,25 @@ EXAMPLE_USER = (
 
 
 class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
-    @classmethod
-    def setUpClass(cls):
+    async def asyncSetUp(self):
         ctx.eval_only = False
-        cls.template = asyncio.run(
-            generate_permission_set_template_from_base(
-                IAMBIC_TEST_DETAILS.template_dir_path
-            )
+        self.template = await generate_permission_set_template_from_base(
+            IAMBIC_TEST_DETAILS.template_dir_path,
+            extra_salt="update",
         )
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
-        cls.permission_set_arn = None
-        sleep(5)
-        asyncio.run(
-            IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details(
-                batch_size=5
-            )
-        )
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([changes])
+        await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.template.deleted = True
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
+    async def asyncTearDown(self):
+        self.template.deleted = True
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
-    async def test_update_valid_description(self):
-        updated_description = "Updated description"
+    # please consolidate all update like test into this method to avoid
+    # the need to create additional permission set
+    async def test_all_the_update(self):
+        timestamp = datetime.datetime.now().isoformat()
+        updated_description = f"{timestamp}"
         assert self.template.properties.description != updated_description
         self.template.properties.description = updated_description
         changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
@@ -70,13 +64,26 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
             InstanceArn=sso_admin_instance_arn,
             PermissionSetArn=permission_set_arn,
         )
-
         self.assertEqual(
             self.template.properties.description,
             response["PermissionSet"]["Description"],
         )
 
-    async def test_account_assignment(self):
+        # test invalid description will generate a exception in teh template_change_details
+        old_description = self.template.properties.description
+        self.template.properties.description = ""  # this does not trigger error because default validation only happens during creation
+        template_change_details = await self.template.apply(
+            IAMBIC_TEST_DETAILS.config.aws
+        )
+        screen_render_resource_changes([template_change_details])
+        self.assertEqual(
+            len(template_change_details.exceptions_seen),
+            1,
+            json.dumps(template_change_details.dict()),
+        )
+        self.template.properties.description = old_description
+
+        # test access rules
         self.template.access_rules = [
             PermissionSetAccess(users=[EXAMPLE_USER], groups=[EXAMPLE_GROUP])
         ]
@@ -86,7 +93,6 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
         )
 
         # test assignment
-
         identity_center_client = await IAMBIC_TEST_DETAILS.identity_center_account.get_boto3_client(
             "sso-admin",
             region_name=IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.region_name,
@@ -119,15 +125,3 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
             IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.org_account_map,
         )
         assert len(cloud_access_rules) == 0
-
-    async def test_update_invalid_description(self):
-        self.template.properties.description = ""  # this does not trigger error because default validation only happens during creation
-        template_change_details = await self.template.apply(
-            IAMBIC_TEST_DETAILS.config.aws
-        )
-        screen_render_resource_changes([template_change_details])
-        self.assertEqual(
-            len(template_change_details.exceptions_seen),
-            1,
-            json.dumps(template_change_details.dict()),
-        )
