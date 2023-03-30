@@ -13,7 +13,7 @@ on:
 jobs:
   build-container:
     if: ${{ github.repository == 'noqdev/iambic' && github.event.commits[0].author.name != 'Version Auto Bump' }}
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     name: Build Container
     permissions:
       id-token: write

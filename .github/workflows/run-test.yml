@@ -5,17 +5,24 @@ on:
     branches: [main]
 jobs:
   run-unit-test:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     name: Run unit test
     permissions:
       id-token: write
       contents: read
     steps:
       - uses: actions/checkout@v3
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          # Semantic version range syntax or exact version of a Python version
+          python-version: '3.9'
+          # Optional - x64 or x86 architecture, defaults to x64
+          architecture: 'x64'
       - name: run-test
         id: run-test
         run: |
-          python3.10 -m venv env
+          python3 -m venv env
           . env/bin/activate && pip install poetry setuptools pip --upgrade && poetry install && make test
       - name: Upload coverage reports to Codecov
         if: ${{ github.repository == 'noqdev/iambic' }}
@@ -26,7 +33,7 @@ jobs:
           token: ${{secrets.CODECOV_TOKEN}}
   run-functional-test:
     # functional test requires various web services
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     if: ${{ github.repository == 'noqdev/iambic' }}
     name: Run functional test
     needs: [run-unit-test]
@@ -35,10 +42,17 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          # Semantic version range syntax or exact version of a Python version
+          python-version: '3.9'
+          # Optional - x64 or x86 architecture, defaults to x64
+          architecture: 'x64'
       - name: bootstrap
         id: bootstrap
         run: |
-          python3.10 -m venv env
+          python3 -m venv env
           . env/bin/activate && pip install poetry setuptools pip --upgrade && poetry install
       - name: Configure AWS Credentials for building itest image
         uses: aws-actions/configure-aws-credentials@v1
