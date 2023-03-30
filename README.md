@@ -1,6 +1,5 @@
 [![Supported Versions](https://img.shields.io/pypi/pyversions/iambic-core.svg)](https://pypi.org/project/iambic-core)
-[![codecov.io](https://codecov.io/github/noqdev/iambic/coverage.svg?branch=main)]
-(https://codecov.io/github/noqdev/iambic?branch=main)
+[![codecov.io](https://codecov.io/github/noqdev/iambic/coverage.svg?branch=main)](https://codecov.io/github/noqdev/iambic?branch=main)
 
 # IAMbic: Cloud IAM as Code
 
