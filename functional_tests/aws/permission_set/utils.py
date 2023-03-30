@@ -12,6 +12,7 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
     AwsIdentityCenterPermissionSetTemplate,
     PermissionSetAccess,
+    PermissionSetProperties,
 )
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation import (
     collect_aws_permission_sets,
@@ -85,6 +86,23 @@ async def generate_permission_set_template_from_base(
         "This was created by a functional test."
     )
 
+    permission_set_template.write()
+    return permission_set_template
+
+
+async def generate_permission_set_template(
+    repo_dir: str,
+    noise: str = "",
+) -> AwsIdentityCenterPermissionSetTemplate:
+    permission_set_dir = get_template_dir(repo_dir)
+    identifier = f"iambic_test_{noise}{random.randint(0, 10000)}"
+    file_path = f"{permission_set_dir}/{identifier}.yaml"
+    properties = PermissionSetProperties(
+        name=identifier, description="This was created by a functional test."
+    )
+    permission_set_template = AwsIdentityCenterPermissionSetTemplate(
+        identifier=identifier, properties=properties, file_path=file_path
+    )
     permission_set_template.write()
     return permission_set_template
 

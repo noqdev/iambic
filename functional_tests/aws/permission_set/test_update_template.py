@@ -1,14 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import datetime
 from unittest import IsolatedAsyncioTestCase
 
-from functional_tests.aws.permission_set.utils import (
-    generate_permission_set_template_from_base,
-)
+from functional_tests.aws.permission_set.utils import generate_permission_set_template
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core import noq_json as json
-from iambic.core.context import ctx
 from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     PermissionSetAccess,
@@ -25,22 +23,39 @@ EXAMPLE_USER = (
 
 class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        ctx.eval_only = False
-        self.template = await generate_permission_set_template_from_base(
+        self.template = await generate_permission_set_template(
             IAMBIC_TEST_DETAILS.template_dir_path,
-            extra_salt="update",
+            noise="update",
         )
-        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
-        screen_render_resource_changes([changes])
-        await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()
+
+        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        # eventual consistency bites
+        # after create, it does not mean we can immediate list it
+        cur_attempt = 0
+        max_attempts = 3
+        while cur_attempt < max_attempts:
+            cur_attempt += 1
+            await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details(
+                batch_size=5
+            )
+            if (
+                self.template.identifier
+                not in IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.permission_set_map
+            ):
+                asyncio.sleep(5)
+            else:
+                break
+
+        assert (
+            self.template.identifier
+            in IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.permission_set_map
+        )
 
     async def asyncTearDown(self):
         self.template.deleted = True
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
-    # please consolidate all update like test into this method to avoid
-    # the need to create additional permission set
-    async def test_all_the_update(self):
+    async def test_update_description(self):
         timestamp = datetime.datetime.now().isoformat()
         updated_description = f"{timestamp}"
         assert self.template.properties.description != updated_description
@@ -64,13 +79,12 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
             InstanceArn=sso_admin_instance_arn,
             PermissionSetArn=permission_set_arn,
         )
+
         self.assertEqual(
             self.template.properties.description,
             response["PermissionSet"]["Description"],
         )
 
-        # test invalid description will generate a exception in teh template_change_details
-        old_description = self.template.properties.description
         self.template.properties.description = ""  # this does not trigger error because default validation only happens during creation
         template_change_details = await self.template.apply(
             IAMBIC_TEST_DETAILS.config.aws
@@ -81,9 +95,8 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
             1,
             json.dumps(template_change_details.dict()),
         )
-        self.template.properties.description = old_description
 
-        # test access rules
+    async def test_account_assignment(self):
         self.template.access_rules = [
             PermissionSetAccess(users=[EXAMPLE_USER], groups=[EXAMPLE_GROUP])
         ]
@@ -93,6 +106,7 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
         )
 
         # test assignment
+
         identity_center_client = await IAMBIC_TEST_DETAILS.identity_center_account.get_boto3_client(
             "sso-admin",
             region_name=IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.region_name,
