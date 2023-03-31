@@ -21,6 +21,16 @@ Easily manage and streamline cloud Identity and Access Management (IAM) with IAM
 
 Dive into IAMbic with our [quick-start guide](http://iambic.org/getting_started/) and explore powerful template examples for AWS Multi-Account Roles, Dynamic Permissions, Okta Applications and Group Assignments, Azure Active Directory Users and Groups, and Google Workspace Group Assignments. We are rapidly expanding support for existing resources and cloud providers, so check back often!
 
+## Installing IAMbic and Supported Versions
+
+IAMbic is available on PyPI:
+
+```console
+python -m pip install iambic-core
+```
+
+IAMbic officially supports Python 3.9+.
+
 ### Template Examples
 
 Here are some examples showcasing IAMbic's capabilities:
