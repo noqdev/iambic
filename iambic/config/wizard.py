@@ -745,9 +745,10 @@ class ConfigurationWizard:
             not self.config.aws.accounts and not self.config.aws.organizations
         )
         requires_sync = bool(
-            not is_hub_account and (
-                    len(self.config.aws.accounts)
-                    > self.config.aws.min_accounts_required_for_wildcard_included_accounts
+            not is_hub_account
+            and (
+                len(self.config.aws.accounts)
+                > self.config.aws.min_accounts_required_for_wildcard_included_accounts
             )
         )
 
@@ -850,9 +851,7 @@ class ConfigurationWizard:
             account.hub_role_arn = get_hub_role_arn(account_id)
         # account.partition = set_aws_account_partition(account.partition)
 
-        confirm_command_exe(
-            "AWS Account", Operation.ADDED, requires_sync=requires_sync
-        )
+        confirm_command_exe("AWS Account", Operation.ADDED, requires_sync=requires_sync)
 
         self.config.aws.accounts.append(account)
 
@@ -1029,7 +1028,6 @@ class ConfigurationWizard:
         aws_org = AWSOrganization(
             org_id=org_id,
             org_account_id=account_id,
-            region=org_region,
             default_rule=BaseAWSOrgRule(),
             hub_role_arn=get_hub_role_arn(account_id),
             aws_profile=profile_name,
