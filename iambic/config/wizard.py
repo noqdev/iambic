@@ -1029,7 +1029,6 @@ class ConfigurationWizard:
         aws_org = AWSOrganization(
             org_id=org_id,
             org_account_id=account_id,
-            region=org_region,
             default_rule=BaseAWSOrgRule(),
             hub_role_arn=get_hub_role_arn(account_id),
             aws_profile=profile_name,
