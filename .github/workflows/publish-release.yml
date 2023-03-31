@@ -5,6 +5,7 @@ on:
       - 'v*'
 jobs:
   build:
+    if: ${{ github.repository == 'noqdev/iambic' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -28,3 +29,19 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: iambic.sbom.json
+  build-n-publish:
+    if: ${{ github.repository == 'noqdev/iambic' }}
+    name: Build and publish Python 🐍 distributions 📦 to PyPI
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.9"
+    - name: bootstrap
+      run: |
+        pip install poetry setuptools pip --upgrade
+    - run: poetry config pypi-token.pypi "${{ secrets.PYPI_API_KEY }}"
+    - name: Publish package
+      run: poetry publish --build
