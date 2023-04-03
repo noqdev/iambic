@@ -7,6 +7,8 @@ from unittest import IsolatedAsyncioTestCase
 from functional_tests.aws.permission_set.utils import generate_permission_set_template
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core import noq_json as json
+from iambic.core.context import ctx
+from iambic.core.models import ProposedChangeType
 from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     PermissionSetAccess,
@@ -28,7 +30,10 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
             noise="update",
         )
 
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        ctx.eval_only = False
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        assert changes.exceptions_seen in [None, []]
+
         # eventual consistency bites
         # after create, it does not mean we can immediate list it
         cur_attempt = 0
@@ -61,7 +66,11 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
         assert self.template.properties.description != updated_description
         self.template.properties.description = updated_description
         changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
-        screen_render_resource_changes([changes])
+        assert (
+            changes.proposed_changes[0].proposed_changes[0].change_type
+            == ProposedChangeType.UPDATE
+        )
+        assert changes.exceptions_seen in [None, []]
 
         identity_center_client = await IAMBIC_TEST_DETAILS.identity_center_account.get_boto3_client(
             "sso-admin",
@@ -100,7 +109,9 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
         self.template.access_rules = [
             PermissionSetAccess(users=[EXAMPLE_USER], groups=[EXAMPLE_GROUP])
         ]
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        assert changes.exceptions_seen in [None, []]
+
         await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details(
             batch_size=5
         )
