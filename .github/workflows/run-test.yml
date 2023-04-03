@@ -1,21 +1,28 @@
-name: Run test
+name: Run unit and functional test
 on:
   pull_request:
   push:
     branches: [main]
 jobs:
-  run-unit-test:
-    runs-on: self-hosted
+  run-unit-and-functional-test:
+    runs-on: ubuntu-latest
     name: Run unit test
     permissions:
       id-token: write
       contents: read
     steps:
       - uses: actions/checkout@v3
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          # Semantic version range syntax or exact version of a Python version
+          python-version: '3.9'
+          # Optional - x64 or x86 architecture, defaults to x64
+          architecture: 'x64'
       - name: run-test
         id: run-test
         run: |
-          python3.10 -m venv env
+          python3 -m venv env
           . env/bin/activate && pip install poetry setuptools pip --upgrade && poetry install && make test
       - name: Upload coverage reports to Codecov
         if: ${{ github.repository == 'noqdev/iambic' }}
@@ -24,43 +31,19 @@ jobs:
           files: cov_unit_tests.xml
           flags: unit_tests
           token: ${{secrets.CODECOV_TOKEN}}
-  run-functional-test:
-    # functional test requires various web services
-    runs-on: self-hosted
-    if: ${{ github.repository == 'noqdev/iambic' }}
-    name: Run functional test
-    needs: [run-unit-test]
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-      - name: bootstrap
-        id: bootstrap
-        run: |
-          python3.10 -m venv env
-          . env/bin/activate && pip install poetry setuptools pip --upgrade && poetry install
-      - name: Configure AWS Credentials for building itest image
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          role-to-assume: arn:aws:iam::442632209887:role/iambic_image_builder
-          aws-region: us-east-1
-      # Disable image builder for now since we are not using it
-      #- name: build-itest-image
-      #  id: build-itest-image
-      #  run: |
-      #    aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/l1s5s8m2
-      #    . env/bin/activate && make -f Makefile.itest build_docker_itest upload_docker_itest
       - name: Configure AWS Credentials
+        if: ${{ github.repository == 'noqdev/iambic' }}
         uses: aws-actions/configure-aws-credentials@v1
         with:
           role-to-assume: arn:aws:iam::580605962305:role/IambicHubRole
           aws-region: us-east-1
       - name: run-functional-test
+        if: ${{ github.repository == 'noqdev/iambic' }}
         id: run-functional-test
         run: |
           . env/bin/activate && make functional_test
       - name: Upload coverage reports to Codecov
+        if: ${{ github.repository == 'noqdev/iambic' }}
         uses: codecov/codecov-action@v3
         with:
           files: cov_functional_tests.xml
