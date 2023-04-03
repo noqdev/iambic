@@ -67,6 +67,7 @@ class UserTemplateProperties(BaseModel, ExpiryModel):
     def from_azure_response(cls, azure_response: dict) -> UserTemplateProperties:
         unwanted_keys = [
             "password_profile",
+            "account_enabled",
         ]
         azure_response = normalize_dict_keys(azure_response)
         # Filter unwanted keys
