@@ -106,6 +106,9 @@ class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
             self.google_project2,
         ]
 
+    def tearDown(self):
+        ctx.eval_only = False
+
     async def test_apply_with_projects(self):
         ctx.eval_only = True
         google_workspace_config = copy.deepcopy(self.google_workspace_config)
