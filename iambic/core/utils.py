@@ -135,6 +135,9 @@ async def file_regex_search(file_path: str, re_pattern: str) -> Union[str, None]
 
 
 async def gather_templates(repo_dir: str, template_type: str = None) -> list[str]:
+    if repo_dir.endswith("/") and repo_dir != "//":
+        repo_dir = repo_dir[:-1]
+
     if template_type and template_type.startswith("NOQ::"):
         # Strip the prefix, so it plays nice with NOQ_TEMPLATE_REGEX
         template_type = template_type.replace("NOQ::", "")
@@ -144,14 +147,17 @@ async def gather_templates(repo_dir: str, template_type: str = None) -> list[str
         if template_type
         else NOQ_TEMPLATE_REGEX
     )
+    # since multiple glob pattern can potential intersect, we use a set data structure
+    # to suppress any duplicate for defensive measure
     # Support both yaml and yml extensions for templates
-    file_paths = glob.glob(f"{repo_dir}/**/*.yaml", recursive=True)
-    file_paths += glob.glob(f"{repo_dir}*.yaml", recursive=True)
-    file_paths += glob.glob(f"{repo_dir}/**/*.yml", recursive=True)
-    file_paths += glob.glob(f"{repo_dir}*.yml", recursive=True)
+    file_path_set = set()
+    # >>> glob.glob('**/*.txt', recursive=True)
+    # ['2.txt', 'sub/3.txt']
+    file_path_set.update(glob.glob(f"{repo_dir}/**/*.yaml", recursive=True))
+    file_path_set.update(glob.glob(f"{repo_dir}/**/*.yml", recursive=True))
 
     file_paths = await gather_limit(
-        *[file_regex_search(fp, regex_pattern) for fp in file_paths],
+        *[file_regex_search(fp, regex_pattern) for fp in file_path_set],
         limit=int(os.environ.get("IAMBIC_GATHER_TEMPLATES_LIMIT", 10)),
     )
     return [fp for fp in file_paths if fp]

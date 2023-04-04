@@ -200,6 +200,8 @@ async def test_gather_templates(tmpdir):
     file3.write("template_type: NOQ::type1\n")
     file4 = sub_dir2.join("file4.yaml")
     file4.write("template_type: not_noq\n")
+    top_level_file = templates_dir.join("top_level.yaml")
+    top_level_file.write("template_type:  NOQ::top_level\n")
 
     # Test the function
     result = await gather_templates(str(templates_dir), "type1")
@@ -221,4 +223,25 @@ async def test_gather_templates(tmpdir):
         str(file1),
         str(file2),
         str(file3),
+        str(top_level_file),
     }
+
+    # Test the function
+    assert not str(templates_dir).endswith("/")
+    result = await gather_templates(str(templates_dir) + "/", "top_level")
+    assert set(result) == {
+        str(top_level_file),
+    }
+    # despite the function signature returns a list, we expect all
+    # elements to be unique.
+    assert len(result) == len(set(result))
+
+    # Test the function
+    assert not str(templates_dir).endswith("/")
+    result = await gather_templates(str(templates_dir), "top_level")
+    assert set(result) == {
+        str(top_level_file),
+    }
+    # despite the function signature returns a list, we expect all
+    # elements to be unique.
+    assert len(result) == len(set(result))
