@@ -212,7 +212,7 @@ class NoqSemaphore:
 async def async_batch_processor(
     tasks: list,
     batch_size: int,
-    seconds_between_process: Union[int, float] = 1,
+    seconds_between_process: Union[int, float, None] = None,
     return_exceptions: bool = False,
 ) -> list:
     """

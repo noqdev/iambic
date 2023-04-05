@@ -101,6 +101,7 @@ async def get_permission_set_users_and_groups(
             for account_id in instance_accounts
         ],
         15,
+        1,
         return_exceptions=True,
     )
 
@@ -569,7 +570,7 @@ async def apply_account_assignments(
             log.info(log_str, details=assignment, **log_params)
 
     if tasks:
-        results: list[list[ProposedChange]] = await async_batch_processor(tasks, 10)
+        results: list[list[ProposedChange]] = await async_batch_processor(tasks, 10, 1)
         return list(chain.from_iterable(results))
     else:
         return response
