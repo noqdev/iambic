@@ -10,6 +10,7 @@ import os
 import typing
 from enum import Enum
 from hashlib import md5
+from pathlib import Path
 from types import GenericAlias
 from typing import (
     TYPE_CHECKING,
@@ -29,7 +30,7 @@ from deepdiff.model import PrettyOrderedSet
 from git import Repo
 from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Extra, Field, root_validator, schema,  validate_model, validator
+from pydantic import Extra, Field, root_validator, schema, validate_model, validator
 from pydantic.fields import ModelField
 
 from iambic.core.iambic_enum import Command, ExecutionStatus, IambicManaged
@@ -345,7 +346,7 @@ class AccountChangeDetails(PydanticBaseModel):
 class TemplateChangeDetails(PydanticBaseModel):
     resource_id: str
     resource_type: str
-    template_path: str
+    template_path: Union[str, Path]
     # Supports multi-account providers and single-account providers
     proposed_changes: list[Union[AccountChangeDetails, ProposedChange]] = []
     exceptions_seen: list[Union[AccountChangeDetails, ProposedChange]] = Field(
@@ -355,6 +356,10 @@ class TemplateChangeDetails(PydanticBaseModel):
     class Config:
         json_encoders = {PrettyOrderedSet: list}
         extra = Extra.forbid
+
+    @validator("template_path")
+    def validate_template_path(cls, v: Union[str, Path]):
+        return str(v)
 
     def extend_changes(self, changes: list[ProposedChange]):
         for change in changes:
@@ -468,7 +473,7 @@ class BaseTemplate(
     BaseModel,
 ):
     template_type: str
-    file_path: str = Field(..., hidden_from_schema=True)
+    file_path: Union[str, Path] = Field(..., hidden_from_schema=True)
     owner: Optional[str]
     iambic_managed: Optional[IambicManaged] = Field(
         IambicManaged.UNDEFINED,
