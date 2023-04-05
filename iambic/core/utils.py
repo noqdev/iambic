@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import gc
 import glob
 import os
 import pathlib
@@ -224,7 +225,7 @@ async def async_batch_processor(
     for min_elem in range(0, len(tasks), batch_size):
         response.extend(
             await asyncio.gather(
-                *tasks[min_elem : min_elem + batch_size],
+                *tasks[min_elem: min_elem + batch_size],
                 return_exceptions=return_exceptions,
             )
         )
@@ -233,6 +234,8 @@ async def async_batch_processor(
 
         if seconds_between_process:
             await asyncio.sleep(seconds_between_process)
+
+        gc.collect()
 
     return response
 

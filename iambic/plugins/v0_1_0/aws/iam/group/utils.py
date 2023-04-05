@@ -135,6 +135,9 @@ async def apply_group_managed_policies(
     ]
     if new_managed_policies:
         log_str = "New managed policies discovered."
+        if ctx.execute:
+            log_str = f"{log_str} Attaching managed policies..."
+
         for policy_arn in new_managed_policies:
             proposed_changes = [
                 ProposedChange(
@@ -146,7 +149,6 @@ async def apply_group_managed_policies(
             ]
             response.extend(proposed_changes)
             if ctx.execute:
-                log_str = f"{log_str} Attaching managed policies..."
                 apply_awaitable = boto_crud_call(
                     iam_client.attach_group_policy,
                     GroupName=group_name,
