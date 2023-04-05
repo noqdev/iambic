@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import glob
 import os
 import pathlib
 import re
@@ -11,6 +10,7 @@ import tempfile
 import typing
 from datetime import date, datetime
 from io import StringIO
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Coroutine, Optional, Union
 from urllib.parse import unquote_plus
 
@@ -127,7 +127,9 @@ async def resource_file_upsert(
         await f.write(json.dumps(content_as_dict, indent=2))
 
 
-async def file_regex_search(file_path: str, re_pattern: str) -> Union[str, None]:
+async def file_regex_search(
+    file_path: Union[str, Path], re_pattern: str
+) -> Union[str, None]:
     async with aiofiles.open(file_path, mode="r") as f:
         file_content = await f.read()
         if re.search(re_pattern, file_content):
@@ -135,8 +137,9 @@ async def file_regex_search(file_path: str, re_pattern: str) -> Union[str, None]
 
 
 async def gather_templates(repo_dir: str, template_type: str = None) -> list[str]:
-    if repo_dir.endswith("/") and repo_dir != "//":
-        repo_dir = repo_dir[:-1]
+    repo_dir_path = Path(repo_dir)
+    if not repo_dir_path.is_dir():
+        raise ValueError(f"{repo_dir_path} is not a directory")
 
     if template_type and template_type.startswith("NOQ::"):
         # Strip the prefix, so it plays nice with NOQ_TEMPLATE_REGEX
@@ -153,8 +156,8 @@ async def gather_templates(repo_dir: str, template_type: str = None) -> list[str
     file_path_set = set()
     # >>> glob.glob('**/*.txt', recursive=True)
     # ['2.txt', 'sub/3.txt']
-    file_path_set.update(glob.glob(f"{repo_dir}/**/*.yaml", recursive=True))
-    file_path_set.update(glob.glob(f"{repo_dir}/**/*.yml", recursive=True))
+    file_path_set.update(repo_dir_path.glob("**/*.yaml"))
+    file_path_set.update(repo_dir_path.glob("**/*.yml"))
 
     file_paths = await gather_limit(
         *[file_regex_search(fp, regex_pattern) for fp in file_path_set],
