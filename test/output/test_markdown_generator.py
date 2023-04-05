@@ -6,7 +6,7 @@ from iambic.core.models import TemplateChangeDetails
 from iambic.output.markdown import gh_render_resource_changes
 from iambic.output.models import ActionSummaries, get_template_data
 
-from . import get_update_template, get_templates_mixed
+from . import get_templates_mixed, get_update_template
 
 
 @pytest.mark.parametrize(
@@ -19,7 +19,7 @@ from . import get_update_template, get_templates_mixed
         (
             get_update_template(),
             ActionSummaries(num_accounts=1, num_actions=1, num_templates=1),
-        )
+        ),
     ],
 )
 def test_get_template_data(
@@ -42,7 +42,7 @@ def test_get_template_data(
         (
             get_update_template(),
             ActionSummaries(num_accounts=10, num_actions=1, num_templates=1),
-        )
+        ),
     ],
 )
 def test_gh_render_resource_changes(

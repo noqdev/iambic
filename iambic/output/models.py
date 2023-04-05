@@ -1,6 +1,6 @@
 from __future__ import annotations
-import json
 
+import json
 import pathlib
 from typing import Any, Dict, List, Optional, Set
 
@@ -38,7 +38,6 @@ class ProposedChangeDiff(ProposedChange):
         "groups": "Group",
         "users": "User",
         "user": "User",
-
     }
 
     def __init__(self, proposed_change: ProposedChange) -> None:
@@ -52,10 +51,12 @@ class ProposedChangeDiff(ProposedChange):
         if self.new_value is None:
             self.new_value = {}
         if isinstance(self.current_value, dict):
-            self.diff = list(diff(self.current_value.get(object_attribute, {}), self.new_value))
+            self.diff = list(
+                diff(self.current_value.get(object_attribute, {}), self.new_value)
+            )
         else:
             self.diff = list(diff(self.current_value, self.new_value))
-        
+
     @property
     def diff_plus_minus(self) -> List[str]:
         diff_plus_minus = ""
@@ -71,14 +72,20 @@ class ProposedChangeDiff(ProposedChange):
                 if change_to:
                     diff_plus_minus += f"{label}:\n-(From)\n{json.dumps(change_from, indent=2)}\n+(To)\n{json.dumps(change_to, indent=2)}"
                 else:
-                    diff_plus_minus += f"{label}:\n-(Remove)\n{json.dumps(change_from, indent=2)}"
-                diff_plus_minus.rstrip('\n')
+                    diff_plus_minus += (
+                        f"{label}:\n-(Remove)\n{json.dumps(change_from, indent=2)}"
+                    )
+                diff_plus_minus.rstrip("\n")
             elif x[0] == "add":
-                diff_plus_minus += f"{label}:\n+(Add)\n{json.dumps([y[1] for y in x[2]], indent=2)}"
-                diff_plus_minus.rstrip('\n')
+                diff_plus_minus += (
+                    f"{label}:\n+(Add)\n{json.dumps([y[1] for y in x[2]], indent=2)}"
+                )
+                diff_plus_minus.rstrip("\n")
             elif x[0] == "remove":
-                diff_plus_minus += f"{label}:\n-(Remove)\n{json.dumps([y[1] for y in x[2]], indent=2)}"
-                diff_plus_minus.rstrip('\n')
+                diff_plus_minus += (
+                    f"{label}:\n-(Remove)\n{json.dumps([y[1] for y in x[2]], indent=2)}"
+                )
+                diff_plus_minus.rstrip("\n")
         return diff_plus_minus
 
 

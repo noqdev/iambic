@@ -266,7 +266,7 @@ async def update_app_assignments(
                     }
                 },
                 current_value=current_user_assignments + current_group_assignments,
-                new_value = desired_user_assignments + desired_group_assignments,
+                new_value=desired_user_assignments + desired_group_assignments,
             )
         )
 

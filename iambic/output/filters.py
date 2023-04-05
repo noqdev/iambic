@@ -1,14 +1,17 @@
 from io import StringIO
 from typing import List
-from rich.console import Console    
+
+from rich.console import Console
 from rich.style import Style
-from rich.text import Text
 from rich.table import Table
+from rich.text import Text
 from rich.tree import Tree
+
 from iambic.output.models import ActionSummary, ExceptionSummary
 
-
 console = Console()
+
+
 def rich_format(value: str, style_str: str) -> str:
     style = Style.parse(style_str)
     return console.render_str(str(value), style=style)
@@ -35,7 +38,10 @@ def rich_tree_summary(action_summary: ActionSummary):
         for account in template.accounts:
             account_tree = template_tree.add(account.account, expanded=True)
             for change in account.changes:
-                change_tree = account_tree.add(f"{change.change.resource_type} // {change.change.resource_id}", expanded=True)
+                change_tree = account_tree.add(
+                    f"{change.change.resource_type} // {change.change.resource_id}",
+                    expanded=True,
+                )
                 if change.change.diff:
                     change_tree.add(change.change.diff_plus_minus)
     console = Console(file=StringIO(), force_terminal=True)
@@ -51,7 +57,9 @@ def rich_tree_exception(exceptions: ExceptionSummary):
         for account in template.accounts:
             account_tree = template_tree.add(account.account, expanded=True)
             for change in account.changes:
-                change_tree = account_tree.add(str(change.change.change_type), expanded=True)
+                change_tree = account_tree.add(
+                    str(change.change.change_type), expanded=True
+                )
                 change_tree.add(change.change.resource_id)
                 change_tree.add(change.change.resource_type)
                 change_tree.add(str(change.change.change_type.value))

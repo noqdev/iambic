@@ -225,7 +225,7 @@ async def async_batch_processor(
     for min_elem in range(0, len(tasks), batch_size):
         response.extend(
             await asyncio.gather(
-                *tasks[min_elem: min_elem + batch_size],
+                *tasks[min_elem : min_elem + batch_size],
                 return_exceptions=return_exceptions,
             )
         )

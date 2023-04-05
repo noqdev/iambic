@@ -139,7 +139,7 @@ async def delete_managed_policy(iam_client, policy_arn: str, log_params: dict):
                 boto_crud_call(
                     iam_client.delete_policy_version,
                     PolicyArn=policy_arn,
-                    VersionId=version["VersionId"]
+                    VersionId=version["VersionId"],
                 )
             )
 

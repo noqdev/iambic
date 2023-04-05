@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import pytest
-from rich import print
 
 from iambic.core.models import TemplateChangeDetails
-from iambic.output.text import file_render_resource_changes, screen_render_resource_changes
+from iambic.output.text import (
+    file_render_resource_changes,
+    screen_render_resource_changes,
+)
 
-from . import get_update_template, get_templates_mixed
+from . import get_templates_mixed, get_update_template
 
 
 @pytest.mark.parametrize(
@@ -21,15 +23,14 @@ from . import get_update_template, get_templates_mixed
                 "aws:iam:role // design-dev_iambic_test_role",
                 "aws:iam:role // design-workspaces_iambic_test_role",
                 "design-prod - (234567890123)",
-            ]
+            ],
         ),
         (
             get_update_template(),
             [
                 "resources/aws/roles/demo-1/t1000.yaml",
-            ]
-
-        )
+            ],
+        ),
     ],
 )
 def test_screen_render_resource_changes(
@@ -54,15 +55,14 @@ def test_screen_render_resource_changes(
                 "aws:iam:role // design-dev_iambic_test_role",
                 "aws:iam:role // design-workspaces_iambic_test_role",
                 "design-prod - (234567890123)",
-            ]
+            ],
         ),
         (
             get_update_template(),
             [
                 "resources/aws/roles/demo-1/t1000.yaml",
-            ]
-
-        )
+            ],
+        ),
     ],
 )
 def test_file_render_resource_changes(
@@ -72,7 +72,7 @@ def test_file_render_resource_changes(
 ):
     test_file = tmp_path / "test_file_render_resource_changes.txt"
     file_render_resource_changes(str(test_file), template_change_details)
-    
+
     with open(test_file, "r") as f:
         output = f.read()
     for expected_output in expected_outputs:

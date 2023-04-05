@@ -513,7 +513,11 @@ async def apply_account_assignments(
     for assignment_id, assignment in existing_assignment_map.items():
         if not template_assignment_map.get(assignment_id):
             log_str = "Stale assignments discovered."
-            resource_type="arn:aws:iam::aws:user" if assignment["resource_type"] == "USER" else "arn:aws:iam::aws:group"
+            resource_type = (
+                "arn:aws:iam::aws:user"
+                if assignment["resource_type"] == "USER"
+                else "arn:aws:iam::aws:group"
+            )
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DELETE,
@@ -541,7 +545,11 @@ async def apply_account_assignments(
 
     for assignment_id, assignment in template_assignment_map.items():
         if not existing_assignment_map.get(assignment_id):
-            resource_type="arn:aws:iam::aws:user" if assignment["resource_type"] == "USER" else "arn:aws:iam::aws:group"
+            resource_type = (
+                "arn:aws:iam::aws:user"
+                if assignment["resource_type"] == "USER"
+                else "arn:aws:iam::aws:group"
+            )
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
