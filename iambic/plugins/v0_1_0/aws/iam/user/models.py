@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from itertools import chain
 from typing import Any, Callable, Optional, Union
 
 from pydantic import Field, validator
@@ -161,9 +162,10 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
         self, aws_account: AWSAccount
     ) -> AccountChangeDetails:
         client = await aws_account.get_boto3_client("iam")
-        self = await remove_expired_resources(
-            self, self.resource_type, self.resource_id
-        )
+        # Marking for deletion. This shouldn't be done on the fly.
+        # self = await remove_expired_resources(
+        #     self, self.resource_type, self.resource_id
+        # )
         account_user = self.apply_resource_dict(aws_account)
 
         user_name = account_user["UserName"]
@@ -207,7 +209,7 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
                 log_str = "Active resource found with deleted=false."
                 if ctx.execute and not iambic_import_only:
                     log_str = f"{log_str} Deleting resource..."
-                log.info(log_str, **log_params)
+                log.debug(log_str, **log_params)
 
                 if ctx.execute:
                     await delete_iam_user(user_name, client, log_params)
@@ -257,7 +259,7 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
                 if update_user_params:
                     log_str = "Out of date resource found."
                     if ctx.execute:
-                        log.info(
+                        log.debug(
                             f"{log_str} Updating resource...",
                             **update_resource_log_params,
                         )
@@ -286,7 +288,7 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
 
                         tasks.append(update_user())
                     else:
-                        log.info(log_str, **update_resource_log_params)
+                        log.debug(log_str, **update_resource_log_params)
                         account_change_details.proposed_changes.append(
                             ProposedChange(
                                 change_type=ProposedChangeType.UPDATE,
@@ -304,12 +306,12 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
                 )
                 log_str = "New resource found in code."
                 if not ctx.execute:
-                    log.info(log_str, **log_params)
+                    log.debug(log_str, **log_params)
                     # Exit now because apply functions won't work if resource doesn't exist
                     return account_change_details
 
                 log_str = f"{log_str} Creating resource..."
-                log.info(log_str, **log_params)
+                log.debug(log_str, **log_params)
                 if account_user.get("PermissionsBoundary"):
                     account_user["PermissionsBoundary"] = account_user[
                         "PermissionsBoundary"
@@ -346,36 +348,30 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
             ]
         )
         try:
-            results: list[list[ProposedChange]] = await asyncio.gather(
+            changes_made: list[list[ProposedChange]] = await asyncio.gather(
                 *tasks, return_exceptions=True
             )
-
-            # separate out the success versus failure calls
-            exceptions: list[ProposedChange] = []
-            changes_made: list[ProposedChange] = []
-            for result in results:
-                for r in result:
-                    if isinstance(r, ProposedChange):
-                        if len(r.exceptions_seen) == 0:
-                            changes_made.append(r)
-                        else:
-                            exceptions.append(r)
+            if any(changes_made):
+                account_change_details.extend_changes(list(chain.from_iterable(changes_made)))
 
         except Exception as e:
             log.exception("Unable to apply changes to resource", error=e, **log_params)
             return account_change_details
-        if any(changes_made):
-            account_change_details.proposed_changes.extend(changes_made)
-        if any(exceptions):
-            account_change_details.exceptions_seen.extend(exceptions)
 
-        if ctx.execute:
-            if self.deleted:
-                self.delete()
-            self.write()
+        if ctx.execute and not account_change_details.exceptions_seen:
+            # if self.deleted:
+            #     self.delete()
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),
+                **log_params,
+            )
+        elif account_change_details.exceptions_seen:
+            log.error(
+                "Unable to finish execution on account for resource",
+                exceptions_seen=[
+                    cd.exceptions_seen for cd in account_change_details.exceptions_seen
+                ],
                 **log_params,
             )
         else:

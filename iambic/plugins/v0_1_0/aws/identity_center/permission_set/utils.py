@@ -644,7 +644,7 @@ async def apply_permission_set_inline_policy(
                 PermissionSetArn=permission_set_arn,
                 InlinePolicy=json.dumps(template_inline_policy),
             )
-        log.info(log_str, **log_params)
+        log.debug(log_str, **log_params)
     elif not template_inline_policy and existing_inline_policy:
         log_str = "Stale InlinePolicyDocument."
         response.append(
@@ -663,7 +663,7 @@ async def apply_permission_set_inline_policy(
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
             )
-        log.info(log_str, **log_params)
+        log.debug(log_str, **log_params)
 
     return response
 
@@ -724,7 +724,7 @@ async def apply_permission_set_permission_boundary(
                 PermissionSetArn=permission_set_arn,
                 PermissionsBoundary=template_permission_boundary,
             )
-        log.info(log_str, **log_params)
+        log.debug(log_str, **log_params)
     elif existing_permission_boundary and not template_permission_boundary:
         log_str = "Removing PermissionsBoundary discovered."
         response.append(
@@ -744,7 +744,7 @@ async def apply_permission_set_permission_boundary(
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
             )
-        log.info(log_str, **log_params)
+        log.debug(log_str, **log_params)
 
     return response
 
@@ -790,7 +790,7 @@ async def apply_permission_set_tags(
                 TagKeys=tags_to_remove,
             )
             tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
-        log.info(log_str, tags=tags_to_remove, **log_params)
+        log.debug(log_str, tags=tags_to_remove, **log_params)
 
     if tags_to_apply:
         log_str = "New tags discovered in AWS."
@@ -815,7 +815,7 @@ async def apply_permission_set_tags(
                 Tags=tags_to_apply,
             )
             tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
-        log.info(log_str, tags=tags_to_apply, **log_params)
+        log.debug(log_str, tags=tags_to_apply, **log_params)
 
     if tasks:
         results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
@@ -917,7 +917,7 @@ async def delete_permission_set(
             )
         )
 
-    log.info(
+    log.debug(
         "Detaching resources from the permission set.",
         permission_set_arn=permission_set_arn,
         **log_params,
@@ -939,7 +939,7 @@ async def delete_permission_set(
                 in err_response["Message"]
             ) and retry_count < 10:
                 # Wait for the detached resources to be deleted so that the permission set can be deleted.
-                log.info(
+                log.debug(
                     "Waiting for resources to be detached from the permission set.",
                     **log_params,
                 )

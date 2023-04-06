@@ -235,7 +235,7 @@ async def async_batch_processor(
         if seconds_between_process:
             await asyncio.sleep(seconds_between_process)
 
-        gc.collect()
+        # gc.collect()
 
     return response
 

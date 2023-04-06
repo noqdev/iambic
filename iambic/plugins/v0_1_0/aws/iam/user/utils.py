@@ -174,7 +174,7 @@ async def apply_user_tags(
             )
             tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
 
-        log.info(log_str, tags=tags_to_remove, **log_params)
+        log.debug(log_str, tags=tags_to_remove, **log_params)
 
     if tags_to_apply:
         log_str = "New tags discovered in AWS."
@@ -197,7 +197,7 @@ async def apply_user_tags(
             )
             tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
 
-        log.info(log_str, tags=tags_to_apply, **log_params)
+        log.debug(log_str, tags=tags_to_apply, **log_params)
 
     if tasks:
         results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
@@ -251,7 +251,7 @@ async def apply_user_permission_boundary(
                 )
             ]
 
-        log.info(
+        log.debug(
             log_str, permission_boundary=template_boundary_policy_arn, **log_params
         )
 
@@ -286,7 +286,7 @@ async def apply_user_permission_boundary(
                 ]
             )
 
-        log.info(
+        log.debug(
             log_str, permission_boundary=existing_boundary_policy_arn, **log_params
         )
 
@@ -351,7 +351,7 @@ async def apply_user_managed_policies(
                 for policy_arn in new_managed_policies
             ]
 
-        log.info(log_str, managed_policies=new_managed_policies, **log_params)
+        log.debug(log_str, managed_policies=new_managed_policies, **log_params)
 
     # Delete existing managed policies not in template
     existing_managed_policies = [
@@ -397,7 +397,7 @@ async def apply_user_managed_policies(
                 ]
             )
 
-        log.info(log_str, managed_policies=existing_managed_policies, **log_params)
+        log.debug(log_str, managed_policies=existing_managed_policies, **log_params)
 
     if tasks:
         results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
@@ -448,7 +448,7 @@ async def apply_user_inline_policies(
                 )
                 tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
 
-            log.info(log_str, policy_name=policy_name, **log_params)
+            log.debug(log_str, policy_name=policy_name, **log_params)
 
     for policy_name, policy_document in template_policy_map.items():
         existing_policy_doc = existing_policy_map.get(policy_name)
@@ -509,7 +509,7 @@ async def apply_user_inline_policies(
                 )
                 tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
 
-            log.info(log_str, policy_name=policy_name, **log_params)
+            log.debug(log_str, policy_name=policy_name, **log_params)
 
     if tasks:
         results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
@@ -552,7 +552,7 @@ async def apply_user_groups(
                 )
                 tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
 
-            log.info(log_str, group_name=group, **log_params)
+            log.debug(log_str, group_name=group, **log_params)
 
     # Remove stale groups
     for group in existing_groups:
@@ -577,7 +577,7 @@ async def apply_user_groups(
                 )
                 tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
 
-            log.info(log_str, group_name=group, **log_params)
+            log.debug(log_str, group_name=group, **log_params)
 
     if tasks:
         results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
@@ -591,7 +591,7 @@ async def delete_iam_user(user_name: str, iam_client, log_params: dict):
     # Detach managed policies
     managed_policies = await get_user_managed_policies(user_name, iam_client)
     managed_policies = [policy["PolicyArn"] for policy in managed_policies]
-    log.info(
+    log.debug(
         "Detaching managed policies.", managed_policies=managed_policies, **log_params
     )
     for policy in managed_policies:
@@ -604,7 +604,7 @@ async def delete_iam_user(user_name: str, iam_client, log_params: dict):
     # Delete inline policies
     inline_policies = await get_user_inline_policies(user_name, iam_client)
     inline_policies = list(inline_policies.keys())
-    log.info(
+    log.debug(
         "Deleting inline policies.", managed_policies=inline_policies, **log_params
     )
     for policy_name in inline_policies:

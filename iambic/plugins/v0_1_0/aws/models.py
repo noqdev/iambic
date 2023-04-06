@@ -722,43 +722,41 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
         log_params = dict(
             resource_type=self.resource_type, resource_id=self.resource_id
         )
+        relevant_accounts = []
+
         for account in config.accounts:
             if evaluate_on_provider(self, account):
-                if ctx.execute:
-                    log_str = "Applying changes to resource."
-                else:
-                    log_str = "Detecting changes for resource."
-                log.info(log_str, account=str(account), **log_params)
+                relevant_accounts.append(str(account))
                 tasks.append(self._apply_to_account(account))
 
-        account_changes: list[AccountChangeDetails] = await asyncio.gather(*tasks)
-        template_changes.proposed_changes = [
-            account_change
-            for account_change in account_changes
-            if any(account_change.proposed_changes)
-        ]
-        # aggregate exceptions
-        template_changes.exceptions_seen = [
-            account_change
-            for account_change in account_changes
-            if any(account_change.exceptions_seen)
-        ]
+        if not relevant_accounts:
+            return template_changes
 
-        proposed_changes = [x for x in account_changes if x.proposed_changes]
-
-        if proposed_changes and ctx.execute:
-            log.info(
-                "Successfully applied all or some resource changes to all aws_accounts. Any unapplied resources will have an accompanying error message.",
-                **log_params,
-            )
-        elif proposed_changes and not ctx.execute:
-            log.info(
-                "Successfully detected all or some required resource changes on all aws_accounts. Any unapplied resources will have an accompanying error message.",
-                **log_params,
-            )
+        if ctx.execute:
+            log_str = "Applying changes to resource."
         else:
-            log.debug("No changes detected for resource on any account.", **log_params)
+            log_str = "Detecting changes for resource."
 
+        log.info(log_str, accounts=relevant_accounts, **log_params)
+
+        account_changes: list[AccountChangeDetails] = await asyncio.gather(*tasks)
+        template_changes.extend_changes(account_changes)
+
+        if template_changes.exceptions_seen:
+            cmd_verb = "applying" if ctx.execute else "detecting"
+            log_str = f"Error encountered when {cmd_verb} resource changes."
+        elif account_changes and ctx.execute:
+            if self.deleted:
+                self.delete()
+                log_str = "Successfully removed resource."
+            else:
+                log_str = "Successfully applied resource changes."
+        elif account_changes:
+            log_str = "Successfully detected required resource changes."
+        else:
+            log_str = "No changes detected for resource."
+
+        log.info(log_str, accounts=relevant_accounts, **log_params)
         return template_changes
 
     @property
