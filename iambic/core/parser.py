@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import traceback
+from functools import partial
+from multiprocessing import cpu_count, Pool
 from typing import Union
 
 from pydantic import ValidationError
@@ -65,38 +67,54 @@ def format_validation_error(err, ruamel_dict):
         return f"Unable to compute hints: {captured_traceback}"
 
 
-def load_templates(
-    template_paths: list[str], raise_validation_err: bool = True
-) -> list[BaseTemplate]:
-    templates = []
+def load_template(template_path: str, raise_validation_err: bool = True) -> dict:
+    try:
+        template_dict = transform_comments(yaml.load(open(template_path)))
+        template_type = template_dict.get("template_type")
+        if template_type and template_type not in ["NOQ::Core::Config"]:
+            template_dict["file_path"] = template_path
+            return template_dict
+    except ScannerError as err:
+        log.critical(
+            "Invalid template structure", file_path=template_path, error=repr(err)
+        )
+        if raise_validation_err:
+            raise ValueError(
+                f"{template_path} template has validation error."
+            ) from err
 
-    for template_path in template_paths:
+
+def load_templates(template_paths: list[str], raise_validation_err: bool = True) -> list[BaseTemplate]:
+    templates = []
+    load_template_fn = partial(load_template, raise_validation_err=raise_validation_err)
+    with Pool(max(1, cpu_count() // 2)) as p:
+        template_dicts = p.map(load_template_fn, template_paths)
+
+    for template_dict in template_dicts:
+        if not template_dict:
+            continue
+
         try:
-            template_dict = transform_comments(yaml.load(open(template_path)))
-            if template_dict["template_type"] in ["NOQ::Core::Config"]:
-                continue
             template_cls = TEMPLATES.template_map[template_dict["template_type"]]
             template_cls.update_forward_refs()
-            templates.append(template_cls(file_path=template_path, **template_dict))
+            templates.append(template_cls(**template_dict))
         except KeyError:
             log.critical(
                 "Invalid template type",
-                file_path=template_path,
+                file_path=template_dict["file_path"],
                 template_type=template_dict["template_type"],
             )
             # We should allow to continue to allow unknown template type; otherwise,
             # we cannot support forward or backward compatibility during version changes.
-        except (ValidationError, ScannerError) as err:
+        except ValidationError as err:
             log.critical(
-                "Invalid template structure", file_path=template_path, error=repr(err)
+                "Invalid template structure", file_path=template_dict["file_path"], error=repr(err)
             )
             if raise_validation_err:
-                if isinstance(err, ValidationError):
-                    hints = format_validation_error(err, template_dict)
-                else:
-                    hints = ""
+                hints = format_validation_error(err, template_dict)
                 raise ValueError(
-                    f"{template_path} template has validation error. \n{hints}"
+                    f"{template_dict['file_path']} template has validation error. \n{hints}"
                 ) from err
 
     return templates
+
