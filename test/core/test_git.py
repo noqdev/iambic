@@ -44,6 +44,16 @@ properties:
   name: {name}
 """
 
+TEST_TEMPLATE_MULTI_ACCOUNT_INC_STAR_YAML = """template_type: NOQ::Example::LocalFileMultiAccount
+name: test_multi_account_template
+expires_at: tomorrow
+included_accounts:
+- *
+excluded_accounts: []
+properties:
+  name: {name}
+"""
+
 TEST_TEMPLATE_DIR = "resources/example/"
 TEST_TEMPLATE_PATH = "resources/example/test_template.yaml"
 TEST_MULTI_ACCOUNT_TEMPLATE_PATH = "resources/example/test_multi_account_template.yaml"
@@ -117,7 +127,13 @@ def test_get_remote_default_branch(repo_with_single_commit: Repo):
 
 
 @pytest.fixture
-def git_diff():
+def git_diff_parameterized(request):
+    def fin():
+        shutil.rmtree(f"{temp_templates_directory}/{TEST_TEMPLATE_DIR}")
+        shutil.rmtree(f"{temp_templates_directory}/{TEST_CONFIG_DIR}")
+
+    request.addfinalizer(fin)
+
     temp_templates_directory = tempfile.mkdtemp(
         prefix="iambic_test_temp_templates_directory"
     )
@@ -126,34 +142,34 @@ def git_diff():
         prefix="iambic_test_temp_templates_directory_bare"
     )
 
-    try:
-        bare_repo = git.Repo.init(f"{bare_directory}", bare=True)
-        repo = bare_repo.clone(temp_templates_directory)
-        repo_config_writer = repo.config_writer()
-        repo_config_writer.set_value(
-            "user", "name", "Iambic Github Functional Test for Github"
-        )
-        repo_config_writer.set_value(
-            "user", "email", "github-cicd-functional-test@iambic.org"
-        )
-        repo_config_writer.release()
+    bare_repo = git.Repo.init(f"{bare_directory}", bare=True)
+    repo = bare_repo.clone(temp_templates_directory)
+    repo_config_writer = repo.config_writer()
+    repo_config_writer.set_value(
+        "user", "name", "Iambic Github Functional Test for Github"
+    )
+    repo_config_writer.set_value(
+        "user", "email", "github-cicd-functional-test@iambic.org"
+    )
+    repo_config_writer.release()
 
-        os.makedirs(f"{temp_templates_directory}/{TEST_TEMPLATE_DIR}")
-        os.makedirs(f"{temp_templates_directory}/{TEST_CONFIG_DIR}")
+    os.makedirs(f"{temp_templates_directory}/{TEST_TEMPLATE_DIR}")
+    os.makedirs(f"{temp_templates_directory}/{TEST_CONFIG_DIR}")
 
+    def wrapped(template_under_test: str):
         with open(f"{temp_templates_directory}/{TEST_CONFIG_PATH}", "w") as f:
             f.write(
                 TEST_CONFIG_YAML.format(example_plugin_location=EXAMPLE_PLUGIN_PATH)
             )
         asyncio.run(load_config(f"{temp_templates_directory}/{TEST_CONFIG_PATH}"))
 
-        with open(f"{temp_templates_directory}/{TEST_TEMPLATE_PATH}", "w") as f:
+        with open(f"{temp_templates_directory}/{template_under_test}", "w") as f:
             f.write(TEST_TEMPLATE_YAML.format(name="before"))
 
         repo.git.add(A=True)
         repo.git.commit(m="before")
 
-        with open(f"{temp_templates_directory}/{TEST_TEMPLATE_PATH}", "w") as f:
+        with open(f"{temp_templates_directory}/{template_under_test}", "w") as f:
             f.write(TEST_TEMPLATE_YAML.format(name="after"))
 
         repo.git.add(A=True)
@@ -165,92 +181,28 @@ def git_diff():
             diffs.append(
                 GitDiff(
                     path=str(
-                        os.path.join(temp_templates_directory, TEST_TEMPLATE_PATH)
+                        os.path.join(temp_templates_directory, template_under_test)
                     ),
                     content=file_obj.a_blob.data_stream.read().decode("utf-8"),
                 )
             )
 
-        yield diffs
-    finally:
-        try:
-            shutil.rmtree(temp_templates_directory)
-            shutil.rmtree(bare_directory)
-        except Exception as e:
-            print(e)
+        return diffs
+    return wrapped
 
 
-@pytest.fixture
-def git_diff_multi_account():
-    temp_templates_directory = tempfile.mkdtemp(
-        prefix="iambic_test_temp_templates_directory"
-    )
-
-    bare_directory = tempfile.mkdtemp(
-        prefix="iambic_test_temp_templates_directory_bare"
-    )
-
-    try:
-        bare_repo = git.Repo.init(f"{bare_directory}", bare=True)
-        repo = bare_repo.clone(temp_templates_directory)
-        repo_config_writer = repo.config_writer()
-        repo_config_writer.set_value(
-            "user", "name", "Iambic Github Functional Test for Github"
-        )
-        repo_config_writer.set_value(
-            "user", "email", "github-cicd-functional-test@iambic.org"
-        )
-        repo_config_writer.release()
-
-        os.makedirs(f"{temp_templates_directory}/{TEST_TEMPLATE_DIR}")
-        os.makedirs(f"{temp_templates_directory}/{TEST_CONFIG_DIR}")
-
-        with open(f"{temp_templates_directory}/{TEST_CONFIG_PATH}", "w") as f:
-            f.write(
-                TEST_CONFIG_YAML.format(example_plugin_location=EXAMPLE_PLUGIN_PATH)
-            )
-        asyncio.run(load_config(f"{temp_templates_directory}/{TEST_CONFIG_PATH}"))
-
-        with open(f"{temp_templates_directory}/{TEST_MULTI_ACCOUNT_TEMPLATE_PATH}", "w") as f:
-            f.write(TEST_TEMPLATE_MULTI_ACCOUNT_YAML.format(name="before"))
-
-        repo.git.add(A=True)
-        repo.git.commit(m="before")
-
-        with open(f"{temp_templates_directory}/{TEST_MULTI_ACCOUNT_TEMPLATE_PATH}", "w") as f:
-            f.write(TEST_TEMPLATE_MULTI_ACCOUNT_YAML.format(name="after"))
-
-        repo.git.add(A=True)
-        repo.git.commit(m="after")
-
-        diff_index = repo.index.diff(repo.commit("HEAD~1"))
-        diffs = []
-        for file_obj in diff_index.iter_change_type("M"):
-            diffs.append(
-                GitDiff(
-                    path=str(
-                        os.path.join(temp_templates_directory, TEST_MULTI_ACCOUNT_TEMPLATE_PATH)
-                    ),
-                    content=file_obj.a_blob.data_stream.read().decode("utf-8"),
-                )
-            )
-
-        yield diffs
-    finally:
-        try:
-            shutil.rmtree(temp_templates_directory)
-            shutil.rmtree(bare_directory)
-        except Exception as e:
-            print(e)
-
-
-def test_create_templates_for_modified_files_without_multi_account_support(git_diff: list[Any]):
-    templates: list[BaseTemplate] = create_templates_for_modified_files(None, git_diff)
+def test_create_templates_for_modified_files_without_multi_account_support(git_diff_parameterized: list[Any]):
+    templates: list[BaseTemplate] = create_templates_for_modified_files(None, git_diff_parameterized(TEST_TEMPLATE_YAML))
     assert templates[0].properties.name == "after"
 
 
-def test_create_templates_for_modified_files_with_multi_account_support(test_config_path_two_accounts_plus_org, git_diff_multi_account: list[Any]):
-    templates: list[BaseTemplate] = create_templates_for_modified_files(test_config_path_two_accounts_plus_org, git_diff_multi_account)
+def test_create_templates_for_modified_files_with_multi_account_support(test_config_path_two_accounts_plus_org, git_diff_parameterized: list[Any]):
+    templates: list[BaseTemplate] = create_templates_for_modified_files(test_config_path_two_accounts_plus_org, git_diff_parameterized(TEST_TEMPLATE_MULTI_ACCOUNT_YAML))
+    assert templates[0].properties.name == "after"
+
+
+def test_create_templates_for_modified_files_with_multi_account_incl_star_support(test_config_path_two_accounts_plus_org, git_diff_parameterized: list[Any]):
+    templates: list[BaseTemplate] = create_templates_for_modified_files(test_config_path_two_accounts_plus_org, git_diff_parameterized(TEST_TEMPLATE_MULTI_ACCOUNT_INC_STAR_YAML))
     assert templates[0].properties.name == "after"
 
 
