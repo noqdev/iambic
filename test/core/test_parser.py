@@ -52,7 +52,7 @@ example:
 EXAMPLE_PLUGIN_PATH = iambic.plugins.v0_1_0.example.__path__[0]
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def example_test_filesystem():
     temp_templates_directory = tempfile.mkdtemp(
         prefix="iambic_test_temp_templates_directory"
