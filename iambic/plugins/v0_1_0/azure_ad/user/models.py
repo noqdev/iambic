@@ -171,8 +171,6 @@ class AzureActiveDirectoryUserTemplate(ExpiryModel, AzureADTemplate):
         user_exists = bool(cloud_user)
         tasks = []
 
-        await self.remove_expired_resources()
-
         if not user_exists and not self.deleted:
             log_str = "New resource found in code."
             change_details.extend_changes(

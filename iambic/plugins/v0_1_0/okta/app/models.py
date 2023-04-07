@@ -18,7 +18,6 @@ from iambic.core.models import (
     TemplateChangeDetails,
 )
 from iambic.core.utils import NoqSemaphore
-from iambic.plugins.v0_1_0.aws.utils import remove_expired_resources
 from iambic.plugins.v0_1_0.okta.app.utils import (
     get_app,
     maybe_delete_app,

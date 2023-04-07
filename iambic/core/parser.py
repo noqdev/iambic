@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import traceback
 from functools import partial
-from multiprocessing import cpu_count, Pool
+from multiprocessing import Pool, cpu_count
 from typing import Union
 
 from pydantic import ValidationError
@@ -79,12 +79,12 @@ def load_template(template_path: str, raise_validation_err: bool = True) -> dict
             "Invalid template structure", file_path=template_path, error=repr(err)
         )
         if raise_validation_err:
-            raise ValueError(
-                f"{template_path} template has validation error."
-            ) from err
+            raise ValueError(f"{template_path} template has validation error.") from err
 
 
-def load_templates(template_paths: list[str], raise_validation_err: bool = True) -> list[BaseTemplate]:
+def load_templates(
+    template_paths: list[str], raise_validation_err: bool = True
+) -> list[BaseTemplate]:
     templates = []
     load_template_fn = partial(load_template, raise_validation_err=raise_validation_err)
     with Pool(max(1, cpu_count() // 2)) as p:
@@ -108,7 +108,9 @@ def load_templates(template_paths: list[str], raise_validation_err: bool = True)
             # we cannot support forward or backward compatibility during version changes.
         except ValidationError as err:
             log.critical(
-                "Invalid template structure", file_path=template_dict["file_path"], error=repr(err)
+                "Invalid template structure",
+                file_path=template_dict["file_path"],
+                error=repr(err),
             )
             if raise_validation_err:
                 hints = format_validation_error(err, template_dict)
@@ -117,4 +119,3 @@ def load_templates(template_paths: list[str], raise_validation_err: bool = True)
                 ) from err
 
     return templates
-

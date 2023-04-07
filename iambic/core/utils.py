@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import gc
 import glob
 import os
 import pathlib
@@ -83,13 +82,12 @@ def snake_to_camelcap(str_obj: str) -> str:
 async def plugin_apply_wrapper(
     apply_awaitable: Coroutine, proposed_changes: list[ProposedChange]
 ) -> list[ProposedChange]:
-    exceptions = []
     try:
         await apply_awaitable
     except Exception as e:
-        exceptions.append(str(e))
-    for change in proposed_changes:
-        change.exceptions_seen = exceptions
+        for change in proposed_changes:
+            change.exceptions_seen.append(str(e))
+
     return proposed_changes
 
 
@@ -234,8 +232,6 @@ async def async_batch_processor(
 
         if seconds_between_process:
             await asyncio.sleep(seconds_between_process)
-
-        # gc.collect()
 
     return response
 
