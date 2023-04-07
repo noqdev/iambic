@@ -129,6 +129,7 @@ class UpdateMS365GroupTestCase(BaseMS365TestCase):
         self.template.properties.members[1].expires_at = cur_time + datetime.timedelta(
             days=1
         )
+        self.template.write(exclude_unset=False)
 
         # Write new template, apply, and confirm access removed
         await flag_expired_resources([self.template.file_path])
