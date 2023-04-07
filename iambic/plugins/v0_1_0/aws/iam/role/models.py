@@ -220,11 +220,6 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
         self, aws_account: AWSAccount
     ) -> AccountChangeDetails:
         client = await aws_account.get_boto3_client("iam")
-
-        # Marking for deletion. This shouldn't be done on the fly.
-        # self = await remove_expired_resources(
-        #     self, self.resource_type, self.resource_id
-        # )
         account_role = self.apply_resource_dict(aws_account)
         role_name = account_role["RoleName"]
         account_change_details = AccountChangeDetails(

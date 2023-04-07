@@ -364,6 +364,14 @@ class TemplateChangeDetails(PydanticBaseModel):
     def extend_changes(self, changes: list[ProposedChange]):
         for change in changes:
             if change.exceptions_seen:
+                if isinstance(change, AccountChangeDetails) and change.proposed_changes:
+                    # If there was a partial failure then split the successes into their own change
+                    proposed_change = change.copy()
+                    proposed_change.exceptions_seen = []
+                    self.proposed_changes.append(proposed_change)
+                    change.proposed_changes = (
+                        []
+                    )  # Remove the proposed changes from the original change
                 self.exceptions_seen.append(change)
             elif isinstance(change, AccountChangeDetails) and change.proposed_changes:
                 self.proposed_changes.append(change)

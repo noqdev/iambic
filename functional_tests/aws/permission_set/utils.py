@@ -86,7 +86,7 @@ async def generate_permission_set_template_from_base(
         "This was created by a functional test."
     )
 
-    permission_set_template.write()
+    permission_set_template.write(exclude_unset=False)
     return permission_set_template
 
 

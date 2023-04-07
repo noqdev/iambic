@@ -25,8 +25,9 @@ class PartialImportManagedPolicyTestCase(IsolatedAsyncioTestCase):
         ]
 
     async def asyncTearDown(self):
-        self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        if os.path.exists(self.template.file_path):
+            self.template.deleted = True
+            await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
     async def test_update_managed_policy_attribute(self):
         initial_description = "This was created by a functional test."

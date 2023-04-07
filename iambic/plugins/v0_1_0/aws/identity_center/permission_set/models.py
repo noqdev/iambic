@@ -512,7 +512,6 @@ class AwsIdentityCenterPermissionSetTemplate(
                         current_account_assignments,
                         log_params,
                     )
-                    self.delete()
 
             return account_change_details
 
@@ -703,8 +702,6 @@ class AwsIdentityCenterPermissionSetTemplate(
 
                     await asyncio.sleep(1)
                     continue
-            # elif self.deleted:
-            #     self.delete()
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),

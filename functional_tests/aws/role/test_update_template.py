@@ -9,9 +9,13 @@ from functional_tests.aws.role.utils import generate_role_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
-from iambic.plugins.v0_1_0.aws.iam.role.models import PermissionBoundary
+from iambic.plugins.v0_1_0.aws.iam.role.models import (
+    AwsIamRoleTemplate,
+    PermissionBoundary,
+)
 from iambic.plugins.v0_1_0.aws.iam.role.utils import get_role_across_accounts
 from iambic.plugins.v0_1_0.aws.models import Tag
+from iambic.request_handler.expire_resources import flag_expired_resources
 
 
 class UpdateRoleTestCase(IsolatedAsyncioTestCase):
@@ -238,9 +242,9 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
                 ],
             )
         )
-        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
-        screen_render_resource_changes([r])
-        self.assertEqual(len(r.proposed_changes), 2)
+        template_changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([template_changes])
+        self.assertEqual(len(template_changes.proposed_changes), 2)
 
         # Set expiration
         self.template.properties.inline_policies[1].statement[
@@ -248,6 +252,10 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
         ].expires_at = dateparser.parse(
             "yesterday", settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True}
         )
-        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
-        screen_render_resource_changes([r])
-        self.assertEqual(len(r.proposed_changes), 1)
+        self.template.write()
+        await flag_expired_resources([self.template.file_path])
+        template = AwsIamRoleTemplate.load(self.template.file_path)
+
+        template_changes = await template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes([template_changes])
+        self.assertEqual(len(template_changes.proposed_changes), 1)
