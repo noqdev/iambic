@@ -4,6 +4,7 @@ import asyncio
 import base64
 import json
 import uuid
+from itertools import chain
 from typing import TYPE_CHECKING, Union
 
 import boto3
@@ -40,7 +41,7 @@ from iambic.plugins.v0_1_0.aws.iam.user.template_generation import (
     generate_aws_user_templates,
 )
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
-    AwsIdentityCenterPermissionSetTemplate,
+    AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
 )
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation import (
     collect_aws_permission_sets,
@@ -111,6 +112,72 @@ async def load(config: AWSConfig) -> AWSConfig:
     return config
 
 
+async def apply_identity_center_templates(
+    exe_message: ExecutionMessage,
+    config: AWSConfig,
+    templates: list[BaseTemplate],
+    remote_worker=None,
+) -> list[TemplateChangeDetails]:
+    """
+    The async_apply_callable for IdentityCenter (SSO) resources.
+
+    :param exe_message: Execution context
+    :param config: The config object.
+    :param templates: The list of templates to apply.
+    :param remote_worker: The remote worker to use for applying templates.
+    """
+    return await async_batch_processor(
+        [template.apply(config) for template in templates],
+        5,
+        0.5,
+    )
+
+
+async def apply_iam_templates(
+    exe_message: ExecutionMessage,
+    config: AWSConfig,
+    templates: list[BaseTemplate],
+    remote_worker=None,
+) -> list[TemplateChangeDetails]:
+    """
+    The async_apply_callable for IAM resource.
+
+    :param exe_message: Execution context
+    :param config: The config object.
+    :param templates: The list of templates to apply.
+    :param remote_worker: The remote worker to use for applying templates.
+    """
+    await generate_permission_set_map(config.accounts, templates)
+
+    template_changes: list[TemplateChangeDetails] = []
+
+    if managed_policy_tasks := [
+        template.apply(config)
+        for template in templates
+        if template.template_type == AWS_MANAGED_POLICY_TEMPLATE_TYPE
+    ]:
+        template_changes.extend(
+            await async_batch_processor(managed_policy_tasks, 40, 0)
+        )
+        if len(template_changes) > len(managed_policy_tasks):
+            # There are other template changes that could rely on the managed policy
+            # Give a few seconds to allow the managed policies to be created in AWS
+            await asyncio.sleep(10)
+
+    template_changes.extend(
+        await async_batch_processor(
+            [
+                template.apply(config)
+                for template in templates
+                if template.template_type != AWS_MANAGED_POLICY_TEMPLATE_TYPE
+            ],
+            40,
+            0.1,
+        )
+    )
+    return template_changes
+
+
 async def apply(
     exe_message: ExecutionMessage,
     config: AWSConfig,
@@ -128,38 +195,29 @@ async def apply(
     # TODO: Leverage exe_message as part of a distributed execution
     # TODO: Leverage remote_worker as part of a distributed execution
 
-    if any(
-        isinstance(template, AwsIdentityCenterPermissionSetTemplate)
-        for template in templates
-    ):
-        await generate_permission_set_map(config.accounts, templates)
+    identity_center_templates = []
+    iam_templates = []
+    tasks = []
 
-    template_changes: list[TemplateChangeDetails] = []
+    for template in templates:
+        if template.template_type == AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE:
+            identity_center_templates.append(template)
+        else:
+            iam_templates.append(template)
 
-    if managed_policy_tasks := [
-        template.apply(config)
-        for template in templates
-        if template.template_type == AWS_MANAGED_POLICY_TEMPLATE_TYPE
-    ]:
-        template_changes.extend(
-            await async_batch_processor(managed_policy_tasks, 50, 0)
+    if identity_center_templates:
+        tasks.append(
+            apply_identity_center_templates(
+                exe_message, config, identity_center_templates, remote_worker
+            )
         )
-        if len(template_changes) > len(managed_policy_tasks):
-            # There are other template changes that could rely on the managed policy
-            # Give a few seconds to allow the managed policies to be created in AWS
-            await asyncio.sleep(10)
 
-    template_changes.extend(
-        await async_batch_processor(
-            [
-                template.apply(config)
-                for template in templates
-                if template.template_type != AWS_MANAGED_POLICY_TEMPLATE_TYPE
-            ],
-            50,
-            0,
+    if iam_templates:
+        tasks.append(
+            apply_iam_templates(exe_message, config, iam_templates, remote_worker)
         )
-    )
+
+    template_changes = list(chain.from_iterable(await asyncio.gather(*tasks)))
 
     return [
         template_change
