@@ -7,6 +7,7 @@ from functional_tests.aws.managed_policy.utils import (
 )
 from functional_tests.aws.role.utils import get_modifiable_role
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core.utils import aio_wrapper
 from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.iam.policy.utils import (

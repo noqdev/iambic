@@ -57,6 +57,7 @@ async def get_managed_policy_attachments(iam_client, policy_arn: str):
     return await paginated_search(
         iam_client.list_entities_for_policy,
         response_keys=["PolicyGroups", "PolicyRoles", "PolicyUsers"],
+        retain_key=True,
         PolicyArn=policy_arn,
     )
 
@@ -116,6 +117,7 @@ async def list_managed_policies(
 
 async def delete_managed_policy(iam_client, policy_arn: str, log_params: dict):
     policy_attachments = await get_managed_policy_attachments(iam_client, policy_arn)
+    policy_versions = await list_managed_policy_versions(iam_client, policy_arn)
     tasks = []
 
     for detachment_type in ["User", "Role", "Group"]:
@@ -125,6 +127,19 @@ async def delete_managed_policy(iam_client, policy_arn: str, log_params: dict):
                     getattr(iam_client, f"detach_{detachment_type.lower()}_policy"),
                     PolicyArn=policy_arn,
                     **{f"{detachment_type}Name": entity[f"{detachment_type}Name"]},
+                )
+            )
+
+    if len(policy_versions) > 1:
+        for version in policy_versions:
+            if version["IsDefaultVersion"]:
+                continue
+
+            tasks.append(
+                boto_crud_call(
+                    iam_client.delete_policy_version,
+                    PolicyArn=policy_arn,
+                    VersionId=version["VersionId"],
                 )
             )
 

@@ -1,7 +1,6 @@
 from iambic.core.models import TemplateChangeDetails
 from iambic.core.utils import yaml
 
-
 update_template_yaml = """  - resource_id: t1000
     resource_type: aws:iam:role
     template_path: resources/aws/roles/demo-1/t1000.yaml
@@ -536,6 +535,7 @@ template_yaml = """  - resource_id: prod_iambic_test_role
 
 def get_templates_mixed():
     return [TemplateChangeDetails.parse_obj(x) for x in yaml.load(template_yaml)]
+
 
 def get_update_template():
     return [TemplateChangeDetails.parse_obj(x) for x in yaml.load(update_template_yaml)]

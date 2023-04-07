@@ -23,8 +23,15 @@ from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage, TemplateChangeDetails
 from iambic.core.parser import load_templates
-from iambic.core.utils import exceptions_in_proposed_changes, gather_templates, init_writable_directory
-from iambic.output.text import file_render_resource_changes, screen_render_resource_changes
+from iambic.core.utils import (
+    exceptions_in_proposed_changes,
+    gather_templates,
+    init_writable_directory,
+)
+from iambic.output.text import (
+    file_render_resource_changes,
+    screen_render_resource_changes,
+)
 from iambic.request_handler.expire_resources import flag_expired_resources
 from iambic.request_handler.git_apply import apply_git_changes
 from iambic.request_handler.git_plan import plan_git_changes
@@ -47,9 +54,7 @@ def output_proposed_changes(
 
     json_filepath = pathlib.Path(output_path).with_suffix(".json")
     with open(str(json_filepath), "w") as fp:
-        json.dump(
-            [template_change.dict() for template_change in template_changes], fp
-        )
+        json.dump([template_change.dict() for template_change in template_changes], fp)
 
     if exceptions_in_proposed_changes([change.dict() for change in template_changes]):
         log.error(
@@ -353,7 +358,9 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
     )
     asyncio.run(flag_expired_resources(templates))
     ctx.eval_only = True
-    template_changes = asyncio.run(config.run_apply(exe_message, load_templates(templates)))
+    template_changes = asyncio.run(
+        config.run_apply(exe_message, load_templates(templates))
+    )
     output_proposed_changes(template_changes)
     screen_render_resource_changes(template_changes)
 

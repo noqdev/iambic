@@ -4,9 +4,7 @@ from typing import List
 
 import rich
 
-from iambic.core.models import (
-    TemplateChangeDetails,
-)
+from iambic.core.models import TemplateChangeDetails
 from iambic.output import get_template_env
 from iambic.output.models import get_template_data
 

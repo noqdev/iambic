@@ -101,6 +101,7 @@ async def get_permission_set_users_and_groups(
             for account_id in instance_accounts
         ],
         15,
+        1,
         return_exceptions=True,
     )
 
@@ -512,7 +513,11 @@ async def apply_account_assignments(
     for assignment_id, assignment in existing_assignment_map.items():
         if not template_assignment_map.get(assignment_id):
             log_str = "Stale assignments discovered."
-            resource_type="arn:aws:iam::aws:user" if assignment["resource_type"] == "USER" else "arn:aws:iam::aws:group"
+            resource_type = (
+                "arn:aws:iam::aws:user"
+                if assignment["resource_type"] == "USER"
+                else "arn:aws:iam::aws:group"
+            )
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DELETE,
@@ -540,7 +545,11 @@ async def apply_account_assignments(
 
     for assignment_id, assignment in template_assignment_map.items():
         if not existing_assignment_map.get(assignment_id):
-            resource_type="arn:aws:iam::aws:user" if assignment["resource_type"] == "USER" else "arn:aws:iam::aws:group"
+            resource_type = (
+                "arn:aws:iam::aws:user"
+                if assignment["resource_type"] == "USER"
+                else "arn:aws:iam::aws:group"
+            )
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
@@ -569,7 +578,7 @@ async def apply_account_assignments(
             log.info(log_str, details=assignment, **log_params)
 
     if tasks:
-        results: list[list[ProposedChange]] = await async_batch_processor(tasks, 10)
+        results: list[list[ProposedChange]] = await async_batch_processor(tasks, 10, 1)
         return list(chain.from_iterable(results))
     else:
         return response
