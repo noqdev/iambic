@@ -5,6 +5,11 @@ on:
     branches: [main]
 jobs:
   run-unit-and-functional-test:
+    # Since functional tests include tests that does not handle parallel runs
+    # For example, config_discovery test does not tolerate resources being
+    # destroyed, we are setting the concurrency here to only 1 active run at
+    # a time, other run requested will be queued.
+    concurrency: 'unit-and-functional-test'
     runs-on: ubuntu-latest
     name: Run unit test
     permissions:
