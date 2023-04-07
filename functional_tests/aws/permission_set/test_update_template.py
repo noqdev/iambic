@@ -29,6 +29,7 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
             IAMBIC_TEST_DETAILS.template_dir_path,
             noise="update",
         )
+        self.template.write()
 
         ctx.eval_only = False
         changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)

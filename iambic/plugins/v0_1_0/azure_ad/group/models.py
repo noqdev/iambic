@@ -386,10 +386,6 @@ class AzureActiveDirectoryGroupTemplate(ExpiryModel, AzureADTemplate):
                 changes_made=bool(change_details.proposed_changes),
                 **log_params,
             )
-            # TODO: Check if deleted, remove git commit the change to ratify it
-            if self.deleted:
-                self.delete()
-            self.write()
         elif change_details.exceptions_seen:
             cmd_verb = "apply" if ctx.execute else "scan for"
             log.error(

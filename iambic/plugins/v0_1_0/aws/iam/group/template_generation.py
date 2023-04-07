@@ -88,7 +88,7 @@ async def generate_account_group_resource_files(
     iam_client = await aws_account.get_boto3_client("iam")
     account_groups = await list_groups(iam_client)
 
-    log.info(
+    log.debug(
         "Retrieved AWS IAM Groups.",
         account_id=aws_account.account_id,
         account_name=aws_account.account_name,
@@ -111,7 +111,7 @@ async def generate_account_group_resource_files(
         )
 
     await group_resource_file_upsert_semaphore.process(messages)
-    log.info(
+    log.debug(
         "Finished caching AWS IAM Groups.",
         account_id=aws_account.account_id,
         group_count=len(account_groups),
@@ -136,7 +136,7 @@ async def generate_group_resource_file_for_all_accounts(
     )
     group_across_accounts = {k: v for k, v in group_across_accounts.items() if v}
 
-    log.info(
+    log.debug(
         "Retrieved AWS IAM Group for all accounts.",
         group_name=group_name,
         total_accounts=len(group_across_accounts),
@@ -159,7 +159,7 @@ async def generate_group_resource_file_for_all_accounts(
         )
 
     await group_resource_file_upsert_semaphore.process(messages)
-    log.info(
+    log.debug(
         "Finished caching AWS IAM Group for all accounts.",
         group_name=group_name,
         total_accounts=len(group_across_accounts),
@@ -462,7 +462,7 @@ async def generate_aws_group_templates(
         *RESOURCE_DIR, file_name_and_extension="output.json", flatten_results=True
     )
 
-    log.info("Grouping groups")
+    log.debug("Grouping groups")
     # Move everything to required structure
     for account_group_elem in range(len(account_groups)):
         for group_elem in range(len(account_groups[account_group_elem]["groups"])):
@@ -479,7 +479,7 @@ async def generate_aws_group_templates(
 
     grouped_group_map = await base_group_str_attribute(aws_account_map, account_groups)
 
-    log.info("Writing templated groups")
+    log.debug("Writing templated groups")
     all_resource_ids = set()
     for group_name, group_refs in grouped_group_map.items():
         resource_template = await create_templated_group(

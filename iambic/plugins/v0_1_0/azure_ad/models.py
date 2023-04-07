@@ -13,7 +13,6 @@ from iambic.core.context import ctx
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, TemplateChangeDetails
-from iambic.core.utils import exceptions_in_proposed_changes
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.azure_ad.iambic_plugin import AzureADConfig
@@ -195,17 +194,24 @@ class AzureADTemplate(BaseTemplate):
         account_changes = list(await asyncio.gather(*tasks))
         template_changes.extend_changes(account_changes)
 
-        if exceptions_in_proposed_changes(template_changes.dict()):
+        if template_changes.exceptions_seen:
             cmd_verb = "applying" if ctx.execute else "detecting"
             log.error(
                 f"Error encountered when {cmd_verb} resource changes.",
                 **log_params,
             )
         elif account_changes and ctx.execute:
-            log.info(
-                "Successfully applied resource changes to all Azure AD organizations.",
-                **log_params,
-            )
+            if self.deleted:
+                self.delete()
+                log.info(
+                    "Successfully removed resource from all Azure AD organizations.",
+                    **log_params,
+                )
+            else:
+                log.info(
+                    "Successfully applied resource changes to all Azure AD organizations.",
+                    **log_params,
+                )
         elif account_changes:
             log.info(
                 "Successfully detected required resource changes on all Azure AD organizations.",

@@ -90,7 +90,7 @@ async def generate_account_role_resource_files(
     iam_client = await aws_account.get_boto3_client("iam")
     account_roles = await list_roles(iam_client)
 
-    log.info(
+    log.debug(
         "Retrieved AWS IAM Roles.",
         account_id=aws_account.account_id,
         account_name=aws_account.account_name,
@@ -113,7 +113,7 @@ async def generate_account_role_resource_files(
         )
 
     await role_resource_file_upsert_semaphore.process(messages)
-    log.info(
+    log.debug(
         "Finished caching AWS IAM Roles.",
         account_id=aws_account.account_id,
         role_count=len(account_roles),
@@ -140,7 +140,7 @@ async def generate_role_resource_file_for_all_accounts(
     )
     role_across_accounts = {k: v for k, v in role_across_accounts.items() if v}
 
-    log.info(
+    log.debug(
         "Retrieved AWS IAM Role for all accounts.",
         role_name=role_name,
         total_accounts=len(role_across_accounts),
@@ -163,7 +163,7 @@ async def generate_role_resource_file_for_all_accounts(
         )
 
     await role_resource_file_upsert_semaphore.process(messages)
-    log.info(
+    log.debug(
         "Finished caching AWS IAM Role for all accounts.",
         role_name=role_name,
         total_accounts=len(role_across_accounts),

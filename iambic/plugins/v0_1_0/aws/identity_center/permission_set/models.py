@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from itertools import chain
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 from pydantic import Field, validator
@@ -38,7 +39,7 @@ from iambic.plugins.v0_1_0.aws.models import (
     ExpiryModel,
     Tag,
 )
-from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
+from iambic.plugins.v0_1_0.aws.utils import boto_crud_call
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -419,9 +420,10 @@ class AwsIdentityCenterPermissionSetTemplate(
         )
         instance_arn = aws_account.identity_center_details.instance_arn
         permission_set_arn = None
-        self = await remove_expired_resources(
-            self, self.resource_type, self.resource_id
-        )
+        # Marking for deletion. This shouldn't be done on the fly.
+        # self = await remove_expired_resources(
+        #     self, self.resource_type, self.resource_id
+        # )
         template_permission_set = self.apply_resource_dict(aws_account)
         name = template_permission_set["Name"]
         template_account_assignments = await self._verbose_access_rules(aws_account)
@@ -499,7 +501,7 @@ class AwsIdentityCenterPermissionSetTemplate(
                 log_str = "Active resource found with deleted=false."
                 if ctx.execute and not read_only:
                     log_str = f"{log_str} Deleting resource..."
-                log.info(log_str, **log_params)
+                log.debug(log_str, **log_params)
 
                 if ctx.execute:
                     await delete_permission_set(
@@ -510,7 +512,6 @@ class AwsIdentityCenterPermissionSetTemplate(
                         current_account_assignments,
                         log_params,
                     )
-                    self.delete()
 
             return account_change_details
 
@@ -653,11 +654,11 @@ class AwsIdentityCenterPermissionSetTemplate(
             ]
         )
         try:
-            results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+            changes_made: list[list[ProposedChange]] = await asyncio.gather(*tasks)
 
             # apply_account_assignments is a dedicated call due to the request limit on CreateAccountAssignment
             #   per https://docs.aws.amazon.com/singlesignon/latest/userguide/limits.html
-            results.append(
+            changes_made.append(
                 await apply_account_assignments(
                     identity_center_client,
                     instance_arn,
@@ -667,28 +668,16 @@ class AwsIdentityCenterPermissionSetTemplate(
                     log_params,
                 )
             )
+            if any(changes_made):
+                account_change_details.extend_changes(
+                    list(chain.from_iterable(changes_made))
+                )
         except Exception as e:
             log.error("Unable to apply changes to resource", error=e, **log_params)
             return account_change_details
 
-        # separate out the success versus failure calls
-        exceptions: list[ProposedChange] = []
-        changes_made: list[ProposedChange] = []
-        for result in results:
-            for r in result:
-                if isinstance(r, ProposedChange):
-                    if len(r.exceptions_seen) == 0:
-                        changes_made.append(r)
-                    else:
-                        exceptions.append(r)
-
-        if any(changes_made):
-            account_change_details.proposed_changes.extend(changes_made)
-        if any(exceptions):
-            account_change_details.exceptions_seen.extend(exceptions)
-
-        if ctx.execute:
-            if any(changes_made):
+        if ctx.execute and not account_change_details.exceptions_seen:
+            if any(changes_made) and not self.deleted:
                 res = await boto_crud_call(
                     identity_center_client.provision_permission_set,
                     InstanceArn=instance_arn,
@@ -713,12 +702,17 @@ class AwsIdentityCenterPermissionSetTemplate(
 
                     await asyncio.sleep(1)
                     continue
-            if self.deleted:
-                self.delete()
-            self.write()  # why are writing the template here?
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),
+                **log_params,
+            )
+        elif account_change_details.exceptions_seen:
+            log.error(
+                "Unable to finish execution on account for resource",
+                exceptions_seen=[
+                    cd.exceptions_seen for cd in account_change_details.exceptions_seen
+                ],
                 **log_params,
             )
         else:
@@ -728,7 +722,6 @@ class AwsIdentityCenterPermissionSetTemplate(
                 **log_params,
             )
 
-        # If changes are detected they are to be executed then call provision_permission_set
         return account_change_details
 
     async def apply(self, config: AWSConfig) -> TemplateChangeDetails:
@@ -742,47 +735,49 @@ class AwsIdentityCenterPermissionSetTemplate(
         log_params = dict(
             resource_type=self.resource_type, resource_id=self.resource_id
         )
+        relevant_accounts = []
 
         for account in config.accounts:
             if not account.identity_center_details:
                 continue
 
             if evaluate_on_provider(self, account):
-                if ctx.execute:
-                    log_str = "Applying changes to resource."
-                else:
-                    log_str = "Detecting changes for resource."
-                log.info(log_str, account=str(account), **log_params)
+                relevant_accounts.append(str(account))
                 tasks.append(self._apply_to_account(account))
 
-        account_changes = await asyncio.gather(*tasks)
-        template_changes.proposed_changes = [
-            account_change
-            for account_change in account_changes
-            if any(account_change.proposed_changes)
-        ]
-        # aggregate exceptions
-        template_changes.exceptions_seen = [
-            account_change
-            for account_change in account_changes
-            if any(account_change.exceptions_seen)
-        ]
+        if not relevant_accounts:
+            return template_changes
 
-        proposed_changes = [x for x in account_changes if x.proposed_changes]
-
-        if proposed_changes and ctx.execute:
-            log.info(
-                "Successfully applied all or some resource changes to all AWS accounts. Any unapplied resources will have an accompanying error message.",
-                **log_params,
-            )
-        elif proposed_changes and not ctx.execute:
-            log.info(
-                "Successfully detected all or some required resource changes on all AWS accounts. Any unapplied resources will have an accompanying error message.",
-                **log_params,
-            )
+        if ctx.execute:
+            log_str = "Applying changes to resource."
         else:
-            log.debug("No changes detected for resource on any account.", **log_params)
+            log_str = "Detecting changes for resource."
 
+        log.info(log_str, accounts=relevant_accounts, **log_params)
+
+        account_changes = await asyncio.gather(*tasks)
+        template_changes.extend_changes(account_changes)
+
+        if template_changes.exceptions_seen:
+            if self.deleted:
+                cmd_verb = "removing"
+            elif ctx.execute:
+                cmd_verb = "applying"
+            else:
+                cmd_verb = "detecting"
+            log_str = f"Error encountered when {cmd_verb} resource changes."
+        elif account_changes and ctx.execute:
+            if self.deleted:
+                self.delete()
+                log_str = "Successfully removed resource."
+            else:
+                log_str = "Successfully applied resource changes."
+        elif account_changes:
+            log_str = "Successfully detected required resource changes."
+        else:
+            log_str = "No changes detected for resource."
+
+        log.info(log_str, accounts=relevant_accounts, **log_params)
         return template_changes
 
     @property

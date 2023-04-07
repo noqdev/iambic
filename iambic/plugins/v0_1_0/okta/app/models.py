@@ -18,7 +18,6 @@ from iambic.core.models import (
     TemplateChangeDetails,
 )
 from iambic.core.utils import NoqSemaphore
-from iambic.plugins.v0_1_0.aws.utils import remove_expired_resources
 from iambic.plugins.v0_1_0.okta.app.utils import (
     get_app,
     maybe_delete_app,
@@ -185,9 +184,10 @@ class OktaAppTemplate(BaseTemplate, ExpiryModel):
         app_exists = bool(current_app)
         tasks = []
 
-        self = await remove_expired_resources(
-            self, self.resource_type, self.resource_id
-        )
+        # Marking for deletion. This shouldn't be done on the fly.
+        # self = await remove_expired_resources(
+        #     self, self.resource_type, self.resource_id
+        # )
 
         if not app_exists and not self.deleted:
             log.error(
