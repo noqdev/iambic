@@ -16,6 +16,7 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
+from iambic.core.utils import plugin_apply_wrapper
 from iambic.plugins.v0_1_0.aws.iam.models import Path, PermissionBoundary
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.user.utils import (
@@ -28,7 +29,7 @@ from iambic.plugins.v0_1_0.aws.iam.user.utils import (
     get_user,
 )
 from iambic.plugins.v0_1_0.aws.models import AccessModel, AWSAccount, AWSTemplate, Tag
-from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
+from iambic.plugins.v0_1_0.aws.utils import boto_crud_call
 
 AWS_IAM_USER_TEMPLATE_TYPE = "NOQ::AWS::IAM::User"
 
@@ -162,10 +163,6 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
         self, aws_account: AWSAccount
     ) -> AccountChangeDetails:
         client = await aws_account.get_boto3_client("iam")
-        # Marking for deletion. This shouldn't be done on the fly.
-        # self = await remove_expired_resources(
-        #     self, self.resource_type, self.resource_id
-        # )
         account_user = self.apply_resource_dict(aws_account)
 
         user_name = account_user["UserName"]
@@ -183,7 +180,15 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
             account=str(aws_account),
         )
         iambic_import_only = self._is_iambic_import_only(aws_account)
-        current_user = await get_user(user_name, client)
+        deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
+        try:
+            current_user = await get_user(
+                user_name, client, include_policies=bool(not deleted)
+            )
+        except Exception as err:
+            log.error("Failed to retrieve user", **log_params, error=err)
+            return account_change_details
+
         if current_user:
             account_change_details.current_value = {**current_user}  # Create a new dict
 
@@ -192,27 +197,30 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
                 account_change_details.new_value = {}
                 return account_change_details
 
-        deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
         if isinstance(deleted, list):
             deleted = deleted[0].deleted
 
         if deleted:
             if current_user:
                 account_change_details.new_value = None
-                account_change_details.proposed_changes.append(
+                log_str = "Active resource found with deleted=false."
+                if ctx.execute and not iambic_import_only:
+                    log_str = f"{log_str} Deleting resource..."
+                log.debug(log_str, **log_params)
+                proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.DELETE,
                         resource_id=user_name,
                         resource_type=self.resource_type,
                     )
-                )
-                log_str = "Active resource found with deleted=false."
-                if ctx.execute and not iambic_import_only:
-                    log_str = f"{log_str} Deleting resource..."
-                log.debug(log_str, **log_params)
+                ]
 
                 if ctx.execute:
-                    await delete_iam_user(user_name, client, log_params)
+                    proposed_changes = await plugin_apply_wrapper(
+                        delete_iam_user(user_name, client, log_params), proposed_changes
+                    )
+
+                account_change_details.extend_changes(proposed_changes)
 
             return account_change_details
 
@@ -297,15 +305,16 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
                             )
                         )
             else:
-                account_change_details.proposed_changes.append(
+                proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.CREATE,
                         resource_id=user_name,
                         resource_type=self.resource_type,
                     )
-                )
+                ]
                 log_str = "New resource found in code."
                 if not ctx.execute:
+                    account_change_details.proposed_changes.extend(proposed_changes)
                     log.debug(log_str, **log_params)
                     # Exit now because apply functions won't work if resource doesn't exist
                     return account_change_details
@@ -317,7 +326,12 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
                         "PermissionsBoundary"
                     ]["PolicyArn"]
 
-                await boto_crud_call(client.create_user, **account_user)
+                account_change_details.proposed_changes.extend(
+                    await plugin_apply_wrapper(
+                        boto_crud_call(client.create_user, **account_user),
+                        proposed_changes,
+                    )
+                )
         except Exception as e:
             log.error("Unable to generate tasks for resource", error=e, **log_params)
             return account_change_details
@@ -352,15 +366,15 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
                 *tasks, return_exceptions=True
             )
             if any(changes_made):
-                account_change_details.extend_changes(list(chain.from_iterable(changes_made)))
+                account_change_details.extend_changes(
+                    list(chain.from_iterable(changes_made))
+                )
 
         except Exception as e:
             log.exception("Unable to apply changes to resource", error=e, **log_params)
             return account_change_details
 
         if ctx.execute and not account_change_details.exceptions_seen:
-            # if self.deleted:
-            #     self.delete()
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),

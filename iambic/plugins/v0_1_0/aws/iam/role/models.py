@@ -43,7 +43,7 @@ from iambic.plugins.v0_1_0.aws.models import (
     Description,
     Tag,
 )
-from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
+from iambic.plugins.v0_1_0.aws.utils import boto_crud_call
 
 AWS_IAM_ROLE_TEMPLATE_TYPE = "NOQ::AWS::IAM::Role"
 
@@ -414,15 +414,15 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
                 *tasks, return_exceptions=True
             )
             if any(changes_made):
-                account_change_details.extend_changes(list(chain.from_iterable(changes_made)))
+                account_change_details.extend_changes(
+                    list(chain.from_iterable(changes_made))
+                )
 
         except Exception as e:
             log.exception("Unable to apply changes to resource", error=e, **log_params)
             return account_change_details
 
         if ctx.execute and not account_change_details.exceptions_seen:
-            # if self.deleted:
-            #     self.delete()
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),

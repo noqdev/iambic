@@ -743,7 +743,12 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
         template_changes.extend_changes(account_changes)
 
         if template_changes.exceptions_seen:
-            cmd_verb = "applying" if ctx.execute else "detecting"
+            if self.deleted:
+                cmd_verb = "removing"
+            elif ctx.execute:
+                cmd_verb = "applying"
+            else:
+                cmd_verb = "detecting"
             log_str = f"Error encountered when {cmd_verb} resource changes."
         elif account_changes and ctx.execute:
             if self.deleted:

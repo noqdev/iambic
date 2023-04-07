@@ -49,7 +49,8 @@ async def boto_crud_call(boto_fnc, **kwargs) -> Union[list, dict]:
                 if retry_count >= 10:
                     raise
                 retry_count += 1
-                await asyncio.sleep(retry_count / 2)
+                log.warning(f"Throttling error on {str(boto_fnc)}")
+                await asyncio.sleep(retry_count / 4)
                 continue
             elif "AccessDenied" in err.response["Error"]["Code"]:
                 raise

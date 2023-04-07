@@ -399,7 +399,9 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
                 *tasks, return_exceptions=True
             )
             if any(changes_made):
-                account_change_details.extend_changes(list(chain.from_iterable(changes_made)))
+                account_change_details.extend_changes(
+                    list(chain.from_iterable(changes_made))
+                )
 
         else:
             account_change_details.proposed_changes.append(

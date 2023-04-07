@@ -243,7 +243,9 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
         try:
             changes_made = await asyncio.gather(*tasks, return_exceptions=True)
             if any(changes_made):
-                account_change_details.extend_changes(list(chain.from_iterable(changes_made)))
+                account_change_details.extend_changes(
+                    list(chain.from_iterable(changes_made))
+                )
 
         except Exception as e:
             log.exception("Unable to apply changes to resource", error=e, **log_params)

@@ -558,7 +558,6 @@ async def apply_user_groups(
     for group in existing_groups:
         if group not in template_groups:
             log_str = "Stale groups discovered."
-
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DELETE,
@@ -590,31 +589,49 @@ async def delete_iam_user(user_name: str, iam_client, log_params: dict):
     tasks = []
     # Detach managed policies
     managed_policies = await get_user_managed_policies(user_name, iam_client)
-    managed_policies = [policy["PolicyArn"] for policy in managed_policies]
-    log.debug(
-        "Detaching managed policies.", managed_policies=managed_policies, **log_params
-    )
-    for policy in managed_policies:
-        tasks.append(
-            boto_crud_call(
-                iam_client.detach_user_policy, UserName=user_name, PolicyArn=policy
-            )
+    if managed_policies:
+        managed_policies = [policy["PolicyArn"] for policy in managed_policies]
+        log.debug(
+            "Detaching managed policies.",
+            managed_policies=managed_policies,
+            **log_params,
         )
+        for policy in managed_policies:
+            tasks.append(
+                boto_crud_call(
+                    iam_client.detach_user_policy, UserName=user_name, PolicyArn=policy
+                )
+            )
 
     # Delete inline policies
     inline_policies = await get_user_inline_policies(user_name, iam_client)
-    inline_policies = list(inline_policies.keys())
-    log.debug(
-        "Deleting inline policies.", managed_policies=inline_policies, **log_params
-    )
-    for policy_name in inline_policies:
-        tasks.append(
-            boto_crud_call(
-                iam_client.delete_user_policy,
-                UserName=user_name,
-                PolicyName=policy_name,
-            )
+    if inline_policies:
+        inline_policies = list(inline_policies.keys())
+        log.debug(
+            "Deleting inline policies.", managed_policies=inline_policies, **log_params
         )
+        for policy_name in inline_policies:
+            tasks.append(
+                boto_crud_call(
+                    iam_client.delete_user_policy,
+                    UserName=user_name,
+                    PolicyName=policy_name,
+                )
+            )
+
+    # Remove groups
+    user_groups = await get_user_groups(user_name, iam_client)
+    if user_groups:
+        user_groups = sorted(list(user_groups.keys()))
+        log.debug("Removing user groups.", groups=user_groups, **log_params)
+        for group in user_groups:
+            tasks.append(
+                boto_crud_call(
+                    iam_client.remove_user_from_group,
+                    UserName=user_name,
+                    GroupName=group,
+                )
+            )
 
     # Actually perform the deletion of Managed & Inline policies
     await asyncio.gather(*tasks)

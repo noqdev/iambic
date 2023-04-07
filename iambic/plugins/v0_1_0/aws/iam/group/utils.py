@@ -234,7 +234,9 @@ async def apply_group_inline_policies(
                     GroupName=group_name,
                     PolicyName=policy_name,
                 )
-                delete_tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
+                delete_tasks.append(
+                    plugin_apply_wrapper(apply_awaitable, proposed_changes)
+                )
             log.debug(log_str, policy_name=policy_name, **log_params)
 
     for policy_name, policy_document in template_policy_map.items():
@@ -293,7 +295,9 @@ async def apply_group_inline_policies(
                     PolicyName=policy_name,
                     PolicyDocument=json.dumps(policy_document),
                 )
-                apply_tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
+                apply_tasks.append(
+                    plugin_apply_wrapper(apply_awaitable, proposed_changes)
+                )
 
             log.debug(log_str, policy_name=policy_name, **log_params)
 
@@ -320,7 +324,9 @@ async def delete_iam_group(group_name: str, iam_client, log_params: dict):
     attached_users = await list_users_in_group(group_name, iam_client)
     if attached_users:
         attached_users = [attached_user["UserName"] for attached_user in attached_users]
-        log.debug("Removing users from group.", attached_users=attached_users, **log_params)
+        log.debug(
+            "Removing users from group.", attached_users=attached_users, **log_params
+        )
         for attached_user in attached_users:
             tasks.append(
                 boto_crud_call(
@@ -337,12 +343,16 @@ async def delete_iam_group(group_name: str, iam_client, log_params: dict):
     if managed_policies:
         managed_policies = [policy["PolicyArn"] for policy in managed_policies]
         log.debug(
-            "Detaching managed policies.", managed_policies=managed_policies, **log_params
+            "Detaching managed policies.",
+            managed_policies=managed_policies,
+            **log_params,
         )
         for policy in managed_policies:
             tasks.append(
                 boto_crud_call(
-                    iam_client.detach_group_policy, GroupName=group_name, PolicyArn=policy
+                    iam_client.detach_group_policy,
+                    GroupName=group_name,
+                    PolicyArn=policy,
                 )
             )
 

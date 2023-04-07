@@ -39,7 +39,7 @@ from iambic.plugins.v0_1_0.aws.models import (
     ExpiryModel,
     Tag,
 )
-from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, remove_expired_resources
+from iambic.plugins.v0_1_0.aws.utils import boto_crud_call
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -670,7 +670,9 @@ class AwsIdentityCenterPermissionSetTemplate(
                 )
             )
             if any(changes_made):
-                account_change_details.extend_changes(list(chain.from_iterable(changes_made)))
+                account_change_details.extend_changes(
+                    list(chain.from_iterable(changes_made))
+                )
         except Exception as e:
             log.error("Unable to apply changes to resource", error=e, **log_params)
             return account_change_details
@@ -760,7 +762,12 @@ class AwsIdentityCenterPermissionSetTemplate(
         template_changes.extend_changes(account_changes)
 
         if template_changes.exceptions_seen:
-            cmd_verb = "applying" if ctx.execute else "detecting"
+            if self.deleted:
+                cmd_verb = "removing"
+            elif ctx.execute:
+                cmd_verb = "applying"
+            else:
+                cmd_verb = "detecting"
             log_str = f"Error encountered when {cmd_verb} resource changes."
         elif account_changes and ctx.execute:
             if self.deleted:

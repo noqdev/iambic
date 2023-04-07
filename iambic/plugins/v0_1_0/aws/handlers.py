@@ -156,9 +156,7 @@ async def apply_iam_templates(
         for template in templates
         if template.template_type == AWS_MANAGED_POLICY_TEMPLATE_TYPE
     ]:
-        template_changes.extend(
-            await async_batch_processor(managed_policy_tasks, 30)
-        )
+        template_changes.extend(await async_batch_processor(managed_policy_tasks, 40))
         if len(template_changes) > len(managed_policy_tasks):
             # There are other template changes that could rely on the managed policy
             # Give a few seconds to allow the managed policies to be created in AWS
