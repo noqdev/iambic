@@ -549,7 +549,13 @@ class BaseTemplate(
             repo = Repo(self.file_path, search_parent_directories=True)
             # why force=True? Expire could have modified the local contents
             # without force=True, git rm would not be able to remove the file
-            repo.index.remove([self.file_path], working_tree=True, force=True)
+            repo.index.remove(
+                [
+                    str(self.file_path)
+                ],  # manual cast to str is necessary because git library only accepts str and not FilePath
+                working_tree=True,
+                force=True,
+            )
         except Exception as e:
             log.error(
                 "Unable to remove file from local Git repo. Deleting manually",
