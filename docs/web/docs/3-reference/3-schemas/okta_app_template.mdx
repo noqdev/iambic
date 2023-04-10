@@ -5,9 +5,6 @@ configurations for other models used in IAMbic.*
 
 ## Properties
 
-- **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-- **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-  - **Items**
 - **`expires_at`**: The date and time the resource will be/was set to deleted.
   - **Any of**
     - *string*
@@ -38,9 +35,6 @@ configurations for other models used in IAMbic.*
 
 - **`Assignment`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic. Cannot contain additional properties.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
   - **`expires_at`**: The date and time the resource will be/was set to deleted.
     - **Any of**
       - *string*
@@ -54,9 +48,6 @@ configurations for other models used in IAMbic. Cannot contain additional proper
 
 - **`AppProperties`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic. Cannot contain additional properties.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
   - **`expires_at`**: The date and time the resource will be/was set to deleted.
     - **Any of**
       - *string*
@@ -68,7 +59,6 @@ configurations for other models used in IAMbic. Cannot contain additional proper
     - **All of**
       - : Refer to *[#/definitions/Status](#definitions/Status)*.
   - **`id`** *(string)*: Unique App ID for the app. Usually it's {idp-name}-{name}.
-  - **`file_path`** *(string)*: Path to the template file. Default: `""`.
   - **`description`** *(string)*: Description of the app. Default: `""`.
   - **`extra`**: Extra attributes to store.
   - **`created`** *(string)*: Date the app was created. Default: `""`.

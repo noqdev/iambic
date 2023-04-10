@@ -3,20 +3,6 @@
   "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
   "type": "object",
   "properties": {
-    "metadata_commented_dict": {
-      "title": "Metadatacommenteddict",
-      "description": "yaml inline comments",
-      "default": {},
-      "type": "object"
-    },
-    "metadata_iambic_fields": {
-      "title": "Metadataiambicfields",
-      "description": "metadata for iambic",
-      "default": [],
-      "type": "array",
-      "items": {},
-      "uniqueItems": true
-    },
     "expires_at": {
       "title": "Expiresat",
       "description": "The date and time the resource will be/was set to deleted.",
@@ -110,20 +96,6 @@
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "expires_at": {
           "title": "Expiresat",
           "description": "The date and time the resource will be/was set to deleted.",
@@ -222,20 +194,6 @@
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "expires_at": {
           "title": "Expiresat",
           "description": "The date and time the resource will be/was set to deleted.",
@@ -267,12 +225,6 @@
         "group_id": {
           "title": "Groupid",
           "description": "Unique Group ID for the group. Usually it's {idp-name}-{name}",
-          "default": "",
-          "type": "string"
-        },
-        "file_path": {
-          "title": "Filepath",
-          "description": "File path of the group",
           "default": "",
           "type": "string"
         },
