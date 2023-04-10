@@ -48,8 +48,18 @@ TEST_TEMPLATE_MULTI_ACCOUNT_INC_STAR_YAML = """template_type: NOQ::Example::Loca
 name: test_multi_account_template
 expires_at: tomorrow
 included_accounts:
-- *
+- "*"
 excluded_accounts: []
+properties:
+  name: {name}
+"""
+
+TEST_TEMPLATE_MULTI_ACCOUNT_EXC_STAR_YAML = """template_type: NOQ::Example::LocalFileMultiAccount
+name: test_multi_account_template
+expires_at: tomorrow
+included_accounts: []
+excluded_accounts:
+- "*"
 properties:
   name: {name}
 """
@@ -126,7 +136,7 @@ def test_get_remote_default_branch(repo_with_single_commit: Repo):
     assert remote_branch_name == TEST_TRACKING_BRANCH
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def git_diff_parameterized(request):
     def fin():
         shutil.rmtree(f"{temp_templates_directory}/{TEST_TEMPLATE_DIR}")
@@ -163,14 +173,14 @@ def git_diff_parameterized(request):
             )
         asyncio.run(load_config(f"{temp_templates_directory}/{TEST_CONFIG_PATH}"))
 
-        with open(f"{temp_templates_directory}/{template_under_test}", "w") as f:
-            f.write(TEST_TEMPLATE_YAML.format(name="before"))
+        with open(f"{temp_templates_directory}/{TEST_TEMPLATE_PATH}", "w") as f:
+            f.write(template_under_test.format(name="before"))
 
         repo.git.add(A=True)
         repo.git.commit(m="before")
 
-        with open(f"{temp_templates_directory}/{template_under_test}", "w") as f:
-            f.write(TEST_TEMPLATE_YAML.format(name="after"))
+        with open(f"{temp_templates_directory}/{TEST_TEMPLATE_PATH}", "w") as f:
+            f.write(template_under_test.format(name="after"))
 
         repo.git.add(A=True)
         repo.git.commit(m="after")
@@ -181,7 +191,7 @@ def git_diff_parameterized(request):
             diffs.append(
                 GitDiff(
                     path=str(
-                        os.path.join(temp_templates_directory, template_under_test)
+                        os.path.join(temp_templates_directory, TEST_TEMPLATE_PATH)
                     ),
                     content=file_obj.a_blob.data_stream.read().decode("utf-8"),
                 )
@@ -203,6 +213,11 @@ def test_create_templates_for_modified_files_with_multi_account_support(test_con
 
 def test_create_templates_for_modified_files_with_multi_account_incl_star_support(test_config_path_two_accounts_plus_org, git_diff_parameterized: list[Any]):
     templates: list[BaseTemplate] = create_templates_for_modified_files(test_config_path_two_accounts_plus_org, git_diff_parameterized(TEST_TEMPLATE_MULTI_ACCOUNT_INC_STAR_YAML))
+    assert templates[0].properties.name == "after"
+
+
+def test_create_templates_for_modified_files_with_multi_account_incl_star_support(test_config_path_two_accounts_plus_org, git_diff_parameterized: list[Any]):
+    templates: list[BaseTemplate] = create_templates_for_modified_files(test_config_path_two_accounts_plus_org, git_diff_parameterized(TEST_TEMPLATE_MULTI_ACCOUNT_EXC_STAR_YAML))
     assert templates[0].properties.name == "after"
 
 
