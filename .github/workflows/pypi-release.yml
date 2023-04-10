@@ -15,6 +15,6 @@ jobs:
     - name: bootstrap
       run: |
         pip install poetry setuptools pip --upgrade
-    - run: poetry config pypi-token.pypi "${{ secrets.PYPI_API_KEY }}"
+    - run: poetry config pypi-token.pypi "${{ secrets.IAMBIC_PYPI_API_KEY }}"
     - name: Publish package
       run: poetry publish --build
