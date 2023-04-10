@@ -28,7 +28,7 @@ configurations for other models used in IAMbic.*
 
 <a id="definitions/IambicManaged"></a>
 
-- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "enforced", "disabled"]`.
 
 <a id="definitions/MemberDataType"></a>
 
@@ -37,7 +37,7 @@ configurations for other models used in IAMbic.*
 <a id="definitions/Member"></a>
 
 - **`Member`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.
+configurations for other models used in IAMbic. Cannot contain additional properties.
   - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
   - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
     - **Items**
@@ -54,7 +54,7 @@ configurations for other models used in IAMbic.
 <a id="definitions/GroupTemplateProperties"></a>
 
 - **`GroupTemplateProperties`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.
+configurations for other models used in IAMbic. Cannot contain additional properties.
   - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
   - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
     - **Items**
@@ -78,3 +78,22 @@ configurations for other models used in IAMbic.
   - **`membership_rule`** *(string)*: The rule that determines members for this group if the group is a dynamic group.
   - **`members`** *(array)*: A list of users in the group. Default: `[]`.
     - **Items**: Refer to *[#/definitions/Member](#definitions/Member)*.
+  - **`classification`** *(string)*: Classification of the group.
+  - **`created_date_time`** *(string)*: Date and time when the group was created.
+  - **`creation_options`** *(array)*: Specifies the group type and its membership.
+    - **Items** *(string)*
+  - **`deleted_date_time`** *(string)*: Date and time when the group was deleted.
+  - **`expiration_date_time`** *(string)*: Date and time when the group expires.
+  - **`membership_rule_processing_state`** *(string)*: Indicates whether the group is a dynamic group or not.
+  - **`preferred_data_location`** *(string)*: Preferred data location of the group.
+  - **`preferred_language`** *(string)*: Preferred language of the group.
+  - **`proxy_addresses`** *(array)*: Proxy addresses of the group.
+    - **Items** *(string)*
+  - **`renewed_date_time`** *(string)*: Date and time when the group was renewed.
+  - **`resource_behavior_options`** *(array)*: Resource behavior options of the group.
+    - **Items** *(string)*
+  - **`resource_provisioning_options`** *(array)*: Resource provisioning options of the group.
+    - **Items** *(string)*
+  - **`security_identifier`** *(string)*: Security identifier of the group.
+  - **`theme`** *(string)*: Theme of the group.
+  - **`visibility`** *(string)*: Visibility of the group.

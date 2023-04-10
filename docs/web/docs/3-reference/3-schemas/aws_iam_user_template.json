@@ -116,6 +116,7 @@
     "identifier",
     "properties"
   ],
+  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -124,6 +125,7 @@
         "undefined",
         "read_and_write",
         "import_only",
+        "enforced",
         "disabled"
       ]
     },
@@ -282,7 +284,8 @@
       },
       "required": [
         "policy_arn"
-      ]
+      ],
+      "additionalProperties": false
     },
     "Tag": {
       "title": "Tag",
@@ -378,7 +381,8 @@
       "required": [
         "key",
         "value"
-      ]
+      ],
+      "additionalProperties": false
     },
     "Group": {
       "title": "Group",
@@ -465,11 +469,40 @@
         "group_name": {
           "title": "Groupname",
           "type": "string"
+        },
+        "arn": {
+          "title": "Arn",
+          "description": "ARN of the group",
+          "default": "",
+          "type": "string"
+        },
+        "create_date": {
+          "title": "Createdate",
+          "description": "Date the group was created",
+          "default": "",
+          "type": "string"
+        },
+        "group_id": {
+          "title": "Groupid",
+          "description": "ID of the group",
+          "default": "",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "description": "Path of the group",
+          "default": "",
+          "type": "string"
+        },
+        "extra": {
+          "title": "Extra",
+          "description": "Extra attributes to store"
         }
       },
       "required": [
         "group_name"
-      ]
+      ],
+      "additionalProperties": false
     },
     "ManagedPolicyRef": {
       "title": "ManagedPolicyRef",
@@ -557,11 +590,16 @@
           "title": "Policyarn",
           "pattern": "(^arn:([^:]*):([^:]*):([^:]*):(|\\*|[\\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\\*$",
           "type": "string"
+        },
+        "policy_name": {
+          "title": "Policyname",
+          "type": "string"
         }
       },
       "required": [
         "policy_arn"
-      ]
+      ],
+      "additionalProperties": false
     },
     "Principal": {
       "title": "Principal",
@@ -823,7 +861,8 @@
       },
       "required": [
         "effect"
-      ]
+      ],
+      "additionalProperties": false
     },
     "PolicyDocument": {
       "title": "PolicyDocument",
@@ -927,7 +966,8 @@
       },
       "required": [
         "policy_name"
-      ]
+      ],
+      "additionalProperties": false
     },
     "UserProperties": {
       "title": "UserProperties",

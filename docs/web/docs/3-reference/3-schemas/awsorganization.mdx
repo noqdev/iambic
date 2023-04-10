@@ -9,6 +9,7 @@
 - **`hub_role_arn`** *(string)*: The role arn to assume into when making calls to the account.
 - **`external_id`** *(string)*: The external id to use for assuming into a role when making calls to the account.
 - **`boto3_session_map`** *(object)*
+- **`org_name`** *(string)*: Optional friendly name for the organization.
 - **`org_id`** *(string)*: A unique identifier designating the identity of the organization.
 - **`org_account_id`** *(string)*: The AWS Organization's master account ID.
 - **`identity_center`**: The AWS Account ID and region of the AWS Identity Center instance to use for this organization.
@@ -35,7 +36,7 @@
 
 <a id="definitions/IambicManaged"></a>
 
-- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "enforced", "disabled"]`.
 
 <a id="definitions/BaseAWSOrgRule"></a>
 

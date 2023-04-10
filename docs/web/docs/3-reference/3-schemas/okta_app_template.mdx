@@ -28,7 +28,7 @@ configurations for other models used in IAMbic.*
 
 <a id="definitions/IambicManaged"></a>
 
-- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "enforced", "disabled"]`.
 
 <a id="definitions/Status"></a>
 
@@ -37,7 +37,7 @@ configurations for other models used in IAMbic.*
 <a id="definitions/Assignment"></a>
 
 - **`Assignment`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.
+configurations for other models used in IAMbic. Cannot contain additional properties.
   - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
   - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
     - **Items**
@@ -53,7 +53,7 @@ configurations for other models used in IAMbic.
 <a id="definitions/AppProperties"></a>
 
 - **`AppProperties`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.
+configurations for other models used in IAMbic. Cannot contain additional properties.
   - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
   - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
     - **Items**
@@ -68,6 +68,7 @@ configurations for other models used in IAMbic.
     - **All of**
       - : Refer to *[#/definitions/Status](#definitions/Status)*.
   - **`id`** *(string)*: Unique App ID for the app. Usually it's {idp-name}-{name}.
+  - **`file_path`** *(string)*: Path to the template file. Default: `""`.
   - **`description`** *(string)*: Description of the app. Default: `""`.
   - **`extra`**: Extra attributes to store.
   - **`created`** *(string)*: Date the app was created. Default: `""`.

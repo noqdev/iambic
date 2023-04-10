@@ -117,6 +117,7 @@
     "identifier",
     "properties"
   ],
+  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -125,6 +126,7 @@
         "undefined",
         "read_and_write",
         "import_only",
+        "enforced",
         "disabled"
       ]
     },
@@ -275,11 +277,16 @@
           "title": "Policyarn",
           "pattern": "(^arn:([^:]*):([^:]*):([^:]*):(|\\*|[\\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\\*$",
           "type": "string"
+        },
+        "policy_name": {
+          "title": "Policyname",
+          "type": "string"
         }
       },
       "required": [
         "policy_arn"
-      ]
+      ],
+      "additionalProperties": false
     },
     "Principal": {
       "title": "Principal",
@@ -541,7 +548,8 @@
       },
       "required": [
         "effect"
-      ]
+      ],
+      "additionalProperties": false
     },
     "PolicyDocument": {
       "title": "PolicyDocument",
@@ -645,7 +653,8 @@
       },
       "required": [
         "policy_name"
-      ]
+      ],
+      "additionalProperties": false
     },
     "GroupProperties": {
       "title": "GroupProperties",

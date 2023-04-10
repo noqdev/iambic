@@ -116,6 +116,7 @@
     "identifier",
     "properties"
   ],
+  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -124,6 +125,7 @@
         "undefined",
         "read_and_write",
         "import_only",
+        "enforced",
         "disabled"
       ]
     },
@@ -514,7 +516,8 @@
       },
       "required": [
         "effect"
-      ]
+      ],
+      "additionalProperties": false
     },
     "ManagedPolicyDocument": {
       "title": "ManagedPolicyDocument",
@@ -683,7 +686,8 @@
       "required": [
         "key",
         "value"
-      ]
+      ],
+      "additionalProperties": false
     },
     "ManagedPolicyProperties": {
       "title": "ManagedPolicyProperties",

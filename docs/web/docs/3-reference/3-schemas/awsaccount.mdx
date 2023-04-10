@@ -29,6 +29,7 @@ For Okta, this is the IDP domain*
 - **`hub_session_info`** *(object)*
 - **`identity_center_details`**: Refer to *[#/definitions/IdentityCenterDetails](#definitions/IdentityCenterDetails)*.
 - **`spoke_role_arn`** *(string)*: (Auto-populated) The role arn to assume into when making calls to the account.
+- **`assume_role_arn`** *(string)*: The role arn to assume into when making calls to the account.
 ## Definitions
 
 
@@ -38,7 +39,7 @@ For Okta, this is the IDP domain*
 
 <a id="definitions/IambicManaged"></a>
 
-- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "enforced", "disabled"]`.
 
 <a id="definitions/Partition"></a>
 

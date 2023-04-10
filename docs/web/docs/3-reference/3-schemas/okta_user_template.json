@@ -77,6 +77,7 @@
     "properties",
     "idp_name"
   ],
+  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -85,6 +86,7 @@
         "undefined",
         "read_and_write",
         "import_only",
+        "enforced",
         "disabled"
       ]
     },

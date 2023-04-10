@@ -36,7 +36,7 @@ configurations for other models used in IAMbic.*
 
 <a id="definitions/IambicManaged"></a>
 
-- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "enforced", "disabled"]`.
 
 <a id="definitions/Path"></a>
 
@@ -57,7 +57,7 @@ configurations for other models used in IAMbic.
 <a id="definitions/ManagedPolicyRef"></a>
 
 - **`ManagedPolicyRef`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.
+configurations for other models used in IAMbic. Cannot contain additional properties.
   - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
   - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
     - **Items**
@@ -76,6 +76,7 @@ configurations for other models used in IAMbic.
   - **`excluded_orgs`** *(array)*: A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string. Default: `[]`.
     - **Items** *(string)*
   - **`policy_arn`** *(string)*
+  - **`policy_name`** *(string)*
 
 <a id="definitions/Principal"></a>
 
@@ -108,7 +109,7 @@ configurations for other models used in IAMbic.
 <a id="definitions/PolicyStatement"></a>
 
 - **`PolicyStatement`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.
+configurations for other models used in IAMbic. Cannot contain additional properties.
   - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
   - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
     - **Items**
@@ -161,7 +162,7 @@ configurations for other models used in IAMbic.
 <a id="definitions/PolicyDocument"></a>
 
 - **`PolicyDocument`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.
+configurations for other models used in IAMbic. Cannot contain additional properties.
   - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
   - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
     - **Items**

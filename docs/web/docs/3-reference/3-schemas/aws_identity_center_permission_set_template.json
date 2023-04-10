@@ -99,6 +99,7 @@
     "identifier",
     "properties"
   ],
+  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -107,6 +108,7 @@
         "undefined",
         "read_and_write",
         "import_only",
+        "enforced",
         "disabled"
       ]
     },
@@ -258,7 +260,8 @@
       "required": [
         "path",
         "name"
-      ]
+      ],
+      "additionalProperties": false
     },
     "PermissionBoundary": {
       "title": "PermissionBoundary",
@@ -309,7 +312,8 @@
           "title": "Policyarn",
           "type": "string"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "Principal": {
       "title": "Principal",
@@ -571,7 +575,8 @@
       },
       "required": [
         "effect"
-      ]
+      ],
+      "additionalProperties": false
     },
     "InlinePolicy": {
       "title": "InlinePolicy",
@@ -627,7 +632,8 @@
             "$ref": "#/definitions/PolicyStatement"
           }
         }
-      }
+      },
+      "additionalProperties": false
     },
     "ManagedPolicyArn": {
       "title": "ManagedPolicyArn",
@@ -678,7 +684,8 @@
       },
       "required": [
         "arn"
-      ]
+      ],
+      "additionalProperties": false
     },
     "Tag": {
       "title": "Tag",
@@ -774,7 +781,8 @@
       "required": [
         "key",
         "value"
-      ]
+      ],
+      "additionalProperties": false
     },
     "PermissionSetProperties": {
       "title": "PermissionSetProperties",
@@ -967,7 +975,8 @@
             "type": "string"
           }
         }
-      }
+      },
+      "additionalProperties": false
     }
   }
 }

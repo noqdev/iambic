@@ -78,6 +78,7 @@
     "idp_name",
     "properties"
   ],
+  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -86,6 +87,7 @@
         "undefined",
         "read_and_write",
         "import_only",
+        "enforced",
         "disabled"
       ]
     },
@@ -154,7 +156,8 @@
       "required": [
         "name",
         "data_type"
-      ]
+      ],
+      "additionalProperties": false
     },
     "GroupTemplateProperties": {
       "title": "GroupTemplateProperties",
@@ -267,11 +270,99 @@
           "items": {
             "$ref": "#/definitions/Member"
           }
+        },
+        "classification": {
+          "title": "Classification",
+          "description": "Classification of the group",
+          "type": "string"
+        },
+        "created_date_time": {
+          "title": "Createddatetime",
+          "description": "Date and time when the group was created",
+          "type": "string"
+        },
+        "creation_options": {
+          "title": "Creationoptions",
+          "description": "Specifies the group type and its membership",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "deleted_date_time": {
+          "title": "Deleteddatetime",
+          "description": "Date and time when the group was deleted",
+          "type": "string"
+        },
+        "expiration_date_time": {
+          "title": "Expirationdatetime",
+          "description": "Date and time when the group expires",
+          "type": "string"
+        },
+        "membership_rule_processing_state": {
+          "title": "Membershipruleprocessingstate",
+          "description": "Indicates whether the group is a dynamic group or not",
+          "type": "string"
+        },
+        "preferred_data_location": {
+          "title": "Preferreddatalocation",
+          "description": "Preferred data location of the group",
+          "type": "string"
+        },
+        "preferred_language": {
+          "title": "Preferredlanguage",
+          "description": "Preferred language of the group",
+          "type": "string"
+        },
+        "proxy_addresses": {
+          "title": "Proxyaddresses",
+          "description": "Proxy addresses of the group",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "renewed_date_time": {
+          "title": "Reneweddatetime",
+          "description": "Date and time when the group was renewed",
+          "type": "string"
+        },
+        "resource_behavior_options": {
+          "title": "Resourcebehavioroptions",
+          "description": "Resource behavior options of the group",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resource_provisioning_options": {
+          "title": "Resourceprovisioningoptions",
+          "description": "Resource provisioning options of the group",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "security_identifier": {
+          "title": "Securityidentifier",
+          "description": "Security identifier of the group",
+          "type": "string"
+        },
+        "theme": {
+          "title": "Theme",
+          "description": "Theme of the group",
+          "type": "string"
+        },
+        "visibility": {
+          "title": "Visibility",
+          "description": "Visibility of the group",
+          "type": "string"
         }
       },
       "required": [
         "name"
-      ]
+      ],
+      "additionalProperties": false
     }
   }
 }
