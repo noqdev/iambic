@@ -1,0 +1,20 @@
+name: Publish to PyPI
+on:
+  workflow_dispatch
+jobs:
+  build-n-publish:
+    if: ${{ github.repository == 'noqdev/iambic' }}
+    name: Build and publish Python 🐍 distributions 📦 to PyPI
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.9"
+    - name: bootstrap
+      run: |
+        pip install poetry setuptools pip --upgrade
+    - run: poetry config pypi-token.pypi "${{ secrets.PYPI_API_KEY }}"
+    - name: Publish package
+      run: poetry publish --build
