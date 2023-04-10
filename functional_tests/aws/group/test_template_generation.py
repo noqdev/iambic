@@ -23,8 +23,9 @@ class PartialImportGroupTestCase(IsolatedAsyncioTestCase):
         ]
 
     async def asyncTearDown(self):
-        self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        if os.path.exists(self.template.file_path):
+            self.template.deleted = True
+            await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
     async def test_delete_group_template(self):
         included_account = self.all_account_ids[0]
@@ -61,6 +62,7 @@ class PartialImportGroupTestCase(IsolatedAsyncioTestCase):
 
         # Create the policy on all accounts except 1
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        self.template.write(exclude_unset=False)
 
         # Refresh the template
         await group_full_import(

@@ -37,6 +37,7 @@ class CreatePermissionSetTestCase(IsolatedAsyncioTestCase):
         self.template = attach_access_rule(
             self.template, IAMBIC_TEST_DETAILS.identity_center_account
         )
+        self.template.write()
         changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
         screen_render_resource_changes([changes])
         await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details()

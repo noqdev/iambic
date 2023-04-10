@@ -24,8 +24,9 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
         ]
 
     async def asyncTearDown(self):
-        self.template.deleted = True
-        await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        if os.path.exists(self.template.file_path):
+            self.template.deleted = True
+            await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
 
     async def test_update_role_attribute(self):
         initial_description = "This was created by a functional test."
@@ -93,6 +94,7 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
 
         # Create the policy on all accounts except 1
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        self.template.write(exclude_unset=False)
 
         await role_full_import(
             [

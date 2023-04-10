@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from itertools import chain
 from typing import Callable, List, Optional, Union
 
 from jinja2 import BaseLoader, Environment
@@ -367,7 +368,7 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
                 log_str = "Active resource found with deleted=false."
                 if not is_iambic_import_only:
                     log_str = f"{log_str} Deleting resource..."
-                log.info(log_str, **log_params)
+                log.debug(log_str, **log_params)
 
                 if not is_iambic_import_only:
                     await delete_managed_policy(client, policy_arn, log_params)
@@ -394,23 +395,14 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
                 ),
             ]
 
-            results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
-
-            # separate out the success versus failure calls
-            exceptions: list[ProposedChange] = []
-            changes_made: list[ProposedChange] = []
-            for result in results:
-                for r in result:
-                    if isinstance(r, ProposedChange):
-                        if len(r.exceptions_seen) == 0:
-                            changes_made.append(r)
-                        else:
-                            exceptions.append(r)
-
+            changes_made: list[list[ProposedChange]] = await asyncio.gather(
+                *tasks, return_exceptions=True
+            )
             if any(changes_made):
-                account_change_details.proposed_changes.extend(changes_made)
-            if any(exceptions):
-                account_change_details.exceptions_seen.extend(exceptions)
+                account_change_details.extend_changes(
+                    list(chain.from_iterable(changes_made))
+                )
+
         else:
             account_change_details.proposed_changes.append(
                 ProposedChange(
@@ -427,12 +419,22 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
                         account_policy["PolicyDocument"]
                     )
                 await boto_crud_call(client.create_policy, **account_policy)
-            log.info(log_str, **log_params)
+            log.debug(log_str, **log_params)
 
-        if not is_iambic_import_only:
+        if ctx.execute and not account_change_details.exceptions_seen:
+            # if self.deleted:
+            #     self.delete()
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),
+                **log_params,
+            )
+        elif account_change_details.exceptions_seen:
+            log.error(
+                "Unable to finish execution on account for resource",
+                exceptions_seen=[
+                    cd.exceptions_seen for cd in account_change_details.exceptions_seen
+                ],
                 **log_params,
             )
         else:

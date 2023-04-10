@@ -143,7 +143,7 @@ async def delete_managed_policy(iam_client, policy_arn: str, log_params: dict):
                 )
             )
 
-    log.info(
+    log.debug(
         "Detaching managed policy from resources.",
         policy_arn=policy_arn,
         **log_params,
@@ -202,7 +202,7 @@ async def apply_update_managed_policy(
                 )
                 return await plugin_apply_wrapper(apply_awaitable, proposed_changes)
 
-        log.info(log_str, **log_params)
+        log.debug(log_str, **log_params)
     return response
 
 
@@ -224,7 +224,7 @@ async def new_policy_version(
         PolicyArn=policy_arn,
         PolicyDocument=json.dumps(template_policy_document),
     )
-    log.info(log_str, **log_params)
+    log.debug(log_str, **log_params)
 
 
 async def apply_managed_policy_tags(
@@ -268,7 +268,7 @@ async def apply_managed_policy_tags(
                 TagKeys=tags_to_remove,
             )
             tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
-        log.info(log_str, tags=tags_to_remove, **log_params)
+        log.debug(log_str, tags=tags_to_remove, **log_params)
 
     if tags_to_apply:
         log_str = "New tags discovered in AWS."
@@ -289,7 +289,7 @@ async def apply_managed_policy_tags(
                 iam_client.tag_policy, PolicyArn=policy_arn, Tags=tags_to_apply
             )
             tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
-        log.info(log_str, tags=tags_to_apply, **log_params)
+        log.debug(log_str, tags=tags_to_apply, **log_params)
 
     if tasks:
         results: list[list[ProposedChange]] = await asyncio.gather(*tasks)

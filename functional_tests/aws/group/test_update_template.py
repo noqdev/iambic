@@ -8,8 +8,10 @@ import dateparser
 from functional_tests.aws.group.utils import generate_group_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.output.text import screen_render_resource_changes
+from iambic.plugins.v0_1_0.aws.iam.group.models import AwsIamGroupTemplate
 from iambic.plugins.v0_1_0.aws.iam.group.utils import get_group_across_accounts
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
+from iambic.request_handler.expire_resources import flag_expired_resources
 
 
 class UpdateGroupTestCase(IsolatedAsyncioTestCase):
@@ -131,9 +133,9 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
                 ],
             )
         )
-        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
-        screen_render_resource_changes(([r]))
-        self.assertEqual(len(r.proposed_changes), 2)
+        template_changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes(([template_changes]))
+        self.assertEqual(len(template_changes.proposed_changes), 2)
 
         # Set expiration
         self.template.properties.inline_policies[1].statement[
@@ -141,9 +143,13 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
         ].expires_at = dateparser.parse(
             "yesterday", settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True}
         )
-        r = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
-        screen_render_resource_changes(([r]))
-        self.assertEqual(len(r.proposed_changes), 1)
+        self.template.write()
+        await flag_expired_resources([self.template.file_path])
+        template = AwsIamGroupTemplate.load(self.template.file_path)
+
+        template_changes = await template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        screen_render_resource_changes(([template_changes]))
+        self.assertEqual(len(template_changes.proposed_changes), 1)
 
 
 class UpdateGroupBadInputTestCase(IsolatedAsyncioTestCase):
