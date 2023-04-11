@@ -3,20 +3,6 @@
   "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
   "type": "object",
   "properties": {
-    "metadata_commented_dict": {
-      "title": "Metadatacommenteddict",
-      "description": "yaml inline comments",
-      "default": {},
-      "type": "object"
-    },
-    "metadata_iambic_fields": {
-      "title": "Metadataiambicfields",
-      "description": "metadata for iambic",
-      "default": [],
-      "type": "array",
-      "items": {},
-      "uniqueItems": true
-    },
     "template_type": {
       "title": "Templatetype",
       "default": "NOQ::AzureAD::User",
@@ -77,6 +63,7 @@
     "idp_name",
     "properties"
   ],
+  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -85,6 +72,7 @@
         "undefined",
         "read_and_write",
         "import_only",
+        "enforced",
         "disabled"
       ]
     },
@@ -102,20 +90,6 @@
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "expires_at": {
           "title": "Expiresat",
           "description": "The date and time the resource will be/was set to deleted.",
@@ -141,6 +115,8 @@
         },
         "user_id": {
           "title": "Userid",
+          "description": "Unique identifier for the user",
+          "default": "",
           "type": "string"
         },
         "username": {
@@ -173,12 +149,62 @@
         },
         "status": {
           "$ref": "#/definitions/UserStatus"
+        },
+        "business_phones": {
+          "title": "Businessphones",
+          "description": "List of business phone numbers",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "id": {
+          "title": "Id",
+          "description": "Unique identifier for the user",
+          "type": "string"
+        },
+        "job_title": {
+          "title": "Jobtitle",
+          "description": "Job title of the user",
+          "type": "string"
+        },
+        "mail": {
+          "title": "Mail",
+          "description": "Email address of the user",
+          "type": "string"
+        },
+        "mobile_phone": {
+          "title": "Mobilephone",
+          "description": "Mobile phone number of the user",
+          "type": "string"
+        },
+        "office_location": {
+          "title": "Officelocation",
+          "description": "Office location of the user",
+          "type": "string"
+        },
+        "preferred_language": {
+          "title": "Preferredlanguage",
+          "description": "Preferred language of the user",
+          "type": "string"
+        },
+        "surname": {
+          "title": "Surname",
+          "description": "Surname of the user",
+          "type": "string"
+        },
+        "user_principal_name": {
+          "title": "Userprincipalname",
+          "description": "User principal name of the user",
+          "type": "string"
         }
       },
       "required": [
         "username",
         "display_name"
-      ]
+      ],
+      "additionalProperties": false
     }
   }
 }

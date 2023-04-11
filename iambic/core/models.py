@@ -74,9 +74,11 @@ schema.field_schema = field_schema
 
 class IambicPydanticBaseModel(PydanticBaseModel):
     metadata_iambic_fields = Field(
-        set(), description="metadata for iambic", exclude=True
+        set(), description="metadata for iambic", exclude=True, hidden_from_schema=True
     )
-    metadata_commented_dict: dict = Field({}, description="yaml inline comments")
+    metadata_commented_dict: dict = Field(
+        {}, description="yaml inline comments", hidden_from_schema=True
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

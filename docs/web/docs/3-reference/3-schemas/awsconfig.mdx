@@ -25,15 +25,12 @@
 
 <a id="definitions/IambicManaged"></a>
 
-- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "enforced", "disabled"]`.
 
 <a id="definitions/BaseAWSOrgRule"></a>
 
 - **`BaseAWSOrgRule`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
   - **`iambic_managed`**: Controls the directionality of iambic changes. Default: `"undefined"`.
     - **All of**
       - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
@@ -42,9 +39,6 @@ configurations for other models used in IAMbic.
 
 - **`AWSOrgAccountRule`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
   - **`iambic_managed`**: Controls the directionality of iambic changes. Default: `"undefined"`.
     - **All of**
       - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
@@ -55,7 +49,7 @@ configurations for other models used in IAMbic.
 
 <a id="definitions/AWSOrganization"></a>
 
-- **`AWSOrganization`** *(object)*
+- **`AWSOrganization`** *(object)*: Cannot contain additional properties.
   - **`default_region`**: Default region to use when making AWS requests. Default: `"us-east-1"`.
     - **All of**
       - : Refer to *[#/definitions/RegionName](#definitions/RegionName)*.
@@ -63,6 +57,7 @@ configurations for other models used in IAMbic.
   - **`hub_role_arn`** *(string)*: The role arn to assume into when making calls to the account.
   - **`external_id`** *(string)*: The external id to use for assuming into a role when making calls to the account.
   - **`boto3_session_map`** *(object)*
+  - **`org_name`** *(string)*: Optional friendly name for the organization.
   - **`org_id`** *(string)*: A unique identifier designating the identity of the organization.
   - **`org_account_id`** *(string)*: The AWS Organization's master account ID.
   - **`identity_center`**: The AWS Account ID and region of the AWS Identity Center instance to use for this organization.
@@ -101,7 +96,7 @@ configurations for other models used in IAMbic.
 
 - **`AWSAccount`** *(object)*: Inherited by the provider class to provide a consistent interface for AccessModelMixin<br \>  For AWS, this is the AWS account
 For GCP, this is the GCP project
-For Okta, this is the IDP domain.
+For Okta, this is the IDP domain. Cannot contain additional properties.
   - **`default_region`**: Default region to use when making AWS requests. Default: `"us-east-1"`.
     - **All of**
       - : Refer to *[#/definitions/RegionName](#definitions/RegionName)*.
@@ -123,3 +118,4 @@ For Okta, this is the IDP domain.
   - **`hub_session_info`** *(object)*
   - **`identity_center_details`**: Refer to *[#/definitions/IdentityCenterDetails](#definitions/IdentityCenterDetails)*.
   - **`spoke_role_arn`** *(string)*: (Auto-populated) The role arn to assume into when making calls to the account.
+  - **`assume_role_arn`** *(string)*: The role arn to assume into when making calls to the account.
