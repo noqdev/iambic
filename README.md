@@ -9,6 +9,8 @@ Easily manage and streamline cloud Identity and Access Management (IAM) with IAM
 
 ## Key Features
 
+<!-- Keep this in sync with the list of features in the IAMbic Docs Overview Page -->
+
 - **GitOps-driven Cloud IAM (IAMOps)**: Leverage GitOps-driven Cloud IAM with human-readable formats and your favorite tools.
 - **[Multi-Cloud](https://iambic.org/getting_started/)**: Unify cloud identity management for AWS, Okta, Azure Active Directory, Google Workspace, and more.
 - **[Dynamic AWS Permissions](https://iambic.org/getting_started/aws#31---create-dynamic-iam-role-policies-that-vary-per-account)**: Simplify multi-account AWS management with flexible templates, allowing multi-account roles to have different permissions and access rules on different accounts.
