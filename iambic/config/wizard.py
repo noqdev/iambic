@@ -330,6 +330,7 @@ class ConfigurationWizard:
 
         if self.config.aws:
             self.hub_account_id = self.config.aws.hub_role_arn.split(":")[4]
+            self.spoke_role_is_read_only = self.config.aws.spoke_role_is_read_only
         else:
             self.hub_account_id = None
 
@@ -802,6 +803,15 @@ class ConfigurationWizard:
                 )
                 return
 
+        read_only = bool(
+            questionary.confirm(
+                "Do you want to restrict IambicSpokeRole to read-only?\n"
+                "This will limit IAMbic capability to import",
+                default=False,
+            ).unsafe_ask()
+        )
+        self.config.aws.spoke_role_is_read_only = read_only
+
         session, profile_name = self.get_boto3_session_for_account(account_id)
         if not session:
             return
@@ -821,6 +831,7 @@ class ConfigurationWizard:
                     hub_account_id=account_id,
                     assume_as_arn=self.assume_as_arn,
                     role_arn=role_arn,
+                    read_only=read_only,
                 )
             )
             if not created_successfully:
@@ -832,6 +843,7 @@ class ConfigurationWizard:
                     cf_client=cf_client,
                     hub_account_id=account_id,
                     role_arn=role_arn,
+                    read_only=read_only,
                 )
             )
             if not created_successfully:
@@ -843,7 +855,7 @@ class ConfigurationWizard:
         account = AWSAccount(
             account_id=account_id,
             account_name=account_name,
-            spoke_role_arn=get_spoke_role_arn(account_id),
+            spoke_role_arn=get_spoke_role_arn(account_id, read_only=read_only),
             iambic_managed=IambicManaged.READ_AND_WRITE,
             aws_profile=profile_name,
         )
@@ -1012,6 +1024,15 @@ class ConfigurationWizard:
             log.info("Unable to add the AWS Org without creating the required roles.")
             return
 
+        read_only = bool(
+            questionary.confirm(
+                "Do you want to restrict IambicSpokeRole to read-only?\n"
+                "This will limit IAMbic capability to import",
+                default=False,
+            ).unsafe_ask()
+        )
+        self.config.aws.spoke_role_is_read_only = read_only
+
         created_successfully = asyncio.run(
             create_iambic_role_stacks(
                 cf_client=session.client("cloudformation"),
@@ -1019,6 +1040,7 @@ class ConfigurationWizard:
                 assume_as_arn=self.assume_as_arn,
                 role_arn=self.cf_role_arn,
                 org_client=session.client("organizations"),
+                read_only=read_only,
             )
         )
         if not created_successfully:
@@ -1031,6 +1053,7 @@ class ConfigurationWizard:
             default_rule=BaseAWSOrgRule(),
             hub_role_arn=get_hub_role_arn(account_id),
             aws_profile=profile_name,
+            spoke_role_is_read_only=read_only,
         )
         aws_org.default_rule.iambic_managed = IambicManaged.READ_AND_WRITE
 
@@ -1130,7 +1153,9 @@ class ConfigurationWizard:
             ExtendsConfig(
                 key=ExtendsConfigKey.AWS_SECRETS_MANAGER,
                 value=response["ARN"],
-                assume_role_arn=get_spoke_role_arn(self.hub_account_id),
+                assume_role_arn=get_spoke_role_arn(
+                    self.hub_account_id, read_only=self.spoke_role_is_read_only
+                ),
             )
         ]
         self.config.write()

@@ -55,8 +55,11 @@ def get_hub_role_arn(account_id: str) -> str:
     return f"arn:aws:iam::{account_id}:role/{IAMBIC_HUB_ROLE_NAME}"
 
 
-def get_spoke_role_arn(account_id: str) -> str:
-    return f"arn:aws:iam::{account_id}:role/{IAMBIC_SPOKE_ROLE_NAME}"
+def get_spoke_role_arn(account_id: str, read_only=False) -> str:
+    spoke_role_postfix = "ReadOnly" if read_only else ""
+    return (
+        f"arn:aws:iam::{account_id}:role/{IAMBIC_SPOKE_ROLE_NAME}{spoke_role_postfix}"
+    )
 
 
 @yaml_object(yaml)
@@ -581,6 +584,10 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
     hub_role_arn: str = Field(
         description="The role arn to assume into when making calls to the account",
     )
+    spoke_role_is_read_only: bool = Field(
+        False,
+        description="if true, the spoke role name is IambicSpokeRoleReadOnly",
+    )
 
     async def _create_org_account_instance(
         self, account: dict, session: boto3.Session
@@ -615,7 +622,9 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
             variables=account["variables"],
             identity_center_details=identity_center_details,
             iambic_managed=account_rule.iambic_managed,
-            spoke_role_arn=get_spoke_role_arn(account_id),
+            spoke_role_arn=get_spoke_role_arn(
+                account_id, read_only=self.spoke_role_is_read_only
+            ),
             hub_session_info=dict(boto3_session=session),
             default_region=region_name,
             boto3_session_map={},

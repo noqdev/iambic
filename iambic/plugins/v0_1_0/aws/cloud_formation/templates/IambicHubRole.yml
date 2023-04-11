@@ -45,7 +45,7 @@ Resources:
                 Action:
                   - sts:assumerole
                 Resource:
-                  - !Sub 'arn:aws:iam::*:role/${SpokeRoleName}'
+                  - !Sub 'arn:aws:iam::*:role/${SpokeRoleName}*'
         - PolicyName: list_spoke_account_info
           PolicyDocument:
             Version: '2012-10-17'
