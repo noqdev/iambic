@@ -117,8 +117,10 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
             account=str(aws_account),
         )
         iambic_import_only = self._is_iambic_import_only(aws_account)
-
-        current_group = await get_group(group_name, client)
+        deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
+        current_group = await get_group(
+            group_name, client, include_policies=bool(not deleted)
+        )
         if current_group:
             account_change_details.current_value = {
                 **current_group
