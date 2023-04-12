@@ -1,5 +1,5 @@
 ## Built-in plugins
-* Amazon Web Service
+* Amazon Web Services
 * Azure Active Directory
 * Google Workspace
 * Okta
