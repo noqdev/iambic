@@ -64,13 +64,13 @@ IAMbic will create an AWS Secret to store your Okta API token. If you choose to 
 you can either leverage AWS Secrets Manager to store your token, or you can store it in a local file that
 will be merged into your IAMbic configuration but won't be checked into your `iambic-templates` Git repository.
 
-Steps configuring Okta through wizard: 
+Steps configuring Okta through the setup wizard:
 <details>
 
-1. Execute `iambic setup`  
-1. Select `Okta`  
-1. Complete the steps with your `OKTA_IDP_NAME`, `OKTA_DOMAIN` and `OKTA_API_TOKEN`  
-1. In the end, your iambic_config.yml will have an `extends` section with your secret.  
+1. Execute `iambic setup`
+1. Select `Okta`
+1. Complete the steps with your `OKTA_IDP_NAME`, `OKTA_DOMAIN` and `OKTA_API_TOKEN`
+1. In the end, your iambic_config.yml will have an `extends` section with your secret.
 
 </details>
 
@@ -171,7 +171,7 @@ template_type: NOQ::Okta::Group
 idp_name: $OKTA_IDP_NAME
 properties:
   name: iambic-test-group
-  description: 'summary description'
+  description: 'description'
   members:
     - username: $EMAIL
 EOF
