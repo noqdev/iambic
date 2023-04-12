@@ -123,7 +123,7 @@ and merge it into your main configuration file using the `extends` key. You can 
 separate configuration file to store this configuration.
 
 * OKTA_DOMAIN=<your_okta_domain> # ex: https://dev-12345.okta.com/, you get the `dev-12345` portion, specific to your environment from the Okta portal.
-* OKTA_ORG_NAME=<your_okta_org_name> # ex: development. This is a friendly name to identify your Okta organization. Any arbitrary string will work here.
+* OKTA_IDP_NAME=<your_okta_idp_name> # ex: development. This is a friendly name to identify your Okta organization. Any arbitrary string will work here.
 * OKTA_API_TOKEN=<your_okta_api_token> # An administrative API token for your Okta organization
 
 An example configuration is included below:
@@ -132,7 +132,7 @@ An example configuration is included below:
 secrets:
   okta:
     organizations:
-      - idp_name: $OKTA_ORG_NAME
+      - idp_name: $OKTA_IDP_NAME
         org_url: $OKTA_DOMAIN
         api_token: $OKTA_API_TOKEN
 ```
