@@ -5,6 +5,9 @@ on:
     branches: [main]
 jobs:
   run-unit-and-functional-test:
+    # Version Auto Bump happens when CICD just auto bump patch version
+    # We have decided to minimize generating work that is not necessary.
+    if: ${{ github.event.commits[0].author.name != 'Version Auto Bump' }}
     # Since functional tests include tests that does not handle parallel runs
     # For example, config_discovery test does not tolerate resources being
     # destroyed, we are setting the concurrency here to only 1 active run at
