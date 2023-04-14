@@ -215,6 +215,9 @@ async def apply_permission_set_aws_managed_policies(
     ]
     if new_managed_policies:
         log_str = "New AWS managed policies discovered."
+        if ctx.execute:
+            log_str = f"{log_str} Attaching AWS managed policies..."
+
         for policy_arn in new_managed_policies:
             proposed_changes = [
                 ProposedChange(
@@ -226,7 +229,6 @@ async def apply_permission_set_aws_managed_policies(
             ]
             response.extend(proposed_changes)
             if ctx.execute:
-                log_str = f"{log_str} Attaching AWS managed policies..."
                 apply_awaitable = boto_crud_call(
                     identity_center_client.attach_managed_policy_to_permission_set,
                     InstanceArn=instance_arn,
@@ -234,7 +236,7 @@ async def apply_permission_set_aws_managed_policies(
                     ManagedPolicyArn=policy_arn,
                 )
                 tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
-        log.info(log_str, managed_policies=new_managed_policies, **log_params)
+        log.debug(log_str, managed_policies=new_managed_policies, **log_params)
 
     # Delete existing managed policies not in template
     existing_managed_policies = [
@@ -244,6 +246,9 @@ async def apply_permission_set_aws_managed_policies(
     ]
     if existing_managed_policies:
         log_str = "Stale AWS managed policies discovered."
+        if ctx.execute:
+            log_str = f"{log_str} Detaching AWS managed policies..."
+
         for policy_arn in existing_managed_policies:
             proposed_changes = [
                 ProposedChange(
@@ -255,7 +260,6 @@ async def apply_permission_set_aws_managed_policies(
             ]
             response.extend(proposed_changes)
             if ctx.execute:
-                log_str = f"{log_str} Detaching AWS managed policies..."
                 apply_awaitable = boto_crud_call(
                     identity_center_client.detach_managed_policy_from_permission_set,
                     InstanceArn=instance_arn,
@@ -263,27 +267,13 @@ async def apply_permission_set_aws_managed_policies(
                     ManagedPolicyArn=policy_arn,
                 )
                 tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
-        log.info(log_str, managed_policies=existing_managed_policies, **log_params)
+        log.debug(log_str, managed_policies=existing_managed_policies, **log_params)
 
     if tasks:
         results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
         return list(chain.from_iterable(results))
     else:
         return response
-
-
-async def detach_customer_managed_policy_ref(
-    identity_center_client, instance_arn: str, permission_set_arn: str, policy: dict
-):
-    try:
-        await boto_crud_call(
-            identity_center_client.detach_customer_managed_policy_reference_from_permission_set,
-            InstanceArn=instance_arn,
-            PermissionSetArn=permission_set_arn,
-            CustomerManagedPolicyReference=policy,
-        )
-    except identity_center_client.exceptions.ConflictException:
-        return
 
 
 async def apply_permission_set_customer_managed_policies(
@@ -297,7 +287,7 @@ async def apply_permission_set_customer_managed_policies(
     tasks = []
     response = []
 
-    log.warning(
+    log.debug(
         "Customer Managed Policies",
         template_policies=template_policies,
         existing_policies=existing_policies,
@@ -318,6 +308,9 @@ async def apply_permission_set_customer_managed_policies(
     ]
     if new_customer_managed_policy_references:
         log_str = "New customer managed policies discovered."
+        if ctx.execute:
+            log_str = f"{log_str} Attaching customer managed policies..."
+
         for policy in new_customer_managed_policy_references:
             proposed_changes = [
                 ProposedChange(
@@ -329,7 +322,6 @@ async def apply_permission_set_customer_managed_policies(
             ]
             response.extend(proposed_changes)
             if ctx.execute:
-                log_str = f"{log_str} Attaching customer managed policies..."
                 apply_awaitable = boto_crud_call(
                     identity_center_client.attach_customer_managed_policy_reference_to_permission_set,
                     InstanceArn=instance_arn,
@@ -337,7 +329,7 @@ async def apply_permission_set_customer_managed_policies(
                     CustomerManagedPolicyReference=policy,
                 )
                 tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
-        log.info(
+        log.debug(
             log_str,
             customer_managed_policy_refs=new_customer_managed_policy_references,
             **log_params,
@@ -351,6 +343,9 @@ async def apply_permission_set_customer_managed_policies(
     ]
     if existing_customer_managed_policy_references:
         log_str = "Stale customer managed policies discovered."
+        if ctx.execute:
+            log_str = f"{log_str} Detaching customer managed policies..."
+
         for policy in existing_customer_managed_policy_references:
             proposed_changes = [
                 ProposedChange(
@@ -362,15 +357,15 @@ async def apply_permission_set_customer_managed_policies(
             ]
             response.extend(proposed_changes)
             if ctx.execute:
-                log_str = f"{log_str} Detaching customer managed policies..."
-                apply_awaitable = detach_customer_managed_policy_ref(
-                    identity_center_client,
-                    instance_arn=instance_arn,
-                    permission_set_arn=permission_set_arn,
-                    policy=policy,
+                apply_awaitable = boto_crud_call(
+                    identity_center_client.detach_customer_managed_policy_reference_from_permission_set,
+                    retryable_errors=["ConflictException"],
+                    InstanceArn=instance_arn,
+                    PermissionSetArn=permission_set_arn,
+                    CustomerManagedPolicyReference=policy,
                 )
                 tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
-        log.info(
+        log.debug(
             log_str,
             customer_managed_policy_refs=existing_customer_managed_policy_references,
             **log_params,
@@ -420,7 +415,7 @@ async def create_account_assignment(
                 "resource_type": f"aws:identity_center:account_assignment:{resource_type.lower()}",
             }
             log.error(
-                "Unable to delete account assignment.",
+                "Unable to create account assignment.",
                 reason=creation_status.get("FailureReason"),
                 assigned_account_id=account_id,
                 resource_name=resource_name,
@@ -878,11 +873,12 @@ async def delete_permission_set(
         ] = customer_managed_policy_references
         tasks.extend(
             [
-                detach_customer_managed_policy_ref(
-                    identity_center_client,
-                    instance_arn=instance_arn,
-                    permission_set_arn=permission_set_arn,
-                    policy=policy,
+                boto_crud_call(
+                    identity_center_client.detach_customer_managed_policy_reference_from_permission_set,
+                    retryable_errors=["ConflictException"],
+                    InstanceArn=instance_arn,
+                    PermissionSetArn=permission_set_arn,
+                    CustomerManagedPolicyReference=policy,
                 )
                 for policy in customer_managed_policy_references
             ]

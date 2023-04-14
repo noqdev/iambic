@@ -151,6 +151,35 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
         screen_render_resource_changes(([template_changes]))
         self.assertEqual(len(template_changes.proposed_changes), 1)
 
+    async def test_replace_max_size_inline_policy(self):
+        # Check that replacing policies won't fail due to size limits
+        policy_statement = [
+            {
+                "action": [f"s3:NotARealAction{x}" for x in range(175)],
+                "effect": "Deny",
+                "resource": ["*"],
+            },
+        ]
+
+        self.template.properties.inline_policies.append(
+            PolicyDocument(
+                policy_name="init_policy",
+                statement=policy_statement
+            )
+        )
+        results = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        self.assertFalse(bool(results.exceptions_seen))
+        self.assertTrue(bool(results.proposed_changes))
+
+        self.template.properties.inline_policies = [
+            PolicyDocument(
+                policy_name="replace_policy",
+                statement=policy_statement
+            )
+        ]
+        results = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        self.assertFalse(bool(results.exceptions_seen))
+
 
 class UpdateGroupBadInputTestCase(IsolatedAsyncioTestCase):
     @classmethod
