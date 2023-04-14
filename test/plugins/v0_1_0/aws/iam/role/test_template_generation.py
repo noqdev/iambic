@@ -18,7 +18,10 @@ from moto import mock_sts
 import iambic
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
-from iambic.core.template_generation import merge_access_model_list
+from iambic.core.template_generation import (
+    get_existing_template_map,
+    merge_access_model_list,
+)
 from iambic.plugins.v0_1_0.aws.iam.policy.models import AssumeRolePolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate, RoleProperties
 from iambic.plugins.v0_1_0.aws.iam.role.template_generation import (
@@ -229,7 +232,13 @@ async def test_collect_aws_roles(
 ):
     _, templates_base_dir = mock_fs
     config = AWSConfig(accounts=[mock_aws_account])
-    await collect_aws_roles(mock_execution_message, config, templates_base_dir)
+    iam_template_map = await get_existing_template_map(
+        repo_dir=templates_base_dir,
+        template_type="AWS::IAM.*",
+        nested=True,
+    )
+
+    await collect_aws_roles(mock_execution_message, config, iam_template_map)
     output_path = f"{templates_base_dir}/.iambic/fake_execution_id/iam/role/output.json"
     with open(output_path, "r") as f:
         output_roles = json.load(f)
@@ -246,11 +255,18 @@ async def test_generate_aws_role_templates(
 ):
     _, templates_base_dir = mock_fs
     config = AWSConfig(accounts=[mock_aws_account])
+
+    iam_template_map = await get_existing_template_map(
+        repo_dir=templates_base_dir,
+        template_type="AWS::IAM.*",
+        nested=True,
+    )
+
     # have to call collect_aws_roles to prep the cloud response
-    await collect_aws_roles(mock_execution_message, config, templates_base_dir)
+    await collect_aws_roles(mock_execution_message, config, iam_template_map)
     # actually call the function being tested
     await generate_aws_role_templates(
-        mock_execution_message, config, templates_base_dir
+        mock_execution_message, config, templates_base_dir, iam_template_map
     )
     output_path = f"{templates_base_dir}/resources/aws/iam/role/example_account/example_role_name.yaml"
     assert os.path.exists(output_path)

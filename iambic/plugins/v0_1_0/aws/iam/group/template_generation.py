@@ -14,7 +14,6 @@ from iambic.core.template_generation import (
     base_group_str_attribute,
     create_or_update_template,
     delete_orphaned_templates,
-    get_existing_template_map,
     group_dict_attribute,
     group_int_or_str_attribute,
 )

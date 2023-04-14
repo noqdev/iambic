@@ -7,6 +7,7 @@ from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
+from iambic.core.template_generation import get_existing_template_map
 from iambic.core.utils import gather_templates
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
@@ -111,15 +112,21 @@ async def permission_set_full_import(detect_messages: list = None):
     exe_message = ExecutionMessage(
         execution_id=str(uuid.uuid4()), command=Command.IMPORT, provider_type="aws"
     )
+    identity_center_template_map = await get_existing_template_map(
+        repo_dir=IAMBIC_TEST_DETAILS.template_dir_path,
+        template_type="AWS::IdentityCenter.*",
+        nested=True,
+    )
     await collect_aws_permission_sets(
         exe_message,
         IAMBIC_TEST_DETAILS.config.aws,
-        IAMBIC_TEST_DETAILS.template_dir_path,
+        identity_center_template_map,
         detect_messages,
     )
     await generate_aws_permission_set_templates(
         exe_message,
         IAMBIC_TEST_DETAILS.config.aws,
         IAMBIC_TEST_DETAILS.template_dir_path,
+        identity_center_template_map,
         detect_messages,
     )
