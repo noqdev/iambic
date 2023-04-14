@@ -767,6 +767,15 @@ class ConfigurationWizard:
                     "Unable to add the AWS Account without creating the required roles."
                 )
                 return
+
+            self.config.aws.spoke_role_is_read_only = bool(
+                questionary.confirm(
+                    "Do you want to restrict IambicSpokeRole to read-only IAM and IdentityCenter service?\n"
+                    "This will limit IAMbic capability to import",
+                    default=False,
+                ).unsafe_ask()
+            )
+
         else:
             if requires_sync:
                 if not questionary.confirm(
@@ -803,15 +812,7 @@ class ConfigurationWizard:
                 )
                 return
 
-        read_only = bool(
-            questionary.confirm(
-                "Do you want to restrict IambicSpokeRole to read-only?\n"
-                "This will limit IAMbic capability to import",
-                default=False,
-            ).unsafe_ask()
-        )
-        self.config.aws.spoke_role_is_read_only = read_only
-
+        read_only = self.config.aws.spoke_role_is_read_only
         session, profile_name = self.get_boto3_session_for_account(account_id)
         if not session:
             return
@@ -1026,7 +1027,7 @@ class ConfigurationWizard:
 
         read_only = bool(
             questionary.confirm(
-                "Do you want to restrict IambicSpokeRole to read-only?\n"
+                "Do you want to restrict IambicSpokeRole to read-only IAM and IdentityCenter service?\n"
                 "This will limit IAMbic capability to import",
                 default=False,
             ).unsafe_ask()
