@@ -496,8 +496,9 @@ async def apply_role_inline_policies(
     existing_policies: list[dict],
     log_params: dict,
 ) -> list[ProposedChange]:
-    tasks = []
-    response = []
+    apply_tasks = []
+    delete_tasks = []
+    plan_response = []
     template_policy_map = {
         policy["PolicyName"]: {k: v for k, v in policy.items() if k != "PolicyName"}
         for policy in template_policies
@@ -510,22 +511,26 @@ async def apply_role_inline_policies(
     for policy_name in existing_policy_map.keys():
         if not template_policy_map.get(policy_name):
             log_str = "Stale inline policies discovered."
-            response.append(
+            proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DELETE,
                     resource_type="aws:policy_document",
                     resource_id=policy_name,
                     attribute="inline_policies",
                 )
-            )
+            ]
+            plan_response.extend(proposed_changes)
+
             if ctx.execute:
                 log_str = f"{log_str} Removing inline policy..."
-                tasks.append(
-                    boto_crud_call(
-                        iam_client.delete_role_policy,
-                        RoleName=role_name,
-                        PolicyName=policy_name,
-                    )
+
+                apply_awaitable = boto_crud_call(
+                    iam_client.delete_role_policy,
+                    RoleName=role_name,
+                    PolicyName=policy_name,
+                )
+                delete_tasks.append(
+                    plugin_apply_wrapper(apply_awaitable, proposed_changes)
                 )
             log.debug(log_str, policy_name=policy_name, **log_params)
 
@@ -551,7 +556,7 @@ async def apply_role_inline_policies(
                 log_params["policy_drift"] = policy_drift
                 boto_action = "Updating"
                 resource_existence = "Stale"
-                response.append(
+                proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.UPDATE,
                         resource_type="aws:policy_document",
@@ -561,11 +566,11 @@ async def apply_role_inline_policies(
                         current_value=existing_policy_doc,
                         new_value=policy_document,
                     )
-                )
+                ]
             else:
                 boto_action = "Creating"
                 resource_existence = "New"
-                response.append(
+                proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.CREATE,
                         resource_type="aws:policy_document",
@@ -573,26 +578,39 @@ async def apply_role_inline_policies(
                         attribute="inline_policies",
                         new_value=policy_document,
                     )
-                )
+                ]
+            plan_response.extend(proposed_changes)
 
             log_str = f"{resource_existence} inline policies discovered."
             if ctx.execute and policy_document:
                 log_str = f"{log_str} {boto_action} inline policy..."
-                tasks.append(
-                    boto_crud_call(
-                        iam_client.put_role_policy,
-                        RoleName=role_name,
-                        PolicyName=policy_name,
-                        PolicyDocument=json.dumps(policy_document),
-                    )
+                apply_awaitable = boto_crud_call(
+                    iam_client.put_role_policy,
+                    RoleName=role_name,
+                    PolicyName=policy_name,
+                    PolicyDocument=json.dumps(policy_document),
+                )
+                apply_tasks.append(
+                    plugin_apply_wrapper(apply_awaitable, proposed_changes)
                 )
 
             log.debug(log_str, policy_name=policy_name, **log_params)
 
-    if tasks:
-        await asyncio.gather(*tasks)
+    if apply_tasks or delete_tasks:
+        results: list[list[ProposedChange]] = []
+        if delete_tasks:
+            results.extend(await asyncio.gather(*delete_tasks))
+            if apply_tasks:
+                # Wait for the policy deletion to propagate before applying new policies
+                # Otherwise a max policy limit error may be thrown
+                await asyncio.sleep(3)
 
-    return response
+        if apply_tasks:
+            results.extend(await asyncio.gather(*apply_tasks))
+
+        return list(chain.from_iterable(results))
+    else:
+        return plan_response
 
 
 async def delete_iam_role(role_name: str, iam_client, log_params: dict):

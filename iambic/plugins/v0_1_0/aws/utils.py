@@ -33,19 +33,29 @@ def calculate_import_preference(existing_template):
     return prefer_templatized
 
 
-async def boto_crud_call(boto_fnc, **kwargs) -> Union[list, dict]:
+async def boto_crud_call(
+    boto_fnc, retryable_errors: list = None, **kwargs
+) -> Union[list, dict]:
     """Responsible for calls to boto. Adds async support and error handling
     :param boto_fnc:
+    :param retryable_errors: A list of error codes that should be retried
     :param kwargs: The params to pass to the boto fnc
     :return:
     """
     retry_count = 0
+    if not retryable_errors:
+        retryable_errors = []
+
+    retryable_errors.append("Throttling")
 
     while True:
         try:
             return await aio_wrapper(boto_fnc, **kwargs)
         except ClientError as err:
-            if "Throttling" in err.response["Error"]["Code"]:
+            if any(
+                retryable_err in err.response["Error"]["Code"]
+                for retryable_err in retryable_errors
+            ):
                 if retry_count >= 10:
                     raise
                 retry_count += 1

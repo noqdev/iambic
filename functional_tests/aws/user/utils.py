@@ -32,7 +32,7 @@ properties:
       statement:
         - action:
             - s3:initialpolicy
-          effect: Allow
+          effect: Deny
           resource: '*'
       version: '2012-10-17'
   managed_policies:

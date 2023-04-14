@@ -356,6 +356,7 @@ class ConfigurationWizard:
                     "To get started with the IAMbic setup wizard, you'll need an AWS account.\n"
                     "This is where IAMbic will deploy its main role. If you have an AWS Organization, "
                     "that account will be your hub account.\n"
+                    "Review to-be-created IAMbic roles at https://iambic.org/reference/aws_hub_and_spoke_roles\n"
                     "Which Account ID should we use to deploy the IAMbic hub role?",
                     default_val=default_hub_account_id,
                 )

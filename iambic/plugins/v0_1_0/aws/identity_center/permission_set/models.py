@@ -746,6 +746,14 @@ class AwsIdentityCenterPermissionSetTemplate(
                 tasks.append(self._apply_to_account(account))
 
         if not relevant_accounts:
+            if ctx.execute:
+                if self.deleted:
+                    log_str = "Successfully removed resource."
+                    self.delete()
+                else:
+                    log_str = "No changes detected for resource."
+                log.info(log_str, accounts=relevant_accounts, **log_params)
+
             return template_changes
 
         if ctx.execute:
