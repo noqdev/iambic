@@ -11,7 +11,7 @@ import pytest
 
 import iambic.plugins.v0_1_0.example
 from iambic.config.dynamic_config import load_config
-from iambic.core.parser import load_templates
+from iambic.core.parser import load_template, load_templates
 
 MISSING_REQUIRED_FIELDS_TEMPLATE_YAML = """template_type: NOQ::Example::LocalDatabase
 expires_at: tomorrow
@@ -86,7 +86,7 @@ def example_test_filesystem():
             print(e)
 
 
-def test_load_templates(example_test_filesystem):
+def test_load_template(example_test_filesystem):
     config_path, repo_dir = example_test_filesystem
     with open(f"{repo_dir}/{TEST_TEMPLATE_PATH}", "r") as f:
         before_template_content = "\n".join(f.readlines())
@@ -96,6 +96,18 @@ def test_load_templates(example_test_filesystem):
     templates = [f"{repo_dir}/{TEST_TEMPLATE_PATH}"]
     templates = load_templates(templates, raise_validation_err=True)
     assert len(templates) > 0
+
+
+def test_load_templates(example_test_filesystem):
+    config_path, repo_dir = example_test_filesystem
+    with open(f"{repo_dir}/{TEST_TEMPLATE_PATH}", "r") as f:
+        before_template_content = "\n".join(f.readlines())
+    assert "tomorrow" in before_template_content
+
+    asyncio.run(load_config(config_path))
+    template = f"{repo_dir}/{TEST_TEMPLATE_PATH}"
+    template = load_template(template, raise_validation_err=True)
+    assert template
 
 
 def test_missing_required_fields_templates(example_test_filesystem):
