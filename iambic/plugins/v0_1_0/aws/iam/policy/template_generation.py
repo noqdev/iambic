@@ -14,7 +14,6 @@ from iambic.core.template_generation import (
     base_group_str_attribute,
     create_or_update_template,
     delete_orphaned_templates,
-    get_existing_template_map,
     group_dict_attribute,
     group_int_or_str_attribute,
 )
@@ -302,7 +301,7 @@ async def create_templated_managed_policy(  # noqa: C901
 async def collect_aws_managed_policies(
     exe_message: ExecutionMessage,
     config: AWSConfig,
-    base_output_dir: str,
+    iam_template_map: dict,
     detect_messages: list[ManagedPolicyMessageDetails] = None,
 ):
     aws_account_map = await get_aws_account_map(config)
@@ -320,9 +319,7 @@ async def collect_aws_managed_policies(
         if not detect_messages:
             return
 
-    existing_template_map = await get_existing_template_map(
-        base_output_dir, AWS_MANAGED_POLICY_TEMPLATE_TYPE
-    )
+    existing_template_map = iam_template_map.get(AWS_MANAGED_POLICY_TEMPLATE_TYPE, {})
 
     log.info(
         "Generating AWS managed policy templates. Beginning to retrieve AWS IAM Managed Policies.",
@@ -440,12 +437,11 @@ async def generate_aws_managed_policy_templates(
     exe_message: ExecutionMessage,
     config: AWSConfig,
     base_output_dir: str,
+    iam_template_map: dict,
     detect_messages: list[ManagedPolicyMessageDetails] = None,
 ):
     aws_account_map = await get_aws_account_map(config)
-    existing_template_map = await get_existing_template_map(
-        base_output_dir, AWS_MANAGED_POLICY_TEMPLATE_TYPE
-    )
+    existing_template_map = iam_template_map.get(AWS_MANAGED_POLICY_TEMPLATE_TYPE, {})
     resource_dir = get_template_dir(base_output_dir)
     account_managed_policies = await exe_message.get_sub_exe_files(
         *RESOURCE_DIR, file_name_and_extension="output.json", flatten_results=True

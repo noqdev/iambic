@@ -20,17 +20,26 @@ from iambic.core.utils import (
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
 
-async def get_existing_template_map(repo_dir: str, template_type: str) -> dict:
+async def get_existing_template_map(
+    repo_dir: str, template_type: str, nested: bool = False
+) -> dict:
     """Used to keep track of existing templates on import
 
      Write to the existing file before creating a new one.
 
     :param repo_dir:
     :param template_type:
+    :param nested: If true, will return a map of {template_type: {resource_id: template}}
     :return: {resource_id: template}
     """
     templates = load_templates(await gather_templates(repo_dir, template_type))
-    return {template.resource_id: template for template in templates}
+    if not nested:
+        return {template.resource_id: template for template in templates}
+
+    response = defaultdict(dict)
+    for template in templates:
+        response[template.template_type][template.resource_id] = template
+    return response
 
 
 def templatize_resource(aws_account: AWSAccount, resource):

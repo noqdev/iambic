@@ -14,7 +14,6 @@ from iambic.core.template_generation import (
     base_group_str_attribute,
     create_or_update_template,
     delete_orphaned_templates,
-    get_existing_template_map,
     group_dict_attribute,
     group_int_or_str_attribute,
 )
@@ -399,7 +398,7 @@ async def create_templated_user(  # noqa: C901
 async def collect_aws_users(
     exe_message: ExecutionMessage,
     config: AWSConfig,
-    base_output_dir: str,
+    iam_template_map: dict,
     detect_messages: list[UserMessageDetails] = None,
 ):
     aws_account_map = await get_aws_account_map(config)
@@ -408,9 +407,7 @@ async def collect_aws_users(
             exe_message.provider_id: aws_account_map[exe_message.provider_id]
         }
 
-    existing_template_map = await get_existing_template_map(
-        base_output_dir, AWS_IAM_USER_TEMPLATE_TYPE
-    )
+    existing_template_map = iam_template_map.get(AWS_IAM_USER_TEMPLATE_TYPE, {})
     set_user_resource_inline_policies_semaphore = NoqSemaphore(
         set_user_resource_inline_policies, 20
     )
@@ -418,8 +415,8 @@ async def collect_aws_users(
         set_user_resource_managed_policies, 30
     )
 
-    set_user_resource_groups_semaphore = NoqSemaphore(set_user_resource_groups, 30)
-    set_user_resource_tags_semaphore = NoqSemaphore(set_user_resource_tags, 50)
+    set_user_resource_groups_semaphore = NoqSemaphore(set_user_resource_groups, 25)
+    set_user_resource_tags_semaphore = NoqSemaphore(set_user_resource_tags, 30)
 
     log.info(
         "Generating AWS user templates. Beginning to retrieve AWS IAM Users.",
@@ -532,6 +529,7 @@ async def generate_aws_user_templates(
     exe_message: ExecutionMessage,
     config: AWSConfig,
     base_output_dir: str,
+    iam_template_map: dict,
     detect_messages: list[UserMessageDetails] = None,
 ):
     aws_account_map = await get_aws_account_map(config)
@@ -543,9 +541,7 @@ async def generate_aws_user_templates(
         if not detect_messages:
             return
 
-    existing_template_map = await get_existing_template_map(
-        base_output_dir, AWS_IAM_USER_TEMPLATE_TYPE
-    )
+    existing_template_map = iam_template_map.get(AWS_IAM_USER_TEMPLATE_TYPE, {})
     user_dir = get_template_dir(base_output_dir)
     account_users = await exe_message.get_sub_exe_files(
         *RESOURCE_DIR, file_name_and_extension="output.json", flatten_results=True

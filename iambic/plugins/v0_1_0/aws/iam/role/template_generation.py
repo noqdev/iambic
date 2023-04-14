@@ -14,7 +14,6 @@ from iambic.core.template_generation import (
     base_group_str_attribute,
     create_or_update_template,
     delete_orphaned_templates,
-    get_existing_template_map,
     group_dict_attribute,
     group_int_or_str_attribute,
 )
@@ -421,7 +420,7 @@ async def create_templated_role(  # noqa: C901
 async def collect_aws_roles(
     exe_message: ExecutionMessage,
     config: AWSConfig,
-    base_output_dir: str,
+    iam_template_map: dict,
     detect_messages: list[RoleMessageDetails] = None,
 ):
     aws_account_map = await get_aws_account_map(config)
@@ -430,9 +429,7 @@ async def collect_aws_roles(
             exe_message.provider_id: aws_account_map[exe_message.provider_id]
         }
 
-    existing_template_map = await get_existing_template_map(
-        base_output_dir, AWS_IAM_ROLE_TEMPLATE_TYPE
-    )
+    existing_template_map = iam_template_map.get(AWS_IAM_ROLE_TEMPLATE_TYPE, {})
     set_role_resource_inline_policies_semaphore = NoqSemaphore(
         set_role_resource_inline_policies, 20
     )
@@ -482,7 +479,6 @@ async def collect_aws_roles(
                                 "exe_message": exe_message,
                                 "aws_accounts": aws_accounts,
                                 "role_name": existing_template.properties.role_name,
-                                "exe_message": exe_message,
                             }
                         )
 
@@ -551,13 +547,12 @@ async def generate_aws_role_templates(
     exe_message: ExecutionMessage,
     config: AWSConfig,
     base_output_dir: str,
+    iam_template_map: dict,
     detect_messages: list[RoleMessageDetails] = None,
 ):
     role_dir = get_template_dir(base_output_dir)
     aws_account_map = await get_aws_account_map(config)
-    existing_template_map = await get_existing_template_map(
-        base_output_dir, AWS_IAM_ROLE_TEMPLATE_TYPE
-    )
+    existing_template_map = iam_template_map.get(AWS_IAM_ROLE_TEMPLATE_TYPE, {})
     account_roles = await exe_message.get_sub_exe_files(
         *RESOURCE_DIR, file_name_and_extension="output.json", flatten_results=True
     )
