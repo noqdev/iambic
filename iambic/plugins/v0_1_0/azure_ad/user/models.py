@@ -199,6 +199,7 @@ class AzureActiveDirectoryUserTemplate(ExpiryModel, AzureADTemplate):
                     or self.properties.username.split("@")[0],
                 )
                 self.properties.user_id = cloud_user.user_id
+                self.write()
             except ClientResponseError as err:
                 log.exception(
                     "Failed to create user in Azure AD",
