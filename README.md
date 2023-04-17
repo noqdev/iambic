@@ -5,24 +5,24 @@
 
 "IAMbic: the Terraform of Cloud IAM"
 
-Easily manage and streamline cloud Identity and Access Management (IAM) with IAMbic, a multi-cloud IAM control plane. Discover more at [https://www.iambic.org](https://www.iambic.org).
+Easily manage and streamline cloud Identity and Access Management (IAM) with IAMbic, a multi-cloud IAM control plane. Discover more at [https://docs.iambic.org](https://docs.iambic.org).
 
 ## Key Features
 
 <!-- Keep this in sync with the list of features in the IAMbic Docs Overview Page -->
 
-- **GitOps-driven Cloud IAM (IAMOps)**: Leverage GitOps-driven Cloud IAM with human-readable formats and your favorite tools.
-- **[Multi-Cloud](https://iambic.org/getting_started/)**: Unify cloud identity management for AWS, Okta, Azure Active Directory, Google Workspace, and more.
-- **[Dynamic AWS Permissions](https://iambic.org/getting_started/aws#31---create-dynamic-iam-role-policies-that-vary-per-account)**: Simplify multi-account AWS management with flexible templates, allowing multi-account roles to have different permissions and access rules on different accounts.
-- **[Temporary Access, Permissions, and Identities](https://iambic.org/getting_started/aws#32---create-temporary-expiring-iam-permissions)**: Declaratively define and automate expiration dates for resources, permissions, and access rules.
-- **Drift Prevention**: IAMbic can prevent drift on IAM resources that you specify, ensuring that the state of your cloud environment matches the state defined in Git.
+- **[Universal Cloud Identity](https://docs.iambic.org/getting_started/)**: Unify cloud identity management for AWS, Okta, Azure Active Directory, Google Workspace with more to come.
+- **[Temporary Access](https://docs.iambic.org/getting_started/aws#32---create-temporary-expiring-iam-permissions)**: Declaratively define and automate expiration dates for resources, permissions, and access rules.
+- **[Dynamic AWS Permissions](https://docs.iambic.org/getting_started/aws#31---create-dynamic-iam-role-policies-that-vary-per-account)**: Simplify multi-account AWS management with flexible templates, allowing multi-account roles to have different permissions and access rules on different accounts.
+- **[Drift Prevention](https://docs.iambic.org/how_to_guides/prevent-drift)**: Protect the IAM resources you want to be exclusively managed via IAMbic. What is in Git becomes the absolute source of truth.
+- **[GitOps-driven Cloud IAM (IAMOps)](https://docs.iambic.org/reference/iamops_philosophy)**: Leverage GitOps-driven Cloud IAM with human-readable formats and your favorite tools.
 - **Centralized Management**: IAMbic keeps Git updated with the latest, complete state of your cloud environment, maintaining a single source of truth for auditing and compliance across multiple cloud providers in Git.
 - **Extendable**: Integrate with various clouds and applications through a powerful plugin architecture.
 - **Auditable**: Track changes to IAM policies, permissions, and rules with Git history. For AWS, IAmbic annotates out-of-band commits with details from CloudTrail.
 
 ## Getting Started
 
-Dive into IAMbic with our [quick-start guide](http://iambic.org/getting_started/) and explore powerful template examples for AWS Multi-Account Roles, Dynamic Permissions, Okta Applications and Group Assignments, Azure Active Directory Users and Groups, and Google Workspace Group Assignments. We are rapidly expanding support for existing resources and cloud providers, so check back often!
+Dive into IAMbic with our [quick-start guide](http://docs.iambic.org/getting_started/) and explore powerful template examples for AWS Multi-Account Roles, Dynamic Permissions, Okta Applications and Group Assignments, Azure Active Directory Users and Groups, and Google Workspace Group Assignments. We are rapidly expanding support for existing resources and cloud providers, so check back often!
 
 ## Installing IAMbic and Supported Versions
 
@@ -42,7 +42,7 @@ Here are some examples showcasing IAMbic's capabilities:
 
 Create a Cloudwatch role with static permissions across three accounts, dynamically generating role names based on the account the role is deployed to. This template would
 result in the creation of three roles: "dev_cloudwatch",
-"staging_cloudwatch", and "prod_cloudwatch" on the respective AWS accounts. See the [Getting Started guide for AWS](https://iambic.org/getting_started/aws) for more information.
+"staging_cloudwatch", and "prod_cloudwatch" on the respective AWS accounts. See the [Getting Started guide for AWS](https://docs.iambic.org/getting_started/aws) for more information.
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
@@ -88,7 +88,7 @@ properties:
 
 ### AWS Dynamic Permissions
 
-Create a BackendDeveloperRole with varying permissions based on the AWS account. See the [Getting Started guide for AWS](https://iambic.org/getting_started/aws) for more information.
+Create a BackendDeveloperRole with varying permissions based on the AWS account. See the [Getting Started guide for AWS](https://docs.iambic.org/getting_started/aws) for more information.
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
@@ -143,7 +143,7 @@ properties:
 
 ### Okta Application Assignments
 
-Manage Okta application assignments, including expiration dates for specific users. See the [Getting Started guide for Okta](https://iambic.org/getting_started/okta) for more information.
+Manage Okta application assignments, including expiration dates for specific users. See the [Getting Started guide for Okta](https://docs.iambic.org/getting_started/okta) for more information.
 
 ```yaml
 template_type: NOQ::Okta::App
@@ -160,7 +160,7 @@ properties:
 
 ### Okta Group Assignments
 
-Easily manage Okta group assignments with expiration dates for members. See the [Getting Started guide for Okta](https://iambic.org/getting_started/okta) for more information.
+Easily manage Okta group assignments with expiration dates for members. See the [Getting Started guide for Okta](https://docs.iambic.org/getting_started/okta) for more information.
 
 ```yaml
 template_type: NOQ::Okta::Group
@@ -179,7 +179,7 @@ properties:
 ### Google Group Assignments
 
 Manage Google Workspace group assignments, including temporary access for external users. See the [Getting Started guide for Google
-Workspace](https://iambic.org/getting_started/google) for more information.
+Workspace](https://docs.iambic.org/getting_started/google) for more information.
 
 ```yaml
 template_type: NOQ::GoogleWorkspace::Group
@@ -198,7 +198,7 @@ properties:
 
 ## Azure Active Directory Users
 
-Manage Azure Active Directory users and their attributes. See the [Getting Started guide for Azure AD](https://iambic.org/getting_started/azure_ad) for more information.
+Manage Azure Active Directory users and their attributes. See the [Getting Started guide for Azure AD](https://docs.iambic.org/getting_started/azure_ad) for more information.
 
 ```yaml
 expires_at: 2025-01-01
@@ -212,7 +212,7 @@ properties:
 
 ### Azure Active Directory Groups and Group Assignments
 
-Manage Azure Active Directory groups and group assignments, including temporary access for external users. See the [Getting Started guide for Azure AD](https://iambic.org/getting_started/azure_ad) for more information.
+Manage Azure Active Directory groups and group assignments, including temporary access for external users. See the [Getting Started guide for Azure AD](https://docs.iambic.org/getting_started/azure_ad) for more information.
 
 ```yaml
 template_type: NOQ::AzureAD::Group
@@ -252,4 +252,4 @@ IAMbic is licensed under the Apache-2.0 license. Commercial licenses and support
 
 Provider Plugins (Such as the AWS, Okta, Azure Active Directory, and Google Workspace plugins) are licensed under Apache 2. You are free to write your own provider plugins for internal services without releasing its source code.
 
-For more information, please visit [iambic.org](https://iambic.org/license).
+For more information, please visit [iambic.org](https://docs.iambic.org/license).

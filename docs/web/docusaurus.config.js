@@ -8,7 +8,7 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 const config = {
   title: 'Iambic Documentation',
   tagline: 'Cloud permissions made easy',
-  url: 'https://iambic.org/',
+  url: 'https://docs.iambic.org/',
   baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
@@ -90,6 +90,10 @@ const config = {
           {
             title: 'Community',
             items: [
+              {
+                label: 'IAMbic',
+                href: 'https://www.iambic.org',
+              },
               {
                 label: 'Slack',
                 href: 'https://communityinviter.com/apps/noqcommunity/noq',
