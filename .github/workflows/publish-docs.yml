@@ -9,6 +9,9 @@ jobs:
     if: ${{ github.repository == 'noqdev/iambic' && github.event.commits[0].author.name != 'Version Auto Bump' }}
     runs-on: ubuntu-latest
     name: docs publishing
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v3
       - name: Configure AWS Credentials
