@@ -111,7 +111,7 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
             PermissionSetAccess(users=[EXAMPLE_USER], groups=[EXAMPLE_GROUP])
         ]
         changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
-        assert changes.exceptions_seen in [None, []]
+        self.assertFalse(bool(changes.exceptions_seen))
 
         await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details(
             batch_size=5

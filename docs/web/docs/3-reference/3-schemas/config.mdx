@@ -5,16 +5,13 @@ configurations for other models used in IAMbic.*
 
 ## Properties
 
-- **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-- **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-  - **Items**
 - **`template_type`** *(string)*: Default: `"NOQ::Core::Config"`.
 - **`owner`** *(string)*
 - **`iambic_managed`**: Controls the directionality of Iambic changes. Default: `"undefined"`.
   - **All of**
     - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
 - **`version`** *(string)*: Do not change! The version of iambic this repo is compatible with.
-- **`plugins`** *(array)*: The plugins used by your IAMbic template repo. Default: `[{"type": "DIRECTORY_PATH", "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/aws", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/google_workspace", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/okta", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/github", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/azure_ad", "version": "v0.1.0"}]`.
+- **`plugins`** *(array)*: The plugins used by your IAMbic template repo. Default: `[{"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/aws", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/google_workspace", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/okta", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/github", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/azure_ad", "version": "v0.1.0"}]`.
   - **Items**: Refer to *[#/definitions/PluginDefinition](#definitions/PluginDefinition)*.
 - **`extends`** *(array)*: Default: `[]`.
   - **Items**: Refer to *[#/definitions/ExtendsConfig](#definitions/ExtendsConfig)*.
@@ -29,7 +26,7 @@ configurations for other models used in IAMbic.*
 
 <a id="definitions/IambicManaged"></a>
 
-- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "enforced", "disabled"]`.
 
 <a id="definitions/PluginType"></a>
 

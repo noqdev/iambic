@@ -3,104 +3,94 @@ slug: /
 title: Overview
 ---
 
-# What is IAMbic?
+## What is IAMbic?
 
-IAMbic shifts cloud permissions left by solving the distributed permissions nightmare across multi-cloud environments.
-You can think of IAMbic like Terraform, but specifically designed for distributed Cloud IAM.
+IAMbic tackles the complex task of managing distributed permissions across multiple cloud environments, such as AWS, Azure Active Directory,
+Okta, and Google Workspace. IAMbic creates a comprehensive copy of your human and cloud principals, and permissions in human readable
+"iambic templates" within Git. IAMbic ensures these templates stay in sync with your cloud environment, and supports bidirectional
+synchronization and round-trip functionality. This allows you to create or adjust templates and apply changes back to the cloud.
 
-Imagine that you're a cloud administrator, cloud security engineer, or site reliability engineer for a
-company with a large, multi-account footprint across
-AWS, GCP, or Azure. You have a lot of different teams across different departments that need access
-to different resources on these accounts. You're responsible for managing their permissions and access.
+<img src={"/img/generic/iambic_template_repository.png"} style={{width: '60%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
 
-You've shifted left, and you're using a mixture of Terraform, CloudFormation, and ClickOps© to manage your infrastructure.
-This approach is great for developers, who review and approve each others' changes. But for you and your security and compliance teams,
-it's a nightmare. Developers are being granted excessive permissions, making production changes that no one saw coming,
-which is causing accidental breakage left and right. It is also drastically increasing the risk and scope of a potential security breach.
+IAMbic is built on top of a plugin-based architecture and can be extended to internal identity providers.
+We are expanding IAMbic to support additional cloud providers, and actively encouraging community contributions.
 
-You've lost track of all the different ways that permissions are managed across your organization,
-and it's hard to know who has access to what without logging in to multiple systems. You're constantly having to chase down permissions requests,
-and you're constantly having to audit your environment to make sure that everything is secure.
+## How does IAMbic work?
 
-That's where IAMbic comes in. IAMbic imports your existing human identities, cloud identities,
-and permissions, using a human-readable syntax. You can manage your policies across all your cloud providers and services
-from a single codebase, making it easier to reason about and manage
-permissions and access controls across different teams and departments, along with dynamic naming and permissions depending on
-cloud account. You can also still leverage Infrastructure-as-Code and ClickOps, to have the best of both worlds. IAMbic will
-keep track of everything.
+IAMbic provides a user-friendly setup wizard (`iambic setup`) that allows you to get started in under 10 minutes. IAMbic will import
+your existing cloud resources into IAMbic template files, which are human-readable files used to represent and
+manage your cloud identities, principals, and permissions within IAMbic. For AWS, IAMbic intelligently organizes and groups similar
+resources across accounts into dynamic permission templates.
 
-IAMbic is a plugin-based multi-cloud identity and access management (IAM) control plane that allows you to view and manage your
-AWS cloud identities (IAM roles, and SSO permission sets), and your human identities from Okta, Azure Active Directory and Google
-in a single location. IAMbic will be extended to support additional cloud providers in the future, and we welcome contributions
-from the community.
+IAMbic templates support declarative definitions of temporary principals, permissions, and access rules,
+enabling zero-standing-permissions and breakglass access.
 
 
-# How does it work?
+IAMbic includes [Github Actions](/getting_started/github) that automatically run IAMbic workflows in CI/CD.
 
-IAMbic creates a centralized, organized, complete copy of your human and cloud identities, principals, and permissions
-in version control and keeps this copy updated with any changes from your cloud environment.
-This central record makes it easy to audit changes over time. IAMbic intelligently groups similar
-identities across accounts, allowing for dynamic definitions of policies or access rules depending on context
-(e.g. AWS accounts).
+These workflows manage the following tasks:
 
-IAMbic also lets you manage changes to your identities, access rules, and permissions. It facilitates
-temporary access, group memberships, IAM permissions, and breakglass flows for end-users.
-With IAMbic, you have a single source of truth that ties together human identities, cloud identities,
-cloud permissions, and the relationships among them.
+- Keeping Git up-to-date with the current state of the cloud environment
+- Manage expiring access, permissions, and cloud identities
+- [Preventing drift for IAMbic managed resources](/how_to_guides/prevent-drift)
+- Applying iambic template changes to the cloud in CI.
+
+IAMbic enables you to create custom GitOps approval processes for managing permissions and access, a concept we refer to as
+[IAMOps](/reference/iamops_philosophy).
+
+<img src={"/img/generic/iambic_iamops.png"} style={{width: '60%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+
+## Features
+
+<!-- Keep this in sync with the list of features in the IAMbic README -->
+
+- **[Universal Cloud Identity](https://docs.iambic.org/getting_started/)**: Unify cloud identity management for AWS, Okta, Azure Active Directory, Google Workspace with more to come.
+- **[Temporary Access](https://docs.iambic.org/getting_started/aws#32---create-temporary-expiring-iam-permissions)**: Declaratively define and automate expiration dates for resources, permissions, and access rules.
+- **[Dynamic AWS Permissions](https://docs.iambic.org/getting_started/aws#31---create-dynamic-iam-role-policies-that-vary-per-account)**: Simplify multi-account AWS management with flexible templates, allowing multi-account roles to have different permissions and access rules on different accounts.
+- **[Drift Prevention](https://docs.iambic.org/how_to_guides/prevent-drift)**: Protect the IAM resources you want to be exclusively managed via IAMbic. What is in Git becomes the absolute source of truth.
+- **[GitOps-driven Cloud IAM (IAMOps)](https://docs.iambic.org/reference/iamops_philosophy)**: Leverage GitOps-driven Cloud IAM with human-readable formats and your favorite tools.
+- **Centralized Management**: IAMbic keeps Git updated with the latest, complete state of your cloud environment, maintaining a single source of truth for auditing and compliance across multiple cloud providers in Git.
+- **Extendable**: Integrate with various clouds and applications through a powerful plugin architecture.
+- **Auditable**: Track changes to IAM policies, permissions, and rules with Git history. For AWS, IAmbic annotates out-of-band commits with details from CloudTrail.
 
 ## Why IAMbic?
 
-Modern, cloud-first companies have empowered employees with an unprecedented level of freedom and control
-through shifting left, adopting the cloud, and countless SaaS products. However, as an unintended side effect,
-security and compliance teams have lost both control and visibility regarding who has access
-to what within their organization.
+Modern, cloud-first companies have empowered employees with an unprecedented level of freedom and control through shifting left,
+adopting the cloud, and countless SaaS products. But as an unintended side effect, security and compliance teams have lost both
+control and visibility regarding who has access to what within their organization.
 
 The impact of this problem is that security and compliance teams face increased risks,
 including data breaches and non-compliance with regulations. This can lead to damage to company
-reputation, loss of trust among customers, and significant financial penalties. The lack of visibility
-and control also creates inefficiencies, as security and compliance teams struggle to keep up with
-the volume of changes, access requests, and difficulties in auditing their systems. This results in a
-decreased ability to respond to changing business needs and a decreased ability to secure their cloud
-environments.
+reputation, loss of trust among customers, and significant financial penalties. The lack of visibility and
+control also creates inefficiencies, as security and compliance teams struggle to keep up with the volume of changes,
+access requests, and difficulties in auditing their systems.
 
-IAMbic's approach to regaining control over cloud permissions and access management is to provide a system
-of record that has the necessary depth into custom permission frameworks (i.e. The 7 layers and
-13,000 actions in AWS policy language) and breadth (i.e. downstream SaaS applications) to meet the
-needs of modern enterprises. This system of record, a modern cloud enterprise directory, combines
-records of SSO and cloud identity into one central location, as well as tracking all related permissions
-for those identities. This comprehensive record enables cross-account management, and provides a single
-source of truth for permissions.
+IAMbic's approach to regaining control over cloud permissions and access management is to provide a system of record
+that has the necessary depth into custom permission frameworks (i.e. The 7 layers and 13,000 actions in AWS policy language) and
+breadth (i.e. downstream SaaS applications) to meet the needs of modern enterprises. This system of record, a modern cloud
+enterprise directory, combines records of SSO and cloud identity into one central location, as well as tracking all
+related permissions for those identities. This comprehensive record enables cross-account management, and provides
+a single source of truth for permissions.
 
-IAMbic intends to standardize the request workflow across the organization, enabling self-serve access
-requests in the developer workflow, and standardized request justification for various scenarios, such as
-break-glass access. Approvals for shared access are integrated into the Git workflow, providing a streamlined
-and efficient process for managing cloud permissions.
+IAMbic intends to standardize the permissions request workflow across the organization. Approvals for shared access are integrated into
+the Git workflow, providing a streamlined and efficient process for managing cloud permissions.
 
 ## What is the difference between IAMbic and Infrastructure-as-Code (IaC)?
 
-IAMbic is complementary to Infrastructure-as-Code (IaC). It's fine to operate with both in parallel, but we recommend
-not managing the same resources with both IAMbic and IaC. IAMbic will automatically capture changes made via IaC or other methods, and store
-them as commits in Git, giving you a clear timeline of when permissions were changed, what the changes were, and (in supported cases) who
-made the changes.
+Infrastructure-as-Code (IaC) is a great way for developers to manage their infrastructure, but it comes with its own challenges when trying to
+manage IAM at scale across multiple providers. IaC promotes decentralization by project, meaning it's hard to get a full picture of
+the identities in your environment in a single place.
 
-Infrastructure-as-Code (IaC) is a way for developers to manage their infrastructure, but it comes with its own challenges.
-IaC promotes decentralization by project, meaning it's hard to get a full picture of your environment's existing configuration
-in a single place. Additionally, as the complexity of IaC code and custom Terraform modules increases and becomes spread
-across multiple accounts and providers, the level of effort required for security practitioners to track the configuration
-goes up quickly. And finally, there can be a drift between the code and the actual state of your cloud environment, making IaC less of a useful artifact for understanding the current state of the cloud.
+IAMbic is designed specifically to help manage your cloud principals and their permissions across multiple providers and
+accounts by centralizing them into a single Git repository. IAMbic also includes Github actions that keep your permissions
+updated with the actual state of your cloud environments and identity providers. This way, you can have a complete and current
+picture of your permissions, regardless of how they are being managed.
 
-That's where IAMbic comes in. IAMbic is designed specifically to help manage permissions, and centralize them into a
-single Git repository in a human-readable format. IAMbic also includes Github actions that keep your permissions
-updated with the actual state of your cloud environments and identity providers. This way, you can have a complete
-and current picture of your permissions.
+IAMbic is not trying to be a replacement for Infrastructure-as-Code (IaC). IAMbic operates alongside IaC and ClickOps©,
+without needing exclusive control over all IAM resources.
 
-IAMbic can take this a step further by letting you manage some or all of your permissions, working seamlessly
-alongside your existing Infrastructure-as-Code or ClickOps workflows.
-The IAMbic format is designed to be simple and human-readable, making it easy for anyone to understand and make changes to your
-permissions. And because IAMbic is stateless, you can make small changes quickly and easily.
-
-In summary, while IaC is great for managing infrastructure, IAMbic is designed specifically to manage permissions
-and provide a complete and mutable representation of your permissions in one central location.
+In summary, while IaC is great for managing infrastructure, IAMbic is designed specifically to manage cloud permissions and provide a
+complete and mutable representation of your permissions in one central location.
 
 ## Getting started
 

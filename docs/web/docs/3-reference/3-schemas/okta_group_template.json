@@ -3,20 +3,6 @@
   "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
   "type": "object",
   "properties": {
-    "metadata_commented_dict": {
-      "title": "Metadatacommenteddict",
-      "description": "yaml inline comments",
-      "default": {},
-      "type": "object"
-    },
-    "metadata_iambic_fields": {
-      "title": "Metadataiambicfields",
-      "description": "metadata for iambic",
-      "default": [],
-      "type": "array",
-      "items": {},
-      "uniqueItems": true
-    },
     "expires_at": {
       "title": "Expiresat",
       "description": "The date and time the resource will be/was set to deleted.",
@@ -78,6 +64,7 @@
     "properties",
     "idp_name"
   ],
+  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -86,6 +73,7 @@
         "undefined",
         "read_and_write",
         "import_only",
+        "enforced",
         "disabled"
       ]
     },
@@ -108,20 +96,6 @@
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "expires_at": {
           "title": "Expiresat",
           "description": "The date and time the resource will be/was set to deleted.",
@@ -150,37 +124,76 @@
           "type": "string"
         },
         "status": {
-          "default": "active",
+          "description": "Status for the group",
           "allOf": [
             {
               "$ref": "#/definitions/UserStatus"
             }
           ]
+        },
+        "background_check_status": {
+          "title": "Backgroundcheckstatus",
+          "description": "Background check status for the group",
+          "default": false,
+          "type": "boolean"
+        },
+        "created": {
+          "title": "Created",
+          "description": "Created date for the group",
+          "type": "string"
+        },
+        "domain": {
+          "title": "Domain",
+          "description": "Domain for the group",
+          "type": "string"
+        },
+        "extra": {
+          "title": "Extra",
+          "description": "Extra attributes to store"
+        },
+        "fullname": {
+          "title": "Fullname",
+          "description": "Full name for the group",
+          "type": "string"
+        },
+        "groups": {
+          "title": "Groups",
+          "description": "Groups for the group",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "idp_name": {
+          "title": "Idpname",
+          "description": "IDP name for the group",
+          "type": "string"
+        },
+        "profile": {
+          "title": "Profile",
+          "description": "Profile for the group"
+        },
+        "updated": {
+          "title": "Updated",
+          "description": "Updated date for the group",
+          "type": "string"
+        },
+        "user_id": {
+          "title": "Userid",
+          "description": "User ID for the group",
+          "type": "string"
         }
       },
       "required": [
         "username"
-      ]
+      ],
+      "additionalProperties": false
     },
     "GroupProperties": {
       "title": "GroupProperties",
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "expires_at": {
           "title": "Expiresat",
           "description": "The date and time the resource will be/was set to deleted.",
@@ -233,11 +246,17 @@
           "items": {
             "$ref": "#/definitions/UserSimple"
           }
+        },
+        "identifier": {
+          "title": "Identifier",
+          "description": "Identifier for the group. Usually it's the group name",
+          "type": "string"
         }
       },
       "required": [
         "name"
-      ]
+      ],
+      "additionalProperties": false
     }
   }
 }

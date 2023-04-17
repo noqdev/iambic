@@ -1,0 +1,3 @@
+this is vendor because the un-certainty of software supply chain.
+since the library is a MIT license, we have decided to vendor instead
+of depend on package management.

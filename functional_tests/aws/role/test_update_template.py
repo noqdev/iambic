@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from unittest import IsolatedAsyncioTestCase
 
 import dateparser
@@ -259,3 +260,32 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
         template_changes = await template.apply(IAMBIC_TEST_DETAILS.config.aws)
         screen_render_resource_changes([template_changes])
         self.assertEqual(len(template_changes.proposed_changes), 1)
+
+    async def test_replace_max_size_inline_policy(self):
+        # Check that replacing policies won't fail due to size limits
+        policy_statement = [
+            {
+                "action": [f"s3:NotARealAction{x}" for x in range(350)],
+                "effect": "Deny",
+                "resource": ["*"],
+            },
+        ]
+
+        self.template.properties.inline_policies.append(
+            PolicyDocument(
+                policy_name="init_policy",
+                statement=policy_statement
+            )
+        )
+        results = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        self.assertFalse(bool(results.exceptions_seen))
+        self.assertTrue(bool(results.proposed_changes))
+
+        self.template.properties.inline_policies = [
+            PolicyDocument(
+                policy_name="replace_policy",
+                statement=policy_statement
+            )
+        ]
+        results = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        self.assertFalse(bool(results.exceptions_seen))

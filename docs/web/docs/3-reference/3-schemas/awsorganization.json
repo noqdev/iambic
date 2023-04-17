@@ -30,6 +30,11 @@
       "title": "Boto3 Session Map",
       "type": "object"
     },
+    "org_name": {
+      "title": "Org Name",
+      "description": "Optional friendly name for the organization",
+      "type": "string"
+    },
     "org_id": {
       "title": "Org Id",
       "description": "A unique identifier designating the identity of the organization",
@@ -78,6 +83,7 @@
     "hub_role_arn",
     "org_account_id"
   ],
+  "additionalProperties": false,
   "definitions": {
     "RegionName": {
       "title": "RegionName",
@@ -118,6 +124,7 @@
         "undefined",
         "read_and_write",
         "import_only",
+        "enforced",
         "disabled"
       ]
     },
@@ -126,20 +133,6 @@
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "iambic_managed": {
           "description": "Controls the directionality of iambic changes",
           "default": "undefined",
@@ -156,20 +149,6 @@
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "iambic_managed": {
           "description": "Controls the directionality of iambic changes",
           "default": "undefined",

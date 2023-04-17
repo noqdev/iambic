@@ -5,9 +5,6 @@ configurations for other models used in IAMbic.*
 
 ## Properties
 
-- **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-- **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-  - **Items**
 - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
   - **Items** *(string)*
 - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -38,15 +35,12 @@ configurations for other models used in IAMbic.*
 
 <a id="definitions/IambicManaged"></a>
 
-- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "enforced", "disabled"]`.
 
 <a id="definitions/Description"></a>
 
 - **`Description`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -61,9 +55,6 @@ configurations for other models used in IAMbic.
 
 - **`MaxSessionDuration`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -78,9 +69,6 @@ configurations for other models used in IAMbic.
 
 - **`Path`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -93,10 +81,7 @@ configurations for other models used in IAMbic.
 <a id="definitions/PermissionBoundary"></a>
 
 - **`PermissionBoundary`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
+configurations for other models used in IAMbic. Cannot contain additional properties.
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -118,9 +103,6 @@ configurations for other models used in IAMbic.
 
 - **`Principal`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
   - **`aws`**
     - **Any of**
       - *string*
@@ -145,10 +127,7 @@ configurations for other models used in IAMbic.
 <a id="definitions/PolicyStatement"></a>
 
 - **`PolicyStatement`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
+configurations for other models used in IAMbic. Cannot contain additional properties.
   - **`expires_at`**: The date and time the resource will be/was set to deleted.
     - **Any of**
       - *string*
@@ -199,9 +178,6 @@ configurations for other models used in IAMbic.
 
 - **`AssumeRolePolicyDocument`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -217,10 +193,7 @@ configurations for other models used in IAMbic.
 <a id="definitions/Tag"></a>
 
 - **`Tag`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
+configurations for other models used in IAMbic. Cannot contain additional properties.
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -241,10 +214,7 @@ configurations for other models used in IAMbic.
 <a id="definitions/ManagedPolicyRef"></a>
 
 - **`ManagedPolicyRef`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
+configurations for other models used in IAMbic. Cannot contain additional properties.
   - **`expires_at`**: The date and time the resource will be/was set to deleted.
     - **Any of**
       - *string*
@@ -260,14 +230,12 @@ configurations for other models used in IAMbic.
   - **`excluded_orgs`** *(array)*: A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string. Default: `[]`.
     - **Items** *(string)*
   - **`policy_arn`** *(string)*
+  - **`policy_name`** *(string)*
 
 <a id="definitions/PolicyDocument"></a>
 
 - **`PolicyDocument`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
+configurations for other models used in IAMbic. Cannot contain additional properties.
   - **`expires_at`**: The date and time the resource will be/was set to deleted.
     - **Any of**
       - *string*
@@ -291,9 +259,6 @@ configurations for other models used in IAMbic.
 
 - **`RoleProperties`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
   - **`role_name`** *(string)*: Name of the role.
   - **`description`**: Description of the role. Default: `""`.
     - **Any of**
@@ -330,10 +295,7 @@ configurations for other models used in IAMbic.
 <a id="definitions/RoleAccess"></a>
 
 - **`RoleAccess`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
+configurations for other models used in IAMbic. Cannot contain additional properties.
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.

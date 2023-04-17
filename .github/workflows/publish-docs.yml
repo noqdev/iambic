@@ -1,0 +1,27 @@
+name: Publish docs
+# This publish docs to https://iambic.org/
+on:
+  push:
+   branches:
+     - main
+jobs:
+  build-container:
+    if: ${{ github.repository == 'noqdev/iambic' && github.event.commits[0].author.name != 'Version Auto Bump' }}
+    runs-on: ubuntu-latest
+    name: docs publishing
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::242345320040:role/iambic_docs_publisher
+          aws-region: us-east-1
+      - name: publish docs
+        id: publish-docs
+        run: |
+          cd docs/web
+          yarn
+          make build_and_upload
