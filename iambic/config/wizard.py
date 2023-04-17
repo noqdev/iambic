@@ -368,6 +368,7 @@ class ConfigurationWizard:
                 f"IAMbic detected you are using {identity_arn} for AWS access.\n"
                 f"This identity will require the ability to create"
                 f"CloudFormation stacks, stack sets, and stack set instances.\n"
+                f"Review to-be-created IAMbic roles at https://docs.iambic.org/reference/aws_hub_and_spoke_roles\n"
                 f"Would you like to use this identity?"
             ).ask():
                 self.caller_identity = default_caller_identity
