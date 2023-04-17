@@ -16,3 +16,9 @@ class BaseException(Exception):
 
 class RateLimitException(BaseException):
     """Rate Limit Exception"""
+
+
+class MultipleSecretsNotAcceptedException(BaseException):
+
+    def __init__(self):
+        super().__init__("extends tag does not accept multiples secrets")
