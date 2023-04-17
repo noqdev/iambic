@@ -23,7 +23,7 @@ async def resolve_config_template_path(repo_dir: str) -> pathlib.Path:
         # IAMbic supports 1 configuration per repo
         raise RuntimeError(
             f"Too many NOQ::Core::Config templates discovered. Found ({len(config_template_file_path)}). "
-            f"Expected 1. Files: {','.join(config_template_file_path)}"
+            f"Expected 1. Files: {','.join([str(x) for x in config_template_file_path])}"
         )
 
     return pathlib.Path(config_template_file_path[0])
