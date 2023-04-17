@@ -14,6 +14,7 @@ from moto import mock_sts
 import iambic
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
+from iambic.core.template_generation import get_existing_template_map
 from iambic.plugins.v0_1_0.aws.iam.group.template_generation import (
     collect_aws_groups,
     generate_account_group_resource_files,
@@ -125,7 +126,13 @@ async def test_collect_aws_groups(
 ):
     _, templates_base_dir = mock_fs
     config = AWSConfig(accounts=[mock_aws_account])
-    await collect_aws_groups(mock_execution_message, config, templates_base_dir)
+    iam_template_map = await get_existing_template_map(
+        repo_dir=templates_base_dir,
+        template_type="AWS::IAM.*",
+        nested=True,
+    )
+
+    await collect_aws_groups(mock_execution_message, config, iam_template_map)
     output_path = (
         f"{templates_base_dir}/.iambic/fake_execution_id/iam/group/output.json"
     )
@@ -144,11 +151,17 @@ async def test_generate_aws_group_templates(
 ):
     _, templates_base_dir = mock_fs
     config = AWSConfig(accounts=[mock_aws_account])
+    iam_template_map = await get_existing_template_map(
+        repo_dir=templates_base_dir,
+        template_type="AWS::IAM.*",
+        nested=True,
+    )
+
     # have to call collect_aws_groups to prep the cloud response
-    await collect_aws_groups(mock_execution_message, config, templates_base_dir)
+    await collect_aws_groups(mock_execution_message, config, iam_template_map)
     # actually call the function being tested
     await generate_aws_group_templates(
-        mock_execution_message, config, templates_base_dir
+        mock_execution_message, config, templates_base_dir, iam_template_map
     )
     output_path = f"{templates_base_dir}/resources/aws/iam/group/example_account/example_groupname.yaml"
     assert os.path.exists(output_path)

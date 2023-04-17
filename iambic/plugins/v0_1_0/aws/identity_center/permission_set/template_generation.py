@@ -15,7 +15,6 @@ from iambic.core.template_generation import (
     base_group_str_attribute,
     create_or_update_template,
     delete_orphaned_templates,
-    get_existing_template_map,
     group_dict_attribute,
     group_int_or_str_attribute,
 )
@@ -374,7 +373,7 @@ async def create_templated_permission_set(  # noqa: C901
 async def collect_aws_permission_sets(
     exe_message: ExecutionMessage,
     config: AWSConfig,
-    base_output_dir: str,
+    identity_center_template_map: dict,
     detect_messages: list[PermissionSetMessageDetails] = None,
 ):
     resource_dir = exe_message.get_directory(*RESOURCE_DIR)
@@ -506,12 +505,13 @@ async def generate_aws_permission_set_templates(
     exe_message: ExecutionMessage,
     config: AWSConfig,
     base_output_dir: str,
+    identity_center_template_map: dict,
     detect_messages: list[PermissionSetMessageDetails] = None,
 ):
     resource_dir = get_template_dir(base_output_dir)
     aws_account_map = await get_aws_account_map(config)
-    existing_template_map = await get_existing_template_map(
-        base_output_dir, AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
+    existing_template_map = identity_center_template_map.get(
+        AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE, {}
     )
 
     all_permission_sets = await exe_message.get_sub_exe_files(

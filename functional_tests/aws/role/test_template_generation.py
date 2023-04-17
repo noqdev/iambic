@@ -95,7 +95,6 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
         # Create the policy on all accounts except 1
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
         self.template.write(exclude_unset=False)
-
         await role_full_import(
             [
                 RoleMessageDetails(
