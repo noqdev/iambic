@@ -86,7 +86,7 @@ def example_test_filesystem():
             print(e)
 
 
-def test_load_template(example_test_filesystem):
+def test_load_templates(example_test_filesystem):
     config_path, repo_dir = example_test_filesystem
     with open(f"{repo_dir}/{TEST_TEMPLATE_PATH}", "r") as f:
         before_template_content = "\n".join(f.readlines())
@@ -98,7 +98,7 @@ def test_load_template(example_test_filesystem):
     assert len(templates) > 0
 
 
-def test_load_templates(example_test_filesystem):
+def test_load_template(example_test_filesystem):
     config_path, repo_dir = example_test_filesystem
     with open(f"{repo_dir}/{TEST_TEMPLATE_PATH}", "r") as f:
         before_template_content = "\n".join(f.readlines())
