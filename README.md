@@ -226,6 +226,10 @@ properties:
       expires_at: tomorrow
 ```
 
+## Preview standalone IAMbic templates repository
+
+Preview a standalone [IAMbic templates repository](https://github.com/noqdev/iambic-templates-examples) on how IAMbic tracks multi-cloud IAM assets in GitHub. The repository is made public for you to study. No need to make your repository public.
+
 ## IAMbic - Beta Software
 
 IAMbic is currently in beta, and is not yet recommended for use in production environments. We are actively working to improve the stability and performance of the software, and welcome feedback from the community.
