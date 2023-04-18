@@ -8,7 +8,7 @@ from iambic.plugins.v0_1_0.example.handlers import import_example_resources, loa
 from iambic.plugins.v0_1_0.example.local_database.models import (
     ExampleLocalDatabaseTemplate,
 )
-from iambic.plugins.v0_1_0.example.local_file.models import ExampleLocalFileTemplate
+from iambic.plugins.v0_1_0.example.local_file.models import ExampleLocalFileMultiAccountTemplate, ExampleLocalFileTemplate
 
 
 class ExampleConfig(BaseModel):
@@ -22,5 +22,5 @@ IAMBIC_PLUGIN = ProviderPlugin(
     requires_secret=True,
     async_import_callable=import_example_resources,
     async_load_callable=load,
-    templates=[ExampleLocalFileTemplate, ExampleLocalDatabaseTemplate],
+    templates=[ExampleLocalFileTemplate, ExampleLocalFileMultiAccountTemplate, ExampleLocalDatabaseTemplate],
 )
