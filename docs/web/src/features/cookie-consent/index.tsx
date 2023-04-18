@@ -4,8 +4,6 @@ import Link from "@docusaurus/Link";
 import { translate } from "@docusaurus/Translate";
 import Cookies from 'universal-cookie';
 
-// import styles from "./styles.module.scss";
-
 export const CookieConsent = () => {
     const cookies = new Cookies();
     const cookieName = "fs-cc";
