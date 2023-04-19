@@ -247,7 +247,7 @@ class BaseModel(IambicPydanticBaseModel):
         variables = {
             k: sanitize_string(v, valid_characters_re) for k, v in variables.items()
         }
-        data = rtemplate.render(**variables)
+        data = rtemplate.render(var=variables)
         return json.loads(data)
 
     async def remove_expired_resources(self):
