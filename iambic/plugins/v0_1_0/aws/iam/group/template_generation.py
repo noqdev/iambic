@@ -11,12 +11,9 @@ from iambic.core import noq_json as json
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import (
-    base_group_str_attribute,
     create_or_update_template,
     delete_orphaned_templates,
     get_existing_template_map,
-    group_dict_attribute,
-    group_int_or_str_attribute,
 )
 from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import GroupMessageDetails
@@ -32,6 +29,11 @@ from iambic.plugins.v0_1_0.aws.iam.group.utils import (
     list_groups,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.template_generation import (
+    base_group_str_attribute,
+    group_dict_attribute,
+    group_int_or_str_attribute,
+)
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
@@ -67,7 +69,9 @@ def get_templated_group_file_path(
         separator = included_accounts[0]
 
     file_name = (
-        group_name.replace("{{", "")
+        group_name.replace(" ", "")
+        .replace("{{var.", "")
+        .replace("{{", "")
         .replace("}}_", "_")
         .replace("}}", "_")
         .replace(".", "_")

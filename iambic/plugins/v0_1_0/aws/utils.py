@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import re
-from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Optional, Union
 
@@ -201,65 +200,6 @@ class RegionName(Enum):
 
 def is_valid_account_id(account_id: str):
     return bool(re.match(r"^\d{12}$", account_id))
-
-
-async def remove_expired_resources(
-    resource,
-    template_resource_type: str,
-    template_resource_id: str,
-    delete_resource_if_expired: bool = True,
-):
-    from iambic.core.models import BaseModel
-
-    if not isinstance(resource, BaseModel):
-        return resource
-
-    log_params = {}
-    if hasattr(resource, "resource_type"):
-        log_params["resource_type"] = resource.resource_type
-    if hasattr(resource, "resource_id"):
-        log_params["resource_id"] = resource.resource_id
-    if template_resource_type != log_params.get(
-        "resource_type"
-    ) or template_resource_id != log_params.get("resource_id"):
-        log_params["parent_resource_type"] = template_resource_type
-        log_params["parent_resource_id"] = template_resource_id
-
-    if isinstance(resource, BaseModel) and hasattr(resource, "expires_at"):
-        if resource.expires_at:
-            cur_time = datetime.now(tz=timezone.utc)
-            if resource.expires_at < cur_time:
-                log.info("Expired resource found, marking for deletion", **log_params)
-                resource.deleted = True
-                return resource
-
-    for field_name in resource.__fields__.keys():
-        field_val = getattr(resource, field_name)
-        if isinstance(field_val, list):
-            new_value = await asyncio.gather(
-                *[
-                    remove_expired_resources(
-                        elem, template_resource_type, template_resource_id
-                    )
-                    for elem in field_val
-                ]
-            )
-            setattr(resource, field_name, new_value)
-            if delete_resource_if_expired:
-                for elem in new_value:
-                    if getattr(elem, "deleted", None) is True:
-                        new_value.remove(elem)
-                        setattr(resource, field_name, new_value)
-        else:
-            new_value = await remove_expired_resources(
-                field_val, template_resource_type, template_resource_id
-            )
-            if getattr(new_value, "deleted", None) is True:
-                setattr(resource, field_name, None)
-            else:
-                setattr(resource, field_name, new_value)
-
-    return resource
 
 
 async def set_org_account_variables(client, account: dict) -> dict:

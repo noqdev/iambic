@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from itertools import chain
 from typing import Any, Callable, Optional, Union
 
 from pydantic import Field, validator
@@ -16,7 +15,7 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
-from iambic.core.utils import plugin_apply_wrapper
+from iambic.core.utils import remove_expired_resources
 from iambic.plugins.v0_1_0.aws.iam.models import Path, PermissionBoundary
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.user.utils import (
@@ -163,6 +162,9 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
         self, aws_account: AWSAccount
     ) -> AccountChangeDetails:
         client = await aws_account.get_boto3_client("iam")
+        self = await remove_expired_resources(
+            self, self.resource_type, self.resource_id
+        )
         account_user = self.apply_resource_dict(aws_account)
 
         user_name = account_user["UserName"]
@@ -180,15 +182,7 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
             account=str(aws_account),
         )
         iambic_import_only = self._is_iambic_import_only(aws_account)
-        deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
-        try:
-            current_user = await get_user(
-                user_name, client, include_policies=bool(not deleted)
-            )
-        except Exception as err:
-            log.error("Failed to retrieve user", **log_params, error=err)
-            return account_change_details
-
+        current_user = await get_user(user_name, client)
         if current_user:
             account_change_details.current_value = {**current_user}  # Create a new dict
 
@@ -197,30 +191,27 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
                 account_change_details.new_value = {}
                 return account_change_details
 
+        deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
         if isinstance(deleted, list):
             deleted = deleted[0].deleted
 
         if deleted:
             if current_user:
                 account_change_details.new_value = None
-                log_str = "Active resource found with deleted=false."
-                if ctx.execute and not iambic_import_only:
-                    log_str = f"{log_str} Deleting resource..."
-                log.debug(log_str, **log_params)
-                proposed_changes = [
+                account_change_details.proposed_changes.append(
                     ProposedChange(
                         change_type=ProposedChangeType.DELETE,
                         resource_id=user_name,
                         resource_type=self.resource_type,
                     )
-                ]
+                )
+                log_str = "Active resource found with deleted=false."
+                if ctx.execute and not iambic_import_only:
+                    log_str = f"{log_str} Deleting resource..."
+                log.info(log_str, **log_params)
 
                 if ctx.execute:
-                    proposed_changes = await plugin_apply_wrapper(
-                        delete_iam_user(user_name, client, log_params), proposed_changes
-                    )
-
-                account_change_details.extend_changes(proposed_changes)
+                    await delete_iam_user(user_name, client, log_params)
 
             return account_change_details
 
@@ -267,7 +258,7 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
                 if update_user_params:
                     log_str = "Out of date resource found."
                     if ctx.execute:
-                        log.debug(
+                        log.info(
                             f"{log_str} Updating resource...",
                             **update_resource_log_params,
                         )
@@ -296,7 +287,7 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
 
                         tasks.append(update_user())
                     else:
-                        log.debug(log_str, **update_resource_log_params)
+                        log.info(log_str, **update_resource_log_params)
                         account_change_details.proposed_changes.append(
                             ProposedChange(
                                 change_type=ProposedChangeType.UPDATE,
@@ -305,33 +296,27 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
                             )
                         )
             else:
-                proposed_changes = [
+                account_change_details.proposed_changes.append(
                     ProposedChange(
                         change_type=ProposedChangeType.CREATE,
                         resource_id=user_name,
                         resource_type=self.resource_type,
                     )
-                ]
+                )
                 log_str = "New resource found in code."
                 if not ctx.execute:
-                    account_change_details.proposed_changes.extend(proposed_changes)
-                    log.debug(log_str, **log_params)
+                    log.info(log_str, **log_params)
                     # Exit now because apply functions won't work if resource doesn't exist
                     return account_change_details
 
                 log_str = f"{log_str} Creating resource..."
-                log.debug(log_str, **log_params)
+                log.info(log_str, **log_params)
                 if account_user.get("PermissionsBoundary"):
                     account_user["PermissionsBoundary"] = account_user[
                         "PermissionsBoundary"
                     ]["PolicyArn"]
 
-                account_change_details.proposed_changes.extend(
-                    await plugin_apply_wrapper(
-                        boto_crud_call(client.create_user, **account_user),
-                        proposed_changes,
-                    )
-                )
+                await boto_crud_call(client.create_user, **account_user)
         except Exception as e:
             log.error("Unable to generate tasks for resource", error=e, **log_params)
             return account_change_details
@@ -362,30 +347,36 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
             ]
         )
         try:
-            changes_made: list[list[ProposedChange]] = await asyncio.gather(
+            results: list[list[ProposedChange]] = await asyncio.gather(
                 *tasks, return_exceptions=True
             )
-            if any(changes_made):
-                account_change_details.extend_changes(
-                    list(chain.from_iterable(changes_made))
-                )
+
+            # separate out the success versus failure calls
+            exceptions: list[ProposedChange] = []
+            changes_made: list[ProposedChange] = []
+            for result in results:
+                for r in result:
+                    if isinstance(r, ProposedChange):
+                        if len(r.exceptions_seen) == 0:
+                            changes_made.append(r)
+                        else:
+                            exceptions.append(r)
 
         except Exception as e:
             log.exception("Unable to apply changes to resource", error=e, **log_params)
             return account_change_details
+        if any(changes_made):
+            account_change_details.proposed_changes.extend(changes_made)
+        if any(exceptions):
+            account_change_details.exceptions_seen.extend(exceptions)
 
-        if ctx.execute and not account_change_details.exceptions_seen:
+        if ctx.execute:
+            if self.deleted:
+                self.delete()
+            self.write()
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),
-                **log_params,
-            )
-        elif account_change_details.exceptions_seen:
-            log.error(
-                "Unable to finish execution on account for resource",
-                exceptions_seen=[
-                    cd.exceptions_seen for cd in account_change_details.exceptions_seen
-                ],
                 **log_params,
             )
         else:
