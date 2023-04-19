@@ -6,6 +6,7 @@ from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.aws.permission_set.utils import generate_permission_set_template
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core import noq_json as json
 from iambic.core.context import ctx
 from iambic.core.models import ProposedChangeType
@@ -111,7 +112,7 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
             PermissionSetAccess(users=[EXAMPLE_USER], groups=[EXAMPLE_GROUP])
         ]
         changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
-        assert changes.exceptions_seen in [None, []]
+        self.assertFalse(bool(changes.exceptions_seen))
 
         await IAMBIC_TEST_DETAILS.identity_center_account.set_identity_center_details(
             batch_size=5

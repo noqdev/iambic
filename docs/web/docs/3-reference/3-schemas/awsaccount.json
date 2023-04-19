@@ -85,11 +85,17 @@
       "title": "Spoke Role Arn",
       "description": "(Auto-populated) The role arn to assume into when making calls to the account",
       "type": "string"
+    },
+    "assume_role_arn": {
+      "title": "Assume Role Arn",
+      "description": "The role arn to assume into when making calls to the account",
+      "type": "string"
     }
   },
   "required": [
     "account_name"
   ],
+  "additionalProperties": false,
   "definitions": {
     "RegionName": {
       "title": "RegionName",
@@ -115,6 +121,7 @@
         "undefined",
         "read_and_write",
         "import_only",
+        "enforced",
         "disabled"
       ]
     },

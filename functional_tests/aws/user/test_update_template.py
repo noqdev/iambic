@@ -4,9 +4,9 @@ import asyncio
 from unittest import IsolatedAsyncioTestCase
 
 import dateparser
-
 from functional_tests.aws.user.utils import generate_user_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core import noq_json as json
 from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.iam.models import PermissionBoundary
@@ -191,3 +191,26 @@ class UpdateUserTestCase(IsolatedAsyncioTestCase):
         template_changes = await template.apply(IAMBIC_TEST_DETAILS.config.aws)
         screen_render_resource_changes([template_changes])
         self.assertEqual(len(template_changes.proposed_changes), 1)
+
+    async def test_replace_max_size_inline_policy(self):
+        # Check that replacing policies won't fail due to size limits
+        policy_statement = [
+            {
+                "action": [f"s3:NotARealAction{x}" for x in range(75)],
+                "effect": "Deny",
+                "resource": ["*"],
+            },
+        ]
+
+        self.template.properties.inline_policies.append(
+            PolicyDocument(policy_name="init_policy", statement=policy_statement)
+        )
+        results = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        self.assertFalse(bool(results.exceptions_seen))
+        self.assertTrue(bool(results.proposed_changes))
+
+        self.template.properties.inline_policies = [
+            PolicyDocument(policy_name="replace_policy", statement=policy_statement)
+        ]
+        results = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        self.assertFalse(bool(results.exceptions_seen))

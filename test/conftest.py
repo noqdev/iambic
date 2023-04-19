@@ -38,14 +38,8 @@ def aws_accounts():
     ]
     for elem, account in enumerate(accounts):
         account.variables = [
-            Variable(
-                key="account_id",
-                value=account.account_id
-            ),
-            Variable(
-                key="account_name",
-                value=account.account_name
-            )
+            Variable(key="account_id", value=account.account_id),
+            Variable(key="account_name", value=account.account_name),
         ]
         accounts[elem] = account
 

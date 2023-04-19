@@ -237,7 +237,10 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
         )
         iambic_import_only = self._is_iambic_import_only(aws_account)
 
-        current_role = await get_role(role_name, client)
+        deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
+        current_role = await get_role(
+            role_name, client, include_policies=bool(not deleted)
+        )
         if current_role:
             account_change_details.current_value = {**current_role}  # Create a new dict
 

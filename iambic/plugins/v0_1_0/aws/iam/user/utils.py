@@ -413,8 +413,9 @@ async def apply_user_inline_policies(
     existing_policies: list[dict],
     log_params: dict,
 ) -> list[ProposedChange]:
-    tasks = []
-    response = []
+    apply_tasks = []
+    delete_tasks = []
+    plan_response = []
     template_policy_map = {
         policy["PolicyName"]: {k: v for k, v in policy.items() if k != "PolicyName"}
         for policy in template_policies
@@ -427,7 +428,6 @@ async def apply_user_inline_policies(
     for policy_name in existing_policy_map.keys():
         if not template_policy_map.get(policy_name):
             log_str = "Stale inline policies discovered."
-
             proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.DELETE,
@@ -436,7 +436,7 @@ async def apply_user_inline_policies(
                     attribute="inline_policies",
                 )
             ]
-            response.extend(proposed_changes)
+            plan_response.extend(proposed_changes)
 
             if ctx.execute:
                 log_str = f"{log_str} Removing inline policy..."
@@ -446,7 +446,9 @@ async def apply_user_inline_policies(
                     UserName=user_name,
                     PolicyName=policy_name,
                 )
-                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
+                delete_tasks.append(
+                    plugin_apply_wrapper(apply_awaitable, proposed_changes)
+                )
 
             log.debug(log_str, policy_name=policy_name, **log_params)
 
@@ -495,7 +497,7 @@ async def apply_user_inline_policies(
                         new_value=policy_document,
                     )
                 ]
-            response.extend(proposed_changes)
+            plan_response.extend(proposed_changes)
 
             log_str = f"{resource_existence} inline policies discovered."
             if ctx.execute and policy_document:
@@ -507,15 +509,27 @@ async def apply_user_inline_policies(
                     PolicyName=policy_name,
                     PolicyDocument=json.dumps(policy_document),
                 )
-                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
+                apply_tasks.append(
+                    plugin_apply_wrapper(apply_awaitable, proposed_changes)
+                )
 
             log.debug(log_str, policy_name=policy_name, **log_params)
 
-    if tasks:
-        results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+    if apply_tasks or delete_tasks:
+        results: list[list[ProposedChange]] = []
+        if delete_tasks:
+            results.extend(await asyncio.gather(*delete_tasks))
+            if apply_tasks:
+                # Wait for the policy deletion to propagate before applying new policies
+                # Otherwise a max policy limit error may be thrown
+                await asyncio.sleep(3)
+
+        if apply_tasks:
+            results.extend(await asyncio.gather(*apply_tasks))
+
         return list(chain.from_iterable(results))
     else:
-        return response
+        return plan_response
 
 
 async def apply_user_groups(

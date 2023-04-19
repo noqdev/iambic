@@ -8,7 +8,6 @@ from functional_tests.aws.role.utils import (
     role_full_import,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
 from iambic.plugins.v0_1_0.aws.event_bridge.models import RoleMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate
 
@@ -95,7 +94,6 @@ class PartialImportRoleTestCase(IsolatedAsyncioTestCase):
         # Create the policy on all accounts except 1
         await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
         self.template.write(exclude_unset=False)
-
         await role_full_import(
             [
                 RoleMessageDetails(

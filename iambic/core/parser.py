@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import traceback
 from functools import partial
-from multiprocessing import Pool, cpu_count
 from typing import Union
 
 from pydantic import ValidationError
@@ -13,6 +13,14 @@ from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate
 from iambic.core.utils import transform_comments, yaml
+
+# we must avoid import multiprocessing pool in the module loading time
+if os.environ.get("AWS_LAMBDA_FUNCTION_NAME", False):
+    from multiprocessing import cpu_count
+
+    from iambic.vendor.lambda_multiprocessing import Pool
+else:
+    from multiprocessing import Pool, cpu_count
 
 
 # line number is zero-th based

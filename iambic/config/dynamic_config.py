@@ -17,6 +17,7 @@ from pydantic import create_model as create_pydantic_model
 
 import iambic.plugins.v0_1_0.github
 from iambic.core.context import ctx
+from iambic.core.exceptions import MultipleSecretsNotAcceptedException
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
@@ -160,43 +161,46 @@ class Config(BaseTemplate):
 
     async def set_config_secrets(self):
         if self.extends:
-            for extend in self.extends:
-                if extend.key == ExtendsConfigKey.LOCAL_FILE:
-                    dir_path = os.path.dirname(self.file_path)
-                    extend_path = os.path.join(dir_path, extend.value)
-                    with open(extend_path, "r") as ymlfile:
-                        extend_config = yaml.load(ymlfile)
-                    for k, v in extend_config.items():
-                        if not getattr(self, k, None):
-                            setattr(self, k, v)
-                else:
-                    decoded_secret_responses: list[dict] = await asyncio.gather(
-                        *[
-                            plugin.async_decode_secret_callable(
-                                self.get_config_plugin(plugin), extend
-                            )
-                            for plugin in self.plugin_instances
-                            if plugin.async_decode_secret_callable
-                        ]
-                    )
-                    for decoded_secret in decoded_secret_responses:
-                        if decoded_secret:
-                            if "secrets" not in decoded_secret:
-                                decoded_secret = dict(secrets=decoded_secret)
-                            else:
-                                for k, v in decoded_secret.items():
-                                    if k != "secrets":
-                                        decoded_secret["secrets"][k] = v
+            if len(self.extends) > 1:
+                raise MultipleSecretsNotAcceptedException()
 
-                            for k, v in decoded_secret.get("secrets", {}).items():
-                                if k in decoded_secret:
-                                    log.warning(
-                                        "Secret key already exists. "
-                                        "This means it was defined in multiple secrets"
-                                        " or multiple times in the same secret.",
-                                        key=k,
-                                    )
-                                self.secrets.setdefault(k, v)
+            extend = self.extends[0]
+            if extend.key == ExtendsConfigKey.LOCAL_FILE:
+                dir_path = os.path.dirname(self.file_path)
+                extend_path = os.path.join(dir_path, extend.value)
+                with open(extend_path, "r") as ymlfile:
+                    extend_config = yaml.load(ymlfile)
+                for k, v in extend_config.items():
+                    if not getattr(self, k, None):
+                        setattr(self, k, v)
+            else:
+                decoded_secret_responses: list[dict] = await asyncio.gather(
+                    *[
+                        plugin.async_decode_secret_callable(
+                            self.get_config_plugin(plugin), extend
+                        )
+                        for plugin in self.plugin_instances
+                        if plugin.async_decode_secret_callable
+                    ]
+                )
+                for decoded_secret in decoded_secret_responses:
+                    if decoded_secret:
+                        if "secrets" not in decoded_secret:
+                            decoded_secret = dict(secrets=decoded_secret)
+                        else:
+                            for k, v in decoded_secret.items():
+                                if k != "secrets":
+                                    decoded_secret["secrets"][k] = v
+
+                        for k, v in decoded_secret.get("secrets", {}).items():
+                            if k in decoded_secret:
+                                log.warning(
+                                    "Secret key already exists. "
+                                    "This means it was defined in multiple secrets"
+                                    " or multiple times in the same secret.",
+                                    key=k,
+                                )
+                            self.secrets.setdefault(k, v)
 
     async def run_import(
         self,

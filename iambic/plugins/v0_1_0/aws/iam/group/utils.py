@@ -203,7 +203,7 @@ async def apply_group_inline_policies(
 ) -> list[ProposedChange]:
     apply_tasks = []
     delete_tasks = []
-    response = []
+    plan_response = []
     template_policy_map = {
         policy["PolicyName"]: {k: v for k, v in policy.items() if k != "PolicyName"}
         for policy in template_policies
@@ -224,7 +224,7 @@ async def apply_group_inline_policies(
                     attribute="inline_policies",
                 )
             ]
-            response.extend(proposed_changes)
+            plan_response.extend(proposed_changes)
 
             if ctx.execute:
                 log_str = f"{log_str} Removing inline policy..."
@@ -284,7 +284,7 @@ async def apply_group_inline_policies(
                         new_value=policy_document,
                     )
                 ]
-            response.extend(proposed_changes)
+            plan_response.extend(proposed_changes)
 
             log_str = f"{resource_existence} inline policies discovered."
             if ctx.execute and policy_document:
@@ -315,7 +315,7 @@ async def apply_group_inline_policies(
 
         return list(chain.from_iterable(results))
     else:
-        return response
+        return plan_response
 
 
 async def delete_iam_group(group_name: str, iam_client, log_params: dict):

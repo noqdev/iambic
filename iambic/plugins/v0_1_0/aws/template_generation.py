@@ -2,8 +2,12 @@ from typing import Union
 
 from iambic.core.template_generation import (
     base_group_str_attribute as core_base_group_str_attribute,
-    group_int_or_str_attribute as core_group_int_or_str_attribute,
+)
+from iambic.core.template_generation import (
     group_dict_attribute as core_group_dict_attribute,
+)
+from iambic.core.template_generation import (
+    group_int_or_str_attribute as core_group_int_or_str_attribute,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 

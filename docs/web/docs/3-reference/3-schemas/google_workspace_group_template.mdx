@@ -5,9 +5,6 @@ configurations for other models used in IAMbic.*
 
 ## Properties
 
-- **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-- **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-  - **Items**
 - **`expires_at`**: The date and time the resource will be/was set to deleted.
   - **Any of**
     - *string*
@@ -25,7 +22,7 @@ configurations for other models used in IAMbic.*
 
 <a id="definitions/IambicManaged"></a>
 
-- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "disabled"]`.
+- **`IambicManaged`**: An enumeration. Must be one of: `["undefined", "read_and_write", "import_only", "enforced", "disabled"]`.
 
 <a id="definitions/GroupMemberRole"></a>
 
@@ -46,10 +43,7 @@ configurations for other models used in IAMbic.*
 <a id="definitions/GroupMember"></a>
 
 - **`GroupMember`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
+configurations for other models used in IAMbic. Cannot contain additional properties.
   - **`expires_at`**: The date and time the resource will be/was set to deleted.
     - **Any of**
       - *string*
@@ -95,9 +89,6 @@ configurations for other models used in IAMbic.
 
 - **`GroupProperties`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic.
-  - **`metadata_commented_dict`** *(object)*: yaml inline comments. Default: `{}`.
-  - **`metadata_iambic_fields`** *(array)*: metadata for iambic. Default: `[]`.
-    - **Items**
   - **`name`** *(string)*
   - **`domain`** *(string)*
   - **`email`** *(string)*

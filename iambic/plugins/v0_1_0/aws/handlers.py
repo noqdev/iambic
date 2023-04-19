@@ -20,6 +20,7 @@ from iambic.core.models import (
     Variable,
 )
 from iambic.core.parser import load_templates
+from iambic.core.template_generation import get_existing_template_map
 from iambic.core.utils import async_batch_processor, gather_templates, yaml
 from iambic.plugins.v0_1_0.aws.event_bridge.models import (
     GroupMessageDetails,
@@ -140,6 +141,7 @@ async def apply_identity_center_templates(
     :param templates: The list of templates to apply.
     :param remote_worker: The remote worker to use for applying templates.
     """
+    await config.set_identity_center_details(exe_message.provider_id)
     return await async_batch_processor(
         [template.apply(config) for template in templates],
         5,
@@ -246,6 +248,7 @@ async def import_service_resources(
     async_generator_callables: list,
     messages: list = None,
     remote_worker=None,
+    existing_template_map: dict = None,
 ):
     base_runner = bool(not exe_message.metadata)
     if not exe_message.metadata:
@@ -270,7 +273,7 @@ async def import_service_resources(
 
             tasks.append(
                 async_collector_callable(
-                    task_message, config, base_output_dir, messages
+                    task_message, config, existing_template_map, messages
                 )
             )
 
@@ -289,7 +292,13 @@ async def import_service_resources(
     if base_runner:
         await asyncio.gather(
             *[
-                async_generator_callable(exe_message, config, base_output_dir, messages)
+                async_generator_callable(
+                    exe_message,
+                    config,
+                    base_output_dir,
+                    existing_template_map,
+                    messages,
+                )
                 for async_generator_callable in async_generator_callables
             ]
         )
@@ -301,6 +310,7 @@ async def import_identity_center_resources(
     base_output_dir: str,
     messages: list = None,
     remote_worker=None,
+    existing_template_map: dict = None,
 ):
     identity_center_config = config.copy()
     identity_center_config.accounts = [
@@ -330,6 +340,7 @@ async def import_identity_center_resources(
         [generate_aws_permission_set_templates],
         messages,
         remote_worker,
+        existing_template_map,
     )
 
 
@@ -343,13 +354,35 @@ async def import_aws_resources(
     tasks = []
 
     if not exe_message.metadata or exe_message.metadata["service"] == "identity_center":
+        identity_center_template_map = None
+        if not remote_worker or exe_message.metadata:
+            identity_center_template_map = await get_existing_template_map(
+                repo_dir=base_output_dir,
+                template_type="AWS::IdentityCenter.*",
+                nested=True,
+            )
+
         tasks.append(
             import_identity_center_resources(
-                exe_message, config, base_output_dir, messages, remote_worker
+                exe_message,
+                config,
+                base_output_dir,
+                messages,
+                remote_worker,
+                identity_center_template_map,
             )
         )
 
     if not exe_message.metadata or exe_message.metadata["service"] == "iam":
+        iam_template_map = None
+
+        if not remote_worker or exe_message.metadata:
+            iam_template_map = await get_existing_template_map(
+                repo_dir=base_output_dir,
+                template_type="AWS::IAM.*",
+                nested=True,
+            )
+
         tasks.append(
             import_service_resources(
                 exe_message,
@@ -370,6 +403,7 @@ async def import_aws_resources(
                 ],
                 messages,
                 remote_worker,
+                iam_template_map,
             )
         )
 
@@ -539,29 +573,48 @@ async def detect_changes(  # noqa: C901
         execution_id=str(uuid.uuid4()), command=Command.IMPORT, provider_type="aws"
     )
     collect_tasks = []
+    iam_template_map = None
+    identity_center_template_map = None
+
+    if role_messages or user_messages or group_messages or managed_policy_messages:
+        iam_template_map = await get_existing_template_map(
+            repo_dir=repo_dir,
+            template_type="AWS::IAM.*",
+            nested=True,
+        )
+
+    if permission_set_messages:
+        identity_center_template_map = await get_existing_template_map(
+            repo_dir=repo_dir,
+            template_type="AWS::IdentityCenter.*",
+            nested=True,
+        )
 
     if role_messages:
         collect_tasks.append(
-            collect_aws_roles(exe_message, config, repo_dir, role_messages)
+            collect_aws_roles(exe_message, config, iam_template_map, role_messages)
         )
     if user_messages:
         collect_tasks.append(
-            collect_aws_users(exe_message, config, repo_dir, user_messages)
+            collect_aws_users(exe_message, config, iam_template_map, user_messages)
         )
     if group_messages:
         collect_tasks.append(
-            collect_aws_groups(exe_message, config, repo_dir, group_messages)
+            collect_aws_groups(exe_message, config, iam_template_map, group_messages)
         )
     if managed_policy_messages:
         collect_tasks.append(
             collect_aws_managed_policies(
-                exe_message, config, repo_dir, managed_policy_messages
+                exe_message, config, iam_template_map, managed_policy_messages
             )
         )
     if permission_set_messages:
         collect_tasks.append(
             collect_aws_permission_sets(
-                exe_message, config, repo_dir, permission_set_messages
+                exe_message,
+                config,
+                identity_center_template_map,
+                permission_set_messages,
             )
         )
 
@@ -572,31 +625,39 @@ async def detect_changes(  # noqa: C901
         if role_messages:
             tasks.append(
                 generate_aws_role_templates(
-                    exe_message, config, repo_dir, role_messages
+                    exe_message, config, repo_dir, iam_template_map, role_messages
                 )
             )
         if user_messages:
             tasks.append(
                 generate_aws_user_templates(
-                    exe_message, config, repo_dir, user_messages
+                    exe_message, config, repo_dir, iam_template_map, user_messages
                 )
             )
         if group_messages:
             tasks.append(
                 generate_aws_group_templates(
-                    exe_message, config, repo_dir, group_messages
+                    exe_message, config, repo_dir, iam_template_map, group_messages
                 )
             )
         if managed_policy_messages:
             tasks.append(
                 generate_aws_managed_policy_templates(
-                    exe_message, config, repo_dir, managed_policy_messages
+                    exe_message,
+                    config,
+                    repo_dir,
+                    iam_template_map,
+                    managed_policy_messages,
                 )
             )
         if permission_set_messages:
             tasks.append(
                 generate_aws_permission_set_templates(
-                    exe_message, config, repo_dir, permission_set_messages
+                    exe_message,
+                    config,
+                    repo_dir,
+                    identity_center_template_map,
+                    permission_set_messages,
                 )
             )
         await asyncio.gather(*tasks)

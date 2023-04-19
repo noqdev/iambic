@@ -13,7 +13,6 @@ from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import (
     create_or_update_template,
     delete_orphaned_templates,
-    get_existing_template_map,
 )
 from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_upsert
 from iambic.plugins.v0_1_0.aws.event_bridge.models import GroupMessageDetails
@@ -319,7 +318,7 @@ async def create_templated_group(  # noqa: C901
 async def collect_aws_groups(
     exe_message: ExecutionMessage,
     config: AWSConfig,
-    base_output_dir: str,
+    iam_template_map: dict,
     detect_messages: list[GroupMessageDetails] = None,
 ):
     aws_account_map = await get_aws_account_map(config)
@@ -335,9 +334,7 @@ async def collect_aws_groups(
         if not detect_messages:
             return
 
-    existing_template_map = await get_existing_template_map(
-        base_output_dir, AWS_IAM_GROUP_TEMPLATE_TYPE
-    )
+    existing_template_map = iam_template_map.get(AWS_IAM_GROUP_TEMPLATE_TYPE, {})
     set_group_resource_inline_policies_semaphore = NoqSemaphore(
         set_group_resource_inline_policies, 20
     )
@@ -455,18 +452,17 @@ async def generate_aws_group_templates(
     exe_message: ExecutionMessage,
     config: AWSConfig,
     base_output_dir: str,
+    iam_template_map: dict,
     detect_messages: list[GroupMessageDetails] = None,
 ):
     aws_account_map = await get_aws_account_map(config)
-    existing_template_map = await get_existing_template_map(
-        base_output_dir, AWS_IAM_GROUP_TEMPLATE_TYPE
-    )
+    existing_template_map = iam_template_map.get(AWS_IAM_GROUP_TEMPLATE_TYPE, {})
     group_dir = get_template_dir(base_output_dir)
     account_groups = await exe_message.get_sub_exe_files(
         *RESOURCE_DIR, file_name_and_extension="output.json", flatten_results=True
     )
 
-    log.debug("Grouping groups")
+    log.info("Grouping groups")
     # Move everything to required structure
     for account_group_elem in range(len(account_groups)):
         for group_elem in range(len(account_groups[account_group_elem]["groups"])):

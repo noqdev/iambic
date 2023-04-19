@@ -8,6 +8,7 @@ from functional_tests.aws.permission_set.utils import (
     generate_permission_set_template_from_base,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.output.text import screen_render_resource_changes
 
 

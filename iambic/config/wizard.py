@@ -355,6 +355,7 @@ class ConfigurationWizard:
                     "To get started with the IAMbic setup wizard, you'll need an AWS account.\n"
                     "This is where IAMbic will deploy its main role. If you have an AWS Organization, "
                     "that account will be your hub account.\n"
+                    "Review to-be-created IAMbic roles at https://docs.iambic.org/reference/aws_hub_and_spoke_roles\n"
                     "Which Account ID should we use to deploy the IAMbic hub role?",
                     default_val=default_hub_account_id,
                 )
@@ -1319,7 +1320,7 @@ class ConfigurationWizard:
     def configuration_wizard_google_workspace(self):
         log.info(
             "For details on how to retrieve the information required to add a Google Workspace "
-            "to IAMbic check out our docs: https://iambic.org/getting_started/google/"
+            "to IAMbic check out our docs: https://docs.iambic.org/getting_started/google/"
         )
 
         if self.config.google_workspace:
@@ -1430,7 +1431,7 @@ class ConfigurationWizard:
     def configuration_wizard_okta(self):
         log.info(
             "For details on how to retrieve the information required to add an Okta Organization "
-            "to IAMbic check out our docs: https://iambic.org/getting_started/okta/"
+            "to IAMbic check out our docs: https://docs.iambic.org/getting_started/okta/"
         )
         if self.config.okta:
             action = questionary.select(
@@ -1553,7 +1554,7 @@ class ConfigurationWizard:
     def configuration_wizard_azure_ad(self):
         log.info(
             "For details on how to retrieve the information required to add an Azure AD Organization "
-            "to IAMbic check out our docs: https://iambic.org/getting_started/azure_ad/"
+            "to IAMbic check out our docs: https://docs.iambic.org/getting_started/azure_ad/"
         )
         if self.config.azure_ad:
             action = questionary.select(

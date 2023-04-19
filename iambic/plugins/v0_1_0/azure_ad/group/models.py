@@ -336,6 +336,7 @@ class AzureActiveDirectoryGroupTemplate(ExpiryModel, AzureADTemplate):
                     group_types=self.properties.group_types,
                 )
                 self.properties.group_id = cloud_group.group_id
+                self.write()
             except ClientResponseError as err:
                 log.exception(
                     "Failed to create user in Azure AD",
