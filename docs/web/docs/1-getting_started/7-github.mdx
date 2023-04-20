@@ -236,7 +236,7 @@ properties:
             - logs:PutLogEvents
           effect: Allow
           resource:
-            - arn:aws:logs:us-west-2:{{account_id}}:log-group:/aws/lambda/iambic_github_app_webhook*:*
+            - arn:aws:logs:*:{{account_id}}:log-group:/aws/lambda/iambic_github_app_webhook*:*
           sid: LogEvents
         - action: sts:AssumeRole
           effect: Allow
