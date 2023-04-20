@@ -220,7 +220,7 @@ properties:
             - logs:CreateLogGroup
           effect: Allow
           resource:
-            - arn:aws:logs:*:{{account_id}}:*
+            - arn:aws:logs:*:{{account_id}}:log-group:*:log-stream:
           sid: CreateLogGroup
         - action:
             - secretsmanager:GetSecretValue
