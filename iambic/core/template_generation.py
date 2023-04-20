@@ -965,6 +965,11 @@ def merge_model(
                         new_value, [existing_value], all_provider_children
                     ),
                 )
+            elif new_value is None:
+                # cloud is represented by None, local is a BaseModel.
+                # this will only work if the local BaseModel does not carry
+                # any local metadata that needs to survive outside of cloud.
+                setattr(merged_model, key, new_value)
             else:
                 raise NotImplementedError
         elif key not in iambic_fields:

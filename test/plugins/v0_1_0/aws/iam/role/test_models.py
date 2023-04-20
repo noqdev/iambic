@@ -5,6 +5,35 @@ from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate, RolePr
 from iambic.plugins.v0_1_0.aws.models import AWSAccount, Description
 
 
+def test_merge_role_template_from_base_model_to_none(aws_accounts: list[AWSAccount]):
+    """this tests ensure the merge model is dealing with a attribute merges between local base model and cloud none during merge operation"""
+    existing_properties = {
+        "role_name": "bar",
+        "permissions_boundary": {
+            "policy_arn": "arn:aws:iam::aws:policy/aws-service-role/AccessAnalyzerServiceRolePolicy",
+        },
+    }
+    existing_document = AwsIamRoleTemplate(
+        identifier="{{account_name}}_iambic_test_role",
+        file_path="foo",
+        properties=existing_properties,
+    )
+    new_properties = {
+        "role_name": "bar",
+    }
+    new_document = AwsIamRoleTemplate(
+        identifier="{{account_name}}_iambic_test_role",
+        file_path="foo",
+        properties=new_properties,
+    )
+    merged_document: AwsIamRoleTemplate = merge_model(
+        new_document, existing_document, aws_accounts
+    )
+    assert existing_document.properties.permissions_boundary is not None
+    assert new_document.properties.permissions_boundary is None
+    assert merged_document.properties.permissions_boundary is None
+
+
 def test_merge_role_template_without_sid(aws_accounts: list[AWSAccount]):
     existing_properties = {
         "role_name": "bar",
