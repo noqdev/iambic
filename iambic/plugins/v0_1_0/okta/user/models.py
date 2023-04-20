@@ -256,7 +256,7 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
                     log_params,
                 ),
                 maybe_deprovision_user(
-                    self.deleted,
+                    bool(self.deleted),
                     current_user,
                     okta_organization,
                     log_params,

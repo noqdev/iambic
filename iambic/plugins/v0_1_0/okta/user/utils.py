@@ -255,10 +255,6 @@ async def update_user_status(
     current_status: str = user.status.value
     if current_status == new_status:
         return response
-    if new_status == "deprovisioned":
-        # maybe_deprovision_user is called in the main loop
-        # and handles this use case
-        return response
     response.append(
         ProposedChange(
             change_type=ProposedChangeType.UPDATE,
