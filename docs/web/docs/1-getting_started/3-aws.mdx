@@ -139,11 +139,11 @@ If there are other roles with the role name specified in the template below, the
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
-identifier: "{{account_name}}_iambic_test_role"
+identifier: "{{var.account_name}}_iambic_test_role"
 included_accounts:
   - "*"
 properties:
-  description: IAMbic test role on {{account_name}}
+  description: IAMbic test role on {{var.account_name}}
   assume_role_policy_document:
     statement:
       - action: sts:AssumeRole
@@ -156,13 +156,13 @@ properties:
         - action:
             - sqs:GetQueueAttributes
           effect: Deny
-          resource: "arn:aws:sqs:us-east-1:{{account_id}}:fakequeue"
+          resource: "arn:aws:sqs:us-east-1:{{var.account_id}}:fakequeue"
   managed_policies:
     - policy_arn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
   path: /iambic_test/
   permissions_boundary:
     policy_arn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
-  role_name: "{{account_name}}_iambic_test_role"
+  role_name: "{{var.account_name}}_iambic_test_role"
 ```
 <!-- #TODO why are we using the word template here? Have we ever defined template for users? -->
 Save the template, and in your terminal, use IAMbic to apply the change.
@@ -185,11 +185,11 @@ Let's add a new inline policy on only a couple of our accounts. You'll need to u
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
-identifier: "{{account_name}}_iambic_test_role"
+identifier: "{{var.account_name}}_iambic_test_role"
 included_accounts:
   - "*"
 properties:
-  description: IAMbic test role on {{account_name}}
+  description: IAMbic test role on {{var.account_name}}
   assume_role_policy_document:
     statement:
       - action: sts:AssumeRole
@@ -226,7 +226,7 @@ properties:
   path: /iambic_test/
   permissions_boundary:
     policy_arn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
-  role_name: "{{account_name}}_iambic_test_role"
+  role_name: "{{var.account_name}}_iambic_test_role"
 ```
 
 Save the template, and in your terminal, use IAMbic to apply the change.
@@ -244,12 +244,12 @@ Notice that `expires_at` can be a datetime string, a date, or even "tomorrow", "
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
-identifier: "{{account_name}}_iambic_test_role"
+identifier: "{{var.account_name}}_iambic_test_role"
 included_accounts:
   - "*"
 expires_at: in 3 days
 properties:
-  description: IAMbic test role on {{account_name}}
+  description: IAMbic test role on {{var.account_name}}
   assume_role_policy_document:
     statement:
       - action: sts:AssumeRole
@@ -288,7 +288,7 @@ properties:
   path: /iambic_test/
   permissions_boundary:
     policy_arn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
-  role_name: "{{account_name}}_iambic_test_role"
+  role_name: "{{var.account_name}}_iambic_test_role"
 ```
 
 Now run the apply command.
@@ -345,7 +345,7 @@ dates before applying.
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
-identifier: "{{account_name}}_iambic_test_role"
+identifier: "{{var.account_name}}_iambic_test_role"
 included_accounts:
   - "*"
 # access_rules:
@@ -355,7 +355,7 @@ included_accounts:
   #  included_accounts:
   #   - ACCOUNT_A
 properties:
-  description: IAMbic test role on {{account_name}}
+  description: IAMbic test role on {{var.account_name}}
   assume_role_policy_document:
     statement:
       - action: sts:AssumeRole
@@ -396,7 +396,7 @@ properties:
   path: /iambic_test/
   permissions_boundary:
     policy_arn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
-  role_name: "{{account_name}}_iambic_test_role"
+  role_name: "{{var.account_name}}_iambic_test_role"
 ```
 
 Save the template, and in your terminal, use IAMbic to apply the change.

@@ -220,27 +220,27 @@ properties:
             - logs:CreateLogGroup
           effect: Allow
           resource:
-            - arn:aws:logs:us-west-2:{{account_id}}:*
+            - arn:aws:logs:us-west-2:{{var.account_id}}:*
           sid: CreateLogGroup
         - action:
             - secretsmanager:GetSecretValue
           effect: Allow
           resource:
-            - arn:aws:secretsmanager:*:{{account_id}}:secret:iambic/github-app-private-key
-            - arn:aws:secretsmanager:*:{{account_id}}:secret:iambic/github-app-private-key-*
-            - arn:aws:secretsmanager:*:{{account_id}}:secret:iambic/github-app-webhook-secret
-            - arn:aws:secretsmanager:*:{{account_id}}:secret:iambic/github-app-webhook-secret-*
+            - arn:aws:secretsmanager:*:{{var.account_id}}:secret:iambic/github-app-private-key
+            - arn:aws:secretsmanager:*:{{var.account_id}}:secret:iambic/github-app-private-key-*
+            - arn:aws:secretsmanager:*:{{var.account_id}}:secret:iambic/github-app-webhook-secret
+            - arn:aws:secretsmanager:*:{{var.account_id}}:secret:iambic/github-app-webhook-secret-*
           sid: SecretReading
         - action:
             - logs:CreateLogStream
             - logs:PutLogEvents
           effect: Allow
           resource:
-            - arn:aws:logs:us-west-2:{{account_id}}:log-group:/aws/lambda/iambic_github_app_webhook*:*
+            - arn:aws:logs:us-west-2:{{var.account_id}}:log-group:/aws/lambda/iambic_github_app_webhook*:*
           sid: LogEvents
         - action: sts:AssumeRole
           effect: Allow
-          resource: arn:aws:iam::{{account_id}}:role/IambicHubRole
+          resource: arn:aws:iam::{{var.account_id}}:role/IambicHubRole
       version: '2012-10-17'
   role_name: iambic_github_app_lambda_execution
 ```

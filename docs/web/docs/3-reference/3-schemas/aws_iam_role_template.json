@@ -348,7 +348,7 @@
         },
         "policy_arn": {
           "title": "Permissions Boundary Arn",
-          "pattern": "(^arn:([^:]*):([^:]*):([^:]*):(|\\*|[\\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\\*$",
+          "pattern": "(^arn:([^:]*):([^:]*):([^:]*):(|\\*|[\\d]{12}|cloudfront|aws|{{var.account_id}}):(.+)$)|^\\*$",
           "type": "string"
         },
         "permissions_boundary_type": {
@@ -808,7 +808,7 @@
         },
         "policy_arn": {
           "title": "Policyarn",
-          "pattern": "(^arn:([^:]*):([^:]*):([^:]*):(|\\*|[\\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\\*$",
+          "pattern": "(^arn:([^:]*):([^:]*):([^:]*):(|\\*|[\\d]{12}|cloudfront|aws|{{var.account_id}}):(.+)$)|^\\*$",
           "type": "string"
         },
         "policy_name": {
