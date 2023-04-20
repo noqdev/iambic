@@ -272,6 +272,7 @@ async def update_user_status(
     if ctx.execute:
         client = await okta_organization.get_okta_client()
         method = "POST"
+        # TODO: refactor to use an state machine approach
         base_endpoint = f"/api/v1/users/{user.user_id}"
         if current_status == "suspended" and new_status == "active":
             api_endpoint = f"{base_endpoint}/lifecycle/unsuspend"
