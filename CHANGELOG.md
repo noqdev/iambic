@@ -4,7 +4,7 @@ BREAKING CHANGES:
 * AWS templates containing account_id or account_name will need to be updated from `{{ account_id }}` to `{{ var.account_id }}` and from `{{ account_name }}` to `{{ var.account_name }}`. Alternatively, you can remove the files and re-import them.
 
 ENHANCEMENTS:
-* Removed AWS package imports from core 
+* Removed AWS package imports from core
 * Standardized variable naming in templates
 
 BUG FIXES:
