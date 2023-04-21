@@ -7,7 +7,7 @@ from typing import Any, Callable, Optional, Union
 from pydantic import Field, validator
 
 from iambic.core.context import ctx
-from iambic.core.iambic_enum import Command, IambicManaged
+from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -46,7 +46,7 @@ class Group(ExpiryModel, AccessModel):
     )
     group_id: Optional[str] = Field("", description="ID of the group", exclude=True)
     path: Optional[str] = Field("", description="Path of the group", exclude=True)
-    extra: Any = Field(None, description=("Extra attributes to store"), exclude=True)
+    extra: Any = Field(None, description="Extra attributes to store", exclude=True)
 
     @property
     def resource_type(self):
@@ -153,12 +153,6 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
 
         return response
 
-    def _is_iambic_import_only(self, aws_account: AWSAccount):
-        return (
-            aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
-            or self.iambic_managed == IambicManaged.IMPORT_ONLY
-        )
-
     async def _apply_to_account(  # noqa: C901
         self, aws_account: AWSAccount
     ) -> AccountChangeDetails:
@@ -179,15 +173,10 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
             resource_id=user_name,
             account=str(aws_account),
         )
-        iambic_import_only = self._is_iambic_import_only(aws_account)
         deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
-        try:
-            current_user = await get_user(
-                user_name, client, include_policies=bool(not deleted)
-            )
-        except Exception as err:
-            log.error("Failed to retrieve user", **log_params, error=err)
-            return account_change_details
+        current_user = await get_user(
+            user_name, client, include_policies=bool(not deleted)
+        )
 
         if current_user:
             account_change_details.current_value = {**current_user}  # Create a new dict
@@ -204,7 +193,7 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
             if current_user:
                 account_change_details.new_value = None
                 log_str = "Active resource found with deleted=false."
-                if ctx.execute and not iambic_import_only:
+                if ctx.execute:
                     log_str = f"{log_str} Deleting resource..."
                 log.debug(log_str, **log_params)
                 proposed_changes = [
@@ -326,7 +315,7 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
                         "PermissionsBoundary"
                     ]["PolicyArn"]
 
-                account_change_details.proposed_changes.extend(
+                account_change_details.extend_changes(
                     await plugin_apply_wrapper(
                         boto_crud_call(client.create_user, **account_user),
                         proposed_changes,
@@ -361,18 +350,12 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
                 ),
             ]
         )
-        try:
-            changes_made: list[list[ProposedChange]] = await asyncio.gather(
-                *tasks, return_exceptions=True
-            )
-            if any(changes_made):
-                account_change_details.extend_changes(
-                    list(chain.from_iterable(changes_made))
-                )
 
-        except Exception as e:
-            log.exception("Unable to apply changes to resource", error=e, **log_params)
-            return account_change_details
+        changes_made = await asyncio.gather(*tasks)
+        if any(changes_made):
+            account_change_details.extend_changes(
+                list(chain.from_iterable(changes_made))
+            )
 
         if ctx.execute and not account_change_details.exceptions_seen:
             log.debug(

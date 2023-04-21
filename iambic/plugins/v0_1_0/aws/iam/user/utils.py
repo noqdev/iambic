@@ -186,6 +186,7 @@ async def apply_user_tags(
                 resource_id=user_name,
                 attribute="tags",
                 new_value=tag,
+                current_value=existing_tag_map.get(tag["Key"]),
             )
             for tag in tags_to_apply
         ]
