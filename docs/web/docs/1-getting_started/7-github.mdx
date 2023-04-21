@@ -199,9 +199,9 @@ By installing IAMbic GitHub App, the app can integrate the pull-request and merg
 ```yaml
 template_type: NOQ::AWS::IAM::Role
 included_accounts:
-	# You will need to replace the "NAME_OF_AWS_ACCOUNT_THAT_HAS_IambicHubRole" 
-	# with the account name of the AWS account holding the IambicHubRole. 
-	# In the event you change the secret names, you need to update those values as well.
+  # You will need to replace the "NAME_OF_AWS_ACCOUNT_THAT_HAS_IambicHubRole" 
+  # with the account name of the AWS account holding the IambicHubRole. 
+  # In the event you change the secret names, you need to update those values as well.
   - NAME_OF_AWS_ACCOUNT_THAT_HAS_IambicHubRole 
 identifier: iambic_github_app_lambda_execution
 properties:
@@ -220,7 +220,7 @@ properties:
             - logs:CreateLogGroup
           effect: Allow
           resource:
-            - arn:aws:logs:us-west-2:{{account_id}}:*
+            - arn:aws:logs:*:{{account_id}}:log-group:*:log-stream:
           sid: CreateLogGroup
         - action:
             - secretsmanager:GetSecretValue
@@ -236,7 +236,7 @@ properties:
             - logs:PutLogEvents
           effect: Allow
           resource:
-            - arn:aws:logs:us-west-2:{{account_id}}:log-group:/aws/lambda/iambic_github_app_webhook*:*
+            - arn:aws:logs:*:{{account_id}}:log-group:/aws/lambda/iambic_github_app_webhook*:*
           sid: LogEvents
         - action: sts:AssumeRole
           effect: Allow
@@ -245,6 +245,21 @@ properties:
   role_name: iambic_github_app_lambda_execution
 ```
 2. You can then apply the template via `iambic apply resources/github/iam_role_lambda.yaml`
+3. Allow the `iambic_github_app_lambda_execution` to assume to `IambicHubRole` in the organization management account.
+
+```diff
+properties:
+  assume_role_policy_document:
+    statement:
++      - action:
++          - sts:AssumeRole
++          - sts:TagSession
++        effect: Allow
++        principal:
++          aws: arn:aws:iam::{{account_id}}:role/iambic_github_app_lambda_execution
+```
+
+Update the IambicHubRole by running `iambic apply <path-to-iambic-hub-role-of-mgmt-account>`
 
 ### Deploy the GitHub App as a Lambda Function
 
