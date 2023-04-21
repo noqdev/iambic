@@ -31,6 +31,20 @@ async def test_list_all_users_with_no_users(
 
 
 @pytest.mark.asyncio
+async def test_list_all_with_filter_operator(
+    mock_okta_organization,  # noqa: F811 # intentional for mocks
+    mocker,
+):
+    spy = mocker.spy(mock_okta_organization.client, "list_users")
+    _ = await list_all_users(mock_okta_organization)
+
+    filter_operator = dict(
+        filter='status eq "ACTIVE" OR status eq "DEPROVISIONED" OR status eq "LOCKED_OUT" OR status eq "PASSWORD_EXPIRED" OR status eq "PROVISIONED" OR status eq "RECOVERY" OR status eq "STAGED" OR status eq "SUSPENDED"'
+    )
+    spy.assert_called_once_with(query_params=filter_operator)
+
+
+@pytest.mark.asyncio
 async def test_list_all_users_with_users(
     mock_okta_organization,  # noqa: F811 # intentional for mocks
 ):
