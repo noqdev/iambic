@@ -8,7 +8,7 @@ from typing import Callable, Optional, Union
 from pydantic import Field, validator
 
 from iambic.core.context import ctx
-from iambic.core.iambic_enum import Command, IambicManaged
+from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -17,6 +17,7 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
+from iambic.core.utils import plugin_apply_wrapper
 from iambic.plugins.v0_1_0.aws.iam.models import (
     MaxSessionDuration,
     Path,
@@ -209,12 +210,8 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
 
         return response
 
-    def _is_iambic_import_only(self, aws_account: AWSAccount):
-        return (
-            "aws-service-role" in self.properties.path
-            or aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
-            or self.iambic_managed == IambicManaged.IMPORT_ONLY
-        )
+    def _is_iambic_import_only(self):
+        return "aws-service-role" in self.properties.path
 
     async def _apply_to_account(  # noqa: C901
         self, aws_account: AWSAccount
@@ -230,13 +227,15 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
             proposed_changes=[],
             exceptions_seen=[],
         )
+        if self._is_iambic_import_only():
+            # Don't apply changes to aws-service-roles
+            return account_change_details
+
         log_params = dict(
             resource_type=self.resource_type,
             resource_id=role_name,
             account=str(aws_account),
         )
-        iambic_import_only = self._is_iambic_import_only(aws_account)
-
         deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
         current_role = await get_role(
             role_name, client, include_policies=bool(not deleted)
@@ -256,20 +255,25 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
         if deleted:
             if current_role:
                 account_change_details.new_value = None
-                account_change_details.proposed_changes.append(
+                proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.DELETE,
                         resource_id=role_name,
                         resource_type=self.resource_type,
                     )
-                )
+                ]
                 log_str = "Active resource found with deleted=false."
-                if ctx.execute and not iambic_import_only:
+                if ctx.execute:
                     log_str = f"{log_str} Deleting resource..."
                 log.debug(log_str, **log_params)
 
                 if ctx.execute:
-                    await delete_iam_role(role_name, client, log_params)
+                    apply_awaitable = delete_iam_role(role_name, client, log_params)
+                    proposed_changes = await plugin_apply_wrapper(
+                        apply_awaitable, proposed_changes
+                    )
+
+                account_change_details.extend_changes(proposed_changes)
 
             return account_change_details
 
@@ -279,115 +283,113 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
         existing_inline_policies = current_role.pop("InlinePolicies", [])
         existing_managed_policies = current_role.pop("ManagedPolicies", [])
         tasks = []
-        try:
-            if role_exists:
-                tasks.extend(
-                    [
-                        apply_role_tags(
-                            role_name,
-                            client,
-                            account_role["Tags"],
-                            current_role.get("Tags", []),
-                            log_params,
-                        ),
-                        update_assume_role_policy(
-                            role_name,
-                            client,
-                            account_role.pop("AssumeRolePolicyDocument", {}),
-                            current_role["AssumeRolePolicyDocument"],
-                            log_params,
-                        ),
-                        apply_role_permission_boundary(
-                            role_name,
-                            client,
-                            account_role.get("PermissionsBoundary", {}),
-                            current_role.get("PermissionsBoundary", {}),
-                            log_params,
-                        ),
-                    ]
-                )
+        if role_exists:
+            tasks.extend(
+                [
+                    apply_role_tags(
+                        role_name,
+                        client,
+                        account_role["Tags"],
+                        current_role.get("Tags", []),
+                        log_params,
+                    ),
+                    update_assume_role_policy(
+                        role_name,
+                        client,
+                        account_role.pop("AssumeRolePolicyDocument", {}),
+                        current_role["AssumeRolePolicyDocument"],
+                        log_params,
+                    ),
+                    apply_role_permission_boundary(
+                        role_name,
+                        client,
+                        account_role.get("PermissionsBoundary", {}),
+                        current_role.get("PermissionsBoundary", {}),
+                        log_params,
+                    ),
+                ]
+            )
 
-                supported_update_keys = ["Description", "MaxSessionDuration"]
-                update_resource_log_params = {**log_params}
-                update_role_params = {}
-                for k in supported_update_keys:
-                    if account_role.get(k) is not None and account_role.get(
-                        k
-                    ) != current_role.get(k):
-                        update_resource_log_params[k] = dict(
-                            old_value=current_role.get(k), new_value=account_role.get(k)
-                        )
-                        update_role_params[k] = current_role.get(k)
+            supported_update_keys = ["Description", "MaxSessionDuration"]
+            update_resource_log_params = {**log_params}
+            update_role_params = {}
+            for k in supported_update_keys:
+                if account_role.get(k) is not None and account_role.get(
+                    k
+                ) != current_role.get(k):
+                    update_resource_log_params[k] = dict(
+                        old_value=current_role.get(k), new_value=account_role.get(k)
+                    )
+                    update_role_params[k] = current_role.get(k)
 
-                if update_role_params:
-                    log_str = "Out of date resource found."
-                    if ctx.execute:
-                        log.debug(
-                            f"{log_str} Updating resource...",
-                            **update_resource_log_params,
-                        )
+            if update_role_params:
+                log_str = "Out of date resource found."
+                if ctx.execute:
+                    log.debug(
+                        f"{log_str} Updating resource...",
+                        **update_resource_log_params,
+                    )
 
-                        async def update_role():
-                            exceptions = []
-                            try:
-                                await boto_crud_call(
-                                    client.update_role,
-                                    RoleName=role_name,
-                                    **{
-                                        k: account_role.get(k)
-                                        for k in supported_update_keys
-                                    },
-                                )
-                            except Exception as e:
-                                exceptions.append(str(e))
-                            return [
-                                ProposedChange(
-                                    change_type=ProposedChangeType.UPDATE,
-                                    resource_id=role_name,
-                                    resource_type=self.resource_type,
-                                    exceptions_seen=exceptions,
-                                )
-                            ]
-
-                        tasks.append(update_role())
-                    else:
-                        log.debug(log_str, **update_resource_log_params)
-                        account_change_details.proposed_changes.append(
+                    async def update_role():
+                        exceptions = []
+                        try:
+                            await boto_crud_call(
+                                client.update_role,
+                                RoleName=role_name,
+                                **{
+                                    k: account_role.get(k)
+                                    for k in supported_update_keys
+                                },
+                            )
+                        except Exception as e:
+                            exceptions.append(str(e))
+                        return [
                             ProposedChange(
                                 change_type=ProposedChangeType.UPDATE,
                                 resource_id=role_name,
                                 resource_type=self.resource_type,
+                                exceptions_seen=exceptions,
                             )
+                        ]
+
+                    tasks.append(update_role())
+                else:
+                    log.debug(log_str, **update_resource_log_params)
+                    account_change_details.proposed_changes.append(
+                        ProposedChange(
+                            change_type=ProposedChangeType.UPDATE,
+                            resource_id=role_name,
+                            resource_type=self.resource_type,
                         )
-            else:
-                account_change_details.proposed_changes.append(
-                    ProposedChange(
-                        change_type=ProposedChangeType.CREATE,
-                        resource_id=role_name,
-                        resource_type=self.resource_type,
                     )
+        else:
+            proposed_changes = [
+                ProposedChange(
+                    change_type=ProposedChangeType.CREATE,
+                    resource_id=role_name,
+                    resource_type=self.resource_type,
                 )
-                log_str = "New resource found in code."
-                if not ctx.execute:
-                    log.debug(log_str, **log_params)
-                    # Exit now because apply functions won't work if resource doesn't exist
-                    return account_change_details
-
-                log_str = f"{log_str} Creating resource..."
+            ]
+            log_str = "New resource found in code."
+            if not ctx.execute:
+                # Exit now because apply functions won't work if resource doesn't exist
                 log.debug(log_str, **log_params)
-                account_role["AssumeRolePolicyDocument"] = json.dumps(
-                    account_role["AssumeRolePolicyDocument"]
-                )
-                if account_role.get("PermissionsBoundary"):
-                    account_role["PermissionsBoundary"] = account_role[
-                        "PermissionsBoundary"
-                    ]["PolicyArn"]
+                account_change_details.extend_changes(proposed_changes)
+                return account_change_details
 
-                await boto_crud_call(client.create_role, **account_role)
-        except Exception as e:
-            log.error("Unable to generate tasks for resource", error=e, **log_params)
-            # return account_change_details
-            raise
+            log.debug(f"{log_str} Creating resource...", **log_params)
+            account_role["AssumeRolePolicyDocument"] = json.dumps(
+                account_role["AssumeRolePolicyDocument"]
+            )
+            if account_role.get("PermissionsBoundary"):
+                account_role["PermissionsBoundary"] = account_role[
+                    "PermissionsBoundary"
+                ]["PolicyArn"]
+
+            apply_awaitable = boto_crud_call(client.create_role, **account_role)
+            account_change_details.extend_changes(
+                await plugin_apply_wrapper(apply_awaitable, proposed_changes)
+            )
 
         tasks.extend(
             [
@@ -407,18 +409,12 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
                 ),
             ]
         )
-        try:
-            changes_made: list[list[ProposedChange]] = await asyncio.gather(
-                *tasks, return_exceptions=True
-            )
-            if any(changes_made):
-                account_change_details.extend_changes(
-                    list(chain.from_iterable(changes_made))
-                )
 
-        except Exception as e:
-            log.exception("Unable to apply changes to resource", error=e, **log_params)
-            return account_change_details
+        changes_made = await asyncio.gather(*tasks)
+        if any(changes_made):
+            account_change_details.extend_changes(
+                list(chain.from_iterable(changes_made))
+            )
 
         if ctx.execute and not account_change_details.exceptions_seen:
             log.debug(
