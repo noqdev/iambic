@@ -1,10 +1,14 @@
-## 0.3.0 (May 1, 2023)
-
-ENHANCEMENTS:
-* Removed provider refs from core and standardized variable representations in templates.
+## 0.3.0 (April 21, 2023)
 
 BREAKING CHANGES:
 * AWS templates containing account_id or account_name will need to be updated from `{{ account_id }}` to `{{ var.account_id }}` and from `{{ account_name }}` to `{{ var.account_name }}`. Alternatively, you can remove the files and re-import them.
+
+ENHANCEMENTS:
+* Removed AWS package imports from core 
+* Standardized variable naming in templates
+
+BUG FIXES:
+* Resolved type error on merge template when new value is None.
 
 
 
