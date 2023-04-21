@@ -18,6 +18,6 @@ make test
 
 `test` target will execute the unit tests that have no dependnecy on cloud resources.
 
-`functional_test` target will execute the functional tests with dependency on specific cloud resources. 
-External developers have no access to them. Please defer to mintainers to verify functional tests. 
-These functional tests will be run via Github Actions. 
+`functional_test` target will execute the functional tests with dependency on specific cloud resources.
+External developers have no access to them. Please defer to mintainers to verify functional tests.
+These functional tests will be run via Github Actions.

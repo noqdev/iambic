@@ -11,7 +11,7 @@ find . -type f -name "*.yaml" -print0 | xargs -0 sed -i '' -e 's/{{account_name}
 ```
 
 ENHANCEMENTS:
-* Removed AWS package imports from core 
+* Removed AWS package imports from core
 * Standardized variable naming in templates
 
 BUG FIXES:

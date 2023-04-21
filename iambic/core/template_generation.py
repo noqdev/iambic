@@ -41,14 +41,15 @@ async def get_existing_template_map(
     return response
 
 
-def templatize_resource(provider_child: ProviderChild, resource):
+def templatize_resource(
+    provider_child: ProviderChild, resource, valid_characters_re: str = r"[\w_+=,.@-]"
+):
     resource_type = type(resource)
 
     if isinstance(resource, dict) or isinstance(resource, list):
         resource = json.dumps(resource)
     elif resource_type != str:
         resource = str(resource)
-    valid_characters_re = r"[\w_+=,.@-]"
 
     if variables := getattr(provider_child, "variables", None):
         for var in variables:
