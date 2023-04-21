@@ -74,9 +74,11 @@ schema.field_schema = field_schema
 
 class IambicPydanticBaseModel(PydanticBaseModel):
     metadata_iambic_fields = Field(
-        set(), description="metadata for iambic", exclude=True
+        set(), description="metadata for iambic", exclude=True, hidden_from_schema=True
     )
-    metadata_commented_dict: dict = Field({}, description="yaml inline comments")
+    metadata_commented_dict: dict = Field(
+        {}, description="yaml inline comments", hidden_from_schema=True
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -247,7 +249,7 @@ class BaseModel(IambicPydanticBaseModel):
         variables = {
             k: sanitize_string(v, valid_characters_re) for k, v in variables.items()
         }
-        data = rtemplate.render(**variables)
+        data = rtemplate.render(var=variables)
         return json.loads(data)
 
     async def remove_expired_resources(self):
@@ -551,7 +553,13 @@ class BaseTemplate(
             repo = Repo(self.file_path, search_parent_directories=True)
             # why force=True? Expire could have modified the local contents
             # without force=True, git rm would not be able to remove the file
-            repo.index.remove([self.file_path], working_tree=True, force=True)
+            repo.index.remove(
+                [
+                    str(self.file_path)
+                ],  # manual cast to str is necessary because git library only accepts str and not FilePath
+                working_tree=True,
+                force=True,
+            )
         except Exception as e:
             log.error(
                 "Unable to remove file from local Git repo. Deleting manually",

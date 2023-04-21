@@ -22,7 +22,7 @@ to load them during runtime.
 ```bash
 export EMAIL=<your_okta_email_address>
 export OKTA_DOMAIN=<your_okta_domain> # e.g.: https://dev-12345.okta.com/. Get the `dev-12345` portion, specific to your environment from the Okta portal.
-export OKTA_ORG_NAME=<your_okta_org_name> # e.g.: development. This is a friendly name to identify your Okta organization.  Any arbitrary string will work here.
+export OKTA_IDP_NAME=<your_okta_org_name> # e.g.: development. This is a friendly name to identify your Okta organization.  Any arbitrary string will work here.
 export OKTA_API_TOKEN=<your_okta_api_token> # An administrative API token for your Okta organization, follow the instructions in the following steps to create one.
 export OKTA_TEST_USER_EMAIL=<test_email> # A test-user e-mail address to use in this tutorial
 ```
@@ -64,6 +64,16 @@ IAMbic will create an AWS Secret to store your Okta API token. If you choose to 
 you can either leverage AWS Secrets Manager to store your token, or you can store it in a local file that
 will be merged into your IAMbic configuration but won't be checked into your `iambic-templates` Git repository.
 
+Steps configuring Okta through the setup wizard:
+<details>
+
+1. Execute `iambic setup`
+1. Select `Okta`
+1. Complete the steps with your `OKTA_IDP_NAME`, `OKTA_DOMAIN` and `OKTA_API_TOKEN`
+1. In the end, your iambic_config.yml will have an `extends` section with your secret.
+
+</details>
+
 The steps below will walk you through configuring IAMbic manually.
 1. Import existing Okta Groups into your IAMbic templates repository
 
@@ -87,11 +97,12 @@ repository that is configured to ignore secrets.yaml files with `**/secrets.yaml
 :::
 
 ```bash
+mkdir -p config
 cat <<EOF > config/secrets.yaml
 secrets:
   okta:
     organizations:
-      - idp_name: $OKTA_ORG_NAME
+      - idp_name: $OKTA_IDP_NAME
         org_url: $OKTA_DOMAIN
         api_token: $OKTA_API_TOKEN
 EOF
@@ -157,10 +168,10 @@ Run the following set of commands from the root of your `iambic-templates` repos
 mkdir -p resources/okta/group/$OKTA_IDP_NAME
 cat <<EOF > resources/okta/group/$OKTA_IDP_NAME/iambic-test-group.yaml
 template_type: NOQ::Okta::Group
+idp_name: $OKTA_IDP_NAME
 properties:
   name: iambic-test-group
-  description: ''
-  idp_name: development
+  description: 'description'
   members:
     - username: $EMAIL
 EOF
@@ -182,7 +193,7 @@ iambic apply resources/okta/group/$OKTA_IDP_NAME/iambic-test-group.yaml
 Confirm that the group has been created by running the following command and visiting the URL in your browser:
 
 ```bash
-echo https://$OKTA_DOMAIN/admin/groups
+echo $OKTA_DOMAIN/admin/groups
 ```
 
 By now the directory of your `iambic-templates` repository should resemble the following, and may include other resources that you've imported:
@@ -200,33 +211,6 @@ $ tree .
     │           ├── iambic-test-group.yaml
 ```
 
-### Add a user to an Okta group
-
-In this section, we will add a user (`testuser@example.com`) to the group we created in the previous section.
-`example.com` is a reserved domain for tests and example use cases, and `testuser@example.com` is not a real user.
-
-Run the following command to replace the previous group you created with a new one that includes the new user:
-
-```bash
-cat <<EOF > resources/okta/group/$OKTA_IDP_NAME/iambic-test-group.yaml
-template_type: NOQ::Okta::Group
-properties:
-  name: iambic-test-group
-  description: ''
-  idp_name: $OKTA_IDP_NAME
-  email: iambic-test-group@$DOMAIN
-  members:
-    - email: $EMAIL
-      role: OWNER
-    - email: testuser@example.com
-EOF
-```
-
-Run the `apply` command to have IAMbic update the group:
-
-```bash
-iambic apply resources/okta/group/$OKTA_DOMAIN/iambic-test-group.yaml
-```
 
 ### Provide temporary ("break-glass") access to an Okta Group
 
@@ -245,10 +229,10 @@ If a timezone is provided, Iambic will use that timezone.
 ```bash
 cat <<EOF > resources/okta/group/$OKTA_IDP_NAME/iambic-test-group.yaml
 template_type: NOQ::Okta::Group
+idp_name: $OKTA_IDP_NAME
 properties:
   name: iambic-test-group
   description: ''
-  idp_name: $OKTA_IDP_NAME
   members:
     - username: $EMAIL
       expires_at: in 2 minutes
@@ -264,7 +248,7 @@ After applying the change, notice that the `expires_at` date in the template was
 Confirm that the user was added by visiting the following URL in your browser:
 
 ```bash
-echo https://$OKTA_DOMAIN/admin/groups
+echo $OKTA_DOMAIN/admin/groups
 ```
 
 After a couple of minutes, the request should expire. In a production deployment, this process would be automatic. But for the purposes of testing, you can manually expire the request by re-running the apply command after two minutes have passed:
@@ -326,6 +310,29 @@ Run the following command to create the user:
 ```bash
 iambic apply resources/okta/user/$OKTA_IDP_NAME/$OKTA_TEST_USER_EMAIL.yaml
 ```
+### Add the user to an Okta group
+
+In this section, we will add the user already created to the group we created in the previous section.
+
+Run the following command to replace the previous group you created with a new one that includes the new user:
+
+```bash
+cat <<EOF > resources/okta/group/$OKTA_IDP_NAME/iambic-test-group.yaml
+template_type: NOQ::Okta::Group
+idp_name: $OKTA_IDP_NAME
+properties:
+  name: iambic-test-group
+  description: ''
+  members:
+    - username: $OKTA_TEST_USER_EMAIL
+EOF
+```
+
+Run the `apply` command to have IAMbic update the group:
+
+```bash
+iambic apply resources/okta/group/$OKTA_DOMAIN/iambic-test-group.yaml
+```
 
 
 ### Manually Create an Okta Application
@@ -380,8 +387,7 @@ expires_at: yesterday
 
 ### Delete the Okta application
 
-To delete the application, we can either set deleted: true or an expires_at
-tag at the top level of the application, and then run `iambic apply resources/okta/app/$OKTA_IDP_NAME/test_application.yaml`:
+To delete the application, we can either set `deleted: true` or an `expires_at: yesterday` at the top level of the application, and then run `iambic apply resources/okta/app/$OKTA_IDP_NAME/test_application.yaml`:
 
 Some examples of how this might look are below:
 
@@ -402,13 +408,14 @@ With `expires_at`:
 ```yaml
 expires_at: yesterday
 template_type: NOQ::Okta::App
-deleted: true
 idp_name: development
 properties:
   name: test_application
   id: 12345
   status: ACTIVE
 ```
+
+The difference between them is when you set `expires_at`, iambic changes the file with the date and add the `deleted` tag.
 
 Apply the changes once done:
 
@@ -419,23 +426,24 @@ iambic apply resources/okta/app/$OKTA_IDP_NAME/test_application.yaml
 
 ### Delete the Okta User
 
-The process for deleting a user is relatively similar. We can either set `deleted: true or an expires_at
+The process for deleting a user is relatively similar. We can either set `deleted: true` or an `expires_at: yesterday`
 tag at the top level of the user, and then run `iambic apply resources/okta/user/$OKTA_IDP_NAME/$OKTA_TEST_USER_EMAIL.yaml`.
 
-Here's an example:
+Run the following command to edit the file:
 
-```yaml
-expires_at: yesterday
+```bash
+cat <<EOF > resources/okta/user/$OKTA_IDP_NAME/$OKTA_TEST_USER_EMAIL.yaml
 template_type: NOQ::Okta::User
-idp_name: development
+idp_name: $OKTA_IDP_NAME
+deleted: true
 properties:
   profile:
-    email: testuser@example.com
+    email: $OKTA_TEST_USER_EMAIL
     firstName: Example
     lastName: User
-    login: testuser@example.com
+    login: $OKTA_TEST_USER_EMAIL
     title: Temporary User
   status: provisioned
-  user_id: 12345
-  username: testuser@example.com
+  username: $OKTA_TEST_USER_EMAIL
+EOF
 ```

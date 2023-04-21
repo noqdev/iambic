@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
+import time
 import traceback
 from functools import partial
-from multiprocessing import Pool, cpu_count
 from typing import Union
 
 from pydantic import ValidationError
@@ -13,6 +15,14 @@ from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate
 from iambic.core.utils import transform_comments, yaml
+
+# we must avoid import multiprocessing pool in the module loading time
+if os.environ.get("AWS_LAMBDA_FUNCTION_NAME", False):
+    from multiprocessing import cpu_count
+
+    from iambic.vendor.lambda_multiprocessing import Pool
+else:
+    from multiprocessing import Pool, cpu_count
 
 
 # line number is zero-th based
@@ -89,6 +99,11 @@ def load_templates(
     load_template_fn = partial(load_template, raise_validation_err=raise_validation_err)
     with Pool(max(1, cpu_count() // 2)) as p:
         template_dicts = p.map(load_template_fn, template_paths)
+        if getattr(sys, "gettrace", None):
+            # When in debug mode, subprocesses can exit
+            # before debugger can attach
+            # https://github.com/microsoft/debugpy/issues/712
+            time.sleep(0.5)
 
     for template_dict in template_dicts:
         if not template_dict:

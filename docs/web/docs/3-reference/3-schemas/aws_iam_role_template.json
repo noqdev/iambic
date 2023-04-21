@@ -3,20 +3,6 @@
   "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
   "type": "object",
   "properties": {
-    "metadata_commented_dict": {
-      "title": "Metadatacommenteddict",
-      "description": "yaml inline comments",
-      "default": {},
-      "type": "object"
-    },
-    "metadata_iambic_fields": {
-      "title": "Metadataiambicfields",
-      "description": "metadata for iambic",
-      "default": [],
-      "type": "array",
-      "items": {},
-      "uniqueItems": true
-    },
     "included_accounts": {
       "title": "Includedaccounts",
       "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
@@ -126,6 +112,7 @@
     "identifier",
     "properties"
   ],
+  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -134,6 +121,7 @@
         "undefined",
         "read_and_write",
         "import_only",
+        "enforced",
         "disabled"
       ]
     },
@@ -142,20 +130,6 @@
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "included_accounts": {
           "title": "Includedaccounts",
           "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
@@ -208,20 +182,6 @@
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "included_accounts": {
           "title": "Includedaccounts",
           "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
@@ -276,20 +236,6 @@
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "included_accounts": {
           "title": "Includedaccounts",
           "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
@@ -337,20 +283,6 @@
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "included_accounts": {
           "title": "Includedaccounts",
           "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
@@ -416,7 +348,7 @@
         },
         "policy_arn": {
           "title": "Permissions Boundary Arn",
-          "pattern": "(^arn:([^:]*):([^:]*):([^:]*):(|\\*|[\\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\\*$",
+          "pattern": "(^arn:([^:]*):([^:]*):([^:]*):(|\\*|[\\d]{12}|cloudfront|aws|{{var.account_id}}):(.+)$)|^\\*$",
           "type": "string"
         },
         "permissions_boundary_type": {
@@ -426,27 +358,14 @@
       },
       "required": [
         "policy_arn"
-      ]
+      ],
+      "additionalProperties": false
     },
     "Principal": {
       "title": "Principal",
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "aws": {
           "title": "Aws",
           "anyOf": [
@@ -510,20 +429,6 @@
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "expires_at": {
           "title": "Expiresat",
           "description": "The date and time the resource will be/was set to deleted.",
@@ -688,27 +593,14 @@
       },
       "required": [
         "effect"
-      ]
+      ],
+      "additionalProperties": false
     },
     "AssumeRolePolicyDocument": {
       "title": "AssumeRolePolicyDocument",
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "included_accounts": {
           "title": "Includedaccounts",
           "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
@@ -768,20 +660,6 @@
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "included_accounts": {
           "title": "Includedaccounts",
           "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
@@ -857,27 +735,14 @@
       "required": [
         "key",
         "value"
-      ]
+      ],
+      "additionalProperties": false
     },
     "ManagedPolicyRef": {
       "title": "ManagedPolicyRef",
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "expires_at": {
           "title": "Expiresat",
           "description": "The date and time the resource will be/was set to deleted.",
@@ -943,33 +808,24 @@
         },
         "policy_arn": {
           "title": "Policyarn",
-          "pattern": "(^arn:([^:]*):([^:]*):([^:]*):(|\\*|[\\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\\*$",
+          "pattern": "(^arn:([^:]*):([^:]*):([^:]*):(|\\*|[\\d]{12}|cloudfront|aws|{{var.account_id}}):(.+)$)|^\\*$",
+          "type": "string"
+        },
+        "policy_name": {
+          "title": "Policyname",
           "type": "string"
         }
       },
       "required": [
         "policy_arn"
-      ]
+      ],
+      "additionalProperties": false
     },
     "PolicyDocument": {
       "title": "PolicyDocument",
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "expires_at": {
           "title": "Expiresat",
           "description": "The date and time the resource will be/was set to deleted.",
@@ -1053,27 +909,14 @@
       },
       "required": [
         "policy_name"
-      ]
+      ],
+      "additionalProperties": false
     },
     "RoleProperties": {
       "title": "RoleProperties",
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "role_name": {
           "title": "Rolename",
           "description": "Name of the role",
@@ -1192,20 +1035,6 @@
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "included_accounts": {
           "title": "Includedaccounts",
           "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
@@ -1287,7 +1116,8 @@
             "type": "string"
           }
         }
-      }
+      },
+      "additionalProperties": false
     }
   }
 }

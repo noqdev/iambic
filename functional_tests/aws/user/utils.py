@@ -4,6 +4,7 @@ import random
 import uuid
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import get_existing_template_map
@@ -33,7 +34,7 @@ properties:
       statement:
         - action:
             - s3:initialpolicy
-          effect: Allow
+          effect: Deny
           resource: '*'
       version: '2012-10-17'
   managed_policies:

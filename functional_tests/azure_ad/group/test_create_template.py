@@ -3,6 +3,7 @@ from __future__ import annotations
 from functional_tests.azure_ad.base_test_case import BaseMS365TestCase
 from functional_tests.azure_ad.group.utils import generate_group_template
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.azure_ad.group.models import Member, MemberDataType
 from iambic.plugins.v0_1_0.azure_ad.group.utils import get_group

@@ -28,11 +28,27 @@ cloud settings without having to make time-consuming requests to your cloud prov
 ### Iambic Import Process
 
 The IAMbic import process grabs updates from your cloud environment and puts them
-into your Git repository. IAMbic comes with GitHub actions that run on a schedule to
+into your Git repository as IAMbic templates. IAMbic comes with GitHub actions that run on a schedule to
 automatically import changes from your cloud environment. If you want, you can also
 run the import process manually.
 
 <img src={"/img/git/iambic_import.png"} style={{width: '80%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+
+#### What are IAMbic template files?
+
+IAMbic uses Git as a database to store cloud permissions. These
+cloud permissions are represented as IAMbic template files.
+
+IAMbic template files are human-readable files used to represent and manage your cloud identities,
+principals, and permissions within IAMbic. These files are stored in a Git repository,
+allowing you to track changes, collaborate, and apply version control to your cloud permissions
+management.
+
+The templates enable you to import, organize, and group your existing cloud resources in a
+structured manner, which simplifies managing permissions across multiple cloud environments
+and accounts. IAMbic template files support declarative definitions of temporary principals,
+permissions, and access rules, making it easier to implement features like zero-standing-permissions
+and breakglass access.
 
 ### Iambic Apply Process
 

@@ -3,20 +3,6 @@
   "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
   "type": "object",
   "properties": {
-    "metadata_commented_dict": {
-      "title": "Metadatacommenteddict",
-      "description": "yaml inline comments",
-      "default": {},
-      "type": "object"
-    },
-    "metadata_iambic_fields": {
-      "title": "Metadataiambicfields",
-      "description": "metadata for iambic",
-      "default": [],
-      "type": "array",
-      "items": {},
-      "uniqueItems": true
-    },
     "expires_at": {
       "title": "Expiresat",
       "description": "The date and time the resource will be/was set to deleted.",
@@ -77,6 +63,7 @@
     "properties",
     "idp_name"
   ],
+  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -85,6 +72,7 @@
         "undefined",
         "read_and_write",
         "import_only",
+        "enforced",
         "disabled"
       ]
     },
@@ -107,20 +95,6 @@
       "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
       "type": "object",
       "properties": {
-        "metadata_commented_dict": {
-          "title": "Metadatacommenteddict",
-          "description": "yaml inline comments",
-          "default": {},
-          "type": "object"
-        },
-        "metadata_iambic_fields": {
-          "title": "Metadataiambicfields",
-          "description": "metadata for iambic",
-          "default": [],
-          "type": "array",
-          "items": {},
-          "uniqueItems": true
-        },
         "username": {
           "title": "Username",
           "description": "Username of the user",

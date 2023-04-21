@@ -13,7 +13,12 @@ from iambic.config.dynamic_config import ExtendsConfig, ExtendsConfigKey
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
-from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
+from iambic.core.models import (
+    BaseTemplate,
+    ExecutionMessage,
+    TemplateChangeDetails,
+    Variable,
+)
 from iambic.core.parser import load_templates
 from iambic.core.template_generation import get_existing_template_map
 from iambic.core.utils import async_batch_processor, gather_templates, yaml
@@ -105,6 +110,15 @@ async def load(config: AWSConfig) -> AWSConfig:
             for account in config.accounts:
                 if account.account_id != hub_account.account_id:
                     account.hub_session_info = hub_session_info
+
+    # Set up the dynamic account variables
+    for idx, account in enumerate(config.accounts):
+        config.accounts[idx].variables.extend(
+            [
+                Variable(key="account_id", value=account.account_id),
+                Variable(key="account_name", value=account.account_name),
+            ]
+        )
 
     # Preload the iam client to improve performance
     await asyncio.gather(
