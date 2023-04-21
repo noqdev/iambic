@@ -123,7 +123,6 @@ async def test_apply_update_managed_policy(mock_iam_client):
         EXAMPLE_POLICY_ARN,
         template_policy_document,
         existing_policy_document,
-        False,
         log_params,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.UPDATE
@@ -139,7 +138,6 @@ async def test_apply_user_tags_on_detach(mock_iam_client):
         EXAMPLE_POLICY_ARN,
         template_tags,
         existing_tags,
-        False,
         log_params,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.DETACH
@@ -155,7 +153,6 @@ async def test_apply_user_tags_on_attach(mock_iam_client):
         EXAMPLE_POLICY_ARN,
         template_tags,
         existing_tags,
-        False,
         log_params,
     )
     assert proposed_changes[0].change_type == ProposedChangeType.ATTACH
