@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  This template creates the IAMbic read-only spoke role.
+Parameters:
+  SpokeRoleName:
+    Type: String
+  HubRoleArn:
+    Type: String
+Resources:
+  IambicSpokeRoleReadOnly:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Ref SpokeRoleName
+      Description: >-
+        This role is used by IAMbic to perform all actions on the account.
+        It is assumed by the Iambic hub role in the hub account.
+        Managed via CloudFormation.
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+              - sts:TagSession
+            Principal:
+              AWS: !Ref HubRoleArn
+      Policies:
+        - PolicyName: base_permissions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - identitystore:Describe*
+                  - identitystore:Get*
+                  - identitystore:List*
+                  - organizations:describe*
+                  - organizations:list*
+                  - iam:Get*
+                  - iam:List*
+                  - sso:Describe*
+                  - sso:Get*
+                  - sso:List*
+                  - sso:Search*
+                Resource:
+                  - '*'
+              - Effect: Allow
+                Action:
+                  - secretsmanager:CreateSecret
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:describesecret
+                  - secretsmanager:listsecrets
+                  - secretsmanager:listsecretversionids
+                  - secretsmanager:PutSecretValue
+                Resource:
+                  - 'arn:aws:secretsmanager:*:*:secret:iambic-config-secrets-*'
