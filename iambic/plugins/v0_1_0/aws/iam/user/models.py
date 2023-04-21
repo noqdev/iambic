@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+from itertools import chain
 from typing import Any, Callable, Optional, Union
 
 from pydantic import Field, validator
 
 from iambic.core.context import ctx
-from iambic.core.iambic_enum import Command, IambicManaged
+from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -15,7 +16,7 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
-from iambic.core.utils import remove_expired_resources
+from iambic.core.utils import plugin_apply_wrapper, remove_expired_resources
 from iambic.plugins.v0_1_0.aws.iam.models import Path, PermissionBoundary
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.user.utils import (
@@ -45,7 +46,7 @@ class Group(ExpiryModel, AccessModel):
     )
     group_id: Optional[str] = Field("", description="ID of the group", exclude=True)
     path: Optional[str] = Field("", description="Path of the group", exclude=True)
-    extra: Any = Field(None, description=("Extra attributes to store"), exclude=True)
+    extra: Any = Field(None, description="Extra attributes to store", exclude=True)
 
     @property
     def resource_type(self):
@@ -152,12 +153,6 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
 
         return response
 
-    def _is_iambic_import_only(self, aws_account: AWSAccount):
-        return (
-            aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
-            or self.iambic_managed == IambicManaged.IMPORT_ONLY
-        )
-
     async def _apply_to_account(  # noqa: C901
         self, aws_account: AWSAccount
     ) -> AccountChangeDetails:
@@ -181,8 +176,10 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
             resource_id=user_name,
             account=str(aws_account),
         )
-        iambic_import_only = self._is_iambic_import_only(aws_account)
-        current_user = await get_user(user_name, client)
+        deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
+        current_user = await get_user(
+            user_name, client, include_policies=bool(not deleted)
+        )
         if current_user:
             account_change_details.current_value = {**current_user}  # Create a new dict
 
@@ -198,20 +195,25 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
         if deleted:
             if current_user:
                 account_change_details.new_value = None
-                account_change_details.proposed_changes.append(
+                log_str = "Active resource found with deleted=false."
+                if ctx.execute:
+                    log_str = f"{log_str} Deleting resource..."
+                log.debug(log_str, **log_params)
+
+                proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.DELETE,
                         resource_id=user_name,
                         resource_type=self.resource_type,
                     )
-                )
-                log_str = "Active resource found with deleted=false."
-                if ctx.execute and not iambic_import_only:
-                    log_str = f"{log_str} Deleting resource..."
-                log.info(log_str, **log_params)
-
+                ]
                 if ctx.execute:
-                    await delete_iam_user(user_name, client, log_params)
+                    apply_awaitable = delete_iam_user(user_name, client, log_params)
+                    proposed_changes = await plugin_apply_wrapper(
+                        apply_awaitable, proposed_changes
+                    )
+
+                account_change_details.extend_changes(proposed_changes)
 
             return account_change_details
 
@@ -223,103 +225,106 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
         existing_managed_policies = current_user.pop("ManagedPolicies", [])
         existing_groups = current_user.pop("Groups", [])
         tasks = []
-        try:
-            if user_exists:
-                tasks.extend(
-                    [
-                        apply_user_tags(
-                            user_name,
-                            client,
-                            account_user["Tags"],
-                            current_user.get("Tags", []),
-                            log_params,
-                        ),
-                        apply_user_permission_boundary(
-                            user_name,
-                            client,
-                            account_user.get("PermissionsBoundary", {}),
-                            current_user.get("PermissionsBoundary", {}),
-                            log_params,
-                        ),
-                    ]
-                )
 
-                supported_update_keys = ["Path", "UserName"]
-                update_resource_log_params = {**log_params}
-                update_user_params = {}
-                for k in supported_update_keys:
-                    if account_user.get(k) is not None and account_user.get(
-                        k
-                    ) != current_user.get(k):
-                        update_resource_log_params[k] = dict(
-                            old_value=current_user.get(k), new_value=account_user.get(k)
-                        )
-                        update_user_params[f"New{k}"] = account_user.get(k)
-                if update_user_params:
-                    log_str = "Out of date resource found."
-                    if ctx.execute:
-                        log.info(
-                            f"{log_str} Updating resource...",
-                            **update_resource_log_params,
-                        )
+        if user_exists:
+            tasks.extend(
+                [
+                    apply_user_tags(
+                        user_name,
+                        client,
+                        account_user["Tags"],
+                        current_user.get("Tags", []),
+                        log_params,
+                    ),
+                    apply_user_permission_boundary(
+                        user_name,
+                        client,
+                        account_user.get("PermissionsBoundary", {}),
+                        current_user.get("PermissionsBoundary", {}),
+                        log_params,
+                    ),
+                ]
+            )
 
-                        async def update_user():
-                            exceptions = []
-                            try:
-                                await boto_crud_call(
-                                    client.update_user,
-                                    UserName=user_name,
-                                    **{
-                                        k: update_user_params.get(k)
-                                        for k in update_user_params
-                                    },
-                                )
-                            except Exception as e:
-                                exceptions.append(str(e))
-                            return [
-                                ProposedChange(
-                                    change_type=ProposedChangeType.UPDATE,
-                                    resource_id=user_name,
-                                    resource_type=self.resource_type,
-                                    exceptions_seen=exceptions,
-                                )
-                            ]
+            supported_update_keys = ["Path", "UserName"]
+            update_resource_log_params = {**log_params}
+            update_user_params = {}
+            for k in supported_update_keys:
+                if account_user.get(k) is not None and account_user.get(
+                    k
+                ) != current_user.get(k):
+                    update_resource_log_params[k] = dict(
+                        old_value=current_user.get(k), new_value=account_user.get(k)
+                    )
+                    update_user_params[f"New{k}"] = account_user.get(k)
+            if update_user_params:
+                log_str = "Out of date resource found."
+                if ctx.execute:
+                    log.info(
+                        f"{log_str} Updating resource...",
+                        **update_resource_log_params,
+                    )
 
-                        tasks.append(update_user())
-                    else:
-                        log.info(log_str, **update_resource_log_params)
-                        account_change_details.proposed_changes.append(
+                    async def update_user():
+                        exceptions = []
+                        try:
+                            await boto_crud_call(
+                                client.update_user,
+                                UserName=user_name,
+                                **{
+                                    k: update_user_params.get(k)
+                                    for k in update_user_params
+                                },
+                            )
+                        except Exception as e:
+                            exceptions.append(str(e))
+                        return [
                             ProposedChange(
                                 change_type=ProposedChangeType.UPDATE,
                                 resource_id=user_name,
                                 resource_type=self.resource_type,
+                                exceptions_seen=exceptions,
                             )
+                        ]
+
+                    tasks.append(update_user())
+                else:
+                    log.info(log_str, **update_resource_log_params)
+                    account_change_details.proposed_changes.append(
+                        ProposedChange(
+                            change_type=ProposedChangeType.UPDATE,
+                            resource_id=user_name,
+                            resource_type=self.resource_type,
                         )
-            else:
-                account_change_details.proposed_changes.append(
-                    ProposedChange(
-                        change_type=ProposedChangeType.CREATE,
-                        resource_id=user_name,
-                        resource_type=self.resource_type,
                     )
+        else:
+            proposed_changes = [
+                ProposedChange(
+                    change_type=ProposedChangeType.CREATE,
+                    resource_id=user_name,
+                    resource_type=self.resource_type,
                 )
-                log_str = "New resource found in code."
-                if not ctx.execute:
-                    log.info(log_str, **log_params)
-                    # Exit now because apply functions won't work if resource doesn't exist
-                    return account_change_details
+            ]
+            log_str = "New resource found in code."
+            if not ctx.execute:
+                # Exit now because apply functions won't work if resource doesn't exist
+                log.debug(log_str, **log_params)
+                account_change_details.extend_changes(proposed_changes)
+                return account_change_details
 
-                log_str = f"{log_str} Creating resource..."
-                log.info(log_str, **log_params)
-                if account_user.get("PermissionsBoundary"):
-                    account_user["PermissionsBoundary"] = account_user[
-                        "PermissionsBoundary"
-                    ]["PolicyArn"]
+            log_str = f"{log_str} Creating resource..."
+            log.info(log_str, **log_params)
+            if account_user.get("PermissionsBoundary"):
+                account_user["PermissionsBoundary"] = account_user[
+                    "PermissionsBoundary"
+                ]["PolicyArn"]
 
-                await boto_crud_call(client.create_user, **account_user)
-        except Exception as e:
-            log.error("Unable to generate tasks for resource", error=e, **log_params)
-            return account_change_details
+            account_change_details.extend_changes(
+                await plugin_apply_wrapper(
+                    boto_crud_call(client.create_user, **account_user),
+                    proposed_changes,
+                )
+            )
 
         tasks.extend(
             [
@@ -346,37 +351,25 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
                 ),
             ]
         )
-        try:
-            results: list[list[ProposedChange]] = await asyncio.gather(
-                *tasks, return_exceptions=True
+
+        changes_made = await asyncio.gather(*tasks)
+        if any(changes_made):
+            account_change_details.extend_changes(
+                list(chain.from_iterable(changes_made))
             )
 
-            # separate out the success versus failure calls
-            exceptions: list[ProposedChange] = []
-            changes_made: list[ProposedChange] = []
-            for result in results:
-                for r in result:
-                    if isinstance(r, ProposedChange):
-                        if len(r.exceptions_seen) == 0:
-                            changes_made.append(r)
-                        else:
-                            exceptions.append(r)
-
-        except Exception as e:
-            log.exception("Unable to apply changes to resource", error=e, **log_params)
-            return account_change_details
-        if any(changes_made):
-            account_change_details.proposed_changes.extend(changes_made)
-        if any(exceptions):
-            account_change_details.exceptions_seen.extend(exceptions)
-
-        if ctx.execute:
-            if self.deleted:
-                self.delete()
-            self.write()
+        if ctx.execute and not account_change_details.exceptions_seen:
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),
+                **log_params,
+            )
+        elif account_change_details.exceptions_seen:
+            log.error(
+                "Unable to finish execution on account for resource",
+                exceptions_seen=[
+                    cd.exceptions_seen for cd in account_change_details.exceptions_seen
+                ],
                 **log_params,
             )
         else:

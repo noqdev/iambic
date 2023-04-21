@@ -735,7 +735,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
 
         for account in config.accounts:
             if evaluate_on_provider(self, account):
-                relevant_accounts.append(str(account))
+                relevant_accounts.append(account)
                 tasks.append(self._apply_to_account(account))
 
         if not relevant_accounts:
@@ -745,7 +745,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
                     self.delete()
                 else:
                     log_str = "No changes detected for resource."
-                log.info(log_str, accounts=relevant_accounts, **log_params)
+                log.info(log_str, **log_params)
 
             return template_changes
 
@@ -754,10 +754,39 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
         else:
             log_str = "Detecting changes for resource."
 
-        log.info(log_str, accounts=relevant_accounts, **log_params)
+        relevant_accounts_str = [str(account) for account in relevant_accounts]
+        log.info(log_str, accounts=relevant_accounts_str, **log_params)
 
-        account_changes: list[AccountChangeDetails] = await asyncio.gather(*tasks)
-        template_changes.extend_changes(account_changes)
+        account_changes: list[AccountChangeDetails] = await asyncio.gather(
+            *tasks, return_exceptions=True
+        )
+        proposed_changes: list[AccountChangeDetails] = []
+        exceptions_seen = set()
+
+        for account_change in account_changes:
+            if isinstance(account_change, AccountChangeDetails):
+                proposed_changes.append(account_change)
+            else:
+                exceptions_seen.add(str(account_change))
+
+        if exceptions_seen:
+            exceptions_seen = list(exceptions_seen)
+            proposed_change_accounts = set(
+                change.account for change in proposed_changes
+            )
+            for aws_account in relevant_accounts:
+                if str(aws_account) in proposed_change_accounts:
+                    continue
+                proposed_changes.append(
+                    AccountChangeDetails(
+                        account=str(aws_account),
+                        resource_id=self.resource_id,
+                        resource_type=self.resource_type,
+                        exceptions_seen=exceptions_seen,
+                    )
+                )
+
+        template_changes.extend_changes(proposed_changes)
 
         if template_changes.exceptions_seen:
             if self.deleted:
@@ -778,7 +807,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
         else:
             log_str = "No changes detected for resource."
 
-        log.info(log_str, accounts=relevant_accounts, **log_params)
+        log.info(log_str, accounts=relevant_accounts_str, **log_params)
         return template_changes
 
     @property

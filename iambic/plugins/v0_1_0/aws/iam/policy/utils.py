@@ -157,7 +157,6 @@ async def apply_update_managed_policy(
     policy_arn: str,
     template_policy_document: dict,
     existing_policy_document: dict,
-    iambic_import_only: bool,
     log_params: dict,
 ) -> list[ProposedChange]:
     response = []
@@ -190,17 +189,16 @@ async def apply_update_managed_policy(
         ]
         response.extend(proposed_changes)
 
-        if not iambic_import_only:
-            if ctx.execute:
-                apply_awaitable = new_policy_version(
-                    iam_client,
-                    policy_arn,
-                    template_policy_document,
-                    policy_drift,
-                    log_str,
-                    log_params,
-                )
-                return await plugin_apply_wrapper(apply_awaitable, proposed_changes)
+        if ctx.execute:
+            apply_awaitable = new_policy_version(
+                iam_client,
+                policy_arn,
+                template_policy_document,
+                policy_drift,
+                log_str,
+                log_params,
+            )
+            return await plugin_apply_wrapper(apply_awaitable, proposed_changes)
 
         log.debug(log_str, **log_params)
     return response
@@ -232,7 +230,6 @@ async def apply_managed_policy_tags(
     policy_arn: str,
     template_tags: list[dict],
     existing_tags: list[dict],
-    iambic_import_only: bool,
     log_params: dict,
 ) -> list[ProposedChange]:
     existing_tag_map = {tag["Key"]: tag.get("Value") for tag in existing_tags}
@@ -260,7 +257,7 @@ async def apply_managed_policy_tags(
         ]
         response.extend(proposed_changes)
 
-        if not iambic_import_only:
+        if ctx.execute:
             log_str = f"{log_str} Removing tags..."
             apply_awaitable = boto_crud_call(
                 iam_client.untag_policy,

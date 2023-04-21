@@ -363,7 +363,9 @@ class TemplateChangeDetails(PydanticBaseModel):
     def validate_template_path(cls, v: Union[str, Path]):
         return str(v)
 
-    def extend_changes(self, changes: list[ProposedChange]):
+    def extend_changes(
+        self, changes: list[Union[AccountChangeDetails, ProposedChange]]
+    ):
         for change in changes:
             if change.exceptions_seen:
                 if isinstance(change, AccountChangeDetails) and change.proposed_changes:

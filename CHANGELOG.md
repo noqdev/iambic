@@ -13,6 +13,8 @@ find . -type f -name "*.yaml" -print0 | xargs -0 sed -i '' -e 's/{{account_name}
 ENHANCEMENTS:
 * Removed AWS package imports from core
 * Standardized variable naming in templates
+* Improved exception handling in the AWS package
+* Cleaned up additional import only checks on AWS IAM role, user, and group models. 
 
 BUG FIXES:
 * Resolved type error on merge template when new value is None.

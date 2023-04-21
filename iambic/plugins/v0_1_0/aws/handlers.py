@@ -29,6 +29,7 @@ from iambic.plugins.v0_1_0.aws.event_bridge.models import (
     RoleMessageDetails,
     UserMessageDetails,
 )
+from iambic.plugins.v0_1_0.aws.iam.group.models import AWS_IAM_GROUP_TEMPLATE_TYPE
 from iambic.plugins.v0_1_0.aws.iam.group.template_generation import (
     collect_aws_groups,
     generate_aws_group_templates,
@@ -42,6 +43,7 @@ from iambic.plugins.v0_1_0.aws.iam.role.template_generation import (
     collect_aws_roles,
     generate_aws_role_templates,
 )
+from iambic.plugins.v0_1_0.aws.iam.user.models import AWS_IAM_USER_TEMPLATE_TYPE
 from iambic.plugins.v0_1_0.aws.iam.user.template_generation import (
     collect_aws_users,
     generate_aws_user_templates,
@@ -166,24 +168,41 @@ async def apply_iam_templates(
     await generate_permission_set_map(config.accounts, templates)
 
     template_changes: list[TemplateChangeDetails] = []
+    excluded_from_batch = [AWS_MANAGED_POLICY_TEMPLATE_TYPE]
 
     if managed_policy_tasks := [
         template.apply(config)
         for template in templates
         if template.template_type == AWS_MANAGED_POLICY_TEMPLATE_TYPE
     ]:
+        # There are other template changes that could rely on the managed policy so create these first
         template_changes.extend(await async_batch_processor(managed_policy_tasks, 40))
         if len(template_changes) > len(managed_policy_tasks):
-            # There are other template changes that could rely on the managed policy
             # Give a few seconds to allow the managed policies to be created in AWS
             await asyncio.sleep(10)
+
+    if any(
+        template.template_type == AWS_IAM_GROUP_TEMPLATE_TYPE for template in templates
+    ) and any(
+        template.template_type == AWS_IAM_USER_TEMPLATE_TYPE for template in templates
+    ):
+        # There are user templates that may rely on the group so groups must be created first
+        excluded_from_batch.append(AWS_IAM_GROUP_TEMPLATE_TYPE)
+        group_tasks = [
+            template.apply(config)
+            for template in templates
+            if template.template_type == AWS_IAM_GROUP_TEMPLATE_TYPE
+        ]
+        template_changes.extend(await async_batch_processor(group_tasks, 30))
+        # Give a few seconds to allow the group to be created in AWS
+        await asyncio.sleep(10)
 
     template_changes.extend(
         await async_batch_processor(
             [
                 template.apply(config)
                 for template in templates
-                if template.template_type != AWS_MANAGED_POLICY_TEMPLATE_TYPE
+                if template.template_type not in excluded_from_batch
             ],
             30,
         )
