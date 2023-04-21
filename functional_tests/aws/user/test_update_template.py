@@ -4,9 +4,9 @@ import asyncio
 from unittest import IsolatedAsyncioTestCase
 
 import dateparser
-
 from functional_tests.aws.user.utils import generate_user_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core import noq_json as json
 from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.iam.models import PermissionBoundary
@@ -203,21 +203,14 @@ class UpdateUserTestCase(IsolatedAsyncioTestCase):
         ]
 
         self.template.properties.inline_policies.append(
-            PolicyDocument(
-                policy_name="init_policy",
-                statement=policy_statement
-            )
+            PolicyDocument(policy_name="init_policy", statement=policy_statement)
         )
         results = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
         self.assertFalse(bool(results.exceptions_seen))
         self.assertTrue(bool(results.proposed_changes))
 
         self.template.properties.inline_policies = [
-            PolicyDocument(
-                policy_name="replace_policy",
-                statement=policy_statement
-            )
+            PolicyDocument(policy_name="replace_policy", statement=policy_statement)
         ]
         results = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
         self.assertFalse(bool(results.exceptions_seen))
-

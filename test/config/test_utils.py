@@ -8,7 +8,10 @@ from unittest.mock import patch
 import pytest
 
 from iambic.config.dynamic_config import Config
-from iambic.config.utils import check_and_update_resource_limit, resolve_config_template_path
+from iambic.config.utils import (
+    check_and_update_resource_limit,
+    resolve_config_template_path,
+)
 from iambic.core.iambic_enum import IambicManaged
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import (
@@ -109,8 +112,12 @@ async def test_resolve_config_template_path_too_many_exception(
     test_config_path_two_accounts_plus_org,
 ):
     test_config_path = pathlib.Path(test_config_path_two_accounts_plus_org).parent
-    (test_config_path / "configuration.yaml").write_text("template_type: NOQ::Core::Config\n")
-    (test_config_path / "configuration2.yaml").write_text("template_type: NOQ::Core::Config\n")
+    (test_config_path / "configuration.yaml").write_text(
+        "template_type: NOQ::Core::Config\n"
+    )
+    (test_config_path / "configuration2.yaml").write_text(
+        "template_type: NOQ::Core::Config\n"
+    )
     with pytest.raises(RuntimeError):
         await resolve_config_template_path(test_config_path)
 

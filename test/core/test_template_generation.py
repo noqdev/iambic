@@ -120,10 +120,12 @@ async def test_group_dict_attribute(aws_accounts: list):
         aws_accounts_map,
         number_of_accounts,
         account_resources,
+        "account_id",
+        "included_accounts",
         False,
         prefer_templatized=True,
     )
-    assert dict_attributes[0] == "{{account_id}}"
+    assert dict_attributes[0] == "{{var.account_id}}"
 
 
 @pytest.mark.asyncio
@@ -151,16 +153,16 @@ async def test_base_group_str_attribute(aws_accounts: list):
     # grouped_role_map is in the format of "<shared-variable-reference>" : [account_resource_dict_1, account_resource_dict_n]
     # account_resource_dict_n must have key "account_id", and "resource_val"
     grouped_role_map = await base_group_str_attribute(
-        aws_account_map, account_resources
+        aws_account_map, account_resources, "account_id"
     )
     grouped_keys_set = set(grouped_role_map.keys())
     expected_keys_set = set(
-        ["prefix-{{account_id}}", f"prefix-{aws_accounts[0].account_id}"]
+        ["prefix-{{var.account_id}}", f"prefix-{aws_accounts[0].account_id}"]
     )  # because we strongly preference on templatized version
     assert grouped_keys_set == expected_keys_set
     # the pattern is account_n_resources[0] because we only put 1 resource in the initial list
-    assert account_0_resources[0] in grouped_role_map["prefix-{{account_id}}"]
-    assert account_2_resources[0] in grouped_role_map["prefix-{{account_id}}"]
+    assert account_0_resources[0] in grouped_role_map["prefix-{{var.account_id}}"]
+    assert account_2_resources[0] in grouped_role_map["prefix-{{var.account_id}}"]
     assert account_1_resources[0] in grouped_role_map[repeated_literal]
 
 
@@ -194,14 +196,14 @@ async def test_base_group_str_attribute_incoming_permutations(aws_accounts: list
         # grouped_role_map is in the format of "<shared-variable-reference>" : [account_resource_dict_1, account_resource_dict_n]
         # account_resource_dict_n must have key "account_id", and "resource_val"
         grouped_role_map = await base_group_str_attribute(
-            aws_account_map, account_resource_permutation
+            aws_account_map, account_resource_permutation, "account_id"
         )
         grouped_keys_set = set(grouped_role_map.keys())
         expected_keys_set = set(
-            ["prefix-{{account_id}}", f"prefix-{aws_accounts[0].account_id}"]
+            ["prefix-{{var.account_id}}", f"prefix-{aws_accounts[0].account_id}"]
         )  # because we strongly preference on templatized version
         assert grouped_keys_set == expected_keys_set
         # the pattern is account_n_resources[0] because we only put 1 resource in the initial list
-        assert account_0_resources[0] in grouped_role_map["prefix-{{account_id}}"]
-        assert account_2_resources[0] in grouped_role_map["prefix-{{account_id}}"]
+        assert account_0_resources[0] in grouped_role_map["prefix-{{var.account_id}}"]
+        assert account_2_resources[0] in grouped_role_map["prefix-{{var.account_id}}"]
         assert account_1_resources[0] in grouped_role_map[repeated_literal]

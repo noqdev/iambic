@@ -9,7 +9,7 @@ from jinja2 import BaseLoader, Environment
 from pydantic import Field, constr, validator
 
 from iambic.core.context import ctx
-from iambic.core.iambic_enum import Command, IambicManaged
+from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -18,7 +18,7 @@ from iambic.core.models import (
     ProposedChange,
     ProposedChangeType,
 )
-from iambic.core.utils import sanitize_string
+from iambic.core.utils import plugin_apply_wrapper, sanitize_string
 from iambic.plugins.v0_1_0.aws.iam.models import Path
 from iambic.plugins.v0_1_0.aws.iam.policy.utils import (
     apply_managed_policy_tags,
@@ -306,13 +306,6 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
         description="The properties of the managed policy",
     )
 
-    def _is_iambic_import_only(self, aws_account: AWSAccount):
-        return (
-            aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
-            or self.iambic_managed == IambicManaged.IMPORT_ONLY
-            or ctx.eval_only
-        )
-
     def get_arn_for_account(self, aws_account: AWSAccount) -> str:
         path = self.get_attribute_val_for_account(aws_account, "properties.path", False)
         policy_name = self.properties.policy_name
@@ -340,7 +333,6 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
             resource_id=policy_name,
             account=str(aws_account),
         )
-        is_iambic_import_only = self._is_iambic_import_only(aws_account)
         policy_arn = account_policy.pop("Arn")
         current_policy = await get_managed_policy(client, policy_arn)
         if current_policy:
@@ -358,20 +350,27 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
         if deleted:
             if current_policy:
                 account_change_details.new_value = None
-                account_change_details.proposed_changes.append(
+                proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.DELETE,
                         resource_id=policy_name,
                         resource_type=self.resource_type,
                     )
-                )
+                ]
                 log_str = "Active resource found with deleted=false."
-                if not is_iambic_import_only:
+                if ctx.execute:
                     log_str = f"{log_str} Deleting resource..."
                 log.debug(log_str, **log_params)
 
-                if not is_iambic_import_only:
-                    await delete_managed_policy(client, policy_arn, log_params)
+                if ctx.execute:
+                    apply_awaitable = delete_managed_policy(
+                        client, policy_arn, log_params
+                    )
+                    proposed_changes = await plugin_apply_wrapper(
+                        apply_awaitable, proposed_changes
+                    )
+
+                account_change_details.extend_changes(proposed_changes)
 
             return account_change_details
 
@@ -382,7 +381,6 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
                     policy_arn,
                     json.loads(account_policy["PolicyDocument"]),
                     current_policy["PolicyDocument"],
-                    is_iambic_import_only,
                     log_params,
                 ),
                 apply_managed_policy_tags(
@@ -390,40 +388,42 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
                     policy_arn,
                     account_policy.get("Tags", []),
                     current_policy.get("Tags", []),
-                    is_iambic_import_only,
                     log_params,
                 ),
             ]
 
-            changes_made: list[list[ProposedChange]] = await asyncio.gather(
-                *tasks, return_exceptions=True
-            )
+            changes_made: list[list[ProposedChange]] = await asyncio.gather(*tasks)
             if any(changes_made):
                 account_change_details.extend_changes(
                     list(chain.from_iterable(changes_made))
                 )
 
         else:
-            account_change_details.proposed_changes.append(
+            proposed_changes = [
                 ProposedChange(
                     change_type=ProposedChangeType.CREATE,
                     resource_id=policy_name,
                     resource_type=self.resource_type,
                 )
-            )
+            ]
             log_str = "New resource found in code."
-            if not is_iambic_import_only:
-                log_str = f"{log_str} Creating resource..."
-                if isinstance(account_policy["PolicyDocument"], dict):
-                    account_policy["PolicyDocument"] = json.dumps(
-                        account_policy["PolicyDocument"]
-                    )
-                await boto_crud_call(client.create_policy, **account_policy)
-            log.debug(log_str, **log_params)
+            if not ctx.execute:
+                # Exit now because apply functions won't work if resource doesn't exist
+                log.debug(log_str, **log_params)
+                account_change_details.extend_changes(proposed_changes)
+                return account_change_details
+
+            log.debug(f"{log_str} Creating resource...", **log_params)
+            if isinstance(account_policy["PolicyDocument"], dict):
+                account_policy["PolicyDocument"] = json.dumps(
+                    account_policy["PolicyDocument"]
+                )
+            apply_awaitable = boto_crud_call(client.create_policy, **account_policy)
+            account_change_details.extend_changes(
+                await plugin_apply_wrapper(apply_awaitable, proposed_changes)
+            )
 
         if ctx.execute and not account_change_details.exceptions_seen:
-            # if self.deleted:
-            #     self.delete()
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),

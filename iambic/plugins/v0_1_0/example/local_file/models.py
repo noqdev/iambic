@@ -74,15 +74,18 @@ class ExampleLocalFileMultiAccountTemplateProperties(BaseTemplate, ExpiryModel):
         return self.name
 
 
-
 class ExampleLocalFileMultiAccountTemplate(BaseTemplate, ExpiryModel):
     template_type = EXAMPLE_LOCAL_FILE_MULTI_ACCOUNT_TEMPLATE_TYPE
     properties: ExampleLocalFileTemplateProperties = Field(
         ..., description="Properties for Example Local File Template"
     )
     name: str = Field(..., description="name of local file")
-    included_accounts: Optional[list] = Field(..., description="list of accounts to include")
-    excluded_accounts: Optional[list] = Field(..., description="list of accounts to exclude")
+    included_accounts: Optional[list] = Field(
+        ..., description="list of accounts to include"
+    )
+    excluded_accounts: Optional[list] = Field(
+        ..., description="list of accounts to exclude"
+    )
 
     @property
     def resource_type(self) -> str:

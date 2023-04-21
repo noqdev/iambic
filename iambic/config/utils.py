@@ -39,9 +39,13 @@ def check_and_update_resource_limit(config: Config):
             resource.setrlimit(resource.RLIMIT_NOFILE, (minimum_ulimit, hard_limit))
         except PermissionError:
             log.warning(
-                "Cannot increase resource limit: the process does not have permission."
+                "Cannot increase resource limit: the process does not have permission.",
+                current_ulimit=soft_limit,
+                desired_ulimit=minimum_ulimit,
             )
         except Exception:
             log.warning(
-                "Unable to increase resource limit: please manually update the soft limit."
+                "Unable to increase resource limit: please manually update the soft limit.",
+                current_ulimit=soft_limit,
+                desired_ulimit=minimum_ulimit,
             )

@@ -10,9 +10,9 @@ import time
 
 import boto3.session
 import pytest
+from functional_tests.conftest import all_config
 from github import Github
 
-from functional_tests.conftest import all_config
 from iambic.config.dynamic_config import Config, load_config
 from iambic.core.git import clone_git_repo
 from iambic.core.logger import log

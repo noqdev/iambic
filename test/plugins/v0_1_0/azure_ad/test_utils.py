@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 from typing import Union
 from unittest import mock

@@ -8,6 +8,7 @@ from functional_tests.aws.managed_policy.utils import (
     managed_policy_full_import,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.event_bridge.models import ManagedPolicyMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.policy.models import AwsIamManagedPolicyTemplate

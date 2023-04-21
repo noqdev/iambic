@@ -1,25 +1,27 @@
 from __future__ import annotations
-# test_your_module.py
-from io import StringIO
+
 import asyncio
 import os
 import shutil
 import tempfile
+
+# test_your_module.py
+from io import StringIO
 from typing import Any, Callable, Generator
 from unittest.mock import AsyncMock
 
 import git
-from git import Repo, GitCommandError
-from mock import MagicMock
 import pytest
-from pytest_mock import MockerFixture
 import yaml
+from git import GitCommandError, Repo
+from mock import MagicMock
+from pytest_mock import MockerFixture
 
 import iambic.plugins.v0_1_0.example
 from iambic.config.dynamic_config import load_config
 from iambic.core.git import (
-    clone_git_repos,
     GitDiff,
+    clone_git_repos,
     create_templates_for_deleted_files,
     create_templates_for_modified_files,
     get_origin_head,
@@ -198,26 +200,46 @@ def git_diff_parameterized(request):
             )
 
         return diffs
+
     return wrapped
 
 
-def test_create_templates_for_modified_files_without_multi_account_support(git_diff_parameterized: list[Any]):
-    templates: list[BaseTemplate] = create_templates_for_modified_files(None, git_diff_parameterized(TEST_TEMPLATE_YAML))
+def test_create_templates_for_modified_files_without_multi_account_support(
+    git_diff_parameterized: list[Any],
+):
+    templates: list[BaseTemplate] = create_templates_for_modified_files(
+        None, git_diff_parameterized(TEST_TEMPLATE_YAML)
+    )
     assert templates[0].properties.name == "after"
 
 
-def test_create_templates_for_modified_files_with_multi_account_support(test_config_path_two_accounts_plus_org, git_diff_parameterized: list[Any]):
-    templates: list[BaseTemplate] = create_templates_for_modified_files(test_config_path_two_accounts_plus_org, git_diff_parameterized(TEST_TEMPLATE_MULTI_ACCOUNT_YAML))
+def test_create_templates_for_modified_files_with_multi_account_support(
+    test_config_path_two_accounts_plus_org, git_diff_parameterized: list[Any]
+):
+    templates: list[BaseTemplate] = create_templates_for_modified_files(
+        test_config_path_two_accounts_plus_org,
+        git_diff_parameterized(TEST_TEMPLATE_MULTI_ACCOUNT_YAML),
+    )
     assert templates[0].properties.name == "after"
 
 
-def test_create_templates_for_modified_files_with_multi_account_incl_star_support(test_config_path_two_accounts_plus_org, git_diff_parameterized: list[Any]):
-    templates: list[BaseTemplate] = create_templates_for_modified_files(test_config_path_two_accounts_plus_org, git_diff_parameterized(TEST_TEMPLATE_MULTI_ACCOUNT_INC_STAR_YAML))
+def test_create_templates_for_modified_files_with_multi_account_incl_star_support(
+    test_config_path_two_accounts_plus_org, git_diff_parameterized: list[Any]
+):
+    templates: list[BaseTemplate] = create_templates_for_modified_files(
+        test_config_path_two_accounts_plus_org,
+        git_diff_parameterized(TEST_TEMPLATE_MULTI_ACCOUNT_INC_STAR_YAML),
+    )
     assert templates[0].properties.name == "after"
 
 
-def test_create_templates_for_modified_files_with_multi_account_incl_star_support(test_config_path_two_accounts_plus_org, git_diff_parameterized: list[Any]):
-    templates: list[BaseTemplate] = create_templates_for_modified_files(test_config_path_two_accounts_plus_org, git_diff_parameterized(TEST_TEMPLATE_MULTI_ACCOUNT_EXC_STAR_YAML))
+def test_create_templates_for_modified_files_with_multi_account_incl_star_support(
+    test_config_path_two_accounts_plus_org, git_diff_parameterized: list[Any]
+):
+    templates: list[BaseTemplate] = create_templates_for_modified_files(
+        test_config_path_two_accounts_plus_org,
+        git_diff_parameterized(TEST_TEMPLATE_MULTI_ACCOUNT_EXC_STAR_YAML),
+    )
     assert templates[0].properties.name == "after"
 
 
@@ -252,7 +274,10 @@ async def test_get_origin_head(mocker):
     ]
     mock_remote.refs = mock_refs
 
-    with pytest.raises(ValueError, match="Unable to determine the default branch for the repo 'origin' remote"):
+    with pytest.raises(
+        ValueError,
+        match="Unable to determine the default branch for the repo 'origin' remote",
+    ):
         get_origin_head(mock_repo)
 
 
@@ -268,18 +293,18 @@ async def test_clone_git_repos(mocker, test_config):
     }
 
     # Mock the os.path.join function
-    mocker.patch('os.path.join', side_effect=lambda *args: "/".join(args))
+    mocker.patch("os.path.join", side_effect=lambda *args: "/".join(args))
 
     # Mock the Repo class and its methods
-    mock_repo = mocker.patch('iambic.core.git.Repo', autospec=True)
-    mock_clone_from = mocker.patch.object(iambic.core.git.Repo, 'clone_from')
+    mock_repo = mocker.patch("iambic.core.git.Repo", autospec=True)
+    mock_clone_from = mocker.patch.object(iambic.core.git.Repo, "clone_from")
 
     # Mock the git attribute of the Repo instance
     mock_git = mocker.MagicMock()
     mock_repo.return_value.git = mock_git
 
     # Mock the GitCommandError exception
-    mock_git_error = mocker.patch('iambic.core.git.GitCommandError', autospec=True)
+    mock_git_error = mocker.patch("iambic.core.git.GitCommandError", autospec=True)
     mock_git_error.stderr = "already exists and is not an empty directory"
 
     # Test the clone_git_repos function
@@ -304,10 +329,10 @@ async def test_clone_git_repos_with_git_error(mocker, test_config):
     }
 
     # Mock the os.path.join function
-    mocker.patch('os.path.join', side_effect=lambda *args: "/".join(args))
+    mocker.patch("os.path.join", side_effect=lambda *args: "/".join(args))
 
     # Mock the Repo class and its methods
-    mock_repo = mocker.patch('iambic.core.git.Repo', autospec=True)
+    mock_repo = mocker.patch("iambic.core.git.Repo", autospec=True)
 
     # Raise GitCommandError when cloning the second repository
     def clone_from_side_effect(uri, path):
@@ -317,7 +342,9 @@ async def test_clone_git_repos_with_git_error(mocker, test_config):
             raise git_error
         return mock_repo.return_value
 
-    mock_clone_from = mocker.patch.object(iambic.core.git.Repo, 'clone_from', side_effect=clone_from_side_effect)
+    mock_clone_from = mocker.patch.object(
+        iambic.core.git.Repo, "clone_from", side_effect=clone_from_side_effect
+    )
 
     # Mock the git attribute of the Repo instance
     mock_git = mocker.MagicMock()
@@ -333,7 +360,7 @@ async def test_clone_git_repos_with_git_error(mocker, test_config):
             mocker.call("https://github.com/user/repo1.git", "test_repo_dir/repo1"),
             mocker.call("https://github.com/user/repo2.git", "test_repo_dir/repo2"),
         ],
-        any_order=True
+        any_order=True,
     )
     mock_git.pull.assert_called_once()
 
@@ -348,38 +375,43 @@ class MockTemplate:
         self.template_type = MagicMock(default=template_type)
         self.deleted = deleted
 
-    __fields__ = {
-            "template_type": MagicMock(default="type1")
-        }
+    __fields__ = {"template_type": MagicMock(default="type1")}
 
 
 class MockTemplate2(MockTemplate):
-    __fields__ = {
-            "template_type": MagicMock(default="type2")
-        }
+    __fields__ = {"template_type": MagicMock(default="type2")}
 
 
 def test_create_templates_for_deleted_files(mocker):
     # Mock the GitDiff objects
-    git_diff1 = mocker.MagicMock(content='template_type: type1\n', file_path='path1.yaml')
-    git_diff2 = mocker.MagicMock(content='template_type: type2\n', file_path='path2.yaml')
+    git_diff1 = mocker.MagicMock(
+        content="template_type: type1\n", file_path="path1.yaml"
+    )
+    git_diff2 = mocker.MagicMock(
+        content="template_type: type2\n", file_path="path2.yaml"
+    )
 
     deleted_files = [git_diff1, git_diff2]
 
     # Mock the template_map in TEMPLATES
-    mock_templates = mocker.MagicMock(templates=[
-        MockTemplate,
-        MockTemplate2,
-    ])
+    mock_templates = mocker.MagicMock(
+        templates=[
+            MockTemplate,
+            MockTemplate2,
+        ]
+    )
 
     # Mock the yaml.load function
-    mocker.patch('iambic.core.git.yaml.load', side_effect=lambda x: yaml.load(x, Loader=yaml.SafeLoader))
+    mocker.patch(
+        "iambic.core.git.yaml.load",
+        side_effect=lambda x: yaml.load(x, Loader=yaml.SafeLoader),
+    )
 
     # Mock the log.info function
-    mock_log_info = mocker.patch('iambic.core.git.log.info')
+    mock_log_info = mocker.patch("iambic.core.git.log.info")
 
     # Test the create_templates_for_deleted_files function
-    with mocker.patch('iambic.core.git.TEMPLATES', mock_templates):
+    with mocker.patch("iambic.core.git.TEMPLATES", mock_templates):
         result = create_templates_for_deleted_files(deleted_files)
 
     # Check if the returned templates are correct

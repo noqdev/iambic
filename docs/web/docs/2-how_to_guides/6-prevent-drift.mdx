@@ -41,7 +41,7 @@ Here is an example of a read_only role with `iambic_managed` mode set to `enforc
 ```yaml
 template_type: NOQ::AWS::IAM::Role
 iambic_managed: enforced
-identifier: '{{account_name}}_readonly'
+identifier: '{{var.account_name}}_readonly'
 properties:
   description: Standard ReadOnly Role
   assume_role_policy_document:
@@ -55,7 +55,7 @@ properties:
     version: '2012-10-17'
   managed_policies:
     - policy_arn: arn:aws:iam::aws:policy/ReadOnlyAccess
-  role_name: '{{account_name}}_readonly'
+  role_name: '{{var.account_name}}_readonly'
   tags:
     - key: owner
       value: cloud_admins@example.com

@@ -46,14 +46,14 @@ result in the creation of three roles: "dev_cloudwatch",
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
-identifier: '{{account_name}}_cloudwatch'
+identifier: '{{var.account_name}}_cloudwatch'
 included_accounts:
     - dev
     - staging
     - prod
 properties:
   description:
-    - description: Cloudwatch role for {{account_name}}
+    - description: Cloudwatch role for {{var.account_name}}
   assume_role_policy_document:
     statement:
       - action:
@@ -80,7 +80,7 @@ properties:
         resource: "*"
   managed_policies:
     - policy_arn: arn:aws:iam::aws:policy/AdministratorAccess
-  role_name: '{{account_name}}_cloudwatch'
+  role_name: '{{var.account_name}}_cloudwatch'
   tags:
     - key: owner
       value: devops
@@ -92,14 +92,14 @@ Create a BackendDeveloperRole with varying permissions based on the AWS account.
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
-identifier: '{{account_name}}_backend_developer'
+identifier: '{{var.account_name}}_backend_developer'
 included_accounts:
   - '*'
 excluded_accounts:
   - compliance
 properties:
   description:
-    - description: Backend developer role for {{account_name}}
+    - description: Backend developer role for {{var.account_name}}
   assume_role_policy_document:
     statement:
       - action:
@@ -135,7 +135,7 @@ properties:
           condition:
                 StringNotEquals:
                     s3:ResourceTag/sensitive: 'true'
-  role_name: '{{account_name}}_backend_developer'
+  role_name: '{{var.account_name}}_backend_developer'
   tags:
     - key: owner
       value: devops

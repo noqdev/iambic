@@ -182,14 +182,14 @@ By installing IAMbic GitHub App, the app can integrate the pull-request and merg
 
 ### Store the following secrets in AWS Secrets Manager in the same AWS account running GitHub App lambda function.
 
-1. Go to AWS Secret Manager, the URL will look like `console.aws.amazon.com/secretsmanager/listsecrets`. 
+1. Go to AWS Secret Manager, the URL will look like `console.aws.amazon.com/secretsmanager/listsecrets`.
 	1. Consider check the region, the default used in the Terraform is `us-west-2`.
 1. Store the earlier downloaded private key contents (not the filename) in AWS Secrets Manager and name it `iambic/github-app-private-key`.
 	1. This is the default name used in the Terraform that will be executed later. If you use another name, be sure to update it in the Terraform procedure later.
 
 <!-- # TODO: Mention plaintext etc. -->
 
-2. Generate a webhook secret by taking the output of one of these commands: 
+2. Generate a webhook secret by taking the output of one of these commands:
 	1. `ruby -rsecurerandom -e 'puts SecureRandom.hex(20)'`at the terminal.
 	1. `python -c "import secrets; print(secrets.token_hex(20))"`
 	1. `node -e "var token = require('crypto').randomBytes(20).toString('hex'); console.log(token)"`
@@ -204,10 +204,10 @@ By installing IAMbic GitHub App, the app can integrate the pull-request and merg
 ```yaml
 template_type: NOQ::AWS::IAM::Role
 included_accounts:
-  # You will need to replace the "NAME_OF_AWS_ACCOUNT_THAT_HAS_IambicHubRole" 
-  # with the account name of the AWS account holding the IambicHubRole. 
+  # You will need to replace the "NAME_OF_AWS_ACCOUNT_THAT_HAS_IambicHubRole"
+  # with the account name of the AWS account holding the IambicHubRole.
   # In the event you change the secret names, you need to update those values as well.
-  - NAME_OF_AWS_ACCOUNT_THAT_HAS_IambicHubRole 
+  - NAME_OF_AWS_ACCOUNT_THAT_HAS_IambicHubRole
 identifier: iambic_github_app_lambda_execution
 properties:
   description: Github App Lambda Execution
@@ -225,27 +225,27 @@ properties:
             - logs:CreateLogGroup
           effect: Allow
           resource:
-            - arn:aws:logs:*:{{account_id}}:log-group:*:log-stream:
+            - arn:aws:logs:*:{{var.account_id}}:log-group:*:log-stream:
           sid: CreateLogGroup
         - action:
             - secretsmanager:GetSecretValue
           effect: Allow
           resource:
-            - arn:aws:secretsmanager:*:{{account_id}}:secret:iambic/github-app-private-key
-            - arn:aws:secretsmanager:*:{{account_id}}:secret:iambic/github-app-private-key-*
-            - arn:aws:secretsmanager:*:{{account_id}}:secret:iambic/github-app-webhook-secret
-            - arn:aws:secretsmanager:*:{{account_id}}:secret:iambic/github-app-webhook-secret-*
+            - arn:aws:secretsmanager:*:{{var.account_id}}:secret:iambic/github-app-private-key
+            - arn:aws:secretsmanager:*:{{var.account_id}}:secret:iambic/github-app-private-key-*
+            - arn:aws:secretsmanager:*:{{var.account_id}}:secret:iambic/github-app-webhook-secret
+            - arn:aws:secretsmanager:*:{{var.account_id}}:secret:iambic/github-app-webhook-secret-*
           sid: SecretReading
         - action:
             - logs:CreateLogStream
             - logs:PutLogEvents
           effect: Allow
           resource:
-            - arn:aws:logs:*:{{account_id}}:log-group:/aws/lambda/iambic_github_app_webhook*:*
+            - arn:aws:logs:*:{{var.account_id}}:log-group:/aws/lambda/iambic_github_app_webhook*:*
           sid: LogEvents
         - action: sts:AssumeRole
           effect: Allow
-          resource: arn:aws:iam::{{account_id}}:role/IambicHubRole
+          resource: arn:aws:iam::{{var.account_id}}:role/IambicHubRole
       version: '2012-10-17'
   role_name: iambic_github_app_lambda_execution
 ```
@@ -268,7 +268,7 @@ Update the IambicHubRole by running `iambic apply <path-to-iambic-hub-role-of-mg
 
 ### Deploy the GitHub App as a Lambda Function
 
-You have created the GitHub App. A GitHub App has to be a hosted application. Now, it will be deployed as a lambda function through a Terraform script. 
+You have created the GitHub App. A GitHub App has to be a hosted application. Now, it will be deployed as a lambda function through a Terraform script.
 
 1. Remember to set your `AWS_PROFILE` environment variable with your AWS account.
 2. [Checkout iambic repository](/reference/installation/install_iambic_via_the_repo#checkout-the-iambic-repository).
@@ -319,15 +319,15 @@ Typical pull-requests review flow requires reviewers approval. Action such as au
 1. In your template directory execute iambic setup
 2. Select `Generate GitHub Action Workflow`
 3. Complete `email`, `repository` name
-4. execute 
+4. execute
 	```bash
-	git add .github 
-	git commit -m "Install github actions" 
+	git add .github
+	git commit -m "Install github actions"
 	git push origin HEAD
 	```
 
 <!-- #TODO should this be a code block? -->
-<!-- 1. Copy the following .github/workflows folder into your template directory. 
+<!-- 1. Copy the following .github/workflows folder into your template directory.
 2. mkdir -p ~/github
 3. git clone https://github.com/noqdev/iambic-templates-example/ iambic-templates-example
 4. git clone \<YOUR OWN IAMBIC repo\> iambic-templates
@@ -343,7 +343,7 @@ Typical pull-requests review flow requires reviewers approval. Action such as au
 
 1. `git checkout -b task/change_description origin/main`
 2. Edit one of your description within your templates, like `resources/github/iam_role_lambda.yaml`. <!-- #TODO edit to what?? -->
-3. Add your changes to your branch, and push it to github:   
+3. Add your changes to your branch, and push it to github:
 	```bash
 	git add resources/github/iam_role_lambda.yaml
 	git commit -m "Change Description"
