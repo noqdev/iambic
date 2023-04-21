@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Union
 from pydantic import Field, validator
 
 from iambic.core.context import ctx
-from iambic.core.iambic_enum import Command, IambicManaged
+from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import (
     AccessModelMixin,
@@ -400,12 +400,6 @@ class AwsIdentityCenterPermissionSetTemplate(
 
         return response
 
-    def _is_read_only(self, aws_account: AWSAccount):
-        return bool(
-            aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
-            or self.iambic_managed == IambicManaged.IMPORT_ONLY
-        )
-
     async def _apply_to_account(  # noqa: C901
         self, aws_account: AWSAccount
     ) -> AccountChangeDetails:
@@ -445,7 +439,6 @@ class AwsIdentityCenterPermissionSetTemplate(
             account=str(aws_account),
             org_id=aws_account.org_id,
         )
-        read_only = self._is_read_only(aws_account)
 
         current_account_assignments = {}
         current_permission_set = (
@@ -491,20 +484,20 @@ class AwsIdentityCenterPermissionSetTemplate(
         if deleted:
             if current_permission_set:
                 account_change_details.new_value = None
-                account_change_details.proposed_changes.append(
+                proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.DELETE,
                         resource_id=name,
                         resource_type=self.resource_type,
                     )
-                )
+                ]
                 log_str = "Active resource found with deleted=false."
-                if ctx.execute and not read_only:
+                if ctx.execute:
                     log_str = f"{log_str} Deleting resource..."
                 log.debug(log_str, **log_params)
 
                 if ctx.execute:
-                    await delete_permission_set(
+                    apply_awaitable = delete_permission_set(
                         identity_center_client,
                         instance_arn,
                         permission_set_arn,
@@ -512,84 +505,90 @@ class AwsIdentityCenterPermissionSetTemplate(
                         current_account_assignments,
                         log_params,
                     )
+                    proposed_changes = await plugin_apply_wrapper(
+                        apply_awaitable, proposed_changes
+                    )
+
+                account_change_details.extend_changes(proposed_changes)
 
             return account_change_details
 
         permission_set_exists = bool(current_permission_set)
         tasks = []
-        try:
-            if permission_set_exists:
-                tasks.append(
-                    apply_permission_set_tags(
-                        identity_center_client,
-                        instance_arn,
-                        permission_set_arn,
-                        template_permission_set.get("Tags", []),
-                        current_permission_set.get("Tags", []),
-                        log_params,
-                    )
+
+        if permission_set_exists:
+            tasks.append(
+                apply_permission_set_tags(
+                    identity_center_client,
+                    instance_arn,
+                    permission_set_arn,
+                    template_permission_set.get("Tags", []),
+                    current_permission_set.get("Tags", []),
+                    log_params,
                 )
+            )
 
-                supported_update_keys = ["Description", "SessionDuration", "RelayState"]
-                update_resource_log_params = {**log_params}
-                update_resource_params = {}
-                for k in supported_update_keys:
-                    if template_permission_set.get(
-                        k
-                    ) is not None and template_permission_set.get(
-                        k
-                    ) != current_permission_set.get(
-                        k
-                    ):
-                        update_resource_log_params[k] = dict(
-                            old_value=current_permission_set.get(k),
-                            new_value=template_permission_set.get(k),
-                        )
-                        update_resource_params[k] = template_permission_set.get(k)
+            supported_update_keys = ["Description", "SessionDuration", "RelayState"]
+            update_resource_log_params = {**log_params}
+            update_resource_params = {}
+            for k in supported_update_keys:
+                if template_permission_set.get(
+                    k
+                ) is not None and template_permission_set.get(
+                    k
+                ) != current_permission_set.get(
+                    k
+                ):
+                    update_resource_log_params[k] = dict(
+                        old_value=current_permission_set.get(k),
+                        new_value=template_permission_set.get(k),
+                    )
+                    update_resource_params[k] = template_permission_set.get(k)
 
-                if update_resource_params:
-                    log_str = "Out of date resource found."
-                    proposed_changes = [
-                        ProposedChange(
-                            change_type=ProposedChangeType.UPDATE,
-                            resource_id=name,
-                            resource_type=self.resource_type,
-                        )
-                    ]
-                    if ctx.execute:
-                        log.info(
-                            f"{log_str} Updating resource...",
-                            **update_resource_log_params,
-                        )
-                        apply_awaitable = boto_crud_call(
-                            identity_center_client.update_permission_set,
-                            InstanceArn=instance_arn,
-                            PermissionSetArn=permission_set_arn,
-                            **update_resource_params,
-                        )
-                        tasks.append(
-                            plugin_apply_wrapper(apply_awaitable, proposed_changes)
-                        )
-                    else:
-                        log.info(log_str, **update_resource_log_params)
-                        account_change_details.proposed_changes.extend(proposed_changes)
-            else:
-                account_change_details.proposed_changes.append(
+            if update_resource_params:
+                log_str = "Out of date resource found."
+                proposed_changes = [
                     ProposedChange(
-                        change_type=ProposedChangeType.CREATE,
+                        change_type=ProposedChangeType.UPDATE,
                         resource_id=name,
                         resource_type=self.resource_type,
                     )
+                ]
+                if ctx.execute:
+                    log.info(
+                        f"{log_str} Updating resource...",
+                        **update_resource_log_params,
+                    )
+                    apply_awaitable = boto_crud_call(
+                        identity_center_client.update_permission_set,
+                        InstanceArn=instance_arn,
+                        PermissionSetArn=permission_set_arn,
+                        **update_resource_params,
+                    )
+                    tasks.append(
+                        plugin_apply_wrapper(apply_awaitable, proposed_changes)
+                    )
+                else:
+                    log.info(log_str, **update_resource_log_params)
+                    account_change_details.proposed_changes.extend(proposed_changes)
+        else:
+            proposed_changes = [
+                ProposedChange(
+                    change_type=ProposedChangeType.CREATE,
+                    resource_id=name,
+                    resource_type=self.resource_type,
                 )
-                log_str = "New resource found in code."
-                if not ctx.execute:
-                    log.info(log_str, **log_params)
-                    # Exit now because apply functions won't work if resource doesn't exist
-                    return account_change_details
+            ]
+            log_str = "New resource found in code."
+            if not ctx.execute:
+                # Exit now because apply functions won't work if resource doesn't exist
+                log.debug(log_str, **log_params)
+                account_change_details.extend_changes(proposed_changes)
+                return account_change_details
 
-                log_str = f"{log_str} Creating resource..."
-                log.info(log_str, **log_params)
+            log.debug(f"{log_str} Creating resource...", **log_params)
 
+            try:
                 permission_set = await boto_crud_call(
                     identity_center_client.create_permission_set,
                     Name=name,
@@ -605,11 +604,24 @@ class AwsIdentityCenterPermissionSetTemplate(
                         if template_permission_set.get(param)
                     },
                 )
-                permission_set_arn = permission_set["PermissionSet"]["PermissionSetArn"]
+            except Exception as e:
+                for change in proposed_changes:
+                    change.exceptions_seen.append(str(e))
 
-        except Exception as e:
-            log.error("Unable to generate tasks for resource", error=e, **log_params)
-            return account_change_details
+            account_change_details.extend_changes(proposed_changes)
+
+            if account_change_details.exceptions_seen:
+                log.error(
+                    "Unable to create resource on account",
+                    exceptions_seen=[
+                        cd.exceptions_seen
+                        for cd in account_change_details.exceptions_seen
+                    ],
+                    **log_params,
+                )
+                return account_change_details
+
+            permission_set_arn = permission_set["PermissionSet"]["PermissionSetArn"]
 
         tasks.extend(
             [
@@ -653,55 +665,61 @@ class AwsIdentityCenterPermissionSetTemplate(
                 ),
             ]
         )
-        try:
-            changes_made: list[list[ProposedChange]] = await asyncio.gather(*tasks)
 
-            # apply_account_assignments is a dedicated call due to the request limit on CreateAccountAssignment
-            #   per https://docs.aws.amazon.com/singlesignon/latest/userguide/limits.html
-            changes_made.append(
-                await apply_account_assignments(
-                    identity_center_client,
-                    instance_arn,
-                    permission_set_arn,
-                    template_account_assignments,
-                    current_account_assignments,
-                    log_params,
-                )
+        changes_made = await asyncio.gather(*tasks)
+        if any(changes_made):
+            account_change_details.extend_changes(
+                list(chain.from_iterable(changes_made))
             )
-            if any(changes_made):
-                account_change_details.extend_changes(
-                    list(chain.from_iterable(changes_made))
-                )
-        except Exception as e:
-            log.error("Unable to apply changes to resource", error=e, **log_params)
-            return account_change_details
+
+        # apply_account_assignments is a dedicated call due to the request limit on CreateAccountAssignment
+        #   per https://docs.aws.amazon.com/singlesignon/latest/userguide/limits.html
+        account_assignment_changes = await apply_account_assignments(
+            identity_center_client,
+            instance_arn,
+            permission_set_arn,
+            template_account_assignments,
+            current_account_assignments,
+            log_params,
+        )
+        if account_assignment_changes:
+            account_change_details.extend_changes(account_assignment_changes)
 
         if ctx.execute and not account_change_details.exceptions_seen:
             if any(changes_made) and not self.deleted:
-                res = await boto_crud_call(
-                    identity_center_client.provision_permission_set,
-                    InstanceArn=instance_arn,
-                    PermissionSetArn=permission_set_arn,
-                    TargetType="ALL_PROVISIONED_ACCOUNTS",
-                )
-
-                request_id = res["PermissionSetProvisioningStatus"]["RequestId"]
-
-                for _ in range(20):
-                    provision_status = await boto_crud_call(
-                        identity_center_client.describe_permission_set_provisioning_status,
+                try:
+                    res = await boto_crud_call(
+                        identity_center_client.provision_permission_set,
                         InstanceArn=instance_arn,
-                        ProvisionPermissionSetRequestId=request_id,
+                        PermissionSetArn=permission_set_arn,
+                        TargetType="ALL_PROVISIONED_ACCOUNTS",
                     )
 
-                    if (
-                        provision_status["PermissionSetProvisioningStatus"]["Status"]
-                        != "IN_PROGRESS"
-                    ):
-                        break
+                    request_id = res["PermissionSetProvisioningStatus"]["RequestId"]
 
-                    await asyncio.sleep(1)
-                    continue
+                    for _ in range(20):
+                        provision_status = await boto_crud_call(
+                            identity_center_client.describe_permission_set_provisioning_status,
+                            InstanceArn=instance_arn,
+                            ProvisionPermissionSetRequestId=request_id,
+                        )
+
+                        if (
+                            provision_status["PermissionSetProvisioningStatus"][
+                                "Status"
+                            ]
+                            != "IN_PROGRESS"
+                        ):
+                            break
+
+                        await asyncio.sleep(1)
+                        continue
+                except Exception as err:
+                    log.warning(
+                        "Unable to resolve status when provisioning permission set.",
+                        error=str(err),
+                        **log_params,
+                    )
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),
@@ -742,7 +760,7 @@ class AwsIdentityCenterPermissionSetTemplate(
                 continue
 
             if evaluate_on_provider(self, account):
-                relevant_accounts.append(str(account))
+                relevant_accounts.append(account)
                 tasks.append(self._apply_to_account(account))
 
         if not relevant_accounts:
@@ -752,7 +770,7 @@ class AwsIdentityCenterPermissionSetTemplate(
                     self.delete()
                 else:
                     log_str = "No changes detected for resource."
-                log.info(log_str, accounts=relevant_accounts, **log_params)
+                log.info(log_str, **log_params)
 
             return template_changes
 
@@ -761,10 +779,37 @@ class AwsIdentityCenterPermissionSetTemplate(
         else:
             log_str = "Detecting changes for resource."
 
-        log.info(log_str, accounts=relevant_accounts, **log_params)
+        relevant_accounts_str = [str(account) for account in relevant_accounts]
+        log.info(log_str, accounts=relevant_accounts_str, **log_params)
 
-        account_changes = await asyncio.gather(*tasks)
-        template_changes.extend_changes(account_changes)
+        account_changes = await asyncio.gather(*tasks, return_exceptions=True)
+        proposed_changes: list[AccountChangeDetails] = []
+        exceptions_seen = set()
+
+        for account_change in account_changes:
+            if isinstance(account_change, AccountChangeDetails):
+                proposed_changes.append(account_change)
+            else:
+                exceptions_seen.add(str(account_change))
+
+        if exceptions_seen:
+            exceptions_seen = list(exceptions_seen)
+            proposed_change_accounts = set(
+                change.account for change in proposed_changes
+            )
+            for aws_account in relevant_accounts:
+                if str(aws_account) in proposed_change_accounts:
+                    continue
+                proposed_changes.append(
+                    AccountChangeDetails(
+                        account=str(aws_account),
+                        resource_id=self.resource_id,
+                        resource_type=self.resource_type,
+                        exceptions_seen=exceptions_seen,
+                    )
+                )
+
+        template_changes.extend_changes(proposed_changes)
 
         if template_changes.exceptions_seen:
             if self.deleted:
@@ -785,7 +830,7 @@ class AwsIdentityCenterPermissionSetTemplate(
         else:
             log_str = "No changes detected for resource."
 
-        log.info(log_str, accounts=relevant_accounts, **log_params)
+        log.info(log_str, accounts=relevant_accounts_str, **log_params)
         return template_changes
 
     @property

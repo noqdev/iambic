@@ -633,12 +633,14 @@ async def apply_permission_set_inline_policy(
         if ctx.execute:
             boto_action = "Creating" if not existing_inline_policy else "Updating"
             log_str = f"{log_str} {boto_action} InlinePolicyDocument..."
-            await boto_crud_call(
+            apply_awaitable = boto_crud_call(
                 identity_center_client.put_inline_policy_to_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
                 InlinePolicy=json.dumps(template_inline_policy),
             )
+            response = await plugin_apply_wrapper(apply_awaitable, response)
+
         log.debug(log_str, **log_params)
     elif not template_inline_policy and existing_inline_policy:
         log_str = "Stale InlinePolicyDocument."
@@ -653,11 +655,13 @@ async def apply_permission_set_inline_policy(
         )
         if ctx.execute:
             log_str = f"{log_str} Removing InlinePolicyDocument..."
-            await boto_crud_call(
+            apply_awaitable = boto_crud_call(
                 identity_center_client.delete_inline_policy_from_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
             )
+            response = await plugin_apply_wrapper(apply_awaitable, response)
+
         log.debug(log_str, **log_params)
 
     return response
@@ -713,12 +717,14 @@ async def apply_permission_set_permission_boundary(
         if ctx.execute:
             boto_action = "Creating" if not existing_permission_boundary else "Updating"
             log_str = f"{log_str} {boto_action} PermissionsBoundary..."
-            await boto_crud_call(
+            apply_awaitable = boto_crud_call(
                 identity_center_client.put_permissions_boundary_to_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
                 PermissionsBoundary=template_permission_boundary,
             )
+            response = await plugin_apply_wrapper(apply_awaitable, response)
+
         log.debug(log_str, **log_params)
     elif existing_permission_boundary and not template_permission_boundary:
         log_str = "Removing PermissionsBoundary discovered."
@@ -734,11 +740,13 @@ async def apply_permission_set_permission_boundary(
 
         if ctx.execute:
             log_str = f"{log_str} Deleting PermissionsBoundary..."
-            await boto_crud_call(
+            apply_awaitable = boto_crud_call(
                 identity_center_client.delete_permissions_boundary_from_permission_set,
                 InstanceArn=instance_arn,
                 PermissionSetArn=permission_set_arn,
             )
+            response = await plugin_apply_wrapper(apply_awaitable, response)
+
         log.debug(log_str, **log_params)
 
     return response
@@ -796,6 +804,7 @@ async def apply_permission_set_tags(
                 resource_id=permission_set_arn,
                 attribute="tags",
                 new_value=tag,
+                current_value=existing_tag_map.get(tag["Key"]),
             )
             for tag in tags_to_apply
         ]
