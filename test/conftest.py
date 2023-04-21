@@ -20,6 +20,7 @@ from iambic.core.logger import log
 from iambic.core.models import Variable
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.core.context import ctx
 
 
 @pytest.fixture(scope="session")
@@ -256,3 +257,18 @@ def mock_aws_account_rw_secretsmanager_session(test_config):
         account_name="test",
         iambic_managed="read_and_write",
     )
+
+
+@pytest.fixture(scope="function")
+def mock_ctx(monkeypatch):
+    def _mock(
+        eval_only: bool = False,
+        use_remote: bool = False,
+        command=None,
+    ):
+        monkeypatch.setattr(ctx, "eval_only", eval_only)
+        monkeypatch.setattr(ctx, "use_remote", use_remote)
+        monkeypatch.setattr(ctx, "command", command)
+        return ctx
+
+    return _mock
