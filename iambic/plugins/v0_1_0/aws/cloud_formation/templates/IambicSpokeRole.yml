@@ -49,5 +49,15 @@ Resources:
                   - secretsmanager:PutSecretValue
                 Resource:
                   - 'arn:aws:secretsmanager:*:*:secret:iambic-config-secrets-*'
+              - Sid: 'SqsWriteAccessForResourceMonitoring'
+                Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:SendMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueUrl
+                  - sqs:GetQueueAttributes
+                Resource:
+                  - 'arn:aws:sqs:*:*:IAMbicChangeDetectionQueue'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/ReadOnlyAccess'
