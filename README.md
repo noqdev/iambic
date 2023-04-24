@@ -256,4 +256,4 @@ IAMbic is licensed under the Apache-2.0 license. Commercial licenses and support
 
 Provider Plugins (Such as the AWS, Okta, Azure Active Directory, and Google Workspace plugins) are licensed under Apache 2. You are free to write your own provider plugins for internal services without releasing its source code.
 
-For more information, please visit [iambic.org](https://docs.iambic.org/license).
+For more information, please visit [https://docs.iambic.org/license](https://docs.iambic.org/license).
