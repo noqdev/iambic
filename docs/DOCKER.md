@@ -1,7 +1,7 @@
 # Docker
 
 
-Iambic ships with a docker container and a docker-compose.yaml file that can be ran either locally, in AWS Lambda, GitHub Actions, and potentially other places.
+Iambic ships with a docker container and a docker-compose.yaml file that can be run either locally, in AWS Lambda, GitHub Actions, and potentially other places.
 
 The container is purpose built to support Python 3.10 in AWS Lambda because at the current time, AWS Lambda does not support Python 3.10 (See: <https://github.com/aws/aws-lambda-base-images/issues/31>). See the Dockerfile for more information.
 
