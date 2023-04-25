@@ -452,15 +452,24 @@ class ConfigurationWizard:
             ).describe_organization()["Organization"]
 
     def resolve_aws_profile_defaults_from_env(self) -> str:
-        if profile_name := os.environ.get("AWS_PROFILE"):
+        if "AWS_ACCESS_KEY_ID" in os.environ:
+            # Environment variables has 1st priority
+            profile_name = "None"
+            log.info("Using AWS credentials from environment", profile=profile_name)
+        elif profile_name := os.environ.get("AWS_PROFILE"):
+            # Explicit profile has 2nd priority
             log.info("Using AWS profile from environment", profile=profile_name)
         elif profile_name := os.environ.get("AWS_DEFAULT_PROFILE"):
-            log.info("Using AWS default profile from environment", profile=profile_name)
-        elif "AWS_ACCESS_KEY_ID" in os.environ:
-            profile_name = "default"
+            # Fallback profile has 3rd priority
             log.info("Using AWS default profile from environment", profile=profile_name)
         else:
+            # User has to direct the wizard at this point since
+            # we cannot reason what credential to use.
             profile_name = "None"
+            log.info(
+                "Not able detect a standard credential provider chain",
+                profile=profile_name,
+            )
 
         return profile_name
 
@@ -574,9 +583,13 @@ class ConfigurationWizard:
             break
 
     def get_boto3_session_for_account(self, account_id: str):
+        # This need to follow standard credentials provider chain
         if account_id == self.hub_account_id:
             if not self.profile_name:
-                if profile_name := os.getenv("AWS_PROFILE"):
+                if os.getenv("AWS_ACCESS_KEY_ID"):
+                    # environment variables credentials detected
+                    self.profile_name = None
+                elif profile_name := os.getenv("AWS_PROFILE"):
                     self.profile_name = profile_name
                 else:
                     self.profile_name = self.set_aws_profile_name(
