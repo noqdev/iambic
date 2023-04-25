@@ -295,7 +295,7 @@ def confirm_command_exe(
         raise ValueError(f"Invalid operation: {operation}")
 
     if not questionary.confirm(
-        f"To preserve these changes, {command_type} must be ran to sync your templates.\n"
+        f"To preserve these changes, {command_type} must be run to sync your templates.\n"
         "Proceed?"
     ).unsafe_ask():
         if questionary.confirm(
