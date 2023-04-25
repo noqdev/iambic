@@ -22,6 +22,7 @@ Resources:
             Action:
               - sts:AssumeRole
               - sts:TagSession
+              - sts:SetSourceIdentity
             Principal:
               AWS: !Ref HubRoleArn
       Policies:

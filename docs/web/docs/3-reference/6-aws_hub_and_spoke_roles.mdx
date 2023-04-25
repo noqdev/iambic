@@ -34,9 +34,10 @@ for more details.
       "Effect": "Allow",
       "Action": [
         "sts:AssumeRole",
-        "sts:TagSession"
+        "sts:TagSession",
+        "sts:SetSourceIdentity"
       ],
-      "Resource": "*"
+      "Resource": "arn:aws:iam::*:role/IambicSpokeRole*"
     }
   ]
 }
