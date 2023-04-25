@@ -295,7 +295,7 @@ def confirm_command_exe(
         raise ValueError(f"Invalid operation: {operation}")
 
     if not questionary.confirm(
-        f"To preserve these changes, {command_type} must be ran to sync your templates.\n"
+        f"To preserve these changes, {command_type} must be run to sync your templates.\n"
         "Proceed?"
     ).unsafe_ask():
         if questionary.confirm(
@@ -780,7 +780,7 @@ class ConfigurationWizard:
         else:
             if requires_sync:
                 if not questionary.confirm(
-                    "Adding this account will require a sync to be ran.\n"
+                    "Adding this account will require a sync to be run.\n"
                     "This is to apply any matching templates to the account if the resource does not already exist.\n"
                     "Then, the account resources will be imported into Iambic.\n"
                     "Proceed?"

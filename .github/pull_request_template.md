@@ -1,8 +1,11 @@
-## What's changed in the PR?
-* Describe the changes in high level term.
+## What changed?
+* Describe the change in high level terms.
 
 ## Rationale
-* Explain the PR implement in a particular approach?
+* Explain the rationale behind this change and the approach.
 
-## How'd to test?
-* Did you introduce unit test? functional test? in the event of manual verification, list the instruction for your reviewers to follow.
+## How was it tested?
+If it was manually verified, list the instructions for your reviewers to follow.
+- [ ] Unit Tests
+- [ ] Functional Tests
+- [ ] Manually Verified
