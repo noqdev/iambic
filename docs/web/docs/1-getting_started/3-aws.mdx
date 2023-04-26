@@ -219,14 +219,14 @@ properties:
           #   - AUDITOR_ACCOUNT
           #   - SECURITY_ACCOUNT
           action:
-            - s3:ListAllMyBuckets
+            - s3:CreateBucket
           effect: Allow
           resource: "*"
   managed_policies:
     - policy_arn: arn:aws:iam::aws:policy/job-function/SupportUser
   path: /iambic_test/
   permissions_boundary:
-    policy_arn: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+    policy_arn: arn:aws:iam::aws:policy/AmazonS3FullAccess
   role_name: "{{var.account_name}}_iambic_test_role"
 ```
 
@@ -236,7 +236,7 @@ Save the template, and in your terminal, use IAMbic to apply the change.
 iambic apply resources/aws/iam/role/all_accounts/iambic_test_role.yaml
 ```
 
-After the command succeeds, you can check on each account via AWS Console to compare the DEV_ACCOUNT and PROD_ACCOUNT contains different inline policies attached to the role (despite manging via a single template). 
+After the command succeeds, you can check on each account via AWS Console to compare the DEV_ACCOUNT and PROD_ACCOUNT contains different inline policies attached to the role (despite managing via a single template).
 
 ### 3.2 - Create Temporary, Expiring IAM Permissions
 
