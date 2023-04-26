@@ -254,6 +254,9 @@ async def update_user_status(
     current_status: str = user.status.value
     if current_status == new_status:
         return response
+    if user.deleted:
+        return response
+
     response.append(
         ProposedChange(
             change_type=ProposedChangeType.UPDATE,
