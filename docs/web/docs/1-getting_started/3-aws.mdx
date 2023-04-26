@@ -181,7 +181,8 @@ Here is a recording of a typical apply process:
 
 Now that we've created an IAM role, let's vary some of the policies based on the accounts at our disposal.
 
-Let's add a new inline policy on only a couple of our accounts. You'll need to uncomment and replace the `ACCOUNT_A` and `ACCOUNT_B` placeholders below with the names or account IDs of some of your accounts.
+Let's add a new inline policy on only a couple of our accounts. You'll need to uncomment and replace the `DEV_ACCOUNT` and `PROD_ACCOUNT` placeholders below with the names or account IDs of some of your accounts.
+A possible scenario is your prod account requires certain managed deletion for compliance reason. In contrast, your want your developers to be able clean up after themselves in the dev account.
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
@@ -197,35 +198,35 @@ properties:
         principal:
           service: ec2.amazonaws.com
   inline_policies:
-    - policy_name: spoke-acct-policy
+    - policy_name: s3-access
       statement:
-        - # excluded_accounts: # Include the policy on the role across all accounts, except ACCOUNT_A
-          #  - ACCOUNT_A
-          action:
-            - s3:ListBucket
-          effect: Deny
-          resource: "*"
-        - # included_accounts: # Only include the policy statement on ACCOUNT_A
-          # - ACCOUNT_A
+        - # excluded_accounts: # Include the policy on the role across all accounts, except PROD_ACCOUNT
+          #  - PROD_ACCOUNT
           action:
             - s3:GetObject
-          effect: Deny
-          resource: "*"
+          effect: Allow
+          resource: "arn:aws:s3:::awsexamplebucket1-{{var.account_name}}/*"
+        - # included_accounts: # Only include the policy statement on DEV_ACCOUNT
+          # - DEV_ACCOUNT
+          action:
+            - s3:DeleteObject
+          effect: Allow
+          resource: "arn:aws:s3:::awsexamplebucket1-{{var.account_name}}/*"
         - included_accounts:
             - "*"
-          # Include the policy statement on all accounts except ACCOUNT_A and ACCOUNT_B
+          # Include the policy statement on all accounts except AUDITOR_ACCOUNT and SECURITY_ACCOUNT
           # excluded_accounts:
-          #   - ACCOUNT_A
-          #   - ACCOUNT_B
+          #   - AUDITOR_ACCOUNT
+          #   - SECURITY_ACCOUNT
           action:
             - s3:ListAllMyBuckets
-          effect: Deny
+          effect: Allow
           resource: "*"
   managed_policies:
-    - policy_arn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+    - policy_arn: arn:aws:iam::aws:policy/job-function/SupportUser
   path: /iambic_test/
   permissions_boundary:
-    policy_arn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+    policy_arn: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
   role_name: "{{var.account_name}}_iambic_test_role"
 ```
 
@@ -234,6 +235,8 @@ Save the template, and in your terminal, use IAMbic to apply the change.
 ```bash
 iambic apply resources/aws/iam/role/all_accounts/iambic_test_role.yaml
 ```
+
+After the command succeeds, you can check on each account via AWS Console to compare the DEV_ACCOUNT and PROD_ACCOUNT contains different inline policies attached to the role (despite manging via a single template). 
 
 ### 3.2 - Create Temporary, Expiring IAM Permissions
 
