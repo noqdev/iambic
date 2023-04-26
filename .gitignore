@@ -144,3 +144,4 @@ cov_*
 functional_tests/results.xml
 iambic_config.yaml
 idp_name
+permission_set_dir
