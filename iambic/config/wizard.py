@@ -5,13 +5,14 @@ import contextlib
 import functools
 import json
 import os
+from pathlib import Path
 import re
 import select
 import sys
 import uuid
 from enum import Enum
 from textwrap import dedent
-from typing import Union
+from typing import Optional, Union
 
 import boto3
 import questionary
@@ -81,6 +82,9 @@ from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import (
 )
 from iambic.plugins.v0_1_0.okta.handlers import import_okta_resources
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaConfig, OktaOrganization
+
+AWS_SECRETS = "AWS Secrets"
+LOCALLY = "Locally"
 
 CUSTOM_AUTO_COMPLETE_STYLE = questionary.Style(
     [
@@ -193,6 +197,20 @@ def set_required_text_value(human_readable_name: str, default_val: str = None):
             print("Please enter a valid response.")
 
 
+def set_required_secure_text_value(
+    human_readable_name: str,
+    default_val: Optional[SecretStr] = None,
+):
+    while True:
+        if response := questionary.text(
+            human_readable_name,
+            default=SecretStr(default_val or "").get_secret_value(),
+        ).unsafe_ask():
+            return SecretStr(response.replace("\\n", "\n"))
+        else:
+            print("Please enter a valid response.")
+
+
 def set_idp_name(default_val: str = None):
     return set_required_text_value("What is the Identity Provider Name?", default_val)
 
@@ -236,8 +254,8 @@ def set_google_project_id(default_val: str = None):
     return set_required_text_value("What is the Project ID?", default_val)
 
 
-def set_google_private_key(default_val: str = None):
-    return set_required_text_value("What is the Private Key?", default_val)
+def set_google_private_key(default_val: SecretStr = None):
+    return set_required_secure_text_value("What is the Private Key?", default_val)
 
 
 def set_google_private_key_id(default_val: str = None):
@@ -328,57 +346,6 @@ class ConfigurationWizard:
 
         asyncio.run(self.set_config_details())
 
-        if self.config.aws:
-            self.hub_account_id = self.config.aws.hub_role_arn.split(":")[4]
-            self.spoke_role_is_read_only = self.config.aws.spoke_role_is_read_only
-        else:
-            self.hub_account_id = None
-
-        try:
-            default_caller_identity = self.boto3_session.client(
-                "sts"
-            ).get_caller_identity()
-            caller_arn = get_identity_arn(default_caller_identity)
-            default_hub_account_id = caller_arn.split(":")[4]
-        except (
-            AttributeError,
-            IndexError,
-            NoCredentialsError,
-            ClientError,
-            FileNotFoundError,
-        ):
-            default_hub_account_id = None
-            default_caller_identity = {}
-
-        if not self.hub_account_id:
-            while True:
-                self.hub_account_id = set_required_text_value(
-                    "To get started with the IAMbic setup wizard, you'll need an AWS account.\n"
-                    "This is where IAMbic will deploy its main role. If you have an AWS Organization, "
-                    "that account will be your hub account.\n"
-                    "Review to-be-created IAMbic roles at https://docs.iambic.org/reference/aws_hub_and_spoke_roles\n"
-                    "Which Account ID should we use to deploy the IAMbic hub role?",
-                    default_val=default_hub_account_id,
-                )
-                if is_valid_account_id(self.hub_account_id):
-                    break
-
-        if self.hub_account_id == default_hub_account_id:
-            identity_arn = get_identity_arn(default_caller_identity)
-            if questionary.confirm(
-                f"IAMbic detected you are using {identity_arn} for AWS access.\n"
-                f"This identity will require the ability to create"
-                f"CloudFormation stacks, stack sets, and stack set instances.\n"
-                f"Would you like to use this identity?"
-            ).ask():
-                self.caller_identity = default_caller_identity
-            else:
-                self.set_boto3_session()
-        else:
-            self.set_boto3_session()
-
-        asyncio.run(self.sync_config_aws_org())
-
         log.debug("Starting configuration wizard", config_path=self.config_path)
 
     @property
@@ -417,6 +384,43 @@ class ConfigurationWizard:
             self._cf_role_arn = set_aws_role_arn(self.hub_account_id)
 
         return self._cf_role_arn
+
+    @property
+    def has_aws_account_or_organizations(self) -> bool:
+        return self.config.aws and (
+            self.config.aws.accounts or self.config.aws.organizations
+        )
+
+    @property
+    def secrets_message(self) -> tuple[str, bool]:
+        """Returns if secrets are configured"""
+        secret_in_config = bool(self.config.extends)
+
+        if (
+            secret_in_config
+            and self.config.extends[0].key == ExtendsConfigKey.AWS_SECRETS_MANAGER
+        ):
+            secret_question_text = (
+                "This requires the ability to update the AWS Secrets Manager secret."
+            )
+        elif (
+            secret_in_config
+            and self.config.extends[0].key == ExtendsConfigKey.LOCAL_FILE
+        ):
+            secret_question_text = (
+                "This requires permissions to update secrets in your secrets file."
+            )
+        else:
+            secret_question_text = "Secrets must be created."
+
+        return (secret_question_text, secret_in_config)
+
+    @property
+    def has_okta_configured(self) -> bool:
+        return self.config.okta and self.config.okta.organizations
+
+    def secret_config_dir(self, secrets_file: str = "secrets.yaml") -> str:
+        return f"{Path(self.config_path).parent.joinpath(secrets_file)}"
 
     async def set_config_details(self):
         try:
@@ -662,7 +666,7 @@ class ConfigurationWizard:
 
     async def sync_config_aws_org(self, run_config_discovery: bool = True):
         if not self.config.aws:
-            return
+            self.config.aws = AWSConfig()
 
         self.aws_account_map = {}
         current_command = ctx.command
@@ -952,6 +956,58 @@ class ConfigurationWizard:
             asyncio.run(self.run_import_aws_resources())
             self.config.write()
 
+    def setup_aws_configuration(self):
+        if self.config.aws:
+            self.hub_account_id = self.config.aws.hub_role_arn.split(":")[4]
+            self.spoke_role_is_read_only = self.config.aws.spoke_role_is_read_only
+        else:
+            self.hub_account_id = None
+
+        try:
+            default_caller_identity = self.boto3_session.client(
+                "sts"
+            ).get_caller_identity()
+            caller_arn = get_identity_arn(default_caller_identity)
+            default_hub_account_id = caller_arn.split(":")[4]
+        except (
+            AttributeError,
+            IndexError,
+            NoCredentialsError,
+            ClientError,
+            FileNotFoundError,
+        ):
+            default_hub_account_id = None
+            default_caller_identity = {}
+
+        if not self.hub_account_id:
+            while True:
+                self.hub_account_id = set_required_text_value(
+                    "To get started with the IAMbic setup wizard, you'll need an AWS account.\n"
+                    "This is where IAMbic will deploy its main role. If you have an AWS Organization, "
+                    "that account will be your hub account.\n"
+                    "Review to-be-created IAMbic roles at https://docs.iambic.org/reference/aws_hub_and_spoke_roles\n"
+                    "Which Account ID should we use to deploy the IAMbic hub role?",
+                    default_val=default_hub_account_id,
+                )
+                if is_valid_account_id(self.hub_account_id):
+                    break
+
+        if self.hub_account_id == default_hub_account_id:
+            identity_arn = get_identity_arn(default_caller_identity)
+            if questionary.confirm(
+                f"IAMbic detected you are using {identity_arn} for AWS access.\n"
+                f"This identity will require the ability to create"
+                f"CloudFormation stacks, stack sets, and stack set instances.\n"
+                f"Would you like to use this identity?"
+            ).ask():
+                self.caller_identity = default_caller_identity
+            else:
+                self.set_boto3_session()
+        else:
+            self.set_boto3_session()
+
+        asyncio.run(self.sync_config_aws_org())
+
     def configuration_wizard_aws_accounts(self):
         while True:
             if self.config.aws and self.config.aws.accounts:
@@ -1124,6 +1180,8 @@ class ConfigurationWizard:
                 self.configuration_wizard_aws_organizations_add()
 
     def configuration_wizard_aws(self):
+        self.setup_aws_configuration()
+
         while True:
             action = questionary.select(
                 "What would you like to configure in AWS?\n"
@@ -1138,76 +1196,135 @@ class ConfigurationWizard:
             elif action == "AWS Accounts":
                 self.configuration_wizard_aws_accounts()
 
-    def create_secret(self):
-        region = set_aws_region(
-            "What region should the secret be created in?",
-            self.default_region,
-        )
-
-        question_text = "Create the secret"
-        role_name = IAMBIC_SPOKE_ROLE_NAME
-        role_account_id = self.hub_account_id
-
-        if not questionary.confirm(f"{question_text}?").unsafe_ask():
-            self.config.secrets = {}
-            return
-
-        if role_name and (aws_account := self.aws_account_map.get(role_account_id)):
-            session = asyncio.run(aws_account.get_boto3_session(region_name=region))
-        else:
-            session = boto3.Session(region_name=region)
-
-        client = session.client(service_name="secretsmanager")
-        response = client.create_secret(
-            Name=f"iambic-config-secrets-{str(uuid.uuid4())}",
-            Description="IAMbic managed secret used to store protected config values",
-            SecretString=yaml.dump({"secrets": self.config.secrets}),
-        )
-
-        self.config.extends = [
-            ExtendsConfig(
-                key=ExtendsConfigKey.AWS_SECRETS_MANAGER,
-                value=response["ARN"],
-                assume_role_arn=get_spoke_role_arn(
-                    self.hub_account_id, read_only=self.spoke_role_is_read_only
-                ),
-            )
-        ]
-        self.config.write()
-
-    def update_secret(self):
+    def upsert_secret(self):
         if not self.config.secrets:
             self.config.secrets = {}
 
         if self.config.okta:
             self.config.secrets["okta"] = get_secret_dict_with_val(
-                self.config.okta, exclude={"client"}
+                self.config.okta,
+                exclude={"organizations": {"__all__": {"client"}}},
+                exclude_unset=True,
             )
 
         if self.config.azure_ad:
             self.config.secrets["azure_ad"] = get_secret_dict_with_val(
-                self.config.azure_ad
+                self.config.azure_ad, exclude_unset=True
             )
 
         if self.config.google_workspace:
             self.config.secrets["google_workspace"] = get_secret_dict_with_val(
-                self.config.google_workspace, exclude={"_service_connection_map"}
+                self.config.google_workspace,
+                exclude={"_service_connection_map"},
+                exclude_unset=True,
             )
-        secret_details = self.config.extends[0]
-        secret_arn = secret_details.value
-        region = secret_arn.split(":")[3]
-        secret_account_id = secret_arn.split(":")[4]
 
-        if aws_account := self.aws_account_map.get(secret_account_id):
-            session = asyncio.run(aws_account.get_boto3_session(region_name=region))
+        if len(self.config.extends) == 0:
+            self.create_secret()
         else:
-            session = boto3.Session(region_name=region)
+            self.update_secret()
 
-        client = session.client(service_name="secretsmanager")
-        client.put_secret_value(
-            SecretId=secret_arn,
-            SecretString=yaml.dump({"secrets": self.config.secrets}),
-        )
+    def create_secret(self):
+        response = None
+
+        if len(self.config.extends) == 0:
+            if self.aws_account_map:
+                response = questionary.select(
+                    "Where do you want to store your secrets?",
+                    choices=[
+                        LOCALLY,
+                        AWS_SECRETS,
+                    ],
+                ).ask()
+            else:
+                # TODO: ask if they want to create the file
+                response = LOCALLY
+        elif self.config.extends[0].key == ExtendsConfigKey.AWS_SECRETS_MANAGER:
+            response = AWS_SECRETS
+        elif self.config.extends[0].key == ExtendsConfigKey.LOCAL_FILE:
+            response = LOCALLY
+
+        if response == AWS_SECRETS:
+            region = set_aws_region(
+                "What region should the secret be created in?",
+                self.default_region,
+            )
+
+            question_text = "Create the secret"
+            role_name = IAMBIC_SPOKE_ROLE_NAME
+            role_account_id = self.hub_account_id
+
+            if not questionary.confirm(f"{question_text}?").unsafe_ask():
+                self.config.secrets = {}
+                return
+
+            if role_name and (aws_account := self.aws_account_map.get(role_account_id)):
+                session = asyncio.run(aws_account.get_boto3_session(region_name=region))
+            else:
+                session = boto3.Session(region_name=region)
+
+            client = session.client(service_name="secretsmanager")
+            response = client.create_secret(
+                Name=f"iambic-config-secrets-{str(uuid.uuid4())}",
+                Description="IAMbic managed secret used to store protected config values",
+                SecretString=yaml.dump({"secrets": self.config.secrets}),
+            )
+
+            self.config.extends = [
+                ExtendsConfig(
+                    key=ExtendsConfigKey.AWS_SECRETS_MANAGER,
+                    value=response["ARN"],
+                    assume_role_arn=get_spoke_role_arn(
+                        self.hub_account_id, read_only=self.spoke_role_is_read_only
+                    ),
+                )  # type: ignore
+            ]
+            self.config.write()
+        elif response == LOCALLY:
+            # TODO: add check to gitignore the file
+            with open(self.secret_config_dir(), "w") as f:
+                f.write(yaml.dump({"secrets": self.config.secrets}))  # type: ignore
+
+            self.config.extends = [
+                ExtendsConfig(
+                    key=ExtendsConfigKey.LOCAL_FILE,
+                    value="secrets.yaml",
+                )  # type: ignore
+            ]
+
+            self.config.write()
+
+    def update_secret(self):
+        response = None
+
+        if self.config.extends[0].key == ExtendsConfigKey.AWS_SECRETS_MANAGER:
+            response = AWS_SECRETS
+        elif self.config.extends[0].key == ExtendsConfigKey.LOCAL_FILE:
+            response = LOCALLY
+
+        secret_details = self.config.extends[0]
+
+        if response == AWS_SECRETS:
+            secret_arn = secret_details.value
+            region = secret_arn.split(":")[3]
+            secret_account_id = secret_arn.split(":")[4]
+
+            if aws_account := self.aws_account_map.get(secret_account_id):
+                session = asyncio.run(aws_account.get_boto3_session(region_name=region))
+            else:
+                session = boto3.Session(region_name=region)
+
+            client = session.client(service_name="secretsmanager")
+            client.put_secret_value(
+                SecretId=secret_arn,
+                SecretString=yaml.dump({"secrets": self.config.secrets}),
+            )
+        elif response == LOCALLY:
+            secrets_config_path = self.secret_config_dir(secret_details.value)
+            with open(secrets_config_path, "w") as f:
+                f.write(yaml.dump({"secrets": self.config.secrets}))  # type: ignore
+
+            self.config.write()
 
     def configuration_wizard_google_workspace_add(self):
         google_obj = {
@@ -1226,32 +1343,15 @@ class ConfigurationWizard:
 
         confirm_command_exe("Google Workspace", Operation.ADDED)
 
-        if self.config.secrets:
-            if self.config.google_workspace:
-                self.config.google_workspace.workspaces.append(
-                    GoogleProject(**google_obj)
-                )
-            else:
-                self.config.google_workspace = GoogleWorkspaceConfig(
-                    workspaces=[
-                        GoogleProject(
-                            iambic_managed=IambicManaged.READ_AND_WRITE, **google_obj
-                        )
-                    ]
-                )
-            asyncio.run(self.run_import_google_workspace_resources())
-            self.update_secret()
+        project = GoogleProject(**google_obj)
+
+        if self.config.secrets and self.config.google_workspace:
+            self.config.google_workspace.workspaces.append(project)
         else:
-            self.config.google_workspace = GoogleWorkspaceConfig(
-                workspaces=[
-                    GoogleProject(
-                        iambic_managed=IambicManaged.READ_AND_WRITE, **google_obj
-                    )
-                ]
-            )
-            asyncio.run(self.run_import_google_workspace_resources())
-            self.config.secrets = {"google_workspace": {"workspaces": [google_obj]}}
-            self.create_secret()
+            self.config.google_workspace = GoogleWorkspaceConfig(workspaces=[project])
+
+        asyncio.run(self.run_import_google_workspace_resources())
+        self.upsert_secret()
 
     def configuration_wizard_google_workspace_edit(self):
         project_ids = [
@@ -1353,7 +1453,7 @@ class ConfigurationWizard:
             ] = project_to_edit
 
             asyncio.run(self.run_import_google_workspace_resources())
-            self.update_secret()
+            self.upsert_secret()
             self.config.write()
 
     def configuration_wizard_google_workspace(self):
@@ -1385,30 +1485,15 @@ class ConfigurationWizard:
 
         confirm_command_exe("Okta Organization", Operation.ADDED)
 
-        if self.config.secrets:
-            if self.config.okta and self.config.okta.organizations:
-                self.config.okta.organizations.append(OktaOrganization(**okta_obj))
-            else:
-                self.config.okta = OktaConfig(
-                    organizations=[
-                        OktaOrganization(
-                            iambic_managed=IambicManaged.READ_AND_WRITE, **okta_obj
-                        )
-                    ]
-                )
-            asyncio.run(self.run_import_okta_resources())
-            self.update_secret()
+        organization = OktaOrganization(**okta_obj)
+
+        if self.config.secrets and self.has_okta_configured:
+            self.config.okta.organizations.append(organization)
         else:
-            self.config.okta = OktaConfig(
-                organizations=[
-                    OktaOrganization(
-                        iambic_managed=IambicManaged.READ_AND_WRITE, **okta_obj
-                    )
-                ]
-            )
-            self.config.secrets = {"okta": {"organizations": [okta_obj]}}
-            asyncio.run(self.run_import_okta_resources())
-            self.create_secret()
+            self.config.okta = OktaConfig(organizations=[organization])
+
+        asyncio.run(self.run_import_okta_resources())
+        self.upsert_secret()
 
     def configuration_wizard_okta_organization_edit(self):
         org_names = [org.idp_name for org in self.config.okta.organizations]
@@ -1464,7 +1549,7 @@ class ConfigurationWizard:
             ] = org_to_edit
 
             asyncio.run(self.run_import_okta_resources())
-            self.update_secret()
+            self.upsert_secret()
             self.config.write()
 
     def configuration_wizard_okta(self):
@@ -1496,36 +1581,19 @@ class ConfigurationWizard:
 
         confirm_command_exe("Azure AD Organization", Operation.ADDED)
 
-        if self.config.secrets:
-            if self.config.azure_ad and self.config.azure_ad.organizations:
-                self.config.azure_ad.organizations.append(
-                    AzureADOrganization(**azure_ad_obj)
-                )
-            else:
-                self.config.azure_ad = AzureADConfig(
-                    organizations=[
-                        AzureADOrganization(
-                            iambic_managed=IambicManaged.READ_AND_WRITE, **azure_ad_obj
-                        )
-                    ]
-                )
+        organization = AzureADOrganization(**azure_ad_obj)
 
-            asyncio.run(self.run_import_azure_ad_resources())
-            self.update_secret()
+        if (
+            self.config.secrets
+            and self.config.azure_ad
+            and self.config.azure_ad.organizations
+        ):
+            self.config.azure_ad.organizations.append(organization)
         else:
-            self.config.azure_ad = AzureADConfig(
-                organizations=[
-                    AzureADOrganization(
-                        iambic_managed=IambicManaged.READ_AND_WRITE, **azure_ad_obj
-                    )
-                ]
-            )
-            self.config.secrets = {
-                "azure_ad": get_secret_dict_with_val(self.config.azure_ad)
-            }
+            self.config.azure_ad = AzureADConfig(organizations=[organization])
 
-            asyncio.run(self.run_import_azure_ad_resources())
-            self.create_secret()
+        asyncio.run(self.run_import_azure_ad_resources())
+        self.upsert_secret()
 
     def configuration_wizard_azure_ad_organization_edit(self):
         org_names = [org.idp_name for org in self.config.azure_ad.organizations]
@@ -1587,7 +1655,7 @@ class ConfigurationWizard:
 
             asyncio.run(self.run_import_azure_ad_resources())
 
-            self.update_secret()
+            self.upsert_secret()
             self.config.write()
 
     def configuration_wizard_azure_ad(self):
@@ -1668,74 +1736,52 @@ class ConfigurationWizard:
         role_name = IAMBIC_SPOKE_ROLE_NAME
         hub_account_id = self.hub_account_id
         sqs_arn = f"arn:aws:sqs:us-east-1:{hub_account_id}:IAMbicChangeDetectionQueue"
+
+        if not self.existing_role_template_map:
+            log.info("Loading AWS role templates...")
+            self.existing_role_template_map = asyncio.run(
+                get_existing_template_map(self.repo_dir, AWS_IAM_ROLE_TEMPLATE_TYPE)
+            )
+
         role_template: AwsIamRoleTemplate = self.existing_role_template_map.get(
             role_name
-        )
-        role_template.properties.inline_policies.append(
-            PolicyDocument(
-                policy_name="consume_iambic_changes",
-                included_accounts=[hub_account_id],
-                statement=[
-                    PolicyStatement(
-                        effect="Allow",
-                        action=[
-                            "sqs:DeleteMessage",
-                            "sqs:ReceiveMessage",
-                            "sqs:GetQueueAttributes",
-                        ],
-                        resource=[sqs_arn],
-                    )
-                ],
-            )
         )
 
         self.config.aws.sqs_cloudtrail_changes_queues = [sqs_arn]
         asyncio.run(self.save_and_deploy_changes(role_template))
 
     def run(self):  # noqa: C901
-        if "aws" not in self.config.__fields__:
-            log.info("The config wizard requires the IAMbic AWS plugin.")
-            return
-        elif not self.config.aws:
-            self.config.aws = AWSConfig()
+        """Run the configuration wizard.
+
+        This will prompt the user for the required information to configure IAMbic.
+
+        Notes:
+        - AWS is not required to use IAMbic, but it is required to store to aws secrets.
+        """
 
         while True:
-            choices = ["AWS", "Done"]
-            secret_in_config = bool(self.config.extends)
-            if secret_in_config:
-                secret_question_text = "This requires the ability to update the AWS Secrets Manager secret."
-            else:
-                secret_question_text = (
-                    "This requires permissions to create an AWS Secret."
-                )
+            choices = []
+            secret_question_text, _ = self.secrets_message
 
-            if self.config.aws.accounts or self.config.aws.organizations:
-                if not self.existing_role_template_map:
-                    log.info("Loading AWS role templates...")
-                    self.existing_role_template_map = asyncio.run(
-                        get_existing_template_map(
-                            self.repo_dir, AWS_IAM_ROLE_TEMPLATE_TYPE
-                        )
-                    )
-                if self.existing_role_template_map:
-                    choices = ["AWS"]
-                    # Currently, the config wizard only support IAMbic plugins
-                    if "azure_ad" in self.config.__fields__:
-                        choices.append("Azure AD")
-                    if "google_workspace" in self.config.__fields__:
-                        choices.append("Google Workspace")
-                    if "okta" in self.config.__fields__:
-                        choices.append("Okta")
+            if "aws" in self.config.__fields__:
+                choices.append("AWS")
+            if "azure_ad" in self.config.__fields__:
+                choices.append("Azure AD")
+            if "google_workspace" in self.config.__fields__:
+                choices.append("Google Workspace")
+            if "okta" in self.config.__fields__:
+                choices.append("Okta")
 
-                    choices.extend(["Generate Github Action Workflows", "Done"])
-
+            if self.has_aws_account_or_organizations:
+                choices.append("Generate Github Action Workflows")
                 if (
                     self.config.aws.organizations
-                    and self.existing_role_template_map
                     and not self.config.aws.sqs_cloudtrail_changes_queues
                 ):
-                    choices.insert(-1, "Setup AWS change detection")
+                    choices.append("Setup AWS change detection")
 
+            choices.append("Done")
+            
             try:
                 action = questionary.select(
                     "What would you like to configure?",

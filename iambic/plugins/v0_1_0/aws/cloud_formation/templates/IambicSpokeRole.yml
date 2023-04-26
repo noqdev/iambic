@@ -32,6 +32,13 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
+                  - sqs:DeleteMessage
+                  - sqs:ReceiveMessage
+                  - sqs:GetQueueAttributes
+                Resource:
+                  - 'arn:aws:sqs:us-east-1:*:IAMbicChangeDetectionQueue'
+              - Effect: Allow
+                Action:
                   - ec2:Describe*
                   - identitystore:*
                   - organizations:describe*
