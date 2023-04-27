@@ -182,7 +182,7 @@ Here is a recording of a typical apply process:
 Now that we've created an IAM role, let's vary some of the policies based on the accounts at our disposal.
 
 Let's add a new inline policy on only a couple of our accounts. You'll need to uncomment and replace the `DEV_ACCOUNT` and `PROD_ACCOUNT` placeholders below with the names or account IDs of some of your accounts.
-A possible scenario is your prod account requires certain managed deletion for compliance reason. In contrast, your want your developers to be able clean up after themselves in the dev account.
+A possible scenario is your prod account requires managed deletion for compliance reasons. In contrast, you want your developers to be able clean up after themselves in the dev account.
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
