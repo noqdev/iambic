@@ -20,6 +20,13 @@ Easily manage and streamline cloud Identity and Access Management (IAM) with IAM
 - **Extendable**: Integrate with various clouds and applications through a powerful plugin architecture.
 - **Auditable**: Track changes to IAM policies, permissions, and rules with Git history. For AWS, IAmbic annotates out-of-band commits with details from CloudTrail.
 
+## 📣 Let's chat
+Do you want to connect with our contributors?
+
+Just click the button below and follow the instructions.
+
+[![slack](https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white)](https://communityinviter.com/apps/noqcommunity/noq)
+
 ## Getting Started
 
 Dive into IAMbic with our [quick-start guide](http://docs.iambic.org/getting_started/) and explore powerful template examples for AWS Multi-Account Roles, Dynamic Permissions, Okta Applications and Group Assignments, Azure Active Directory Users and Groups, and Google Workspace Group Assignments. We are rapidly expanding support for existing resources and cloud providers, so check back often!
