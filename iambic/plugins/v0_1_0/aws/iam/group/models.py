@@ -7,7 +7,7 @@ from typing import Callable, Optional, Union
 from pydantic import Field, validator
 
 from iambic.core.context import ctx
-from iambic.core.iambic_enum import Command, IambicManaged
+from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import (
     AccountChangeDetails,
@@ -84,22 +84,13 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
         description="Properties of the group",
     )
 
-    def _is_iambic_import_only(self, aws_account: AWSAccount):
-        return (
-            "aws-service-group" in self.properties.path
-            or aws_account.iambic_managed == IambicManaged.IMPORT_ONLY
-            or self.iambic_managed == IambicManaged.IMPORT_ONLY
-        )
+    def _is_iambic_import_only(self):
+        return "aws-service-group" in self.properties.path
 
     async def _apply_to_account(  # noqa: C901
         self, aws_account: AWSAccount
     ) -> AccountChangeDetails:
         client = await aws_account.get_boto3_client("iam")
-
-        # Marking for deletion. This shouldn't be done on the fly.
-        # self = await remove_expired_resources(
-        #     self, self.resource_type, self.resource_id
-        # )
         account_group = self.apply_resource_dict(aws_account)
 
         group_name = account_group["GroupName"]
@@ -116,7 +107,9 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
             resource_id=group_name,
             account=str(aws_account),
         )
-        iambic_import_only = self._is_iambic_import_only(aws_account)
+        if self._is_iambic_import_only():
+            return account_change_details
+
         deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
         current_group = await get_group(
             group_name, client, include_policies=bool(not deleted)
@@ -138,20 +131,25 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
         if deleted:
             if current_group:
                 account_change_details.new_value = None
-                account_change_details.proposed_changes.append(
+                proposed_changes = [
                     ProposedChange(
                         change_type=ProposedChangeType.DELETE,
                         resource_id=group_name,
                         resource_type=self.resource_type,
                     )
-                )
+                ]
                 log_str = "Active resource found with deleted=false."
-                if ctx.execute and not iambic_import_only:
+                if ctx.execute:
                     log_str = f"{log_str} Deleting resource..."
                 log.debug(log_str, **log_params)
 
                 if ctx.execute:
-                    await delete_iam_group(group_name, client, log_params)
+                    apply_awaitable = delete_iam_group(group_name, client, log_params)
+                    proposed_changes = await plugin_apply_wrapper(
+                        apply_awaitable, proposed_changes
+                    )
+
+                account_change_details.extend_changes(proposed_changes)
 
             return account_change_details
 
@@ -161,68 +159,79 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
         existing_inline_policies = current_group.pop("InlinePolicies", [])
         existing_managed_policies = current_group.pop("ManagedPolicies", [])
         tasks = []
-        try:
-            if group_exists:
-                tasks.extend([])
 
-                supported_update_keys = ["Path", "GroupName"]
-                update_resource_log_params = {**log_params}
-                update_group_params = {}
-                for k in supported_update_keys:
-                    if account_group.get(k) is not None and account_group.get(
-                        k
-                    ) != current_group.get(k):
-                        update_resource_log_params[k] = dict(
-                            old_value=current_group.get(k),
-                            new_value=account_group.get(k),
-                        )
-                        update_group_params[f"New{k}"] = account_group.get(k)
+        if group_exists:
+            tasks.extend([])
 
-                if update_group_params:
-                    log_str = "Out of date resource found."
-                    proposed_changes = [
-                        ProposedChange(
-                            change_type=ProposedChangeType.UPDATE,
-                            resource_id=group_name,
-                            resource_type=self.resource_type,
-                        )
-                    ]
-                    if ctx.execute:
-                        log.debug(
-                            f"{log_str} Updating resource...",
-                            **update_resource_log_params,
-                        )
-                        apply_awaitable = boto_crud_call(
-                            client.update_group,
-                            RoleName=group_name,
-                            **update_group_params,
-                        )
-                        tasks.append(
-                            plugin_apply_wrapper(apply_awaitable, proposed_changes)
-                        )
-                    else:
-                        log.debug(log_str, **update_resource_log_params)
-                        account_change_details.proposed_changes.extend(proposed_changes)
-            else:
-                account_change_details.proposed_changes.append(
+            supported_update_keys = ["Path", "GroupName"]
+            update_resource_log_params = {**log_params}
+            update_group_params = {}
+            for k in supported_update_keys:
+                if account_group.get(k) is not None and account_group.get(
+                    k
+                ) != current_group.get(k):
+                    update_resource_log_params[k] = dict(
+                        old_value=current_group.get(k),
+                        new_value=account_group.get(k),
+                    )
+                    update_group_params[f"New{k}"] = account_group.get(k)
+
+            if update_group_params:
+                log_str = "Out of date resource found."
+                proposed_changes = [
                     ProposedChange(
-                        change_type=ProposedChangeType.CREATE,
+                        change_type=ProposedChangeType.UPDATE,
                         resource_id=group_name,
                         resource_type=self.resource_type,
                     )
+                ]
+                if ctx.execute:
+                    log.debug(
+                        f"{log_str} Updating resource...",
+                        **update_resource_log_params,
+                    )
+                    apply_awaitable = boto_crud_call(
+                        client.update_group,
+                        RoleName=group_name,
+                        **update_group_params,
+                    )
+                    tasks.append(
+                        plugin_apply_wrapper(apply_awaitable, proposed_changes)
+                    )
+                else:
+                    log.debug(log_str, **update_resource_log_params)
+                    account_change_details.extend_changes(proposed_changes)
+        else:
+            proposed_changes = [
+                ProposedChange(
+                    change_type=ProposedChangeType.CREATE,
+                    resource_id=group_name,
+                    resource_type=self.resource_type,
                 )
-                log_str = "New resource found in code."
-                if not ctx.execute:
-                    log.debug(log_str, **log_params)
-                    # Exit now because apply functions won't work if resource doesn't exist
-                    return account_change_details
-
-                log_str = f"{log_str} Creating resource..."
+            ]
+            log_str = "New resource found in code."
+            if not ctx.execute:
+                # Exit now because apply functions won't work if resource doesn't exist
                 log.debug(log_str, **log_params)
-                await boto_crud_call(client.create_group, **account_group)
-        except Exception as e:
-            log.error("Unable to generate tasks for resource", error=e, **log_params)
-            return account_change_details
+                account_change_details.extend_changes(proposed_changes)
+                return account_change_details
+
+            log.debug(f"{log_str} Creating resource...", **log_params)
+            apply_awaitable = boto_crud_call(client.create_group, **account_group)
+            account_change_details.extend_changes(
+                await plugin_apply_wrapper(apply_awaitable, proposed_changes)
+            )
+
+            if account_change_details.exceptions_seen:
+                log.error(
+                    "Unable to create resource on account",
+                    exceptions_seen=[
+                        cd.exceptions_seen
+                        for cd in account_change_details.exceptions_seen
+                    ],
+                    **log_params,
+                )
+                return account_change_details
 
         tasks.extend(
             [
@@ -242,20 +251,14 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
                 ),
             ]
         )
-        try:
-            changes_made = await asyncio.gather(*tasks, return_exceptions=True)
-            if any(changes_made):
-                account_change_details.extend_changes(
-                    list(chain.from_iterable(changes_made))
-                )
 
-        except Exception as e:
-            log.exception("Unable to apply changes to resource", error=e, **log_params)
-            return account_change_details
+        changes_made = await asyncio.gather(*tasks)
+        if any(changes_made):
+            account_change_details.extend_changes(
+                list(chain.from_iterable(changes_made))
+            )
 
         if ctx.execute and not account_change_details.exceptions_seen:
-            # if self.deleted:
-            #     self.delete()
             log.debug(
                 "Successfully finished execution on account for resource",
                 changes_made=bool(account_change_details.proposed_changes),

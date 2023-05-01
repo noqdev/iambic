@@ -13,7 +13,12 @@ from iambic.config.dynamic_config import ExtendsConfig, ExtendsConfigKey
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
-from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
+from iambic.core.models import (
+    BaseTemplate,
+    ExecutionMessage,
+    TemplateChangeDetails,
+    Variable,
+)
 from iambic.core.parser import load_templates
 from iambic.core.template_generation import get_existing_template_map
 from iambic.core.utils import async_batch_processor, gather_templates, yaml
@@ -24,6 +29,7 @@ from iambic.plugins.v0_1_0.aws.event_bridge.models import (
     RoleMessageDetails,
     UserMessageDetails,
 )
+from iambic.plugins.v0_1_0.aws.iam.group.models import AWS_IAM_GROUP_TEMPLATE_TYPE
 from iambic.plugins.v0_1_0.aws.iam.group.template_generation import (
     collect_aws_groups,
     generate_aws_group_templates,
@@ -37,6 +43,7 @@ from iambic.plugins.v0_1_0.aws.iam.role.template_generation import (
     collect_aws_roles,
     generate_aws_role_templates,
 )
+from iambic.plugins.v0_1_0.aws.iam.user.models import AWS_IAM_USER_TEMPLATE_TYPE
 from iambic.plugins.v0_1_0.aws.iam.user.template_generation import (
     collect_aws_users,
     generate_aws_user_templates,
@@ -104,6 +111,15 @@ async def load(config: AWSConfig) -> AWSConfig:
                 if account.account_id != hub_account.account_id:
                     account.hub_session_info = hub_session_info
 
+    # Set up the dynamic account variables
+    for idx, account in enumerate(config.accounts):
+        config.accounts[idx].variables.extend(
+            [
+                Variable(key="account_id", value=account.account_id),
+                Variable(key="account_name", value=account.account_name),
+            ]
+        )
+
     # Preload the iam client to improve performance
     await asyncio.gather(
         *[account.get_boto3_client("iam") for account in config.accounts],
@@ -152,24 +168,41 @@ async def apply_iam_templates(
     await generate_permission_set_map(config.accounts, templates)
 
     template_changes: list[TemplateChangeDetails] = []
+    excluded_from_batch = [AWS_MANAGED_POLICY_TEMPLATE_TYPE]
 
     if managed_policy_tasks := [
         template.apply(config)
         for template in templates
         if template.template_type == AWS_MANAGED_POLICY_TEMPLATE_TYPE
     ]:
+        # There are other template changes that could rely on the managed policy so create these first
         template_changes.extend(await async_batch_processor(managed_policy_tasks, 40))
         if len(template_changes) > len(managed_policy_tasks):
-            # There are other template changes that could rely on the managed policy
             # Give a few seconds to allow the managed policies to be created in AWS
             await asyncio.sleep(10)
+
+    if any(
+        template.template_type == AWS_IAM_GROUP_TEMPLATE_TYPE for template in templates
+    ) and any(
+        template.template_type == AWS_IAM_USER_TEMPLATE_TYPE for template in templates
+    ):
+        # There are user templates that may rely on the group so groups must be created first
+        excluded_from_batch.append(AWS_IAM_GROUP_TEMPLATE_TYPE)
+        group_tasks = [
+            template.apply(config)
+            for template in templates
+            if template.template_type == AWS_IAM_GROUP_TEMPLATE_TYPE
+        ]
+        template_changes.extend(await async_batch_processor(group_tasks, 30))
+        # Give a few seconds to allow the group to be created in AWS
+        await asyncio.sleep(10)
 
     template_changes.extend(
         await async_batch_processor(
             [
                 template.apply(config)
                 for template in templates
-                if template.template_type != AWS_MANAGED_POLICY_TEMPLATE_TYPE
+                if template.template_type not in excluded_from_batch
             ],
             30,
         )

@@ -1,8 +1,74 @@
 from __future__ import annotations
 
+import pytest
+
 from iambic.core.template_generation import merge_model
 from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate, RoleProperties
 from iambic.plugins.v0_1_0.aws.models import AWSAccount, Description
+
+
+def test_merge_role_template_from_base_model_to_none(aws_accounts: list[AWSAccount]):
+    """this tests ensure the merge model is dealing with a attribute merges between local base model and cloud none during merge operation"""
+    existing_properties = {
+        "role_name": "bar",
+        "permissions_boundary": {
+            "policy_arn": "arn:aws:iam::aws:policy/aws-service-role/AccessAnalyzerServiceRolePolicy",
+        },
+    }
+    existing_document = AwsIamRoleTemplate(
+        identifier="{{account_name}}_iambic_test_role",
+        file_path="foo",
+        properties=existing_properties,
+    )
+    new_properties = {
+        "role_name": "bar",
+    }
+    new_document = AwsIamRoleTemplate(
+        identifier="{{account_name}}_iambic_test_role",
+        file_path="foo",
+        properties=new_properties,
+    )
+    merged_document: AwsIamRoleTemplate = merge_model(
+        new_document, existing_document, aws_accounts
+    )
+    assert existing_document.properties.permissions_boundary is not None
+    assert new_document.properties.permissions_boundary is None
+    assert merged_document.properties.permissions_boundary is None
+
+
+def test_merge_role_template_from_base_model_to_unsupported_type(
+    aws_accounts: list[AWSAccount],
+):
+    """this tests ensure the merge model is raising an error with a attribute merges between local base model and cloud non-supported value during merge operation"""
+    existing_properties = {
+        "role_name": "bar",
+        "permissions_boundary": {
+            "policy_arn": "arn:aws:iam::aws:policy/aws-service-role/AccessAnalyzerServiceRolePolicy",
+        },
+    }
+    existing_document = AwsIamRoleTemplate(
+        identifier="{{account_name}}_iambic_test_role",
+        file_path="foo",
+        properties=existing_properties,
+    )
+    new_properties = {
+        "role_name": "bar",
+    }
+    new_document = AwsIamRoleTemplate(
+        identifier="{{account_name}}_iambic_test_role",
+        file_path="foo",
+        properties=new_properties,
+    )
+    new_document.properties.permissions_boundary = (
+        1.0  # set a un-supported type to trigger downstream merge error
+    )
+    assert existing_document.properties.permissions_boundary is not None
+    assert type(new_document.properties.permissions_boundary) is float
+    with pytest.raises(
+        TypeError,
+        match=f"Type of {type(new_document.properties.permissions_boundary)} is not supported. Please file a github issue",
+    ):
+        _ = merge_model(new_document, existing_document, aws_accounts)
 
 
 def test_merge_role_template_without_sid(aws_accounts: list[AWSAccount]):
@@ -21,7 +87,7 @@ def test_merge_role_template_without_sid(aws_accounts: list[AWSAccount]):
         ],
     }
     existing_document = AwsIamRoleTemplate(
-        identifier="{{account_name}}_iambic_test_role",
+        identifier="{{var.account_name}}_iambic_test_role",
         file_path="foo",
         properties=existing_properties,
     )
@@ -39,7 +105,7 @@ def test_merge_role_template_without_sid(aws_accounts: list[AWSAccount]):
         ],
     }
     new_document = AwsIamRoleTemplate(
-        identifier="{{account_name}}_iambic_test_role",
+        identifier="{{var.account_name}}_iambic_test_role",
         file_path="foo",
         properties=new_properties,
     )
@@ -80,7 +146,7 @@ def test_merge_role_template_access_rules(aws_accounts: list[AWSAccount]):
         }
     ]
     existing_document = AwsIamRoleTemplate(
-        identifier="{{account_name}}_iambic_test_role",
+        identifier="{{var.account_name}}_iambic_test_role",
         file_path="foo",
         properties=existing_properties,
         access_rules=existing_access_rules,
@@ -106,7 +172,7 @@ def test_merge_role_template_access_rules(aws_accounts: list[AWSAccount]):
         }
     ]
     new_document = AwsIamRoleTemplate(
-        identifier="{{account_name}}_iambic_test_role",
+        identifier="{{var.account_name}}_iambic_test_role",
         file_path="foo",
         properties=new_properties,
         access_rules=new_access_rules,
@@ -155,7 +221,7 @@ def test_merge_role_with_forked_policy(aws_accounts: list[AWSAccount]):
         ],
     }
     existing_document = AwsIamRoleTemplate(
-        identifier="{{account_name}}_iambic_test_role",
+        identifier="{{var.account_name}}_iambic_test_role",
         file_path="foo",
         properties=existing_properties,
     )
@@ -188,7 +254,7 @@ def test_merge_role_with_forked_policy(aws_accounts: list[AWSAccount]):
         ],
     }
     new_document = AwsIamRoleTemplate(
-        identifier="{{account_name}}_iambic_test_role",
+        identifier="{{var.account_name}}_iambic_test_role",
         file_path="foo",
         properties=new_properties,
     )
@@ -249,7 +315,7 @@ def test_merge_role_with_access_preservation(aws_accounts: list[AWSAccount]):
         ],
     }
     existing_document = AwsIamRoleTemplate(
-        identifier="{{account_name}}_iambic_test_role",
+        identifier="{{var.account_name}}_iambic_test_role",
         file_path="foo",
         properties=existing_properties,
     )
@@ -289,7 +355,7 @@ def test_merge_role_with_access_preservation(aws_accounts: list[AWSAccount]):
             non_prod_expires_at = inline_policy.expires_at
 
     new_document = AwsIamRoleTemplate(
-        identifier="{{account_name}}_iambic_test_role",
+        identifier="{{var.account_name}}_iambic_test_role",
         file_path="foo",
         properties=new_properties,
     )
@@ -330,7 +396,7 @@ def test_merge_role_with_assignment_resolution(aws_accounts: list[AWSAccount]):
         ],
     }
     existing_document = AwsIamRoleTemplate(
-        identifier="{{account_name}}_iambic_test_role",
+        identifier="{{var.account_name}}_iambic_test_role",
         file_path="foo",
         properties=existing_properties,
     )
@@ -351,7 +417,7 @@ def test_merge_role_with_assignment_resolution(aws_accounts: list[AWSAccount]):
         ],
     }
     new_document = AwsIamRoleTemplate(
-        identifier="{{account_name}}_iambic_test_role",
+        identifier="{{var.account_name}}_iambic_test_role",
         file_path="foo",
         properties=new_properties,
     )
@@ -394,7 +460,7 @@ def test_merge_role_with_new_excluded_account(aws_accounts: list[AWSAccount]):
         ],
     }
     existing_document = AwsIamRoleTemplate(
-        identifier="{{account_name}}_iambic_test_role",
+        identifier="{{var.account_name}}_iambic_test_role",
         file_path="foo",
         properties=existing_properties,
     )
@@ -415,7 +481,7 @@ def test_merge_role_with_new_excluded_account(aws_accounts: list[AWSAccount]):
         ],
     }
     new_document = AwsIamRoleTemplate(
-        identifier="{{account_name}}_iambic_test_role",
+        identifier="{{var.account_name}}_iambic_test_role",
         file_path="foo",
         properties=new_properties,
     )
@@ -468,7 +534,7 @@ def test_merge_role_with_multiple_access_removals(aws_accounts: list[AWSAccount]
         ],
     }
     existing_document = AwsIamRoleTemplate(
-        identifier="{{account_name}}_iambic_test_role",
+        identifier="{{var.account_name}}_iambic_test_role",
         file_path="foo",
         properties=existing_properties,
     )
@@ -488,7 +554,7 @@ def test_merge_role_with_multiple_access_removals(aws_accounts: list[AWSAccount]
         ],
     }
     new_document = AwsIamRoleTemplate(
-        identifier="{{account_name}}_iambic_test_role",
+        identifier="{{var.account_name}}_iambic_test_role",
         file_path="foo",
         properties=new_properties,
     )

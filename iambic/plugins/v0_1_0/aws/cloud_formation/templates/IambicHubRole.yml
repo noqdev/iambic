@@ -29,6 +29,7 @@ Resources:
               Action:
                 - sts:AssumeRole
                 - sts:TagSession
+                - sts:SetSourceIdentity
               Principal:
                 AWS: !Ref AssumeAsArn
           -
@@ -44,8 +45,9 @@ Resources:
               - Effect: Allow
                 Action:
                   - sts:assumerole
+                  - sts:SetSourceIdentity
                 Resource:
-                  - !Sub 'arn:aws:iam::*:role/${SpokeRoleName}'
+                  - !Sub 'arn:aws:iam::*:role/${SpokeRoleName}*'
         - PolicyName: list_spoke_account_info
           PolicyDocument:
             Version: '2012-10-17'

@@ -245,7 +245,7 @@ async def apply_role_tags(
                 )
         log.debug(log_str, tags=tags_to_apply, **log_params)
 
-    if tasks and ctx.execute:
+    if tasks:
         results: list[list[ProposedChange]] = await asyncio.gather(
             *tasks, return_exceptions=True
         )
@@ -340,25 +340,36 @@ async def apply_role_managed_policies(
     ]
     if new_managed_policies:
         log_str = "New managed policies discovered."
-        for policy_arn in new_managed_policies:
-            response.append(
-                ProposedChange(
-                    change_type=ProposedChangeType.ATTACH,
-                    resource_type="aws:policy_document",
-                    resource_id=policy_arn,
-                    attribute="managed_policies",
-                )
-            )
         if ctx.execute:
             log_str = f"{log_str} Attaching managed policies..."
-            tasks = [
-                boto_crud_call(
+            for policy_arn in new_managed_policies:
+                proposed_changes = [
+                    ProposedChange(
+                        change_type=ProposedChangeType.ATTACH,
+                        resource_type="aws:policy_document",
+                        resource_id=policy_arn,
+                        attribute="managed_policies",
+                    )
+                ]
+                apply_awaitable = boto_crud_call(
                     iam_client.attach_role_policy,
                     RoleName=role_name,
                     PolicyArn=policy_arn,
                 )
-                for policy_arn in new_managed_policies
-            ]
+                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
+        else:
+            response.extend(
+                [
+                    ProposedChange(
+                        change_type=ProposedChangeType.ATTACH,
+                        resource_type="aws:policy_document",
+                        resource_id=policy_arn,
+                        attribute="managed_policies",
+                    )
+                    for policy_arn in new_managed_policies
+                ]
+            )
+
         log.debug(log_str, managed_policies=new_managed_policies, **log_params)
 
     # Delete existing managed policies not in template
@@ -369,23 +380,32 @@ async def apply_role_managed_policies(
     ]
     if existing_managed_policies:
         log_str = "Stale managed policies discovered."
-        for policy_arn in existing_managed_policies:
-            response.append(
-                ProposedChange(
-                    change_type=ProposedChangeType.DETACH,
-                    resource_type="aws:policy_document",
-                    resource_id=policy_arn,
-                    attribute="managed_policies",
-                )
-            )
+
         if ctx.execute:
             log_str = f"{log_str} Detaching managed policies..."
-            tasks.extend(
+            for policy_arn in existing_managed_policies:
+                proposed_changes = [
+                    ProposedChange(
+                        change_type=ProposedChangeType.DETACH,
+                        resource_type="aws:policy_document",
+                        resource_id=policy_arn,
+                        attribute="managed_policies",
+                    )
+                ]
+                apply_awaitable = boto_crud_call(
+                    iam_client.detach_role_policy,
+                    RoleName=role_name,
+                    PolicyArn=policy_arn,
+                )
+                tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
+        else:
+            response.extend(
                 [
-                    boto_crud_call(
-                        iam_client.detach_role_policy,
-                        RoleName=role_name,
-                        PolicyArn=policy_arn,
+                    ProposedChange(
+                        change_type=ProposedChangeType.DETACH,
+                        resource_type="aws:policy_document",
+                        resource_id=policy_arn,
+                        attribute="managed_policies",
                     )
                     for policy_arn in existing_managed_policies
                 ]
@@ -393,7 +413,8 @@ async def apply_role_managed_policies(
         log.debug(log_str, managed_policies=existing_managed_policies, **log_params)
 
     if tasks:
-        await asyncio.gather(*tasks)
+        results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+        return list(chain.from_iterable(results))
 
     return response
 

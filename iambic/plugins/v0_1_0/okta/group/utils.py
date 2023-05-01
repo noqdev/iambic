@@ -5,6 +5,8 @@ import functools
 from typing import TYPE_CHECKING, List, Optional
 
 import okta.models as models
+from okta.models.user_status import UserStatus as OktaUserStatus
+
 from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
@@ -29,10 +31,20 @@ async def list_all_users(okta_organization: OktaOrganization) -> List[User]:
     """
 
     client = await okta_organization.get_okta_client()
+
+    filter_operator = " OR ".join(
+        [
+            f'status eq "{status}"'
+            for status in list(map(lambda s: s.name, list(OktaUserStatus)))
+        ]
+    )
+
     async with GlobalRetryController(
         fn_identifier="okta.list_users"
     ) as retry_controller:
-        fn = functools.partial(client.list_users)
+        fn = functools.partial(
+            client.list_users, query_params=dict(filter=filter_operator)
+        )
         users, resp, err = await retry_controller(handle_okta_fn, fn)
         if err:
             log.error("Error encountered when listing users", error=str(err))

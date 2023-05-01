@@ -45,7 +45,7 @@ yaml = YAML()
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 
-ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{account_id}}):(.+)$)|^\*$"
+ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{var.account_id}}):(.+)$)|^\*$"
 
 IAMBIC_HUB_ROLE_NAME = "IambicHubRole"
 IAMBIC_SPOKE_ROLE_NAME = "IambicSpokeRole"
@@ -55,8 +55,11 @@ def get_hub_role_arn(account_id: str) -> str:
     return f"arn:aws:iam::{account_id}:role/{IAMBIC_HUB_ROLE_NAME}"
 
 
-def get_spoke_role_arn(account_id: str) -> str:
-    return f"arn:aws:iam::{account_id}:role/{IAMBIC_SPOKE_ROLE_NAME}"
+def get_spoke_role_arn(account_id: str, read_only=False) -> str:
+    spoke_role_postfix = "ReadOnly" if read_only else ""
+    return (
+        f"arn:aws:iam::{account_id}:role/{IAMBIC_SPOKE_ROLE_NAME}{spoke_role_postfix}"
+    )
 
 
 @yaml_object(yaml)
@@ -581,6 +584,10 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
     hub_role_arn: str = Field(
         description="The role arn to assume into when making calls to the account",
     )
+    spoke_role_is_read_only: bool = Field(
+        False,
+        description="if true, the spoke role name is IambicSpokeRoleReadOnly",
+    )
 
     async def _create_org_account_instance(
         self, account: dict, session: boto3.Session
@@ -615,7 +622,9 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
             variables=account["variables"],
             identity_center_details=identity_center_details,
             iambic_managed=account_rule.iambic_managed,
-            spoke_role_arn=get_spoke_role_arn(account_id),
+            spoke_role_arn=get_spoke_role_arn(
+                account_id, read_only=self.spoke_role_is_read_only
+            ),
             hub_session_info=dict(boto3_session=session),
             default_region=region_name,
             boto3_session_map={},
@@ -726,7 +735,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
 
         for account in config.accounts:
             if evaluate_on_provider(self, account):
-                relevant_accounts.append(str(account))
+                relevant_accounts.append(account)
                 tasks.append(self._apply_to_account(account))
 
         if not relevant_accounts:
@@ -736,7 +745,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
                     self.delete()
                 else:
                     log_str = "No changes detected for resource."
-                log.info(log_str, accounts=relevant_accounts, **log_params)
+                log.info(log_str, **log_params)
 
             return template_changes
 
@@ -745,10 +754,39 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
         else:
             log_str = "Detecting changes for resource."
 
-        log.info(log_str, accounts=relevant_accounts, **log_params)
+        relevant_accounts_str = [str(account) for account in relevant_accounts]
+        log.info(log_str, accounts=relevant_accounts_str, **log_params)
 
-        account_changes: list[AccountChangeDetails] = await asyncio.gather(*tasks)
-        template_changes.extend_changes(account_changes)
+        account_changes: list[AccountChangeDetails] = await asyncio.gather(
+            *tasks, return_exceptions=True
+        )
+        proposed_changes: list[AccountChangeDetails] = []
+        exceptions_seen = set()
+
+        for account_change in account_changes:
+            if isinstance(account_change, AccountChangeDetails):
+                proposed_changes.append(account_change)
+            else:
+                exceptions_seen.add(str(account_change))
+
+        if exceptions_seen:
+            exceptions_seen = list(exceptions_seen)
+            proposed_change_accounts = set(
+                change.account for change in proposed_changes
+            )
+            for aws_account in relevant_accounts:
+                if str(aws_account) in proposed_change_accounts:
+                    continue
+                proposed_changes.append(
+                    AccountChangeDetails(
+                        account=str(aws_account),
+                        resource_id=self.resource_id,
+                        resource_type=self.resource_type,
+                        exceptions_seen=exceptions_seen,
+                    )
+                )
+
+        template_changes.extend_changes(proposed_changes)
 
         if template_changes.exceptions_seen:
             if self.deleted:
@@ -769,7 +807,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
         else:
             log_str = "No changes detected for resource."
 
-        log.info(log_str, accounts=relevant_accounts, **log_params)
+        log.info(log_str, accounts=relevant_accounts_str, **log_params)
         return template_changes
 
     @property

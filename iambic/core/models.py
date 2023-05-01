@@ -249,7 +249,7 @@ class BaseModel(IambicPydanticBaseModel):
         variables = {
             k: sanitize_string(v, valid_characters_re) for k, v in variables.items()
         }
-        data = rtemplate.render(**variables)
+        data = rtemplate.render(var=variables)
         return json.loads(data)
 
     async def remove_expired_resources(self):
@@ -363,7 +363,9 @@ class TemplateChangeDetails(PydanticBaseModel):
     def validate_template_path(cls, v: Union[str, Path]):
         return str(v)
 
-    def extend_changes(self, changes: list[ProposedChange]):
+    def extend_changes(
+        self, changes: list[Union[AccountChangeDetails, ProposedChange]]
+    ):
         for change in changes:
             if change.exceptions_seen:
                 if isinstance(change, AccountChangeDetails) and change.proposed_changes:

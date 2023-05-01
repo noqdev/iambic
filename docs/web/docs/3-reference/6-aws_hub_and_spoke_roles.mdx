@@ -34,9 +34,10 @@ for more details.
       "Effect": "Allow",
       "Action": [
         "sts:AssumeRole",
-        "sts:TagSession"
+        "sts:TagSession",
+        "sts:SetSourceIdentity"
       ],
-      "Resource": "*"
+      "Resource": "arn:aws:iam::*:role/IambicSpokeRole*"
     }
   ]
 }
@@ -67,12 +68,100 @@ and the following permissions:
         "organizations:describe*",
         "organizations:list*",
         "iam:*",
-        "sso:*",
-        "secretsmanager:CreateSecret"
+        "sso:*"
       ],
       "Resource": [
         "*"
       ]
+    },
+    {
+      "Action": [
+        "secretsmanager:CreateSecret",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:describesecret",
+        "secretsmanager:listsecrets",
+        "secretsmanager:listsecretversionids",
+        "secretsmanager:PutSecretValue"
+      ],
+      "Effect": "Allow",
+      "Resource": "arn:aws:secretsmanager:*:*:secret:iambic-config-secrets-*"
+    },
+    {
+      "Action": [
+        "sqs:ReceiveMessage",
+        "sqs:SendMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueUrl",
+        "sqs:GetQueueAttributes"
+      ],
+      "Effect": "Allow",
+      "Resource": "arn:aws:sqs:*:*:IAMbicChangeDetectionQueue"
+    }
+  ]
+}
+```
+
+## A more restrictive Spoke Role permissions
+
+If your initial evaluation requires a much more restrictive IAMbicSpokeRole, we do provide a CloudFormation
+StackSet template to create IAMbicSpokeRoleReadOnly. The read only postfix only uses list, read capability of
+`iam` and `sso` (aka IdentityCenter) services. However, in order for `iambic setup` to work, it keeps the
+write ability to SecretManager resources prefixed with `iambic-config-secrets-`. This is necessary to keeps
+track of other secrets used for other plugins. In addition, the write access to SQS is limited to queue
+named `IAMbicChangeDetectionQueue` to monitor IAM resources changes.
+
+The effect of using a read-only Spoke Role would be IAMbic can only handle one directional import from AWS.
+
+You can either use `iambic setup` to instruct the initial setup to use a more restricted IAMbicSpokeRole or
+directly change the IAMbic configuration to specify the arn of the spoke role.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "identitystore:Describe*",
+        "identitystore:Get*",
+        "identitystore:List*",
+        "organizations:describe*",
+        "organizations:list*",
+        "iam:Get*",
+        "iam:List*",
+        "sso:Describe*",
+        "sso:Get*",
+        "sso:List*",
+        "sso:Search*"
+      ],
+      "Resource": [
+          "*"
+      ],
+      "Effect": "Allow"
+    },
+    {
+      "Action": [
+        "secretsmanager:CreateSecret",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:describesecret",
+        "secretsmanager:listsecrets",
+        "secretsmanager:listsecretversionids",
+        "secretsmanager:PutSecretValue"
+      ],
+      "Resource": [
+        "arn:aws:secretsmanager:*:*:secret:iambic-config-secrets-*"
+      ],
+      "Effect": "Allow"
+    },
+    {
+      "Action": [
+        "sqs:ReceiveMessage",
+        "sqs:SendMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueUrl",
+        "sqs:GetQueueAttributes"
+      ],
+      "Effect": "Allow",
+      "Resource": "arn:aws:sqs:*:*:IAMbicChangeDetectionQueue"
     }
   ]
 }

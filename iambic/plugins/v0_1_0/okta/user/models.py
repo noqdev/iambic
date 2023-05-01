@@ -225,6 +225,8 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
             )
             if current_user:
                 change_details.current_value = current_user
+                self.properties.user_id = current_user.user_id
+                self.write()
         if (
             current_user
             and self.deleted
@@ -254,7 +256,7 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
                     log_params,
                 ),
                 maybe_deprovision_user(
-                    self.deleted,
+                    bool(self.deleted),
                     current_user,
                     okta_organization,
                     log_params,

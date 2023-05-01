@@ -4,7 +4,7 @@ import asyncio
 
 from iambic.core.logger import log
 from iambic.core.parser import load_templates
-from iambic.plugins.v0_1_0.aws.utils import remove_expired_resources
+from iambic.core.utils import remove_expired_resources
 
 
 async def flag_expired_resources(template_paths: list[str]):

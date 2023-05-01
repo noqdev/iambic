@@ -295,7 +295,7 @@ def confirm_command_exe(
         raise ValueError(f"Invalid operation: {operation}")
 
     if not questionary.confirm(
-        f"To preserve these changes, {command_type} must be ran to sync your templates.\n"
+        f"To preserve these changes, {command_type} must be run to sync your templates.\n"
         "Proceed?"
     ).unsafe_ask():
         if questionary.confirm(
@@ -330,6 +330,7 @@ class ConfigurationWizard:
 
         if self.config.aws:
             self.hub_account_id = self.config.aws.hub_role_arn.split(":")[4]
+            self.spoke_role_is_read_only = self.config.aws.spoke_role_is_read_only
         else:
             self.hub_account_id = None
 
@@ -451,15 +452,24 @@ class ConfigurationWizard:
             ).describe_organization()["Organization"]
 
     def resolve_aws_profile_defaults_from_env(self) -> str:
-        if profile_name := os.environ.get("AWS_PROFILE"):
+        if "AWS_ACCESS_KEY_ID" in os.environ:
+            # Environment variables has 1st priority
+            profile_name = "None"
+            log.info("Using AWS credentials from environment", profile=profile_name)
+        elif profile_name := os.environ.get("AWS_PROFILE"):
+            # Explicit profile has 2nd priority
             log.info("Using AWS profile from environment", profile=profile_name)
         elif profile_name := os.environ.get("AWS_DEFAULT_PROFILE"):
-            log.info("Using AWS default profile from environment", profile=profile_name)
-        elif "AWS_ACCESS_KEY_ID" in os.environ:
-            profile_name = "default"
+            # Fallback profile has 3rd priority
             log.info("Using AWS default profile from environment", profile=profile_name)
         else:
+            # User has to direct the wizard at this point since
+            # we cannot reason what credential to use.
             profile_name = "None"
+            log.info(
+                "Not able detect a standard credential provider chain",
+                profile=profile_name,
+            )
 
         return profile_name
 
@@ -573,9 +583,13 @@ class ConfigurationWizard:
             break
 
     def get_boto3_session_for_account(self, account_id: str):
+        # This need to follow standard credentials provider chain
         if account_id == self.hub_account_id:
             if not self.profile_name:
-                if profile_name := os.getenv("AWS_PROFILE"):
+                if os.getenv("AWS_ACCESS_KEY_ID"):
+                    # environment variables credentials detected
+                    self.profile_name = None
+                elif profile_name := os.getenv("AWS_PROFILE"):
                     self.profile_name = profile_name
                 else:
                     self.profile_name = self.set_aws_profile_name(
@@ -767,10 +781,19 @@ class ConfigurationWizard:
                     "Unable to add the AWS Account without creating the required roles."
                 )
                 return
+
+            self.config.aws.spoke_role_is_read_only = bool(
+                questionary.confirm(
+                    "Do you want to restrict IambicSpokeRole to read-only IAM and IdentityCenter service?\n"
+                    "This will limit IAMbic capability to import",
+                    default=False,
+                ).unsafe_ask()
+            )
+
         else:
             if requires_sync:
                 if not questionary.confirm(
-                    "Adding this account will require a sync to be ran.\n"
+                    "Adding this account will require a sync to be run.\n"
                     "This is to apply any matching templates to the account if the resource does not already exist.\n"
                     "Then, the account resources will be imported into Iambic.\n"
                     "Proceed?"
@@ -803,6 +826,7 @@ class ConfigurationWizard:
                 )
                 return
 
+        read_only = self.config.aws.spoke_role_is_read_only
         session, profile_name = self.get_boto3_session_for_account(account_id)
         if not session:
             return
@@ -822,6 +846,7 @@ class ConfigurationWizard:
                     hub_account_id=account_id,
                     assume_as_arn=self.assume_as_arn,
                     role_arn=role_arn,
+                    read_only=read_only,
                 )
             )
             if not created_successfully:
@@ -833,6 +858,7 @@ class ConfigurationWizard:
                     cf_client=cf_client,
                     hub_account_id=account_id,
                     role_arn=role_arn,
+                    read_only=read_only,
                 )
             )
             if not created_successfully:
@@ -844,7 +870,7 @@ class ConfigurationWizard:
         account = AWSAccount(
             account_id=account_id,
             account_name=account_name,
-            spoke_role_arn=get_spoke_role_arn(account_id),
+            spoke_role_arn=get_spoke_role_arn(account_id, read_only=read_only),
             iambic_managed=IambicManaged.READ_AND_WRITE,
             aws_profile=profile_name,
         )
@@ -1013,6 +1039,15 @@ class ConfigurationWizard:
             log.info("Unable to add the AWS Org without creating the required roles.")
             return
 
+        read_only = bool(
+            questionary.confirm(
+                "Do you want to restrict IambicSpokeRole to read-only IAM and IdentityCenter service?\n"
+                "This will limit IAMbic capability to import",
+                default=False,
+            ).unsafe_ask()
+        )
+        self.config.aws.spoke_role_is_read_only = read_only
+
         created_successfully = asyncio.run(
             create_iambic_role_stacks(
                 cf_client=session.client("cloudformation"),
@@ -1020,6 +1055,7 @@ class ConfigurationWizard:
                 assume_as_arn=self.assume_as_arn,
                 role_arn=self.cf_role_arn,
                 org_client=session.client("organizations"),
+                read_only=read_only,
             )
         )
         if not created_successfully:
@@ -1032,6 +1068,7 @@ class ConfigurationWizard:
             default_rule=BaseAWSOrgRule(),
             hub_role_arn=get_hub_role_arn(account_id),
             aws_profile=profile_name,
+            spoke_role_is_read_only=read_only,
         )
         aws_org.default_rule.iambic_managed = IambicManaged.READ_AND_WRITE
 
@@ -1131,7 +1168,9 @@ class ConfigurationWizard:
             ExtendsConfig(
                 key=ExtendsConfigKey.AWS_SECRETS_MANAGER,
                 value=response["ARN"],
-                assume_role_arn=get_spoke_role_arn(self.hub_account_id),
+                assume_role_arn=get_spoke_role_arn(
+                    self.hub_account_id, read_only=self.spoke_role_is_read_only
+                ),
             )
         ]
         self.config.write()

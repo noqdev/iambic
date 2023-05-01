@@ -46,7 +46,7 @@ Here's an example of an AWS role and how to templatize it with IAMbic:
 
 ```
 template_type: NOQ::AWS::IAM::Role
-identifier: '{{account_name}}_readonly'
+identifier: '{{var.account_name}}_readonly'
 properties:
   description: Standard ReadOnly Role
   assume_role_policy_document:
@@ -65,18 +65,18 @@ properties:
           aws: arn:aws:iam::4567890123456:role/ExampleRole2
     version: '2012-10-17'
   managed_policies:
-    - policy_arn: arn:aws:iam::{{account_id}}:policy/ReadOnlyAccess
-  role_name: '{{account_name}}_readonly'
+    - policy_arn: arn:aws:iam::{{var.account_id}}:policy/ReadOnlyAccess
+  role_name: '{{var.account_name}}_readonly'
   tags:
     - key: noq-tra-supported-groups
       value: group@example.com
 
 ```
 
-In the example above, we use the {{account_name}} placeholder to dynamically set the identifier and role_name
+In the example above, we use the {{var.account_name}} placeholder to dynamically set the identifier and role_name
 fields for each account managed by IAMbic. If IAMbic manages 10 accounts, this role would exist in all ten accounts.
 
-For a closer look, let's examine the first few accounts and their templatized role identifiers using the {{account_name}} substitution:
+For a closer look, let's examine the first few accounts and their templatized role identifiers using the {{var.account_name}} substitution:
 
 1. prod:
     identifier: prod_readonly

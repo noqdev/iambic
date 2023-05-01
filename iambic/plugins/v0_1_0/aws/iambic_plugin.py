@@ -40,6 +40,13 @@ class AWSConfig(BaseModel):
         ),
     )
     sqs_cloudtrail_changes_queues: Optional[list[str]] = []
+    spoke_role_is_read_only: bool = Field(
+        False,
+        description=(
+            "aws iambic spoke role is configured as read_only. "
+            "If true, it will restrict IAMbic capability in AWS"
+        ),
+    )
 
     @validator("organizations", allow_reuse=True)
     def validate_organizations(cls, organizations):

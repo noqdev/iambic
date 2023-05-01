@@ -162,20 +162,14 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
         ]
 
         self.template.properties.inline_policies.append(
-            PolicyDocument(
-                policy_name="init_policy",
-                statement=policy_statement
-            )
+            PolicyDocument(policy_name="init_policy", statement=policy_statement)
         )
         results = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
         self.assertFalse(bool(results.exceptions_seen))
         self.assertTrue(bool(results.proposed_changes))
 
         self.template.properties.inline_policies = [
-            PolicyDocument(
-                policy_name="replace_policy",
-                statement=policy_statement
-            )
+            PolicyDocument(policy_name="replace_policy", statement=policy_statement)
         ]
         results = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
         self.assertFalse(bool(results.exceptions_seen))

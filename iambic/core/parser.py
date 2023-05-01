@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import sys
+import time
 import traceback
 from functools import partial
 from typing import Union
@@ -97,6 +99,11 @@ def load_templates(
     load_template_fn = partial(load_template, raise_validation_err=raise_validation_err)
     with Pool(max(1, cpu_count() // 2)) as p:
         template_dicts = p.map(load_template_fn, template_paths)
+        if getattr(sys, "gettrace", None):
+            # When in debug mode, subprocesses can exit
+            # before debugger can attach
+            # https://github.com/microsoft/debugpy/issues/712
+            time.sleep(0.5)
 
     for template_dict in template_dicts:
         if not template_dict:

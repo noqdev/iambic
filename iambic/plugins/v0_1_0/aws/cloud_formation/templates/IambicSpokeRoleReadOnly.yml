@@ -1,13 +1,13 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  This template creates the IAMbic spoke role.
+  This template creates the IAMbic read-only spoke role.
 Parameters:
   SpokeRoleName:
     Type: String
   HubRoleArn:
     Type: String
 Resources:
-  IambicSpokeRole:
+  IambicSpokeRoleReadOnly:
     Type: 'AWS::IAM::Role'
     Properties:
       RoleName: !Ref SpokeRoleName
@@ -32,12 +32,17 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - ec2:Describe*
-                  - identitystore:*
+                  - identitystore:Describe*
+                  - identitystore:Get*
+                  - identitystore:List*
                   - organizations:describe*
                   - organizations:list*
-                  - iam:*
-                  - sso:*
+                  - iam:Get*
+                  - iam:List*
+                  - sso:Describe*
+                  - sso:Get*
+                  - sso:List*
+                  - sso:Search*
                 Resource:
                   - '*'
               - Effect: Allow
@@ -60,5 +65,3 @@ Resources:
                   - sqs:GetQueueAttributes
                 Resource:
                   - 'arn:aws:sqs:*:*:IAMbicChangeDetectionQueue'
-      ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/ReadOnlyAccess'

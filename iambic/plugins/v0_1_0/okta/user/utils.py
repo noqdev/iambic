@@ -5,7 +5,6 @@ import functools
 from typing import TYPE_CHECKING, Any, List, Optional
 
 import okta.models as models
-
 from iambic.core.context import ctx
 from iambic.core.exceptions import RateLimitException
 from iambic.core.logger import log
@@ -255,10 +254,6 @@ async def update_user_status(
     current_status: str = user.status.value
     if current_status == new_status:
         return response
-    if new_status == "deprovisioned":
-        # maybe_deprovision_user is called in the main loop
-        # and handles this use case
-        return response
     response.append(
         ProposedChange(
             change_type=ProposedChangeType.UPDATE,
@@ -273,43 +268,46 @@ async def update_user_status(
             new_value=new_status,
         )
     )
+
+    # TODO: refactor to use an state machine approach
+    method = "POST"
+    base_endpoint = f"/api/v1/users/{user.user_id}"
+    if current_status == "suspended" and new_status == "active":
+        api_endpoint = f"{base_endpoint}/lifecycle/unsuspend"
+    elif current_status == "active" and new_status == "suspended":
+        api_endpoint = f"{base_endpoint}/lifecycle/suspend"
+    elif new_status == "deprovisioned" and current_status != "deprovisioned":
+        api_endpoint = f"{base_endpoint}/lifecycle/deactivate"
+    elif current_status in ["staged", "deprovisioned"] and new_status in [
+        "active",
+        "provisioned",
+    ]:
+        api_endpoint = f"{base_endpoint}/lifecycle/activate"
+    elif current_status in "provisioned" and new_status == "active":
+        api_endpoint = f"{base_endpoint}/lifecycle/reactivate"
+    elif current_status == "locked_out" and new_status == "active":
+        api_endpoint = f"{base_endpoint}/lifecycle/unlock"
+    elif new_status == "recovery":
+        api_endpoint = f"{base_endpoint}/lifecycle/reset_password"
+    elif new_status == "password_expired":
+        api_endpoint = f"{base_endpoint}/lifecycle/expire_password"
+    elif new_status == "deleted":
+        api_endpoint = f"{base_endpoint}"
+        method = "DELETE"
+    else:
+        log.error(
+            "Error updating user status",
+            user=user.username,
+            current_status=current_status,
+            new_status=new_status,
+            **log_params,
+        )
+        raise Exception(
+            f"Error updating user status. Invalid transition from {current_status} to {new_status}"
+        )
+
     if ctx.execute:
         client = await okta_organization.get_okta_client()
-        method = "POST"
-        base_endpoint = f"/api/v1/users/{user.user_id}"
-        if current_status == "suspended" and new_status == "active":
-            api_endpoint = f"{base_endpoint}/lifecycle/unsuspend"
-        elif current_status == "active" and new_status == "suspended":
-            api_endpoint = f"{base_endpoint}/lifecycle/suspend"
-        elif new_status == "deprovisioned" and current_status != "deprovisioned":
-            api_endpoint = f"{base_endpoint}/lifecycle/deactivate"
-        elif current_status in ["staged", "deprovisioned"] and new_status in [
-            "active",
-            "provisioned",
-        ]:
-            api_endpoint = f"{base_endpoint}/lifecycle/activate"
-        elif current_status in "provisioned" and new_status == "active":
-            api_endpoint = f"{base_endpoint}/lifecycle/reactivate"
-        elif current_status == "locked_out" and new_status == "active":
-            api_endpoint = f"{base_endpoint}/lifecycle/unlock"
-        elif new_status == "recovery":
-            api_endpoint = f"{base_endpoint}/lifecycle/reset_password"
-        elif new_status == "password_expired":
-            api_endpoint = f"{base_endpoint}/lifecycle/expire_password"
-        elif new_status == "deleted":
-            api_endpoint = f"{base_endpoint}"
-            method = "DELETE"
-        else:
-            log.error(
-                "Error updating user status",
-                user=user.username,
-                current_status=current_status,
-                new_status=new_status,
-                **log_params,
-            )
-            raise Exception(
-                f"Error updating user status. Invalid transition from {current_status} to {new_status}"
-            )
         request, error = await client.get_request_executor().create_request(
             method=method, url=api_endpoint, body={}, headers={}, oauth=False
         )

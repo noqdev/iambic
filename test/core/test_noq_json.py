@@ -1,7 +1,9 @@
+from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
-from datetime import datetime
+
 from deepdiff.model import PrettyOrderedSet
+
 from iambic.core.noq_json import dumps, loads
 
 

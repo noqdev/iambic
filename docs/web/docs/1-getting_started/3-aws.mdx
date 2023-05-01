@@ -43,7 +43,7 @@ You will then practice using IAMbic to to create, manipulate, and expire a test 
 IAMbic is built around a Hub and Spoke model for managing IAM across multiple AWS accounts.
 This means that IAMbic creates a hub role in your primary AWS account and assumes a spoke role across
 each of your accounts to retrieve resources or manage those accounts. You can learn more about this model in our
-[AWS Hub and Spoke Roles documentation](reference/aws_hub_and_spoke_roles).
+[AWS Hub and Spoke Roles documentation](/reference/aws_hub_and_spoke_roles).
 
 To configure IAMbic for your AWS accounts, you first need to create a local Git repository and run `iambic setup`.
 During the setup process, you will need to set up an AWS Organization (which loads all accounts for that
@@ -139,11 +139,11 @@ If there are other roles with the role name specified in the template below, the
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
-identifier: "{{account_name}}_iambic_test_role"
+identifier: "{{var.account_name}}_iambic_test_role"
 included_accounts:
   - "*"
 properties:
-  description: IAMbic test role on {{account_name}}
+  description: IAMbic test role on {{var.account_name}}
   assume_role_policy_document:
     statement:
       - action: sts:AssumeRole
@@ -156,13 +156,13 @@ properties:
         - action:
             - sqs:GetQueueAttributes
           effect: Deny
-          resource: "arn:aws:sqs:us-east-1:{{account_id}}:fakequeue"
+          resource: "arn:aws:sqs:us-east-1:{{var.account_id}}:fakequeue"
   managed_policies:
     - policy_arn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
   path: /iambic_test/
   permissions_boundary:
     policy_arn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
-  role_name: "{{account_name}}_iambic_test_role"
+  role_name: "{{var.account_name}}_iambic_test_role"
 ```
 <!-- #TODO why are we using the word template here? Have we ever defined template for users? -->
 Save the template, and in your terminal, use IAMbic to apply the change.
@@ -181,15 +181,16 @@ Here is a recording of a typical apply process:
 
 Now that we've created an IAM role, let's vary some of the policies based on the accounts at our disposal.
 
-Let's add a new inline policy on only a couple of our accounts. You'll need to uncomment and replace the `ACCOUNT_A` and `ACCOUNT_B` placeholders below with the names or account IDs of some of your accounts.
+Let's add a new inline policy on only a couple of our accounts. You'll need to uncomment and replace the `DEV_ACCOUNT` and `PROD_ACCOUNT` placeholders below with the names or account IDs of some of your accounts.
+A possible scenario is your prod account requires managed deletion for compliance reasons. In contrast, you want your developers to be able clean up after themselves in the dev account.
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
-identifier: "{{account_name}}_iambic_test_role"
+identifier: "{{var.account_name}}_iambic_test_role"
 included_accounts:
   - "*"
 properties:
-  description: IAMbic test role on {{account_name}}
+  description: IAMbic test role on {{var.account_name}}
   assume_role_policy_document:
     statement:
       - action: sts:AssumeRole
@@ -197,36 +198,36 @@ properties:
         principal:
           service: ec2.amazonaws.com
   inline_policies:
-    - policy_name: spoke-acct-policy
+    - policy_name: s3-access
       statement:
-        - # excluded_accounts: # Include the policy on the role across all accounts, except ACCOUNT_A
-          #  - ACCOUNT_A
-          action:
-            - s3:ListBucket
-          effect: Deny
-          resource: "*"
-        - # included_accounts: # Only include the policy statement on ACCOUNT_A
-          # - ACCOUNT_A
+        - # excluded_accounts: # Include the policy on the role across all accounts, except PROD_ACCOUNT
+          #  - PROD_ACCOUNT
           action:
             - s3:GetObject
-          effect: Deny
-          resource: "*"
+          effect: Allow
+          resource: "arn:aws:s3:::awsexamplebucket1-{{var.account_name}}/*"
+        - # included_accounts: # Only include the policy statement on DEV_ACCOUNT
+          # - DEV_ACCOUNT
+          action:
+            - s3:DeleteObject
+          effect: Allow
+          resource: "arn:aws:s3:::awsexamplebucket1-{{var.account_name}}/*"
         - included_accounts:
             - "*"
-          # Include the policy statement on all accounts except ACCOUNT_A and ACCOUNT_B
+          # Include the policy statement on all accounts except AUDITOR_ACCOUNT and SECURITY_ACCOUNT
           # excluded_accounts:
-          #   - ACCOUNT_A
-          #   - ACCOUNT_B
+          #   - AUDITOR_ACCOUNT
+          #   - SECURITY_ACCOUNT
           action:
-            - s3:ListAllMyBuckets
-          effect: Deny
+            - s3:CreateBucket
+          effect: Allow
           resource: "*"
   managed_policies:
-    - policy_arn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+    - policy_arn: arn:aws:iam::aws:policy/job-function/SupportUser
   path: /iambic_test/
   permissions_boundary:
-    policy_arn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
-  role_name: "{{account_name}}_iambic_test_role"
+    policy_arn: arn:aws:iam::aws:policy/AmazonS3FullAccess
+  role_name: "{{var.account_name}}_iambic_test_role"
 ```
 
 Save the template, and in your terminal, use IAMbic to apply the change.
@@ -234,6 +235,8 @@ Save the template, and in your terminal, use IAMbic to apply the change.
 ```bash
 iambic apply resources/aws/iam/role/all_accounts/iambic_test_role.yaml
 ```
+
+After the command succeeds, you can check on each account via AWS Console to compare the DEV_ACCOUNT and PROD_ACCOUNT contains different inline policies attached to the role (despite managing via a single template).
 
 ### 3.2 - Create Temporary, Expiring IAM Permissions
 
@@ -244,12 +247,12 @@ Notice that `expires_at` can be a datetime string, a date, or even "tomorrow", "
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
-identifier: "{{account_name}}_iambic_test_role"
+identifier: "{{var.account_name}}_iambic_test_role"
 included_accounts:
   - "*"
 expires_at: in 3 days
 properties:
-  description: IAMbic test role on {{account_name}}
+  description: IAMbic test role on {{var.account_name}}
   assume_role_policy_document:
     statement:
       - action: sts:AssumeRole
@@ -288,7 +291,7 @@ properties:
   path: /iambic_test/
   permissions_boundary:
     policy_arn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
-  role_name: "{{account_name}}_iambic_test_role"
+  role_name: "{{var.account_name}}_iambic_test_role"
 ```
 
 Now run the apply command.
@@ -345,7 +348,7 @@ dates before applying.
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
-identifier: "{{account_name}}_iambic_test_role"
+identifier: "{{var.account_name}}_iambic_test_role"
 included_accounts:
   - "*"
 # access_rules:
@@ -355,7 +358,7 @@ included_accounts:
   #  included_accounts:
   #   - ACCOUNT_A
 properties:
-  description: IAMbic test role on {{account_name}}
+  description: IAMbic test role on {{var.account_name}}
   assume_role_policy_document:
     statement:
       - action: sts:AssumeRole
@@ -396,7 +399,7 @@ properties:
   path: /iambic_test/
   permissions_boundary:
     policy_arn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
-  role_name: "{{account_name}}_iambic_test_role"
+  role_name: "{{var.account_name}}_iambic_test_role"
 ```
 
 Save the template, and in your terminal, use IAMbic to apply the change.

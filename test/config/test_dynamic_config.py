@@ -1,11 +1,17 @@
 from __future__ import annotations
+
 import pathlib
 from typing import Any
 
 import pytest
 import yaml
 
-from iambic.config.dynamic_config import Config, ExtendsConfig, ExtendsConfigKey, init_plugins
+from iambic.config.dynamic_config import (
+    Config,
+    ExtendsConfig,
+    ExtendsConfigKey,
+    init_plugins,
+)
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
 
@@ -42,13 +48,17 @@ async def test_set_config_secrets_with_secret_in_secrets_manager(
 
 
 @pytest.mark.asyncio
-async def test_run_discover_upstream_config_changes(test_config, test_config_path_two_accounts_plus_org: Config):
+async def test_run_discover_upstream_config_changes(
+    test_config, test_config_path_two_accounts_plus_org: Config
+):
     execution_message = ExecutionMessage(
         execution_id="test",
-        command = Command.APPLY,
+        command=Command.APPLY,
     )
     config_path = pathlib.Path(test_config_path_two_accounts_plus_org)
-    await test_config.run_discover_upstream_config_changes(execution_message, config_path.parent)
+    await test_config.run_discover_upstream_config_changes(
+        execution_message, config_path.parent
+    )
     with open(test_config.file_path, "r") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
     assert list(config.keys())[0] == "template_type"
@@ -71,7 +81,7 @@ async def test_init_plugins(test_config, test_config_path_two_accounts_plus_org)
 async def test_run_import(test_config, test_config_path_two_accounts_plus_org):
     execution_message = ExecutionMessage(
         execution_id="test",
-        command = Command.APPLY,
+        command=Command.APPLY,
     )
     config_path = pathlib.Path(test_config_path_two_accounts_plus_org)
     await test_config.run_import(execution_message, config_path.parent)

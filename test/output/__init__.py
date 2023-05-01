@@ -175,7 +175,7 @@ template_yaml = """  - resource_id: prod_iambic_test_role
             resource_type: aws:iam:role
         exceptions_seen: []
     exceptions_seen: []
-  - resource_id: '{{account_name}}_iambic_test_role'
+  - resource_id: '{{var.account_name}}_iambic_test_role'
     resource_type: aws:iam:role
     template_path: resources/aws/iam/role/all_accounts/iambic_test_role.yaml
     proposed_changes:

@@ -49,16 +49,16 @@ def test_calculate_import_preference():
 
     template = AwsIamRoleTemplate(
         file_path="foo",
-        identifier="{{account_name}} admin",
-        properties=RoleProperties(role_name="{{account_name}} admin"),
+        identifier="{{var.account_name}} admin",
+        properties=RoleProperties(role_name="{{var.account_name}} admin"),
     )
     templatized_preferrence = calculate_import_preference(template)
     assert templatized_preferrence is True  # because we are using variables
 
     template = AwsIamRoleTemplate(
         file_path="foo",
-        identifier="{{account_name}} admin",
-        properties=RoleProperties(role_name="{{account_name}} admin"),
+        identifier="{{var.account_name}} admin",
+        properties=RoleProperties(role_name="{{var.account_name}} admin"),
     )
     # break template
     template.properties.description = lambda x: x  # lambda is not json-able

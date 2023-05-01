@@ -4,6 +4,7 @@ from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.aws.role.utils import generate_role_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.iam.role.utils import get_role_across_accounts
 

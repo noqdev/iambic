@@ -20,6 +20,13 @@ Easily manage and streamline cloud Identity and Access Management (IAM) with IAM
 - **Extendable**: Integrate with various clouds and applications through a powerful plugin architecture.
 - **Auditable**: Track changes to IAM policies, permissions, and rules with Git history. For AWS, IAmbic annotates out-of-band commits with details from CloudTrail.
 
+## 📣 Let's chat
+Do you want to connect with our contributors?
+
+Just click the button below and follow the instructions.
+
+[![slack](https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white)](https://communityinviter.com/apps/noqcommunity/noq)
+
 ## Getting Started
 
 Dive into IAMbic with our [quick-start guide](http://docs.iambic.org/getting_started/) and explore powerful template examples for AWS Multi-Account Roles, Dynamic Permissions, Okta Applications and Group Assignments, Azure Active Directory Users and Groups, and Google Workspace Group Assignments. We are rapidly expanding support for existing resources and cloud providers, so check back often!
@@ -46,14 +53,14 @@ result in the creation of three roles: "dev_cloudwatch",
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
-identifier: '{{account_name}}_cloudwatch'
+identifier: '{{var.account_name}}_cloudwatch'
 included_accounts:
     - dev
     - staging
     - prod
 properties:
   description:
-    - description: Cloudwatch role for {{account_name}}
+    - description: Cloudwatch role for {{var.account_name}}
   assume_role_policy_document:
     statement:
       - action:
@@ -80,7 +87,7 @@ properties:
         resource: "*"
   managed_policies:
     - policy_arn: arn:aws:iam::aws:policy/AdministratorAccess
-  role_name: '{{account_name}}_cloudwatch'
+  role_name: '{{var.account_name}}_cloudwatch'
   tags:
     - key: owner
       value: devops
@@ -92,14 +99,14 @@ Create a BackendDeveloperRole with varying permissions based on the AWS account.
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
-identifier: '{{account_name}}_backend_developer'
+identifier: '{{var.account_name}}_backend_developer'
 included_accounts:
   - '*'
 excluded_accounts:
   - compliance
 properties:
   description:
-    - description: Backend developer role for {{account_name}}
+    - description: Backend developer role for {{var.account_name}}
   assume_role_policy_document:
     statement:
       - action:
@@ -135,7 +142,7 @@ properties:
           condition:
                 StringNotEquals:
                     s3:ResourceTag/sensitive: 'true'
-  role_name: '{{account_name}}_backend_developer'
+  role_name: '{{var.account_name}}_backend_developer'
   tags:
     - key: owner
       value: devops
@@ -256,4 +263,4 @@ IAMbic is licensed under the Apache-2.0 license. Commercial licenses and support
 
 Provider Plugins (Such as the AWS, Okta, Azure Active Directory, and Google Workspace plugins) are licensed under Apache 2. You are free to write your own provider plugins for internal services without releasing its source code.
 
-For more information, please visit [iambic.org](https://docs.iambic.org/license).
+For more information, please visit [https://docs.iambic.org/license](https://docs.iambic.org/license).

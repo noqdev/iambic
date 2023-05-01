@@ -17,13 +17,15 @@ from iambic.config.dynamic_config import (
 )
 from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
+from iambic.core.models import Variable
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.core.context import ctx
 
 
 @pytest.fixture(scope="session")
 def aws_accounts():
-    return [
+    accounts = [
         AWSAccount(account_id="123456789010", account_name="dev1"),
         AWSAccount(account_id="123456789011", account_name="dev2"),
         AWSAccount(account_id="123456789012", account_name="staging1"),
@@ -35,6 +37,14 @@ def aws_accounts():
         AWSAccount(account_id="123456789018", account_name="prod3"),
         AWSAccount(account_id="123456789019", account_name="test"),
     ]
+    for elem, account in enumerate(accounts):
+        account.variables = [
+            Variable(key="account_id", value=account.account_id),
+            Variable(key="account_name", value=account.account_name),
+        ]
+        accounts[elem] = account
+
+    return accounts
 
 
 @pytest.fixture(scope="session")
@@ -247,3 +257,18 @@ def mock_aws_account_rw_secretsmanager_session(test_config):
         account_name="test",
         iambic_managed="read_and_write",
     )
+
+
+@pytest.fixture(scope="function")
+def mock_ctx(monkeypatch):
+    def _mock(
+        eval_only: bool = False,
+        use_remote: bool = False,
+        command=None,
+    ):
+        monkeypatch.setattr(ctx, "eval_only", eval_only)
+        monkeypatch.setattr(ctx, "use_remote", use_remote)
+        monkeypatch.setattr(ctx, "command", command)
+        return ctx
+
+    return _mock
