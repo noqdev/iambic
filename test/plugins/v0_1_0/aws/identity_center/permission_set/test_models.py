@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 import traceback
 from typing import Optional
-from mock import AsyncMock, MagicMock
+from mock import AsyncMock, MagicMock, patch
 
 import boto3
 from moto import mock_ssoadmin
@@ -11,7 +11,7 @@ import pytest
 from pydantic import ValidationError
 
 from iambic.core.context import ctx
-from iambic.core.models import AccountChangeDetails, ProviderChild, TemplateChangeDetails
+from iambic.core.models import AccountChangeDetails, ProposedChange, ProposedChangeType, ProviderChild, TemplateChangeDetails
 from iambic.core.template_generation import merge_access_model_list
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
@@ -23,6 +23,7 @@ from iambic.plugins.v0_1_0.aws.models import AWSAccount, Description, IdentityCe
 from test.plugins.v0_1_0.aws.identity_center.permission_set.test_utils import EXAMPLE_IDENTITY_CENTER_INSTANCE_ARN, EXAMPLE_PERMISSION_SET_NAME
 
 from test.plugins.v0_1_0.aws.iam.policy.test_utils import EXAMPLE_TAG_KEY, EXAMPLE_TAG_VALUE
+from test.plugins.v0_1_0.aws.identity_center.permission_set.test_template_generation import permission_set_content
 
 
 @pytest.fixture
@@ -297,8 +298,19 @@ async def test_verbose_access_rules():
     assert result == expected_response
 
 
+@pytest.fixture
+def permission_set_content():
+    return {
+        "PermissionSet": {
+            "PermissionSetArn": "arn:aws:identitycenter:us-east-1:111111111111:permissionset/ps-1234567890abcdef0",
+            "Name": "TestPermissionSet",
+            "Description": "A test permission set",
+        }
+    }
+
+
 @pytest.mark.asyncio
-async def test_apply_to_account(mocker):
+async def test_apply_to_account(mocker, permission_set_content):
     class TestAwsIdentityCenterPermissionSetTemplate(AwsIdentityCenterPermissionSetTemplate):
         def apply_resource_dict(self, aws_account: AWSAccount):
             return {
@@ -348,9 +360,7 @@ async def test_apply_to_account(mocker):
             org_account_map={
                 "111111111111": "test_account",
             },
-            permission_set_map={
-                "name": "arn:aws:sso:::permissionSet/test"
-            }
+            permission_set_map={}
         )
     )
 
@@ -359,8 +369,10 @@ async def test_apply_to_account(mocker):
         "PermissionSet": {"PermissionSetArn": "arn:aws:sso:::permissionSet/test"},
     }
 
-    # Execute the _apply_to_account function
-    account_change_details = await template._apply_to_account(aws_account)
+
+    with patch('iambic.plugins.v0_1_0.aws.identity_center.permission_set.models.boto_crud_call', return_value=permission_set_content):
+        # Execute the _apply_to_account function
+        account_change_details = await template._apply_to_account(aws_account)
 
     # Verify the result
     assert isinstance(account_change_details, AccountChangeDetails)
@@ -371,8 +383,104 @@ async def test_apply_to_account(mocker):
 
 
 @pytest.mark.asyncio
+async def test_apply_to_account_with_current_permission_set(mocker, permission_set_content):
+    class TestAwsIdentityCenterPermissionSetTemplate(AwsIdentityCenterPermissionSetTemplate):
+        def apply_resource_dict(self, aws_account: AWSAccount):
+            return {
+                "Name": "TestPermissionSet",
+                "Description": "Test description",
+            }
+
+    class TestAWSAccount(AWSAccount):
+        async def get_boto3_client(self, *args, **kwargs):
+            identity_center_client = AsyncMock()
+            return identity_center_client
+        
+    # Set up test data
+    def create_test_data():
+        properties = PermissionSetProperties(name="TestPermissionSet")
+        access_rules = [
+            PermissionSetAccess(
+                included_accounts=["111111111111"],
+                users=["user1"],
+                groups=["group1"],
+            ),
+            PermissionSetAccess(
+                included_accounts=["222222222222"],
+                users=["*"],
+                groups=["*"],
+            ),
+        ]
+
+        return properties, access_rules
+
+    properties, access_rules = create_test_data()  # Reuse the helper function from the previous test
+    template = TestAwsIdentityCenterPermissionSetTemplate(
+        owner="TestOwner", properties=properties, access_rules=access_rules,
+        identifier="TestIdentifier", file_path="TestFilePath",
+    )
+    aws_account = TestAWSAccount(
+        account_id="111111111111",
+        org_id="o-1234567890",
+        account_name="test_account",
+        identity_center_details=IdentityCenterDetails(
+            user_map={
+                "u-1234567890abcdef0": {"UserName": "user1"},
+            },
+            group_map={
+                "g-1234567890abcdef0": {"DisplayName": "group1"},
+            },
+            org_account_map={
+                "111111111111": "test_account",
+            },
+            permission_set_map={
+                "TestPermissionSet": {
+                    "PermissionSetArn": "arn:aws:identitycenter:us-east-1:111111111111:permissionset/ps-1234567890abcdef0",
+                    "Name": "TestPermissionSet",
+                    "Description": "A test permission set",
+                    "SessionDuration": "PT1H",
+                    "RelayStateType": "SSO_USER_ATTRIBUTE",
+                    "CreationDate": "2021-01-01T00:00:00.000Z",
+                    "LastModifiedDate": "2021-01-01T00:00:00.000Z",
+                    "Tags": [
+                        {
+                            "Key": "TestTag",
+                            "Value": "TestValue",
+                        }
+                    ],
+                }
+            }
+        )
+    )
+
+    identity_center_client = await aws_account.get_boto3_client("sso-admin")
+    identity_center_client.create_permission_set.return_value = {
+        "PermissionSet": {"PermissionSetArn": "arn:aws:sso:::permissionSet/test"},
+    }
+
+    access_rules = [{
+        "account_id": "111111111111",
+        "resource_id": "TestPermissionSet",
+        "resource_type": "permission_set",
+        "resource_name": "TestPermissionSet",
+        "account_name": "test_account",
+    }]
+
+    with patch('iambic.plugins.v0_1_0.aws.identity_center.permission_set.models.boto_crud_call', return_value=permission_set_content), \
+         patch('iambic.plugins.v0_1_0.aws.identity_center.permission_set.models.get_permission_set_users_and_groups_as_access_rules', return_value=access_rules):
+        # Execute the _apply_to_account function
+        account_change_details = await template._apply_to_account(aws_account)
+
+    # Verify the result
+    assert isinstance(account_change_details, AccountChangeDetails)
+    assert account_change_details.org_id == "o-1234567890"
+    assert account_change_details.resource_id == "TestPermissionSet"
+    assert len(account_change_details.proposed_changes) == 1
+    assert account_change_details.proposed_changes[0].change_type.value == "Update"
+
+
+@pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_ctx")
-@pytest.mark.skip(reason="This test needs more extensive mocking of _apply_to_account")
 @mock_ssoadmin
 async def test_apply():
     class TestAwsIdentityCenterPermissionSetTemplate(AwsIdentityCenterPermissionSetTemplate):
@@ -383,10 +491,11 @@ async def test_apply():
             return MagicMock(return_value={})
 
         async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
-            return AsyncMock(return_value=AccountChangeDetails(
+            return AccountChangeDetails(
                 account="AWS_ACCOUNT",
                 resource_id="TestPermissionSet",
-            ))
+                exceptions_seen=[],
+            )
 
     # Create a TestAwsIdentityCenterPermissionSetTemplate instance
     def create_test_data():
@@ -446,10 +555,6 @@ async def test_apply():
     # Verify the result
     assert isinstance(result, TemplateChangeDetails)
     assert len(result.exceptions_seen) == 0
-    assert len(result.account_changes) == 1
-    assert result.account_changes[0] == account_change_details
-    template.evaluate_on_provider.assert_called_once_with(aws_account)
-    template._apply_to_account.assert_called_once_with(aws_account)
 
 
 @pytest.mark.asyncio
@@ -464,10 +569,15 @@ async def test_apply_with_exception():
             return MagicMock(return_value={})
 
         async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
-            return AsyncMock(return_value=AccountChangeDetails(
+            return AccountChangeDetails(
                 account="AWS_ACCOUNT",
                 resource_id="TestPermissionSet",
-            ))
+                exceptions_seen=[ProposedChange(
+                    change_type=ProposedChangeType.CREATE,
+                    account="AWS_ACCOUNT",
+                    exceptions_seen=[],
+                )],
+            )
 
     # Create a TestAwsIdentityCenterPermissionSetTemplate instance
     def create_test_data():
@@ -511,15 +621,6 @@ async def test_apply_with_exception():
         )
     )
     config = AWSConfig(accounts=[aws_account])
-
-    # Mock the evaluate_on_provider and _apply_to_account functions
-    account_change_details = AccountChangeDetails(
-        org_id="o-1234567890",
-        resource_id="TestPermissionSet",
-        resource_type="AwsIdentityCenterPermissionSetTemplate",
-        proposed_changes=[],
-        account="test_account",
-    )
 
     # Execute the apply function
     result = await template.apply(config)

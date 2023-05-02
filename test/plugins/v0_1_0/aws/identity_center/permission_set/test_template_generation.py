@@ -1,4 +1,5 @@
 from __future__ import annotations
+from contextlib import asynccontextmanager
 import json
 import os
 import shutil
@@ -20,6 +21,7 @@ from iambic.plugins.v0_1_0.aws.event_bridge.models import PermissionSetMessageDe
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation import (
     collect_aws_permission_sets,
+    generate_aws_permission_set_templates,
     get_template_dir,
     get_templated_permission_set_file_path,
     create_templated_permission_set,
@@ -133,7 +135,6 @@ def permission_set_content():
         "name": "TestPermissionSet",
         "description": "A test permission set",
         "session_duration": "PT1H",
-        "permissions_boundary": {"arn": "arn:aws:iam::aws:policy/ReadOnlyAccess"},
         "tags": [{"Key": "Environment", "Value": "Test"}],
     }
 
@@ -169,7 +170,8 @@ def aws_account_map(permission_set_refs):
 @pytest.fixture
 def exe_message():
     class TestExecutionMessage(ExecutionMessage):
-        pass
+        async def get_sub_exe_files(self, *path_dirs, file_name_and_extension: str = None, flatten_results: bool = False) -> List[dict]:
+            return MagicMock()
 
     return TestExecutionMessage(execution_id="test_exec_id", command=Command.IMPORT)  # Replace with your custom TestExecutionMessage object
 
@@ -270,19 +272,30 @@ def test_get_template_permission_set_file_path():
     )
 
 
+class MockAioFilesOpen:
+    def __init__(self, content):
+        self.content = content
+
+    async def read(self):
+        return json.dumps(self.content)
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+
 @pytest.mark.asyncio
 async def test_create_templated_permission_set(
     permission_set_refs, permission_set_content, aws_account_map
 ):
-    # Mock aiofiles.open
+    @asynccontextmanager
     async def mock_aiofiles_open(file_path, mode):
-        async def read():
-            return json.dumps(permission_set_content)
-        return MagicMock(read=AsyncMock(side_effect=read))
+        content = permission_set_content  # Replace with your test data
+        yield MockAioFilesOpen(content)
 
-    permission_set_refs = []
-
-    with patch("aiofiles.open", side_effect=mock_aiofiles_open):
+    with patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.aiofiles.open", new=mock_aiofiles_open):
         # Mock other methods used in the function
         calculate_import_preference = MagicMock(return_value=True)
         create_or_update_template = MagicMock()
@@ -324,16 +337,12 @@ async def test_collect_aws_permission_sets(
 
     # Mock methods and objects
     get_aws_account_map = AsyncMock(return_value={})
-    set_identity_center_details = AsyncMock()
     gather_permission_set_names = AsyncMock(return_value=["TestPermissionSet1"])
-    generate_permission_set_resource_file = AsyncMock()
-    NoqSemaphore = MagicMock()
+    generate_permission_set_resource_file = AsyncMock(return_value={"test": "success"})
 
     with patch("iambic.plugins.v0_1_0.aws.utils.get_aws_account_map", get_aws_account_map), \
          patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.gather_permission_set_names", gather_permission_set_names), \
-         patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.generate_permission_set_resource_file", generate_permission_set_resource_file), \
-         patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.generate_permission_set_resource_file_sempaphore", MockGeneratePermissionSetResourceFileSemaphore), \
-         patch("iambic.core.utils.NoqSemaphore", NoqSemaphore):
+         patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.generate_permission_set_resource_file", generate_permission_set_resource_file):
 
         # Call collect_aws_permission_sets
         await collect_aws_permission_sets(
@@ -347,3 +356,40 @@ async def test_collect_aws_permission_sets(
 
         file_path = exe_message.get_file_path(*RESOURCE_DIR, file_name_and_extension="output.json")
         assert os.path.exists(file_path)
+
+
+@pytest.fixture
+def base_output_dir():
+    return "/test/output/dir"
+
+
+@pytest.mark.asyncio
+async def test_generate_aws_permission_set_templates(
+    exe_message, config, base_output_dir, identity_center_template_map, detect_messages
+):
+    # Mock methods and objects
+    get_template_dir = MagicMock(return_value="/test/template/dir")
+    get_aws_account_map = AsyncMock(return_value={})
+    base_group_str_attribute = AsyncMock(return_value={})
+    create_templated_permission_set = AsyncMock()
+    delete_orphaned_templates = MagicMock()
+
+    with patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.get_template_dir", get_template_dir), \
+         patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.get_aws_account_map", get_aws_account_map), \
+         patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.base_group_str_attribute", base_group_str_attribute), \
+         patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.create_templated_permission_set", create_templated_permission_set), \
+         patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.delete_orphaned_templates", delete_orphaned_templates):
+
+        # Call generate_aws_permission_set_templates
+        await generate_aws_permission_set_templates(
+            exe_message,
+            config,
+            base_output_dir,
+            identity_center_template_map,
+            detect_messages,
+        )
+
+        # Assertions
+        get_template_dir.assert_called_once_with(base_output_dir)
+        get_aws_account_map.assert_called_once_with(config)
+        base_group_str_attribute.assert_called_once()
