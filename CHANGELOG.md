@@ -1,3 +1,12 @@
+## 0.4.5 (Target Date May 2nd, 2023)
+
+PERMISSION CHANGES:
+* IambicHubRole using a region agnostic resource definition in the SQS `IAMbicChangeDetectionQueue` permission (CloudFormation Template) 
+
+ENHANCEMENTS:
+* The AWS region IAMbic should use is now configurable in the wizard.
+* Added region awareness to cloud formation util functions.
+
 ## 0.4.1 (Target Date May 1st, 2023)
 
 PERMISSION CHANGES:
