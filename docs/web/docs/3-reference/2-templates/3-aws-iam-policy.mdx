@@ -1,0 +1,32 @@
+---
+title: AWS IAM Policy Template Examples
+---
+
+An example AWS managed policy template that denies Get/Put objects with `pii` prefix in S3 bucket
+```yaml
+template_type: NOQ::AWS::IAM::ManagedPolicy
+included_accounts:
+  - '*'
+identifier: deny-pii-access
+properties:
+  policy_document:
+    statement:
+      - action:
+        - s3:GetObject
+        - s3:PutObject
+        effect: Deny
+        resource: arn:aws:s3:::mybucket
+        condition:
+          StringLike:
+            "s3:prefix":
+              - "pii/*"
+    version: '2012-10-17'
+  policy_name: deny-pii-access
+```
+
+When you use `condition` in policy, there is both the `operator` and `matching_key` and `matching_value`.
+For the example above, the `operator` is `StringLike`, `matching_key` is `s3:prefix` and
+`matching_value` is `pii/*`. The double quote is needed when there is a potential collision with
+yaml dictionary syntax.
+
+For the full condition reference, check out AWS [documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_condition_operators.html).

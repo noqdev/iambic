@@ -1,17 +1,16 @@
 import asyncio
 import json
 from typing import Any, Optional
-
 import boto3
 import botocore
-import pytest
 from mock import AsyncMock, MagicMock
 from moto import mock_ssoadmin
-
+import pytest
 from iambic.core.models import ProposedChangeType, ProviderChild
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
 )
+
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
     apply_account_assignments,
     apply_permission_set_aws_managed_policies,
@@ -174,13 +173,11 @@ async def test_get_permission_set_users_and_groups(mock_ssoadmin_client_bundle: 
         {},
     )
 
-    assert response == {"user": {}, "group": {}}
+    assert response == {'user': {}, 'group': {}}
 
 
 @pytest.mark.asyncio
-async def test_get_permission_set_users_and_groups_as_access_rules(
-    mock_ssoadmin_client_bundle: tuple,
-):
+async def test_get_permission_set_users_and_groups_as_access_rules(mock_ssoadmin_client_bundle: tuple):
     mock_ssoadmin_client, permission_set_arn = mock_ssoadmin_client_bundle
     accounts = [
         FakeAccount(
@@ -207,20 +204,15 @@ async def test_get_permission_set_users_and_groups_as_access_rules(
 @mock_ssoadmin
 async def test_enrich_permission_set_details(mock_ssoadmin_client_bundle: tuple):
     from botocore.exceptions import ClientError
-
     mock_ssoadmin_client, permission_set_arn = mock_ssoadmin_client_bundle
 
     # Set up test data
     instance_arn = "arn:aws:sso:::instance/ssoins-1234567890abcdef"
-    permission_set_arn = (
-        "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef/ps-1234567890abcdef"
-    )
+    permission_set_arn = "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef/ps-1234567890abcdef"
     permission_set_details = {"PermissionSetArn": permission_set_arn}
 
     # Test the enrich_permission_set_details function
-    enriched_details = await enrich_permission_set_details(
-        mock_ssoadmin_client, instance_arn, permission_set_details
-    )
+    enriched_details = await enrich_permission_set_details(mock_ssoadmin_client, instance_arn, permission_set_details)
 
     # Assert that the enriched details contain the expected data
     assert enriched_details["PermissionSetArn"] == permission_set_arn
@@ -229,20 +221,12 @@ async def test_enrich_permission_set_details(mock_ssoadmin_client_bundle: tuple)
 # Helper function to create test data
 def create_test_data():
     instance_arn = "arn:aws:sso:::instance/ssoins-1234567890abcdef0"
-    permission_set_arn = (
-        "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
-    )
+    permission_set_arn = "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
     template_policy_arns = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
     existing_policy_arns = ["arn:aws:iam::aws:policy/AmazonEC2FullAccess"]
     log_params = {"test_log_key": "test_log_value"}
 
-    return (
-        instance_arn,
-        permission_set_arn,
-        template_policy_arns,
-        existing_policy_arns,
-        log_params,
-    )
+    return instance_arn, permission_set_arn, template_policy_arns, existing_policy_arns, log_params
 
 
 @pytest.mark.asyncio
@@ -254,22 +238,11 @@ async def test_apply_permission_set_aws_managed_policies():
     sso_admin = client("sso-admin", region_name="us-west-2")
 
     # Set up test data
-    (
-        instance_arn,
-        permission_set_arn,
-        template_policy_arns,
-        existing_policy_arns,
-        log_params,
-    ) = create_test_data()
+    instance_arn, permission_set_arn, template_policy_arns, existing_policy_arns, log_params = create_test_data()
 
     # Test the apply_permission_set_aws_managed_policies function
     response = await apply_permission_set_aws_managed_policies(
-        sso_admin,
-        instance_arn,
-        permission_set_arn,
-        template_policy_arns,
-        existing_policy_arns,
-        log_params,
+        sso_admin, instance_arn, permission_set_arn, template_policy_arns, existing_policy_arns, log_params
     )
 
     # Assert that the response contains the expected data
@@ -296,12 +269,7 @@ async def test_apply_permission_set_customer_managed_policies():
 
     # Test the apply_permission_set_customer_managed_policies function
     response = await apply_permission_set_customer_managed_policies(
-        sso_admin,
-        instance_arn,
-        permission_set_arn,
-        template_policies,
-        existing_policies,
-        log_params,
+        sso_admin, instance_arn, permission_set_arn, template_policies, existing_policies, log_params
     )
 
     # Assert that the response contains the expected data
@@ -322,9 +290,7 @@ async def test_create_account_assignment(mock_ssoadmin_client_bundle: tuple):
 
     account_id = "123456789012"
     instance_arn = "arn:aws:sso:::instance/ssoins-1234567890abcdef0"
-    permission_set_arn = (
-        "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
-    )
+    permission_set_arn = "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
     resource_type = "GROUP"
     resource_id = "test-group-id"
     resource_name = "Test Group"
@@ -332,89 +298,53 @@ async def test_create_account_assignment(mock_ssoadmin_client_bundle: tuple):
 
     # Test the create_account_assignment function
     await create_account_assignment(
-        sso_admin,
-        account_id,
-        instance_arn,
-        permission_set_arn,
-        resource_type,
-        resource_id,
-        resource_name,
-        log_params,
+        sso_admin, account_id, instance_arn, permission_set_arn, resource_type, resource_id, resource_name, log_params
     )
 
     # Verify the account assignment creation
     assignments = sso_admin.list_account_assignments(
-        InstanceArn=instance_arn,
-        PermissionSetArn=permission_set_arn,
-        AccountId=account_id,
+        InstanceArn=instance_arn, PermissionSetArn=permission_set_arn, AccountId=account_id,
     )
 
     assert len(assignments["AccountAssignments"]) == 1
-    assert (
-        assignments["AccountAssignments"][0]["PermissionSetArn"] == permission_set_arn
-    )
+    assert assignments["AccountAssignments"][0]["PermissionSetArn"] == permission_set_arn
     assert assignments["AccountAssignments"][0]["PrincipalType"] == resource_type
     assert assignments["AccountAssignments"][0]["PrincipalId"] == resource_id
 
 
 @pytest.mark.asyncio
 @mock_ssoadmin
-async def test_create_account_assignment_creation_status_check(
-    mocker, mock_ssoadmin_client_bundle
-):
-    MockBotoCrudCall = AsyncMock(
-        autospec=True,
-        return_value={
-            "AccountAssignmentCreationStatus": {
-                "RequestId": "test-request-id",
-                "Status": "IN_PROGRESS",
-            }
-        },
-    )
+async def test_create_account_assignment_creation_status_check(mocker, mock_ssoadmin_client_bundle):
+    MockBotoCrudCall = AsyncMock(autospec=True, return_value={
+                "AccountAssignmentCreationStatus": {
+                    "RequestId": "test-request-id",
+                    "Status": "IN_PROGRESS",
+                }
+            })
     ssoadmin_client, _ = mock_ssoadmin_client_bundle
     account_id = "123456789012"
     instance_arn = "arn:aws:sso:::instance/ssoins-1234567890abcdef0"
-    permission_set_arn = (
-        "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
-    )
+    permission_set_arn = "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
     resource_type = "GROUP"
     resource_id = "test-group-id"
     resource_name = "Test Group"
     log_params = {"test_log_key": "test_log_value"}
 
-    mocker.patch(
-        "iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils.boto_crud_call",
-        new=MockBotoCrudCall,
-    )
-    task = asyncio.create_task(
-        create_account_assignment(
-            ssoadmin_client,
-            account_id,
-            instance_arn,
-            permission_set_arn,
-            resource_type,
-            resource_id,
-            resource_name,
-            log_params,
-        )
-    )
+    mocker.patch('iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils.boto_crud_call', new=MockBotoCrudCall)
+    task = asyncio.create_task(create_account_assignment(
+        ssoadmin_client, account_id, instance_arn, permission_set_arn, resource_type, resource_id, resource_name, log_params
+    ))
     await asyncio.sleep(1.0)
-    MockBotoCrudCall = AsyncMock(
-        autospec=True,
-        return_value={
+    MockBotoCrudCall = AsyncMock(autospec=True, return_value={
             "AccountAssignmentCreationStatus": {
                 "RequestId": "test-request-id",
                 "Status": "FAILED",
             }
-        },
+        }
     )
-    mocker.patch(
-        "iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils.boto_crud_call",
-        new=MockBotoCrudCall,
-    )
+    mocker.patch('iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils.boto_crud_call', new=MockBotoCrudCall)
     await asyncio.wait_for(task, timeout=2.0)
     assert task.done()
-
 
 @pytest.mark.asyncio
 @mock_ssoadmin
@@ -426,9 +356,7 @@ async def test_delete_account_assignment(mock_ssoadmin_client_bundle: tuple):
 
     account_id = "123456789012"
     instance_arn = "arn:aws:sso:::instance/ssoins-1234567890abcdef0"
-    permission_set_arn = (
-        "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
-    )
+    permission_set_arn = "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
     resource_type = "GROUP"
     resource_id = "test-group-id"
     resource_name = "Test Group"
@@ -436,46 +364,26 @@ async def test_delete_account_assignment(mock_ssoadmin_client_bundle: tuple):
 
     # Test the create_account_assignment function
     await create_account_assignment(
-        sso_admin,
-        account_id,
-        instance_arn,
-        permission_set_arn,
-        resource_type,
-        resource_id,
-        resource_name,
-        log_params,
+        sso_admin, account_id, instance_arn, permission_set_arn, resource_type, resource_id, resource_name, log_params
     )
 
     # Verify the account assignment creation
     assignments = sso_admin.list_account_assignments(
-        InstanceArn=instance_arn,
-        PermissionSetArn=permission_set_arn,
-        AccountId=account_id,
+        InstanceArn=instance_arn, PermissionSetArn=permission_set_arn, AccountId=account_id,
     )
 
     assert len(assignments["AccountAssignments"]) == 1
-    assert (
-        assignments["AccountAssignments"][0]["PermissionSetArn"] == permission_set_arn
-    )
+    assert assignments["AccountAssignments"][0]["PermissionSetArn"] == permission_set_arn
     assert assignments["AccountAssignments"][0]["PrincipalType"] == resource_type
     assert assignments["AccountAssignments"][0]["PrincipalId"] == resource_id
 
     await delete_account_assignment(
-        sso_admin,
-        account_id,
-        instance_arn,
-        permission_set_arn,
-        resource_type,
-        resource_id,
-        resource_name,
-        log_params,
+        sso_admin, account_id, instance_arn, permission_set_arn, resource_type, resource_id, resource_name, log_params
     )
 
     # Verify the account assignment creation
     assignments = sso_admin.list_account_assignments(
-        InstanceArn=instance_arn,
-        PermissionSetArn=permission_set_arn,
-        AccountId=account_id,
+        InstanceArn=instance_arn, PermissionSetArn=permission_set_arn, AccountId=account_id,
     )
 
     assert len(assignments["AccountAssignments"]) == 0
@@ -483,59 +391,35 @@ async def test_delete_account_assignment(mock_ssoadmin_client_bundle: tuple):
 
 @pytest.mark.asyncio
 @mock_ssoadmin
-async def test_delete_account_assignment_creation_status_check(
-    mocker, mock_ssoadmin_client_bundle
-):
-    MockBotoCrudCall = AsyncMock(
-        autospec=True,
-        return_value={
-            "AccountAssignmentDeletionStatus": {
-                "RequestId": "test-request-id",
-                "Status": "IN_PROGRESS",
-            }
-        },
-    )
+async def test_delete_account_assignment_creation_status_check(mocker, mock_ssoadmin_client_bundle):
+    MockBotoCrudCall = AsyncMock(autospec=True, return_value={
+                "AccountAssignmentDeletionStatus": {
+                    "RequestId": "test-request-id",
+                    "Status": "IN_PROGRESS",
+                }
+            })
     ssoadmin_client, _ = mock_ssoadmin_client_bundle
     account_id = "123456789012"
     instance_arn = "arn:aws:sso:::instance/ssoins-1234567890abcdef0"
-    permission_set_arn = (
-        "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
-    )
+    permission_set_arn = "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
     resource_type = "GROUP"
     resource_id = "test-group-id"
     resource_name = "Test Group"
     log_params = {"test_log_key": "test_log_value"}
 
-    mocker.patch(
-        "iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils.boto_crud_call",
-        new=MockBotoCrudCall,
-    )
-    task = asyncio.create_task(
-        delete_account_assignment(
-            ssoadmin_client,
-            account_id,
-            instance_arn,
-            permission_set_arn,
-            resource_type,
-            resource_id,
-            resource_name,
-            log_params,
-        )
-    )
+    mocker.patch('iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils.boto_crud_call', new=MockBotoCrudCall)
+    task = asyncio.create_task(delete_account_assignment(
+        ssoadmin_client, account_id, instance_arn, permission_set_arn, resource_type, resource_id, resource_name, log_params
+    ))
     await asyncio.sleep(1.0)
-    MockBotoCrudCall = AsyncMock(
-        autospec=True,
-        return_value={
+    MockBotoCrudCall = AsyncMock(autospec=True, return_value={
             "AccountAssignmentDeletionStatus": {
                 "RequestId": "test-request-id",
                 "Status": "FAILED",
             }
-        },
+        }
     )
-    mocker.patch(
-        "iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils.boto_crud_call",
-        new=MockBotoCrudCall,
-    )
+    mocker.patch('iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils.boto_crud_call', new=MockBotoCrudCall)
     await asyncio.wait_for(task, timeout=2.0)
     assert task.done()
 
@@ -548,9 +432,7 @@ async def test_apply_account_assignments():
     # Helper function to create test data
     def create_test_data():
         instance_arn = "arn:aws:sso:::instance/ssoins-1234567890abcdef0"
-        permission_set_arn = (
-            "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
-        )
+        permission_set_arn = "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
         template_assignments = [
             {
                 "account_id": "123456789012",
@@ -563,34 +445,18 @@ async def test_apply_account_assignments():
         existing_assignments = []
         log_params = {"test_log_key": "test_log_value"}
 
-        return (
-            instance_arn,
-            permission_set_arn,
-            template_assignments,
-            existing_assignments,
-            log_params,
-        )
+        return instance_arn, permission_set_arn, template_assignments, existing_assignments, log_params
+
 
     # Set up the moto mock SSO Admin client
     sso_admin = client("sso-admin", region_name="us-west-2")
 
     # Set up test data
-    (
-        instance_arn,
-        permission_set_arn,
-        template_assignments,
-        existing_assignments,
-        log_params,
-    ) = create_test_data()
+    instance_arn, permission_set_arn, template_assignments, existing_assignments, log_params = create_test_data()
 
     # Test the apply_account_assignments function
     proposed_changes = await apply_account_assignments(
-        sso_admin,
-        instance_arn,
-        permission_set_arn,
-        template_assignments,
-        existing_assignments,
-        log_params,
+        sso_admin, instance_arn, permission_set_arn, template_assignments, existing_assignments, log_params
     )
 
     # Verify the account assignment creation
@@ -599,11 +465,9 @@ async def test_apply_account_assignments():
     assert created_assignment.change_type == ProposedChangeType.CREATE
     assert created_assignment.account == template_assignments[0]["account_name"]
     assert created_assignment.resource_id == template_assignments[0]["resource_name"]
-    assert created_assignment.resource_type in [
-        "arn:aws:iam::aws:user",
-        "arn:aws:iam::aws:group",
-    ]
+    assert created_assignment.resource_type in ["arn:aws:iam::aws:user", "arn:aws:iam::aws:group"]
     assert created_assignment.attribute == "account_assignment"
+
 
 
 @pytest.mark.asyncio
@@ -614,45 +478,28 @@ async def test_apply_permission_set_inline_policy(mock_ssoadmin_client_bundle: t
     # Helper function to create test data
     def create_test_data():
         instance_arn = "arn:aws:sso:::instance/ssoins-1234567890abcdef0"
-        permission_set_arn = (
-            "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
-        )
-        template_inline_policy = json.dumps(
-            {
-                "Version": "2012-10-17",
-                "Statement": [
-                    {"Effect": "Allow", "Action": "s3:ListBucket", "Resource": "*"}
-                ],
-            }
-        )
+        permission_set_arn = "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
+        template_inline_policy = json.dumps({
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": "s3:ListBucket",
+                    "Resource": "*"
+                }
+            ]
+        })
         existing_inline_policy = None
         log_params = {"test_log_key": "test_log_value"}
 
-        return (
-            instance_arn,
-            permission_set_arn,
-            template_inline_policy,
-            existing_inline_policy,
-            log_params,
-        )
+        return instance_arn, permission_set_arn, template_inline_policy, existing_inline_policy, log_params
 
     # Set up test data
-    (
-        instance_arn,
-        permission_set_arn,
-        template_inline_policy,
-        existing_inline_policy,
-        log_params,
-    ) = create_test_data()
+    instance_arn, permission_set_arn, template_inline_policy, existing_inline_policy, log_params = create_test_data()
 
     # Test the apply_permission_set_inline_policy function
     proposed_changes = await apply_permission_set_inline_policy(
-        mock_ssoadmin_client,
-        instance_arn,
-        permission_set_arn,
-        template_inline_policy,
-        existing_inline_policy,
-        log_params,
+        mock_ssoadmin_client, instance_arn, permission_set_arn, template_inline_policy, existing_inline_policy, log_params
     )
 
     # Verify the InlinePolicyDocument creation
@@ -665,50 +512,30 @@ async def test_apply_permission_set_inline_policy(mock_ssoadmin_client_bundle: t
     assert created_policy.new_value == json.loads(template_inline_policy)
 
 
+
 @pytest.mark.asyncio
 @mock_ssoadmin
-async def test_apply_permission_set_permission_boundary(
-    mock_ssoadmin_client_bundle: tuple,
-):
+async def test_apply_permission_set_permission_boundary(mock_ssoadmin_client_bundle: tuple):
     from boto3 import client
 
     sso_admin_client, _ = mock_ssoadmin_client_bundle
 
     def create_test_data():
         instance_arn = "arn:aws:sso:::instance/ssoins-1234567890abcdef0"
-        permission_set_arn = (
-            "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
-        )
+        permission_set_arn = "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
         template_permission_boundary = {
-            "ManagedPolicyArn": "arn:aws:iam::aws:policy/ReadOnlyAccess"
+            'ManagedPolicyArn': 'arn:aws:iam::aws:policy/ReadOnlyAccess'
         }
         existing_permission_boundary = None
         log_params = {"test_log_key": "test_log_value"}
-        return (
-            instance_arn,
-            permission_set_arn,
-            template_permission_boundary,
-            existing_permission_boundary,
-            log_params,
-        )
+        return instance_arn, permission_set_arn, template_permission_boundary, existing_permission_boundary, log_params
 
     # Set up test data
-    (
-        instance_arn,
-        permission_set_arn,
-        template_permission_boundary,
-        existing_permission_boundary,
-        log_params,
-    ) = create_test_data()
+    instance_arn, permission_set_arn, template_permission_boundary, existing_permission_boundary, log_params = create_test_data()
 
     # Test the apply_permission_set_permission_boundary function
     proposed_changes = await apply_permission_set_permission_boundary(
-        sso_admin_client,
-        instance_arn,
-        permission_set_arn,
-        template_permission_boundary,
-        existing_permission_boundary,
-        log_params,
+        sso_admin_client, instance_arn, permission_set_arn, template_permission_boundary, existing_permission_boundary, log_params
     )
 
     # Verify the PermissionsBoundary creation
@@ -721,6 +548,7 @@ async def test_apply_permission_set_permission_boundary(
     assert created_boundary.new_value == template_permission_boundary
 
 
+
 @pytest.mark.asyncio
 @mock_ssoadmin
 async def test_apply_permission_set_tags(mock_ssoadmin_client_bundle: tuple):
@@ -731,44 +559,20 @@ async def test_apply_permission_set_tags(mock_ssoadmin_client_bundle: tuple):
     # Helper function to create test data
     def create_test_data():
         instance_arn = "arn:aws:sso:::instance/ssoins-1234567890abcdef0"
-        permission_set_arn = (
-            "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
-        )
-        template_tags = [
-            {"Key": "key1", "Value": "value1"},
-            {"Key": "key2", "Value": "value2"},
-        ]
-        existing_tags = [
-            {"Key": "key2", "Value": "value2"},
-            {"Key": "key3", "Value": "value3"},
-        ]
+        permission_set_arn = "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
+        template_tags = [{"Key": "key1", "Value": "value1"}, {"Key": "key2", "Value": "value2"}]
+        existing_tags = [{"Key": "key2", "Value": "value2"}, {"Key": "key3", "Value": "value3"}]
         log_params = {"test_log_key": "test_log_value"}
 
-        return (
-            instance_arn,
-            permission_set_arn,
-            template_tags,
-            existing_tags,
-            log_params,
-        )
+        return instance_arn, permission_set_arn, template_tags, existing_tags, log_params
+
 
     # Set up test data
-    (
-        instance_arn,
-        permission_set_arn,
-        template_tags,
-        existing_tags,
-        log_params,
-    ) = create_test_data()
+    instance_arn, permission_set_arn, template_tags, existing_tags, log_params = create_test_data()
 
     # Test the apply_permission_set_tags function
     proposed_changes = await apply_permission_set_tags(
-        sso_admin_client,
-        instance_arn,
-        permission_set_arn,
-        template_tags,
-        existing_tags,
-        log_params,
+        sso_admin_client, instance_arn, permission_set_arn, template_tags, existing_tags, log_params
     )
 
     # Verify the tag changes
@@ -802,9 +606,7 @@ async def test_delete_permission_set_not_found(mock_ssoadmin_client_bundle: tupl
     # Helper function to create test data
     def create_test_data():
         instance_arn = "arn:aws:sso:::instance/ssoins-1234567890abcdef0"
-        permission_set_arn = (
-            "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
-        )
+        permission_set_arn = "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
         current_permission_set = {
             "ManagedPolicies": [{"Arn": "arn:aws:iam::aws:policy/ReadOnlyAccess"}],
             "Tags": [{"Key": "key1", "Value": "value1"}],
@@ -812,37 +614,18 @@ async def test_delete_permission_set_not_found(mock_ssoadmin_client_bundle: tupl
         account_assignments = []
         log_params = {"test_log_key": "test_log_value"}
 
-        return (
-            instance_arn,
-            permission_set_arn,
-            current_permission_set,
-            account_assignments,
-            log_params,
-        )
+        return instance_arn, permission_set_arn, current_permission_set, account_assignments, log_params
 
     # Set up test data
-    (
-        instance_arn,
-        permission_set_arn,
-        current_permission_set,
-        account_assignments,
-        log_params,
-    ) = create_test_data()
+    instance_arn, permission_set_arn, current_permission_set, account_assignments, log_params = create_test_data()
 
     with pytest.raises(botocore.exceptions.ClientError):
         await delete_permission_set(
-            sso_admin_client,
-            instance_arn,
-            permission_set_arn,
-            current_permission_set,
-            account_assignments,
-            log_params,
+            sso_admin_client, instance_arn, permission_set_arn, current_permission_set, account_assignments, log_params
         )
 
     # Verify the permission set deletion
-    permission_sets = sso_admin_client.list_permission_sets(InstanceArn=instance_arn)[
-        "PermissionSets"
-    ]
+    permission_sets = sso_admin_client.list_permission_sets(InstanceArn=instance_arn)["PermissionSets"]
     assert permission_set_arn not in permission_sets
 
 
@@ -856,9 +639,7 @@ async def test_delete_permission_set(mock_ssoadmin_client_bundle: tuple):
     # Helper function to create test data
     def create_test_data():
         instance_arn = "arn:aws:sso:::instance/ssoins-1234567890abcdef0"
-        permission_set_arn = (
-            "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
-        )
+        permission_set_arn = "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
         current_permission_set = {
             "ManagedPolicies": [{"Arn": "arn:aws:iam::aws:policy/ReadOnlyAccess"}],
             "Tags": [{"Key": "key1", "Value": "value1"}],
@@ -866,35 +647,16 @@ async def test_delete_permission_set(mock_ssoadmin_client_bundle: tuple):
         account_assignments = []
         log_params = {"test_log_key": "test_log_value"}
 
-        return (
-            instance_arn,
-            permission_set_arn,
-            current_permission_set,
-            account_assignments,
-            log_params,
-        )
+        return instance_arn, permission_set_arn, current_permission_set, account_assignments, log_params
 
     # Set up test data
-    (
-        instance_arn,
-        permission_set_arn,
-        current_permission_set,
-        account_assignments,
-        log_params,
-    ) = create_test_data()
+    instance_arn, permission_set_arn, current_permission_set, account_assignments, log_params = create_test_data()
 
     with pytest.raises(botocore.exceptions.ClientError):
         await delete_permission_set(
-            sso_admin_client,
-            instance_arn,
-            permission_set_arn,
-            current_permission_set,
-            account_assignments,
-            log_params,
+            sso_admin_client, instance_arn, permission_set_arn, current_permission_set, account_assignments, log_params
         )
 
     # Verify the permission set deletion
-    permission_sets = sso_admin_client.list_permission_sets(InstanceArn=instance_arn)[
-        "PermissionSets"
-    ]
+    permission_sets = sso_admin_client.list_permission_sets(InstanceArn=instance_arn)["PermissionSets"]
     assert permission_set_arn not in permission_sets

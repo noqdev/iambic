@@ -58,7 +58,7 @@ push_manifest:
 
 .PHONY: test
 test:
-	python -m pytest --cov iambic --cov-report xml:cov_unit_tests.xml --cov-report html:cov_unit_tests.html . --ignore functional_tests/ -s -n auto --dist loadscope
+	python -m pytest -c pytest.ini
 
 .PHONY: functional_test
 functional_test:
