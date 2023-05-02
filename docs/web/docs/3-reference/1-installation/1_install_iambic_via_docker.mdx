@@ -47,11 +47,11 @@ Depending on where your cloud credentials are stored, you may have to mount the 
 We recommend that you add the following to your ~/.bashrc or ~/.bash_profile:
 
 ```bash
-echo 'alias iambic="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e "AWS_PROFILE=${AWS_PROFILE}" -v <local_dir\>:/templates:Z public.ecr.aws/iambic/iambic:latest <command>"' >> ~/.bashrc
+echo 'alias iambic="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws:ro -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e AWS_PROFILE -e HOME=/app -v <iambic-templates>:/templates:Z public.ecr.aws/iambic/iambic:latest"' >> ~/.bashrc
 ```
 
 ```zsh
-echo 'alias iambic="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e "AWS_PROFILE=${AWS_PROFILE}" -v <local_dir\>:/templates:Z public.ecr.aws/iambic/iambic:latest <command>"' >> ~/.zshrc
+echo 'alias iambic="docker run -it -u $(id -u):$(id -g) -v ${HOME}/.aws:/app/.aws:ro -e AWS_CONFIG_FILE=/app/.aws/config -e AWS_SHARED_CREDENTIALS_FILE=/app/.aws/credentials -e AWS_PROFILE -e HOME=/app -v <iambic-templates>:/templates:Z public.ecr.aws/iambic/iambic:latest"' >> ~/.zshrc
 ```
 
 That way you can just execute iambic seamlessly as an application within your system:
