@@ -36,7 +36,7 @@ Resources:
                   - sqs:ReceiveMessage
                   - sqs:GetQueueAttributes
                 Resource:
-                  - 'arn:aws:sqs:us-east-1:*:IAMbicChangeDetectionQueue'
+                  - 'arn:aws:sqs:*:*:IAMbicChangeDetectionQueue'
               - Effect: Allow
                 Action:
                   - ec2:Describe*
