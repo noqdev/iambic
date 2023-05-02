@@ -30,6 +30,11 @@ async def get_permission_set_details(
         ).get("PermissionSet", {})
     except identity_center_client.exceptions.ResourceNotFoundException:
         return {}
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ResourceNotFound":
+            return {}
+        else:
+            raise
 
 
 async def generate_permission_set_map(aws_accounts: list[AWSAccount], templates: list):

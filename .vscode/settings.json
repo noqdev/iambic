@@ -1,5 +1,8 @@
 {
-    "python.testing.pytestArgs": [],
+    "python.testing.pytestArgs": [
+        "-c",
+        "pytest.ini",
+    ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "python.formatting.provider": "black",
