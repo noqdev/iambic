@@ -140,8 +140,6 @@ class AzureADOrganization(BaseModel):
             exclude = required_exclude
         elif isinstance(exclude, set):
             exclude.update(required_exclude)
-        # elif isinstance(exclude, dict):
-        #     exclude.update({i: ... for i in required_exclude})
 
         return super().dict(
             include=include,
