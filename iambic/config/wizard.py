@@ -5,12 +5,12 @@ import contextlib
 import functools
 import json
 import os
-from pathlib import Path
 import re
 import select
 import sys
 import uuid
 from enum import Enum
+from pathlib import Path
 from textwrap import dedent
 from typing import Optional, Union
 
@@ -49,7 +49,6 @@ from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
 from iambic.plugins.v0_1_0.aws.handlers import apply as aws_apply
 from iambic.plugins.v0_1_0.aws.handlers import import_aws_resources
 from iambic.plugins.v0_1_0.aws.handlers import load as aws_load
-from iambic.plugins.v0_1_0.aws.iam.policy.models import PolicyDocument, PolicyStatement
 from iambic.plugins.v0_1_0.aws.iam.role.models import (
     AWS_IAM_ROLE_TEMPLATE_TYPE,
     AwsIamRoleTemplate,
@@ -184,6 +183,16 @@ def set_aws_role_arn(account_id: str):
                 expected_account_id=account_id,
                 provided_role_arn=role_arn,
             )
+
+
+def set_aws_is_read_only() -> bool:
+    return not bool(
+        questionary.confirm(
+            "Grant IambicSpokeRole write access to IAM and IdentityCenter?\n"
+            "If no, this will limit IAMbic capability to only import.",
+            default=True,
+        ).unsafe_ask()
+    )
 
 
 def set_required_text_value(human_readable_name: str, default_val: str = None):
@@ -327,14 +336,6 @@ def confirm_command_exe(
 class ConfigurationWizard:
     def __init__(self, repo_dir: str):
         # TODO: Handle the case where the config file exists but is not valid
-        self.default_region = "us-east-1"
-        try:
-            self.boto3_session = boto3.Session(region_name=self.default_region)
-        except Exception as exc:
-            log.error(f"Unable to access your AWS account: {exc}")
-            sys.exit(1)
-
-        self.autodetected_org_settings = {}
         self.existing_role_template_map = {}
         self.aws_account_map = {}
         self.repo_dir = repo_dir
@@ -343,6 +344,7 @@ class ConfigurationWizard:
         self._assume_as_arn = None
         self.caller_identity = {}
         self.profile_name = ""
+        self._default_region = None
 
         asyncio.run(self.set_config_details())
 
@@ -357,7 +359,7 @@ class ConfigurationWizard:
                     f"create CloudFormation stacks, stack sets, and stack set instances.\n"
                     f"If you are using an AWS Organization, be sure that trusted access is enabled.\n"
                     f"You can check this using the AWS Console:\n  "
-                    f"https://{self.default_region}.console.aws.amazon.com/organizations/v2/home/services/CloudFormation%20StackSets\n"
+                    f"https://{self.aws_default_region}.console.aws.amazon.com/organizations/v2/home/services/CloudFormation%20StackSets\n"
                     f"Proceed?"
                 ).unsafe_ask()
             except KeyboardInterrupt:
@@ -390,6 +392,34 @@ class ConfigurationWizard:
         return self.config.aws and (
             self.config.aws.accounts or self.config.aws.organizations
         )
+
+    @property
+    def aws_default_region(self) -> str:
+        default_val = RegionName.us_east_1.value
+
+        if self._default_region:
+            return self._default_region
+        elif self.has_aws_account_or_organizations:
+            if self.config.aws.organizations:
+                self._default_region = self.config.aws.organizations[0].region_name
+            else:
+                hub_account = [
+                    account
+                    for account in self.config.aws.accounts
+                    if account.hub_role_arn
+                ]
+                if hub_account:
+                    self._default_region = hub_account[0].region_name
+                else:
+                    self._default_region = set_aws_region(
+                        "What region should IAMbic use?", default_val
+                    )
+        else:
+            self._default_region = set_aws_region(
+                "What region should IAMbic use?", default_val
+            )
+
+        return self._default_region
 
     @property
     def secrets_message(self) -> tuple[str, bool]:
@@ -450,11 +480,6 @@ class ConfigurationWizard:
                 base_config, self.config_path, base_config.dict()
             )
 
-        with contextlib.suppress(ClientError, NoCredentialsError, FileNotFoundError):
-            self.autodetected_org_settings = self.boto3_session.client(
-                "organizations"
-            ).describe_organization()["Organization"]
-
     def resolve_aws_profile_defaults_from_env(self) -> str:
         if "AWS_ACCESS_KEY_ID" in os.environ:
             # Environment variables has 1st priority
@@ -481,7 +506,8 @@ class ConfigurationWizard:
         self, question_text: str = None, allow_none: bool = False
     ) -> Union[str, None]:
         questionary_params = {}
-        available_profiles = self.boto3_session.available_profiles
+        boto3_session = boto3.Session(region_name=self.aws_default_region)
+        available_profiles = boto3_session.available_profiles
         if allow_none:
             available_profiles.insert(0, "None")
 
@@ -531,10 +557,10 @@ class ConfigurationWizard:
             try:
                 profile_name = self.set_aws_profile_name()
                 self.boto3_session = boto3.Session(
-                    profile_name=profile_name, region_name=self.default_region
+                    profile_name=profile_name, region_name=self.aws_default_region
                 )
                 self.caller_identity = self.boto3_session.client(
-                    "sts"
+                    "sts", region_name=self.aws_default_region
                 ).get_caller_identity()
                 selected_hub_account_id = self.caller_identity.get("Arn").split(":")[4]
                 if selected_hub_account_id != self.hub_account_id:
@@ -582,12 +608,15 @@ class ConfigurationWizard:
                 ClientError, NoCredentialsError, FileNotFoundError
             ):
                 self.autodetected_org_settings = self.boto3_session.client(
-                    "organizations"
+                    "organizations", region_name=self.aws_default_region
                 ).describe_organization()["Organization"]
             break
 
-    def get_boto3_session_for_account(self, account_id: str):
+    def get_boto3_session_for_account(self, account_id: str, region_name: str = None):
         # This need to follow standard credentials provider chain
+        if not region_name:
+            region_name = self.aws_default_region
+
         if account_id == self.hub_account_id:
             if not self.profile_name:
                 if os.getenv("AWS_ACCESS_KEY_ID"):
@@ -611,9 +640,7 @@ class ConfigurationWizard:
                 log.info("Unable to add the AWS Account without a session.")
                 return None, None
             return (
-                boto3.Session(
-                    profile_name=profile_name, region_name=self.default_region
-                ),
+                boto3.Session(profile_name=profile_name, region_name=region_name),
                 profile_name,
             )
 
@@ -776,6 +803,7 @@ class ConfigurationWizard:
             account_name = set_required_text_value(
                 "What is the name of the AWS Account?"
             )
+            default_region = self.aws_default_region
             if not questionary.confirm(
                 "Create required Hub and Spoke roles via CloudFormation?\n"
                 "The templates that will be used can be found here:\n"
@@ -786,13 +814,7 @@ class ConfigurationWizard:
                 )
                 return
 
-            self.config.aws.spoke_role_is_read_only = bool(
-                questionary.confirm(
-                    "Do you want to restrict IambicSpokeRole to read-only IAM and IdentityCenter service?\n"
-                    "This will limit IAMbic capability to import",
-                    default=False,
-                ).unsafe_ask()
-            )
+            self.config.aws.spoke_role_is_read_only = set_aws_is_read_only()
 
         else:
             if requires_sync:
@@ -820,6 +842,10 @@ class ConfigurationWizard:
                 log.info("AWS Account already exists in the configuration")
                 return
 
+            default_region = set_aws_region(
+                "What region should IAMbic use?", self.aws_default_region
+            )
+
             if not questionary.confirm(
                 "Create required Spoke role via CloudFormation?\n"
                 "The template that will be used can be found here:\n"
@@ -831,7 +857,9 @@ class ConfigurationWizard:
                 return
 
         read_only = self.config.aws.spoke_role_is_read_only
-        session, profile_name = self.get_boto3_session_for_account(account_id)
+        session, profile_name = self.get_boto3_session_for_account(
+            account_id, region_name=default_region
+        )
         if not session:
             return
 
@@ -840,7 +868,7 @@ class ConfigurationWizard:
         elif not is_hub_account:
             profile_name = None
 
-        cf_client = session.client("cloudformation")
+        cf_client = session.client("cloudformation", region_name=default_region)
         role_arn = set_aws_role_arn(account_id)
 
         if is_hub_account:
@@ -877,6 +905,7 @@ class ConfigurationWizard:
             spoke_role_arn=get_spoke_role_arn(account_id, read_only=read_only),
             iambic_managed=IambicManaged.READ_AND_WRITE,
             aws_profile=profile_name,
+            default_region=default_region,
         )
         if is_hub_account:
             account.hub_role_arn = get_hub_role_arn(account_id)
@@ -931,7 +960,7 @@ class ConfigurationWizard:
         else:
             account = self.config.aws.accounts[0]
 
-        choices = ["Go back", "Update IAMbic control"]
+        choices = ["Go back", "Update IAMbic control", "Update Region"]
         if not account.org_id:
             choices.append("Update name")
 
@@ -942,6 +971,10 @@ class ConfigurationWizard:
             ).unsafe_ask()
             if action == "Go back":
                 return
+            elif action == "Update name":
+                account.default_region = set_aws_region(
+                    "What region should IAMbic use?", account.default_region
+                )
             elif action == "Update name":
                 account.account_name = questionary.text(
                     "What is the name of the AWS Account?",
@@ -957,7 +990,7 @@ class ConfigurationWizard:
             self.config.write()
 
     def setup_aws_configuration(self):
-        if self.config.aws:
+        if self.has_aws_account_or_organizations:
             self.hub_account_id = self.config.aws.hub_role_arn.split(":")[4]
             self.spoke_role_is_read_only = self.config.aws.spoke_role_is_read_only
         else:
@@ -965,7 +998,7 @@ class ConfigurationWizard:
 
         try:
             default_caller_identity = self.boto3_session.client(
-                "sts"
+                "sts", region_name=self.aws_default_region
             ).get_caller_identity()
             caller_arn = get_identity_arn(default_caller_identity)
             default_hub_account_id = caller_arn.split(":")[4]
@@ -1050,6 +1083,7 @@ class ConfigurationWizard:
             "Go back",
             "Update IdentityCenter",
             "Update IAMbic control",
+            "Update Region",
         ]
         while True:
             action = questionary.select(
@@ -1058,6 +1092,10 @@ class ConfigurationWizard:
             ).unsafe_ask()
             if action == "Go back":
                 return
+            elif action == "Update Region":
+                org_to_edit.default_region = set_aws_region(
+                    "What region should IAMbic use?", org_to_edit.default_region
+                )
             elif action == "Update IdentityCenter":
                 org_to_edit.identity_center = set_identity_center()
                 asyncio.run(self.sync_config_aws_org(False))
@@ -1075,8 +1113,7 @@ class ConfigurationWizard:
             )
             return
 
-        org_region = "us-east-1"  # Orgs are only available in us-east-1
-        org_console_url = f"https://{org_region}.console.aws.amazon.com/organizations/v2/home/accounts"
+        org_console_url = f"https://{self.aws_default_region}.console.aws.amazon.com/organizations/v2/home/accounts"
         org_id = questionary.text(
             f"What is the AWS Organization ID? It can be found here {org_console_url}",
             default=self.autodetected_org_settings.get("Id", ""),
@@ -1095,22 +1132,20 @@ class ConfigurationWizard:
             log.info("Unable to add the AWS Org without creating the required roles.")
             return
 
-        read_only = bool(
-            questionary.confirm(
-                "Do you want to restrict IambicSpokeRole to read-only IAM and IdentityCenter service?\n"
-                "This will limit IAMbic capability to import",
-                default=False,
-            ).unsafe_ask()
-        )
+        read_only = set_aws_is_read_only()
         self.config.aws.spoke_role_is_read_only = read_only
 
         created_successfully = asyncio.run(
             create_iambic_role_stacks(
-                cf_client=session.client("cloudformation"),
+                cf_client=session.client(
+                    "cloudformation", region_name=self.aws_default_region
+                ),
                 hub_account_id=account_id,
                 assume_as_arn=self.assume_as_arn,
                 role_arn=self.cf_role_arn,
-                org_client=session.client("organizations"),
+                org_client=session.client(
+                    "organizations", region_name=self.aws_default_region
+                ),
                 read_only=read_only,
             )
         )
@@ -1125,6 +1160,7 @@ class ConfigurationWizard:
             hub_role_arn=get_hub_role_arn(account_id),
             aws_profile=profile_name,
             spoke_role_is_read_only=read_only,
+            default_region=self.aws_default_region,
         )
         aws_org.default_rule.iambic_managed = IambicManaged.READ_AND_WRITE
 
@@ -1247,7 +1283,7 @@ class ConfigurationWizard:
         if response == AWS_SECRETS:
             region = set_aws_region(
                 "What region should the secret be created in?",
-                self.default_region,
+                self.aws_default_region,
             )
 
             question_text = "Create the secret"
@@ -1263,7 +1299,7 @@ class ConfigurationWizard:
             else:
                 session = boto3.Session(region_name=region)
 
-            client = session.client(service_name="secretsmanager")
+            client = session.client(service_name="secretsmanager", region_name=region)
             response = client.create_secret(
                 Name=f"iambic-config-secrets-{str(uuid.uuid4())}",
                 Description="IAMbic managed secret used to store protected config values",
@@ -1314,7 +1350,7 @@ class ConfigurationWizard:
             else:
                 session = boto3.Session(region_name=region)
 
-            client = session.client(service_name="secretsmanager")
+            client = session.client(service_name="secretsmanager", region_name=region)
             client.put_secret_value(
                 SecretId=secret_arn,
                 SecretString=yaml.dump({"secrets": self.config.secrets}),
@@ -1712,14 +1748,17 @@ class ConfigurationWizard:
             "To setup change detection for iambic requires "
             "creating CloudFormation stacks "
             "and a CloudFormation stack set.\n"
-            "This will also update the IAMbic Hub Role to add the required policy to consume the changes.\n"
             "Proceed?"
         ).unsafe_ask():
             return
 
         session, _ = self.get_boto3_session_for_account(aws_org.org_account_id)
-        cf_client = session.client("cloudformation", region_name="us-east-1")
-        org_client = session.client("organizations", region_name="us-east-1")
+        cf_client = session.client(
+            "cloudformation", region_name=self.aws_default_region
+        )
+        org_client = session.client(
+            "organizations", region_name=self.aws_default_region
+        )
 
         successfully_created = asyncio.run(
             create_iambic_eventbridge_stacks(
@@ -1735,7 +1774,7 @@ class ConfigurationWizard:
 
         role_name = IAMBIC_SPOKE_ROLE_NAME
         hub_account_id = self.hub_account_id
-        sqs_arn = f"arn:aws:sqs:us-east-1:{hub_account_id}:IAMbicChangeDetectionQueue"
+        sqs_arn = f"arn:aws:sqs:{self.aws_default_region}:{hub_account_id}:IAMbicChangeDetectionQueue"
 
         if not self.existing_role_template_map:
             log.info("Loading AWS role templates...")
@@ -1781,7 +1820,7 @@ class ConfigurationWizard:
                     choices.append("Setup AWS change detection")
 
             choices.append("Done")
-            
+
             try:
                 action = questionary.select(
                     "What would you like to configure?",
@@ -1820,9 +1859,9 @@ class ConfigurationWizard:
                         log.info(
                             f"IAMbic change detection relies on CloudTrail being enabled all IAMbic aware accounts. "
                             f"You can check that you have CloudTrail setup by going to "
-                            f"https://{self.default_region}.console.aws.amazon.com/cloudtrail/home\n"
+                            f"https://{self.aws_default_region}.console.aws.amazon.com/cloudtrail/home\n"
                             f"If you do not have CloudTrail setup, you can set it up by going to "
-                            f"https://{self.default_region}.console.aws.amazon.com/cloudtrail/home?region={self.default_region}#/create"
+                            f"https://{self.aws_default_region}.console.aws.amazon.com/cloudtrail/home?region={self.aws_default_region}#/create"
                         )
                         self.configuration_wizard_change_detection_setup(
                             self.config.aws.organizations[0]
