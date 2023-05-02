@@ -742,9 +742,7 @@ class AwsIdentityCenterPermissionSetTemplate(
 
         return account_change_details
 
-    async def apply(
-        self, config: AWSConfig  # noqa: C901
-    ) -> TemplateChangeDetails:
+    async def apply(self, config: AWSConfig) -> TemplateChangeDetails:  # noqa: C901
         tasks = []
         template_changes = TemplateChangeDetails(
             resource_id=self.resource_id,

@@ -203,7 +203,7 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
             except Exception as err:
                 log.warning(err)
 
-        sts_client = session.client("sts")
+        sts_client = session.client("sts", region_name=region_name)
         if self.hub_role_arn and self.hub_role_arn != get_current_role_arn(sts_client):
             boto3_session = await create_assume_role_session(
                 session,
@@ -233,7 +233,10 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
             return client
 
         client = (await self.get_boto3_session(region_name)).client(
-            service, config=botocore.client.Config(max_pool_connections=50)
+            service,
+            config=botocore.client.Config(
+                max_pool_connections=50, region_name=region_name
+            ),
         )
         self.boto3_session_map.setdefault("client", {}).setdefault(service, {})[
             region_name
