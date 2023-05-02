@@ -1,4 +1,18 @@
-## 0.4.1 (Target Date May 1st, 2023)
+## 0.5.1 (Target Date May 15th, 2023)
+
+BREAKING CHANGES:
+* `AwsIdentityCenterPermissionSetTemplate` schema has changed. In particular, `permission_boundary.policy_arn` has become `permission_boundary.managed_policy_arn`. This is due PermissionSet API distinguishes attached
+permission_boundary either owned by AWS or owned by Customer. To align with AWS API response, we have decided
+to follow the AWS naming convention. The old name `permission_boundary.policy_arn` never quite work correctly
+in `AwsIdentityCenterPermissionSetTemplate`. We decide to go with the breaking change route.
+
+BUG FIXES:
+* Fixed import of `AwsIdentityCenterPermissionSetTemplate` in which permission boundary is set to `managed_policy_arn`
+
+THANKS:
+* [perpil](https://github.com/perpil) for reporting [#372](https://github.com/noqdev/iambic/issues/372).
+
+## 0.4.1 (May 1st, 2023)
 
 PERMISSION CHANGES:
 * IambicHubRole added SQS read/write access to queue named `IAMbicChangeDetectionQueue` to support IAM resource detection. [#355](https://github.com/noqdev/iambic/pull/355)

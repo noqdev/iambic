@@ -104,7 +104,7 @@ class ManagedPolicyArn(BaseModel, ExpiryModel):
 
 class PermissionBoundary(BaseModel, ExpiryModel):
     customer_managed_policy_reference: Optional[CustomerManagedPolicyReference]
-    policy_arn: Optional[str]
+    managed_policy_arn: Optional[str]
 
     @property
     def resource_type(self):
@@ -112,7 +112,7 @@ class PermissionBoundary(BaseModel, ExpiryModel):
 
     @property
     def resource_id(self):
-        return self.customer_managed_policy_reference.name or self.policy_arn
+        return self.customer_managed_policy_reference.name or self.managed_policy_arn
 
 
 class SessionDuration(BaseModel):
@@ -742,9 +742,7 @@ class AwsIdentityCenterPermissionSetTemplate(
 
         return account_change_details
 
-    async def apply(
-        self, config: AWSConfig  # noqa: C901
-    ) -> TemplateChangeDetails:
+    async def apply(self, config: AWSConfig) -> TemplateChangeDetails:  # noqa: C901
         tasks = []
         template_changes = TemplateChangeDetails(
             resource_id=self.resource_id,
