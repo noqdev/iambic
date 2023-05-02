@@ -13,7 +13,7 @@ properties:
     statement:
       - action:
         - s3:GetObject
-          s3:PutObject
+        - s3:PutObject
         effect: Deny
         resource: arn:aws:s3:::mybucket
         condition:
