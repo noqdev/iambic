@@ -23,9 +23,7 @@ if not os.environ.get("GITHUB_ACTIONS", None):
     # Github action runner will use temporary creds in the environment
     # If you are public developer, this probably won't work for you since
     # functional test requires particular cloud resources for testing.
-    os.environ[
-        "AWS_PROFILE"
-    ] = "org2_organizations_management_account/org2_organizations_management_account_admin"
+    os.environ["AWS_PROFILE"] = "iambic_test_org_account/IambicHubRole"
 
 os.environ["TESTING"] = "true"
 FUNCTIONAL_TEST_TEMPLATE_DIR = os.getenv("FUNCTIONAL_TEST_TEMPLATE_DIR", None)
