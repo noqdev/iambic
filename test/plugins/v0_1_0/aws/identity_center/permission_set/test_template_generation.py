@@ -1,44 +1,38 @@
 from __future__ import annotations
-from contextlib import asynccontextmanager
+
 import json
 import os
 import shutil
-
 import tempfile
-from mock import AsyncMock, MagicMock, patch
-
-import boto3
-from moto import mock_ssoadmin
-import pytest
-import iambic
-
-from iambic.core.context import ctx
-from iambic.core.iambic_enum import Command
-from iambic.core.models import (
-    ExecutionMessage,
-)
-from iambic.plugins.v0_1_0.aws.event_bridge.models import PermissionSetMessageDetails
-from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
-from iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation import (
-    collect_aws_permission_sets,
-    generate_aws_permission_set_templates,
-    get_template_dir,
-    get_templated_permission_set_file_path,
-    create_templated_permission_set,
-)
-from iambic.plugins.v0_1_0.aws.models import (
-    AWSAccount,
-    IdentityCenterDetails,
+from contextlib import asynccontextmanager
+from test.plugins.v0_1_0.aws.iam.policy.test_utils import (
+    EXAMPLE_TAG_KEY,
+    EXAMPLE_TAG_VALUE,
 )
 from test.plugins.v0_1_0.aws.identity_center.permission_set.test_utils import (
     EXAMPLE_IDENTITY_CENTER_INSTANCE_ARN,
     EXAMPLE_PERMISSION_SET_NAME,
 )
 
-from test.plugins.v0_1_0.aws.iam.policy.test_utils import (
-    EXAMPLE_TAG_KEY,
-    EXAMPLE_TAG_VALUE,
+import boto3
+import pytest
+from mock import AsyncMock, MagicMock, patch
+from moto import mock_ssoadmin
+
+import iambic
+from iambic.core.context import ctx
+from iambic.core.iambic_enum import Command
+from iambic.core.models import ExecutionMessage
+from iambic.plugins.v0_1_0.aws.event_bridge.models import PermissionSetMessageDetails
+from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+from iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation import (
+    collect_aws_permission_sets,
+    create_templated_permission_set,
+    generate_aws_permission_set_templates,
+    get_template_dir,
+    get_templated_permission_set_file_path,
 )
+from iambic.plugins.v0_1_0.aws.models import AWSAccount, IdentityCenterDetails
 
 TEST_TEMPLATE_DIR = "resources/aws/iam/group"
 TEST_TEMPLATE_PATH = "resources/aws/iam/group/example_groupname.yaml"
@@ -129,6 +123,7 @@ def permission_set_refs():
         },
     ]
 
+
 @pytest.fixture
 def permission_set_content():
     return {
@@ -137,6 +132,7 @@ def permission_set_content():
         "session_duration": "PT1H",
         "tags": [{"Key": "Environment", "Value": "Test"}],
     }
+
 
 @pytest.fixture
 def aws_account_map(permission_set_refs):
@@ -170,15 +166,24 @@ def aws_account_map(permission_set_refs):
 @pytest.fixture
 def exe_message():
     class TestExecutionMessage(ExecutionMessage):
-        async def get_sub_exe_files(self, *path_dirs, file_name_and_extension: str = None, flatten_results: bool = False) -> List[dict]:
+        async def get_sub_exe_files(
+            self,
+            *path_dirs,
+            file_name_and_extension: str = None,
+            flatten_results: bool = False,
+        ) -> List[dict]:
             return MagicMock()
 
-    return TestExecutionMessage(execution_id="test_exec_id", command=Command.IMPORT)  # Replace with your custom TestExecutionMessage object
+    return TestExecutionMessage(
+        execution_id="test_exec_id", command=Command.IMPORT
+    )  # Replace with your custom TestExecutionMessage object
+
 
 @pytest.fixture
 def config():
     class TestAWSConfig(AWSConfig):
         pass
+
     class TestAWSAccount(AWSAccount):
         async def set_identity_center_details(self):
             # Call the original implementation if needed
@@ -186,12 +191,12 @@ def config():
 
             # Call your custom implementation
             return await self.custom_set_identity_center_details()
-        
+
         async def get_boto3_client(*args, **kwargs):
             return {
                 "identity-center": "identity-center-client",
             }
-        
+
         async def custom_set_identity_center_details(self):
             return AsyncMock()
 
@@ -224,16 +229,18 @@ def config():
                         "PermissionSetId": "ps-1234567890abcdef0",
                     },
                 },
-            }
+            },
         ),
     )
     config.accounts = [test_aws_account]
 
     return config
 
+
 @pytest.fixture
 def identity_center_template_map():
     return {}  # Empty template map for this test
+
 
 @pytest.fixture
 def detect_messages():
@@ -295,26 +302,38 @@ async def test_create_templated_permission_set(
         content = permission_set_content  # Replace with your test data
         yield MockAioFilesOpen(content)
 
-    with patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.aiofiles.open", new=mock_aiofiles_open):
+    with patch(
+        "iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.aiofiles.open",
+        new=mock_aiofiles_open,
+    ):
         # Mock other methods used in the function
         calculate_import_preference = MagicMock(return_value=True)
         create_or_update_template = MagicMock()
         group_int_or_str_attribute = AsyncMock()
         group_dict_attribute = AsyncMock()
-        get_templated_permission_set_file_path = MagicMock(return_value="test_file_path")
+        get_templated_permission_set_file_path = MagicMock(
+            return_value="test_file_path"
+        )
 
-        with patch("iambic.plugins.v0_1_0.aws.utils.calculate_import_preference", calculate_import_preference), \
-             patch("iambic.core.template_generation.create_or_update_template", create_or_update_template), \
-             patch("iambic.core.template_generation.group_int_or_str_attribute", group_int_or_str_attribute), \
-             patch("iambic.core.template_generation.group_dict_attribute", group_dict_attribute):
-
+        with patch(
+            "iambic.plugins.v0_1_0.aws.utils.calculate_import_preference",
+            calculate_import_preference,
+        ), patch(
+            "iambic.core.template_generation.create_or_update_template",
+            create_or_update_template,
+        ), patch(
+            "iambic.core.template_generation.group_int_or_str_attribute",
+            group_int_or_str_attribute,
+        ), patch(
+            "iambic.core.template_generation.group_dict_attribute", group_dict_attribute
+        ):
             # Call create_templated_permission_set
             result = await create_templated_permission_set(
                 aws_account_map,
                 "TestPermissionSet",
                 permission_set_refs,
                 "permission_set_dir",
-                {}
+                {},
             )
 
             assert result is not None
@@ -340,10 +359,15 @@ async def test_collect_aws_permission_sets(
     gather_permission_set_names = AsyncMock(return_value=["TestPermissionSet1"])
     generate_permission_set_resource_file = AsyncMock(return_value={"test": "success"})
 
-    with patch("iambic.plugins.v0_1_0.aws.utils.get_aws_account_map", get_aws_account_map), \
-         patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.gather_permission_set_names", gather_permission_set_names), \
-         patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.generate_permission_set_resource_file", generate_permission_set_resource_file):
-
+    with patch(
+        "iambic.plugins.v0_1_0.aws.utils.get_aws_account_map", get_aws_account_map
+    ), patch(
+        "iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.gather_permission_set_names",
+        gather_permission_set_names,
+    ), patch(
+        "iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.generate_permission_set_resource_file",
+        generate_permission_set_resource_file,
+    ):
         # Call collect_aws_permission_sets
         await collect_aws_permission_sets(
             exe_message,
@@ -354,7 +378,9 @@ async def test_collect_aws_permission_sets(
 
         RESOURCE_DIR = ["identity_center", "permission_set"]
 
-        file_path = exe_message.get_file_path(*RESOURCE_DIR, file_name_and_extension="output.json")
+        file_path = exe_message.get_file_path(
+            *RESOURCE_DIR, file_name_and_extension="output.json"
+        )
         assert os.path.exists(file_path)
 
 
@@ -374,12 +400,22 @@ async def test_generate_aws_permission_set_templates(
     create_templated_permission_set = AsyncMock()
     delete_orphaned_templates = MagicMock()
 
-    with patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.get_template_dir", get_template_dir), \
-         patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.get_aws_account_map", get_aws_account_map), \
-         patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.base_group_str_attribute", base_group_str_attribute), \
-         patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.create_templated_permission_set", create_templated_permission_set), \
-         patch("iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.delete_orphaned_templates", delete_orphaned_templates):
-
+    with patch(
+        "iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.get_template_dir",
+        get_template_dir,
+    ), patch(
+        "iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.get_aws_account_map",
+        get_aws_account_map,
+    ), patch(
+        "iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.base_group_str_attribute",
+        base_group_str_attribute,
+    ), patch(
+        "iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.create_templated_permission_set",
+        create_templated_permission_set,
+    ), patch(
+        "iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.delete_orphaned_templates",
+        delete_orphaned_templates,
+    ):
         # Call generate_aws_permission_set_templates
         await generate_aws_permission_set_templates(
             exe_message,
