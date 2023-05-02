@@ -94,11 +94,13 @@ properties:
 
 
 async def get_modifiable_role(iam_client):
+    non_modifiable_roles = ["awsreserved", "controltower", "stacksets"]
     account_roles = await list_roles(iam_client)
     account_roles = [
         role
         for role in account_roles
-        if "service-role" not in role["Path"] and "AWSReserved" not in role["RoleName"]
+        if "service-role" not in role["Path"]
+        and not any(nmr in role["RoleName"].lower() for nmr in non_modifiable_roles)
     ]
     return random.choice(account_roles)
 

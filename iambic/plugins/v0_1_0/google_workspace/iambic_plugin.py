@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
+import typing
+from typing import TYPE_CHECKING, Any, Optional
 
 import googleapiclient.discovery
 from google.oauth2 import service_account
@@ -19,6 +20,10 @@ from iambic.plugins.v0_1_0.google_workspace.handlers import (
     import_google_resources,
     load,
 )
+
+if TYPE_CHECKING:  # pragma: no cover
+    MappingIntStrAny = typing.Mapping[int | str, Any]
+    AbstractSetIntStr = typing.AbstractSet[int | str]
 
 
 class GoogleSubject(BaseModel):

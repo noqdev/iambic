@@ -4,14 +4,16 @@ import asyncio
 import datetime
 from unittest import IsolatedAsyncioTestCase
 
+import pytest
+
 from functional_tests.aws.permission_set.utils import generate_permission_set_template
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
 from iambic.core import noq_json as json
 from iambic.core.context import ctx
 from iambic.core.models import ProposedChangeType
 from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
+    PermissionBoundary,
     PermissionSetAccess,
 )
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
@@ -152,3 +154,80 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
             IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.org_account_map,
         )
         assert len(cloud_access_rules) == 0
+
+    async def test_update_permission_boundary(self):
+        assert self.template.properties.permissions_boundary is None
+        self.template.properties.permissions_boundary = PermissionBoundary(
+            managed_policy_arn="arn:aws:iam::aws:policy/ReadOnlyAccess"
+        )
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        assert (
+            changes.proposed_changes[0].proposed_changes[0].change_type
+            == ProposedChangeType.ATTACH
+        )
+        assert changes.exceptions_seen in [None, []]
+
+        identity_center_client = await IAMBIC_TEST_DETAILS.identity_center_account.get_boto3_client(
+            "sso-admin",
+            region_name=IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.region_name,
+        )
+        sso_admin_instance_arn = (
+            IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.instance_arn
+        )
+        permission_set_arn = IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.permission_set_map[
+            self.template.identifier
+        ][
+            "PermissionSetArn"
+        ]
+        response = identity_center_client.get_permissions_boundary_for_permission_set(
+            InstanceArn=sso_admin_instance_arn,
+            PermissionSetArn=permission_set_arn,
+        )
+
+        self.assertEqual(
+            self.template.properties.permissions_boundary.managed_policy_arn,
+            response["PermissionsBoundary"]["ManagedPolicyArn"],
+        )
+
+        # base_deny is already setup in the functional test org
+        self.template.properties.permissions_boundary = PermissionBoundary(
+            customer_managed_policy_reference={"name": "base_deny", "path": "/"}
+        )
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        assert (
+            changes.proposed_changes[0].proposed_changes[0].change_type
+            == ProposedChangeType.UPDATE
+        )
+        assert changes.exceptions_seen in [None, []]
+
+        response = identity_center_client.get_permissions_boundary_for_permission_set(
+            InstanceArn=sso_admin_instance_arn,
+            PermissionSetArn=permission_set_arn,
+        )
+
+        self.assertEqual(
+            self.template.properties.permissions_boundary.customer_managed_policy_reference.name,
+            response["PermissionsBoundary"]["CustomerManagedPolicyReference"]["Name"],
+        )
+
+        self.assertEqual(
+            self.template.properties.permissions_boundary.customer_managed_policy_reference.path,
+            response["PermissionsBoundary"]["CustomerManagedPolicyReference"]["Path"],
+        )
+
+        self.template.properties.permissions_boundary = None
+        changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        assert (
+            changes.proposed_changes[0].proposed_changes[0].change_type
+            == ProposedChangeType.DETACH
+        )
+        assert changes.exceptions_seen in [None, []]
+
+        with pytest.raises(
+            Exception, match="PermissionsBoundary not present in permission set"
+        ):
+            # it's a funky AWS API design, it rather send non-200 response
+            _ = identity_center_client.get_permissions_boundary_for_permission_set(
+                InstanceArn=sso_admin_instance_arn,
+                PermissionSetArn=permission_set_arn,
+            )

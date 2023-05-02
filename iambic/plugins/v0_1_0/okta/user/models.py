@@ -240,14 +240,18 @@ class OktaUserTemplate(BaseTemplate, ExpiryModel):
             )
             return change_details
 
-        tasks.extend(
-            [
+        if current_user and not self.deleted:
+            tasks.append(
                 update_user_status(
                     current_user,
                     self.properties.status.value,
                     okta_organization,
                     log_params,
                 ),
+            )
+
+        tasks.extend(
+            [
                 update_user_profile(
                     self,
                     current_user,

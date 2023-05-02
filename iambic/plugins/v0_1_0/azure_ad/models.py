@@ -14,10 +14,10 @@ from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, TemplateChangeDetails
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from iambic.plugins.v0_1_0.azure_ad.iambic_plugin import AzureADConfig
 
-    MappingIntStrAny = typing.Mapping[int | str, any]
+    MappingIntStrAny = typing.Mapping[int | str, Any]
     AbstractSetIntStr = typing.AbstractSet[int | str]
 
 
@@ -39,7 +39,7 @@ class AzureADOrganization(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    async def set_azure_access_token(self):
+    async def set_azure_access_token(self):  # pragma: no cover
         if not self.access_token:
             # initialize the client here
             self.client = msal.ConfidentialClientApplication(
@@ -58,7 +58,7 @@ class AzureADOrganization(BaseModel):
 
     async def _make_request(
         self, request_type: str, endpoint: str, **kwargs
-    ) -> Union[dict, list, None]:
+    ) -> Union[dict, list, None]:  # pragma: no cover
         await self.set_azure_access_token()
 
         response = []
