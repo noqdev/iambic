@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import random
 import uuid
 
@@ -87,7 +86,6 @@ properties:
   path: /iambic_test/
   role_name: {identifier}
 """
-    os.makedirs(role_dir, exist_ok=True)
     with open(file_path, "w") as f:
         f.write(role_template)
     role_template = AwsIamRoleTemplate.load(file_path)

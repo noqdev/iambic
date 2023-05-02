@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import random
 import uuid
 
@@ -105,7 +104,6 @@ async def generate_permission_set_template(
     permission_set_template = AwsIdentityCenterPermissionSetTemplate(
         identifier=identifier, properties=properties, file_path=file_path
     )
-    os.makedirs(permission_set_dir, exist_ok=True)
     permission_set_template.write()
     return permission_set_template
 
