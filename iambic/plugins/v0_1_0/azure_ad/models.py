@@ -15,9 +15,7 @@ from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, TemplateChangeDetails
 
 if TYPE_CHECKING:  # pragma: no cover
-    from iambic.plugins.v0_1_0.azure_ad.iambic_plugin import (
-        AzureADConfig,
-    )
+    from iambic.plugins.v0_1_0.azure_ad.iambic_plugin import AzureADConfig
 
     MappingIntStrAny = typing.Mapping[int | str, Any]
     AbstractSetIntStr = typing.AbstractSet[int | str]

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import os
 import random
 import uuid
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import get_existing_template_map
@@ -42,6 +42,7 @@ properties:
   managed_policies:
     - policy_arn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
 """
+    os.makedirs(group_dir, exist_ok=True)
     with open(file_path, "w") as f:
         f.write(group_template)
     group_template = AwsIamGroupTemplate.load(file_path)

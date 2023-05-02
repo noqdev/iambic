@@ -1,5 +1,5 @@
-from pydantic import SecretStr
 import pytest
+from pydantic import SecretStr
 
 from iambic.core.iambic_enum import IambicManaged
 from iambic.plugins.v0_1_0.azure_ad.models import AzureADOrganization

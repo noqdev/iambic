@@ -5,6 +5,7 @@ import functools
 from typing import TYPE_CHECKING, Any, List, Optional
 
 import okta.models as models
+
 from iambic.core.context import ctx
 from iambic.core.exceptions import RateLimitException
 from iambic.core.logger import log

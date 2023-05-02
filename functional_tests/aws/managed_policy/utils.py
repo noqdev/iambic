@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import os
 import random
 import uuid
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
@@ -56,6 +58,7 @@ async def generate_managed_policy_template_from_base(
         ],
     )
 
+    os.makedirs(managed_policy_dir, exist_ok=True)
     managed_policy_template.write()
     return managed_policy_template
 

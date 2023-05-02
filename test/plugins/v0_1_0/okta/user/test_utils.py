@@ -7,10 +7,11 @@ from test.plugins.v0_1_0.okta.test_utils import (  # noqa: F401 # intentional fo
 import okta.models
 import pytest
 
-from iambic.core.context import ctx
 import iambic.plugins.v0_1_0.okta.models
+from iambic.core.context import ctx
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
+from iambic.plugins.v0_1_0.okta.models import UserStatus
 from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate, UserProperties
 from iambic.plugins.v0_1_0.okta.user.utils import (
     change_user_status,
@@ -20,7 +21,6 @@ from iambic.plugins.v0_1_0.okta.user.utils import (
     update_user_profile,
     update_user_status,
 )
-from iambic.plugins.v0_1_0.okta.models import UserStatus
 
 
 @pytest.mark.asyncio
@@ -224,7 +224,6 @@ class TestUpdateUserStatus:
         mock_okta_organization: OktaOrganization,  # noqa: F811 # intentional for mocks
         mock_ctx,
     ):
-
         username = "example_username"
         idp_name = "example.org"
         user_properties = UserProperties(

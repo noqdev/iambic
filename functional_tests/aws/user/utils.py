@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import os
 import random
 import uuid
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import get_existing_template_map
@@ -42,6 +42,7 @@ properties:
   path: /iambic_test/
   user_name: {identifier}
 """
+    os.makedirs(user_dir, exist_ok=True)
     with open(file_path, "w") as f:
         f.write(user_template)
     user_template = AwsIamUserTemplate.load(file_path)

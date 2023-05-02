@@ -16,11 +16,11 @@ from iambic.config.dynamic_config import (
     load_plugins,
 )
 from iambic.config.templates import TEMPLATES
+from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import Variable
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
-from iambic.core.context import ctx
 
 
 @pytest.fixture(scope="session")

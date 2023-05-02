@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import typing
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional
 
 import googleapiclient.discovery
 from google.oauth2 import service_account

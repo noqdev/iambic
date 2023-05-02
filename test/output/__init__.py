@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from iambic.core.models import TemplateChangeDetails
 from iambic.core.utils import yaml
 
