@@ -189,7 +189,7 @@ def set_aws_is_read_only() -> bool:
     return not bool(
         questionary.confirm(
             "Grant IambicSpokeRole write access to IAM and IdentityCenter?\n"
-            "If no, this will limit IAMbic capability to only import.",
+            "If set to 'no', this will limit IAMbic's capabilities to import-only.",
             default=True,
         ).unsafe_ask()
     )
