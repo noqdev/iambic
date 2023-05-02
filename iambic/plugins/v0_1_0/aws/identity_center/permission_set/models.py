@@ -78,7 +78,10 @@ class AWSIdentityCenterInstance(BaseModel):
 
 
 class CustomerManagedPolicyReference(BaseModel, ExpiryModel):
-    path: str
+    path: Optional[str] = Field(
+        "/",
+        description="The path to the IAM policy that you have configured in each account where you want to deploy your permission set. The default is /. For more information, see Friendly names and paths in the IAM User Guide.",
+    )
     name: str
 
     @property
