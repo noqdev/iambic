@@ -35,8 +35,8 @@ def get_iambic_hub_role_template_body() -> str:
 
 
 def get_iambic_spoke_role_template_body(read_only=False) -> str:
-    postfix = "ReadOnly" if read_only else ""
-    template = f"{TEMPLATE_DIR}/IambicSpokeRole{postfix}.yml"
+    suffix = "ReadOnly" if read_only else ""
+    template = f"{TEMPLATE_DIR}/IambicSpokeRole{suffix}.yml"
     with open(template, "r") as f:
         return f.read()
 
@@ -306,9 +306,9 @@ async def create_iambic_eventbridge_stacks(
     )
     if successfully_created:
         log.info(
-            f"Creating stack instances. "
-            f"You can check the progress here: https://{region}.console.aws.amazon.com/cloudformation/home?region={region}#/stacksets/IAMbicForwardEventRule/stacks\n"
-            f"WARNING: Don't Exit"
+            f"WARNING: Do not exit; creating stack instances.\n"
+            f"You can check the progress here:\n"
+            f"https://{region}.console.aws.amazon.com/cloudformation/home?region={region}#/stacksets/IAMbicForwardEventRule/stacks\n"
         )
         return await create_change_detection_stack_sets(
             cf_client, org_client, account_id
@@ -360,10 +360,9 @@ async def create_spoke_role_stack(
     read_only=False,
 ) -> bool:
     additional_kwargs = {"RoleARN": role_arn} if role_arn else {}
-    spoke_role_postfix = "ReadOnly" if read_only else ""
     return await create_stack(
         cf_client,
-        stack_name=f"IambicSpokeRole{spoke_role_postfix}",
+        stack_name="IambicSpokeRole",
         template_body=get_iambic_spoke_role_template_body(read_only=read_only),
         parameters=[
             {
@@ -372,7 +371,7 @@ async def create_spoke_role_stack(
             },
             {
                 "ParameterKey": "SpokeRoleName",
-                "ParameterValue": f"{IAMBIC_SPOKE_ROLE_NAME}{spoke_role_postfix}",
+                "ParameterValue": IAMBIC_SPOKE_ROLE_NAME,
             },
         ],
         Capabilities=["CAPABILITY_NAMED_IAM"],
@@ -385,10 +384,8 @@ async def create_hub_role_stack(
     hub_account_id: str,
     assume_as_arn: str,
     role_arn: str = None,
-    spoke_role_read_only=False,
 ) -> bool:
     additional_kwargs = {"RoleARN": role_arn} if role_arn else {}
-    spoke_role_postfix = "ReadOnly" if spoke_role_read_only else ""
     stack_created = await create_stack(
         cf_client,
         stack_name="IambicHubRole",
@@ -397,7 +394,7 @@ async def create_hub_role_stack(
             {"ParameterKey": "HubRoleName", "ParameterValue": IAMBIC_HUB_ROLE_NAME},
             {
                 "ParameterKey": "SpokeRoleName",
-                "ParameterValue": f"{IAMBIC_SPOKE_ROLE_NAME}{spoke_role_postfix}",
+                "ParameterValue": IAMBIC_SPOKE_ROLE_NAME,
             },
             {"ParameterKey": "AssumeAsArn", "ParameterValue": assume_as_arn},
         ],
@@ -423,15 +420,13 @@ async def create_iambic_role_stacks(
         hub_account_id,
         assume_as_arn,
         role_arn,
-        spoke_role_read_only=read_only,
     )
-    spoke_role_postfix = "ReadOnly" if read_only else ""
     region = cf_client.meta.region_name
     if hub_role_created and org_client:
         log.info(
-            f"Creating stack instances. "
-            f"You can check the progress here: https://{region}.console.aws.amazon.com/cloudformation/home?region={region}#/stacksets/IambicSpokeRole{spoke_role_postfix}/stacks\n"
-            f"WARNING: Don't Exit"
+            f"WARNING: Do not exit; creating stack instances.\n"
+            f"You can check the progress here:\n"
+            f"https://{region}.console.aws.amazon.com/cloudformation/home?region={region}#/stacksets/IambicSpokeRole/stacks\n"
         )
         return await create_spoke_role_stack_set(
             cf_client, org_client, hub_account_id, read_only=read_only
