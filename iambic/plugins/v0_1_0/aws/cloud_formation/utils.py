@@ -374,7 +374,7 @@ async def create_hub_role_stack(
         **additional_kwargs,
     )
     if stack_created:
-        return await create_spoke_role_stack(cf_client, hub_account_id, role_arn)
+        return await create_spoke_role_stack(cf_client, hub_account_id, role_arn, spoke_role_read_only)
 
     return stack_created
 
