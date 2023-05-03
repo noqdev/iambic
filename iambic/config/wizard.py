@@ -551,11 +551,11 @@ class ConfigurationWizard:
 
         return profile_name if profile_name != "None" else None
 
-    def set_boto3_session(self):
+    def set_boto3_session(self, allow_none=False):
         self._has_cf_permissions = True
         while True:
             try:
-                profile_name = self.set_aws_profile_name()
+                profile_name = self.set_aws_profile_name(allow_none=allow_none)
                 self.boto3_session = boto3.Session(
                     profile_name=profile_name, region_name=self.aws_default_region
                 )
@@ -997,6 +997,11 @@ class ConfigurationWizard:
             self.hub_account_id = None
 
         try:
+            if getattr(self, "boto3_session", None) is None:
+                # need bootstrapping
+                self.boto3_session = boto3.Session(region_name=self.aws_default_region)
+                self.autodetected_org_settings = {}
+
             default_caller_identity = self.boto3_session.client(
                 "sts", region_name=self.aws_default_region
             ).get_caller_identity()
@@ -1034,6 +1039,14 @@ class ConfigurationWizard:
                 f"Would you like to use this identity?"
             ).ask():
                 self.caller_identity = default_caller_identity
+                # If we are going to use the default_caller_identity,
+                # we need to set teh autodetected_org_settings to
+                with contextlib.suppress(
+                    ClientError, NoCredentialsError, FileNotFoundError
+                ):
+                    self.autodetected_org_settings = self.boto3_session.client(
+                        "organizations"
+                    ).describe_organization()["Organization"]
             else:
                 self.set_boto3_session()
         else:
