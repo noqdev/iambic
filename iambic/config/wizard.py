@@ -11,10 +11,10 @@ import sys
 import uuid
 from enum import Enum
 from pathlib import Path
-from textwrap import dedent
 from typing import Optional, Union
 
 import boto3
+import click
 import questionary
 from aws_error_utils.aws_error_utils import errors
 from botocore.exceptions import ClientError, NoCredentialsError
@@ -171,10 +171,11 @@ def set_aws_account_partition(default_val: Union[str, Partition]) -> str:
 
 def set_aws_role_arn(account_id: str):
     while True:
-        role_arn = questionary.text(
-            "(Optional) Provide a role arn that CloudFormation will assume to create the stack(s) "
+        click.echo(
+            "\n(Optional) Provide a role arn that CloudFormation will assume to create the stack(s) "
             "or hit enter to use your current access."
-        ).unsafe_ask()
+        )
+        role_arn = questionary.text("(Optional) Role ARN").unsafe_ask()
         if not role_arn or (account_id in role_arn and re.search(ARN_RE, role_arn)):
             return role_arn or None
         else:
@@ -186,10 +187,13 @@ def set_aws_role_arn(account_id: str):
 
 
 def set_aws_is_read_only() -> bool:
+    click.echo(
+        "\nGrant IambicSpokeRole write access to IAM and IdentityCenter?\n"
+        "If set to 'no', this will limit IAMbic's capabilities to import-only."
+    )
     return not bool(
         questionary.confirm(
-            "Grant IambicSpokeRole write access to IAM and IdentityCenter?\n"
-            "If set to 'no', this will limit IAMbic's capabilities to import-only.",
+            "Grant IambicSpokeRole write access?",
             default=True,
         ).unsafe_ask()
     )
@@ -321,14 +325,14 @@ def confirm_command_exe(
     else:
         raise ValueError(f"Invalid operation: {operation}")
 
-    if not questionary.confirm(
-        f"To preserve these changes, {command_type} must be run to sync your templates.\n"
-        "Proceed?"
-    ).unsafe_ask():
-        if questionary.confirm(
-            f"The {provider_type} will not be {operation_str} the config and wizard will exit.\n"
-            "Proceed?"
-        ).unsafe_ask():
+    click.echo(
+        f"\nTo preserve these changes, {command_type} must be run to sync your templates."
+    )
+    if not questionary.confirm("Proceed?").unsafe_ask():
+        click.echo(
+            f"\nThe {provider_type} will not be {operation_str} the config and wizard will exit."
+        )
+        if questionary.confirm("Proceed?").unsafe_ask():
             log.info("Exiting...")
             sys.exit(0)
 
@@ -354,14 +358,14 @@ class ConfigurationWizard:
     def has_cf_permissions(self):
         if self._has_cf_permissions is None:
             try:
-                self._has_cf_permissions = questionary.confirm(
-                    f"This requires that you have the ability to "
+                click.echo(
+                    f"\nThis requires that you have the ability to "
                     f"create CloudFormation stacks, stack sets, and stack set instances.\n"
                     f"If you are using an AWS Organization, be sure that trusted access is enabled.\n"
                     f"You can check this using the AWS Console:\n  "
-                    f"https://{self.aws_default_region}.console.aws.amazon.com/organizations/v2/home/services/CloudFormation%20StackSets\n"
-                    f"Proceed?"
-                ).unsafe_ask()
+                    f"https://{self.aws_default_region}.console.aws.amazon.com/organizations/v2/home/services/CloudFormation%20StackSets"
+                )
+                self._has_cf_permissions = questionary.confirm("Proceed?").unsafe_ask()
             except KeyboardInterrupt:
                 log.info("Exiting...")
                 sys.exit(0)
@@ -372,9 +376,13 @@ class ConfigurationWizard:
     def assume_as_arn(self):
         if self._assume_as_arn is None:
             current_arn = get_identity_arn(self.caller_identity)
-            self._assume_as_arn = questionary.text(
-                "Provide a user or role ARN that will be able to access the hub role. "
+            click.echo(
+                "\nProvide the ARN of the identity (e.g. IAM User, Group, or Role) "
+                "that will be able to access the hub role.\n"
                 "Note: Access to this identity is required to use IAMbic locally.",
+            )
+            self._assume_as_arn = questionary.text(
+                "Identity ARN",
                 default=current_arn,
             ).ask()
 
@@ -517,15 +525,12 @@ class ConfigurationWizard:
             available_profiles.append(default_profile)
 
         if not question_text:
-            question_text = dedent(
-                f"""
-                We couldn't find your AWS credentials, or they're not linked to the Hub Account ({self.hub_account_id}).
-                The specified AWS credentials need to be able to create CloudFormation stacks, stack sets,
-                and stack set instances.
-
-                Please provide an AWS profile to use for this operation, or restart the wizard with valid AWS credentials:
-                """
+            click.echo(
+                f"\nWe couldn't find your AWS credentials, or they're not linked to the Hub Account ({self.hub_account_id}). "
+                "The specified AWS credentials need to be able to create CloudFormation stacks, stack sets, and stack set instances. "
+                "Please provide an AWS profile to use for this operation or restart the wizard with valid AWS credentials."
             )
+            question_text = "AWS Profile"
 
         try:
             if len(available_profiles) == 0:
@@ -804,33 +809,36 @@ class ConfigurationWizard:
                 "What is the name of the AWS Account?"
             )
             default_region = self.aws_default_region
-            if not questionary.confirm(
-                "Create required Hub and Spoke roles via CloudFormation?\n"
-                "The templates that will be used can be found here:\n"
-                "  https://github.com/noqdev/iambic/tree/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates"
-            ).unsafe_ask():
+            self.config.aws.spoke_role_is_read_only = set_aws_is_read_only()
+            click.echo(
+                "\nIAMbic requires Hub and Spoke roles to be created which is deployed using CloudFormation.\n"
+                "To review the templates used or deploy them manually, the templates used can be found here:\n"
+                "https://github.com/noqdev/iambic/tree/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates\n"
+                "If you have already manually deployed the templates, answer yes to proceed.\n"
+                "IAMbic will validate that your stacks have been deployed successfully and will not attempt to replace them."
+            )
+
+            if not questionary.confirm("Proceed?").unsafe_ask():
                 log.info(
                     "Unable to add the AWS Account without creating the required roles."
                 )
                 return
 
-            self.config.aws.spoke_role_is_read_only = set_aws_is_read_only()
-
         else:
             if requires_sync:
-                if not questionary.confirm(
-                    "Adding this account will require a sync to be run.\n"
+                click.echo(
+                    "\nAdding this account will require a sync to be run.\n"
                     "This is to apply any matching templates to the account if the resource does not already exist.\n"
-                    "Then, the account resources will be imported into Iambic.\n"
-                    "Proceed?"
-                ).unsafe_ask():
+                    "Then, the account resources will be imported into Iambic."
+                )
+                if not questionary.confirm("Proceed?").unsafe_ask():
                     log.info(
                         "Unable to add the AWS account without creating the required role."
                     )
                     return
 
             account_id = questionary.text(
-                "What is the AWS Account ID? Usually this looks like `12345689012`"
+                "What is the AWS Account ID? Example: `12345689012`"
             ).unsafe_ask()
             account_name = questionary.text(
                 "What is the name of the AWS Account?"
@@ -845,12 +853,18 @@ class ConfigurationWizard:
             default_region = set_aws_region(
                 "What region should IAMbic use?", self.aws_default_region
             )
+            role_arn = set_aws_role_arn(account_id)
+            assume_as_arn = self.assume_as_arn
 
-            if not questionary.confirm(
-                "Create required Spoke role via CloudFormation?\n"
-                "The template that will be used can be found here:\n"
-                "  https://github.com/noqdev/iambic/blob/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates/IambicSpokeRole.yml"
-            ).unsafe_ask():
+            click.echo(
+                "\nIAMbic requires Hub and Spoke roles to be created which is deployed using CloudFormation.\n"
+                "To review the templates used or deploy them manually, the template used can be found here:\n"
+                "https://github.com/noqdev/iambic/blob/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates/IambicSpokeRole.yml\n"
+                "If you have already manually deployed the templates, answer yes to proceed.\n"
+                "IAMbic will validate that your stacks have been deployed successfully and will not attempt to replace them."
+            )
+
+            if not questionary.confirm("Proceed?").unsafe_ask():
                 log.info(
                     "Unable to add the AWS account without creating the required role."
                 )
@@ -869,14 +883,13 @@ class ConfigurationWizard:
             profile_name = None
 
         cf_client = session.client("cloudformation", region_name=default_region)
-        role_arn = set_aws_role_arn(account_id)
 
         if is_hub_account:
             created_successfully = asyncio.run(
                 create_iambic_role_stacks(
                     cf_client=cf_client,
                     hub_account_id=account_id,
-                    assume_as_arn=self.assume_as_arn,
+                    assume_as_arn=assume_as_arn,
                     role_arn=role_arn,
                     read_only=read_only,
                 )
@@ -899,11 +912,14 @@ class ConfigurationWizard:
                 )
                 return
 
+        iambic_managed = (
+            IambicManaged.IMPORT_ONLY if read_only else IambicManaged.READ_AND_WRITE
+        )
         account = AWSAccount(
             account_id=account_id,
             account_name=account_name,
-            spoke_role_arn=get_spoke_role_arn(account_id, read_only=read_only),
-            iambic_managed=IambicManaged.READ_AND_WRITE,
+            spoke_role_arn=get_spoke_role_arn(account_id),
+            iambic_managed=iambic_managed,
             aws_profile=profile_name,
             default_region=default_region,
         )
@@ -1019,11 +1035,14 @@ class ConfigurationWizard:
 
         if not self.hub_account_id:
             while True:
+                click.echo(
+                    "\nTo get started with the IAMbic setup wizard, you'll need an AWS account.\n"
+                    "This is where IAMbic will deploy its main role.\n"
+                    "If you have an AWS Organization, that account will be your hub account.\n"
+                    "Review to-be-created IAMbic roles at\n"
+                    "https://docs.iambic.org/reference/aws_hub_and_spoke_roles"
+                )
                 self.hub_account_id = set_required_text_value(
-                    "To get started with the IAMbic setup wizard, you'll need an AWS account.\n"
-                    "This is where IAMbic will deploy its main role. If you have an AWS Organization, "
-                    "that account will be your hub account.\n"
-                    "Review to-be-created IAMbic roles at https://docs.iambic.org/reference/aws_hub_and_spoke_roles\n"
                     "Which Account ID should we use to deploy the IAMbic hub role?",
                     default_val=default_hub_account_id,
                 )
@@ -1032,12 +1051,12 @@ class ConfigurationWizard:
 
         if self.hub_account_id == default_hub_account_id:
             identity_arn = get_identity_arn(default_caller_identity)
-            if questionary.confirm(
-                f"IAMbic detected you are using {identity_arn} for AWS access.\n"
+            click.echo(
+                f"\nIAMbic detected you are using {identity_arn} for AWS access.\n"
                 f"This identity will require the ability to create"
-                f"CloudFormation stacks, stack sets, and stack set instances.\n"
-                f"Would you like to use this identity?"
-            ).ask():
+                f"CloudFormation stacks, stack sets, and stack set instances."
+            )
+            if questionary.confirm("Would you like to use this identity?").ask():
                 self.caller_identity = default_caller_identity
                 # If we are going to use the default_caller_identity,
                 # we need to set teh autodetected_org_settings to
@@ -1094,7 +1113,7 @@ class ConfigurationWizard:
 
         choices = [
             "Go back",
-            "Update IdentityCenter",
+            "Update IdentityCenter Region",
             "Update IAMbic control",
             "Update Region",
         ]
@@ -1109,7 +1128,7 @@ class ConfigurationWizard:
                 org_to_edit.default_region = set_aws_region(
                     "What region should IAMbic use?", org_to_edit.default_region
                 )
-            elif action == "Update IdentityCenter":
+            elif action == "Update IdentityCenter Region":
                 org_to_edit.identity_center = set_identity_center()
                 asyncio.run(self.sync_config_aws_org(False))
 
@@ -1127,26 +1146,33 @@ class ConfigurationWizard:
             return
 
         org_console_url = f"https://{self.aws_default_region}.console.aws.amazon.com/organizations/v2/home/accounts"
+        click.echo(
+            f"\nWhat is the AWS Organization ID?\nIt can be found here {org_console_url}"
+        )
         org_id = questionary.text(
-            f"What is the AWS Organization ID? It can be found here {org_console_url}",
+            "AWS Organization ID: ",
             default=self.autodetected_org_settings.get("Id", ""),
         ).unsafe_ask()
-
         account_id = self.hub_account_id
         session, profile_name = self.get_boto3_session_for_account(account_id)
         if not session:
             return
 
-        if not questionary.confirm(
-            "Create required Hub and Spoke roles via CloudFormation?\n"
-            "The templates that will be used can be found here:\n"
-            "  https://github.com/noqdev/iambic/tree/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates"
-        ).unsafe_ask():
-            log.info("Unable to add the AWS Org without creating the required roles.")
-            return
-
         read_only = set_aws_is_read_only()
         self.config.aws.spoke_role_is_read_only = read_only
+        assume_as_arn = self.assume_as_arn
+        cf_role_arn = self.cf_role_arn
+
+        click.echo(
+            "\nIAMbic requires Hub and Spoke roles to be created which is deployed using CloudFormation.\n"
+            "To review the templates used or deploy them manually, the templates used can be found here:\n"
+            "https://github.com/noqdev/iambic/tree/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates\n"
+            "If you have already manually deployed the templates, answer yes to proceed.\n"
+            "IAMbic will validate that your stacks have been deployed successfully and will not attempt to replace them."
+        )
+        if not questionary.confirm("Proceed?").unsafe_ask():
+            log.info("Unable to add the AWS Org without creating the required roles.")
+            return
 
         created_successfully = asyncio.run(
             create_iambic_role_stacks(
@@ -1154,8 +1180,8 @@ class ConfigurationWizard:
                     "cloudformation", region_name=self.aws_default_region
                 ),
                 hub_account_id=account_id,
-                assume_as_arn=self.assume_as_arn,
-                role_arn=self.cf_role_arn,
+                assume_as_arn=assume_as_arn,
+                role_arn=cf_role_arn,
                 org_client=session.client(
                     "organizations", region_name=self.aws_default_region
                 ),
@@ -1175,7 +1201,10 @@ class ConfigurationWizard:
             spoke_role_is_read_only=read_only,
             default_region=self.aws_default_region,
         )
-        aws_org.default_rule.iambic_managed = IambicManaged.READ_AND_WRITE
+        if self.config.aws.spoke_role_is_read_only:
+            aws_org.default_rule.iambic_managed = IambicManaged.IMPORT_ONLY
+        else:
+            aws_org.default_rule.iambic_managed = IambicManaged.READ_AND_WRITE
 
         self.config.aws.organizations.append(aws_org)
 
@@ -1195,10 +1224,10 @@ class ConfigurationWizard:
             aws_org.identity_center = set_identity_center()
 
         if not questionary.confirm("Keep these settings?").unsafe_ask():
-            if questionary.confirm(
-                "The AWS Org will not be added to the config and wizard will exit. "
-                "Proceed?"
-            ).unsafe_ask():
+            click.echo(
+                "\nThe AWS Org will not be added to the config and wizard will exit."
+            )
+            if questionary.confirm("Proceed?").unsafe_ask():
                 log.info("Exiting...")
                 sys.exit(0)
 
@@ -1208,10 +1237,10 @@ class ConfigurationWizard:
         if not questionary.confirm(
             "Add the org accounts to the config and import the org's AWS identities?"
         ).unsafe_ask():
-            if questionary.confirm(
-                "This is required to finish the setup process. Wizard will exit if this has not been setup. "
-                "Exit?"
-            ).unsafe_ask():
+            click.echo(
+                "\nThis is required to finish the setup process.\nWizard will exit if this has not been setup."
+            )
+            if questionary.confirm("Exit?").unsafe_ask():
                 log.info("Exiting...")
                 sys.exit(0)
 
@@ -1219,10 +1248,11 @@ class ConfigurationWizard:
 
     def configuration_wizard_aws_organizations(self):
         # Currently only 1 org per config is supported.
-        if questionary.confirm(
-            "If you would like to use AWS Organizations, the IAMbic hub account you configured must be the same "
-            "AWS account as your AWS Organization.\nIs this the case?"
-        ).unsafe_ask():
+        click.echo(
+            "\nIf you would like to use AWS Organizations, the IAMbic hub account you configured must be the same "
+            "AWS account as your AWS Organization."
+        )
+        if questionary.confirm("Is this the case?").unsafe_ask():
             if self.config.aws and self.config.aws.organizations:
                 self.configuration_wizard_aws_organizations_edit()
             else:
@@ -1230,12 +1260,13 @@ class ConfigurationWizard:
 
     def configuration_wizard_aws(self):
         self.setup_aws_configuration()
-
+        click.echo(
+            "\nWe recommend configuring IAMbic with AWS Organizations, "
+            "but you may also manually configure accounts."
+        )
         while True:
             action = questionary.select(
-                "What would you like to configure in AWS?\n"
-                "We recommend configuring IAMbic with AWS Organizations, "
-                "but you may also manually configure accounts.",
+                "What would you like to configure in AWS?",
                 choices=["Go back", "AWS Organizations", "AWS Accounts"],
             ).unsafe_ask()
             if action == "Go back":
@@ -1323,9 +1354,7 @@ class ConfigurationWizard:
                 ExtendsConfig(
                     key=ExtendsConfigKey.AWS_SECRETS_MANAGER,
                     value=response["ARN"],
-                    assume_role_arn=get_spoke_role_arn(
-                        self.hub_account_id, read_only=self.spoke_role_is_read_only
-                    ),
+                    assume_role_arn=get_spoke_role_arn(self.hub_account_id),
                 )  # type: ignore
             ]
             self.config.write()
@@ -1757,12 +1786,15 @@ class ConfigurationWizard:
             )
 
     def configuration_wizard_change_detection_setup(self, aws_org: AWSOrganization):
-        if not questionary.confirm(
-            "To setup change detection for iambic requires "
-            "creating CloudFormation stacks "
+        click.echo(
+            "\nTo setup change detection for iambic it requires creating CloudFormation stacks "
             "and a CloudFormation stack set.\n"
-            "Proceed?"
-        ).unsafe_ask():
+            "To review the templates used or deploy them manually, the IdentityRule templates used can be found here:\n"
+            "https://github.com/noqdev/iambic/tree/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates\n"
+            "If you have already manually deployed the templates, answer yes to proceed.\n"
+            "IAMbic will validate that your stacks have been deployed successfully and will not attempt to replace them."
+        )
+        if not questionary.confirm("Proceed?").unsafe_ask():
             return
 
         session, _ = self.get_boto3_session_for_account(aws_org.org_account_id)
