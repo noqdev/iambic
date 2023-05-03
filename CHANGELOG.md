@@ -1,6 +1,21 @@
 
 # Change Log
 
+## 0.6.1 (Target Date May 3rd, 2023)
+
+ENHANCEMENTS:
+
+* Additional clarity in the wizard as it relates to AWS cloudformation changes.  
+
+BUG FIXES:
+
+* AWS read only spoke role is now working as designed
+* Fixes to text being truncated in the wizard on smaller terminal windows.
+
+THANKS:
+
+* [rjulian](https://github.com/rjulian) for reporting [#377](https://github.com/noqdev/iambic/pull/377).
+
 ## 0.5.1 (Target Date May 2nd, 2023)
 
 PERMISSION CHANGES:
