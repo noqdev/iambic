@@ -62,18 +62,18 @@ Resources:
     Properties:
       QueueName: IAMbicChangeDetectionQueue
       MessageRetentionPeriod: 604800
-  IAMbicChangeDetectionQueueSQSPolicy: 
+  IAMbicChangeDetectionQueueSQSPolicy:
     Type: AWS::SQS::QueuePolicy
-    Properties: 
-      Queues: 
+    Properties:
+      Queues:
         - !Ref IAMbicChangeDetectionQueue
-      PolicyDocument: 
-        Statement: 
-          - Action: 
-              - "sqs:SendMessage" 
+      PolicyDocument:
+        Statement:
+          - Action:
+              - "sqs:SendMessage"
             Effect: "Allow"
             Resource: !GetAtt IAMbicChangeDetectionQueue.Arn
-            Principal:  
+            Principal:
               Service:
                 - "events.amazonaws.com"
             Condition:
@@ -82,4 +82,4 @@ Resources:
     DependsOn:
       - IAMbicEventRule
       - IAMbicChangeDetectionQueue
-      
+

@@ -711,7 +711,7 @@ async def apply_permission_set_permission_boundary(
         else:
             response.append(
                 ProposedChange(
-                    change_type=ProposedChangeType.CREATE,
+                    change_type=ProposedChangeType.ATTACH,
                     resource_type="aws:identity_center:permission_set",
                     resource_id=permission_set_arn,
                     attribute="permissions_boundary",
@@ -735,7 +735,7 @@ async def apply_permission_set_permission_boundary(
         log_str = "Removing PermissionsBoundary discovered."
         response.append(
             ProposedChange(
-                change_type=ProposedChangeType.DELETE,
+                change_type=ProposedChangeType.DETACH,
                 resource_type="aws:identity_center:permission_set",
                 resource_id=permission_set_arn,
                 attribute="permissions_boundary",

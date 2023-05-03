@@ -1,4 +1,33 @@
-## 0.4.1 (Target Date May 1st, 2023)
+
+# Change Log
+
+## 0.5.1 (Target Date May 2nd, 2023)
+
+PERMISSION CHANGES:
+
+* IambicHubRole now uses a region agnostic resource definition in the SQS `IAMbicChangeDetectionQueue` permission (CloudFormation Template)
+
+ENHANCEMENTS:
+
+* The AWS region IAMbic uses is now configurable in the wizard.
+* Added region awareness to cloud formation util functions.
+
+BREAKING CHANGES:
+
+* The `AwsIdentityCenterPermissionSetTemplate` schema has changed. In particular, `permissions_boundary.policy_arn` has become `permissions_boundary.managed_policy_arn`. This is due to the PermissionSet API distinguishing attached
+permissions_boundary either owned by AWS or owned by Customer. To align with AWS API response, we have decided
+to follow the AWS naming convention. The old name `permissions_boundary.policy_arn` never quite worked correctly
+in `AwsIdentityCenterPermissionSetTemplate`. We decide to go through with the breaking change route.
+
+BUG FIXES:
+
+* Fixed import of `AwsIdentityCenterPermissionSetTemplate` in which permission boundary is set to `managed_policy_arn`
+
+THANKS:
+
+* [perpil](https://github.com/perpil) for reporting [#372](https://github.com/noqdev/iambic/issues/372).
+
+## 0.4.1 (May 1st, 2023)
 
 PERMISSION CHANGES:
 * IambicHubRole added SQS read/write access to queue named `IAMbicChangeDetectionQueue` to support IAM resource detection. [#355](https://github.com/noqdev/iambic/pull/355)

@@ -2,16 +2,33 @@ from __future__ import annotations
 
 import sys
 import traceback
+from test.plugins.v0_1_0.aws.iam.policy.test_utils import (
+    EXAMPLE_TAG_KEY,
+    EXAMPLE_TAG_VALUE,
+)
+from test.plugins.v0_1_0.aws.identity_center.permission_set.test_template_generation import (
+    permission_set_content,
+)
+from test.plugins.v0_1_0.aws.identity_center.permission_set.test_utils import (
+    EXAMPLE_IDENTITY_CENTER_INSTANCE_ARN,
+    EXAMPLE_PERMISSION_SET_NAME,
+)
 from typing import Optional
-from mock import AsyncMock, MagicMock, patch
 
 import boto3
-from moto import mock_ssoadmin
 import pytest
+from mock import AsyncMock, MagicMock, patch
+from moto import mock_ssoadmin
 from pydantic import ValidationError
 
 from iambic.core.context import ctx
-from iambic.core.models import AccountChangeDetails, ProposedChange, ProposedChangeType, ProviderChild, TemplateChangeDetails
+from iambic.core.models import (
+    AccountChangeDetails,
+    ProposedChange,
+    ProposedChangeType,
+    ProviderChild,
+    TemplateChangeDetails,
+)
 from iambic.core.template_generation import merge_access_model_list
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
@@ -19,11 +36,11 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     PermissionSetAccess,
     PermissionSetProperties,
 )
-from iambic.plugins.v0_1_0.aws.models import AWSAccount, Description, IdentityCenterDetails
-from test.plugins.v0_1_0.aws.identity_center.permission_set.test_utils import EXAMPLE_IDENTITY_CENTER_INSTANCE_ARN, EXAMPLE_PERMISSION_SET_NAME
-
-from test.plugins.v0_1_0.aws.iam.policy.test_utils import EXAMPLE_TAG_KEY, EXAMPLE_TAG_VALUE
-from test.plugins.v0_1_0.aws.identity_center.permission_set.test_template_generation import permission_set_content
+from iambic.plugins.v0_1_0.aws.models import (
+    AWSAccount,
+    Description,
+    IdentityCenterDetails,
+)
 
 
 @pytest.fixture
@@ -78,6 +95,16 @@ def test_description_validation_with_empty_string():
     captured_traceback = "\n".join(captured_traceback_lines)
 
     assert "description must be between 1 and 700 characters" in captured_traceback
+
+
+def test_permission_boundary_with_customer_managed_policy_ref_with_default_path():
+    properties = PermissionSetProperties(name="foo", description="A", permissions_boundary={"customer_managed_policy_reference": {"name": "foo"}})
+    assert properties.permissions_boundary.customer_managed_policy_reference.path == "/"
+
+
+def test_permission_boundary_with_customer_managed_policy_ref_with_custom_path():
+    properties = PermissionSetProperties(name="foo", description="A", permissions_boundary={"customer_managed_policy_reference": {"name": "foo", "path": "/engineering/"}})
+    assert properties.permissions_boundary.customer_managed_policy_reference.path == "/engineering/"
 
 
 def test_description_validation_with_valid_string():
@@ -212,10 +239,15 @@ async def test_access_rules_for_account():
     # Set up test data
     properties, access_rules = create_test_data()
     template = AwsIdentityCenterPermissionSetTemplate(
-        owner="TestOwner", properties=properties, access_rules=access_rules,
-        identifier="TestIdentifier", file_path="TestFilePath",
+        owner="TestOwner",
+        properties=properties,
+        access_rules=access_rules,
+        identifier="TestIdentifier",
+        file_path="TestFilePath",
     )
-    aws_account = AWSAccount(account_id="111111111111", org_id="o-1234567890", account_name="test_account")
+    aws_account = AWSAccount(
+        account_id="111111111111", org_id="o-1234567890", account_name="test_account"
+    )
     account_id = "111111111111"
     account_name = "test_account"
     reverse_user_map = {"user1": "u-1234567890abcdef0"}
@@ -255,8 +287,11 @@ async def test_verbose_access_rules():
     # Set up test data
     properties, access_rules = create_test_data()
     template = AwsIdentityCenterPermissionSetTemplate(
-        owner="TestOwner", properties=properties, access_rules=access_rules,
-        identifier="TestIdentifier", file_path="TestFilePath",
+        owner="TestOwner",
+        properties=properties,
+        access_rules=access_rules,
+        identifier="TestIdentifier",
+        file_path="TestFilePath",
     )
     aws_account = AWSAccount(
         account_id="111111111111",
@@ -272,7 +307,7 @@ async def test_verbose_access_rules():
             org_account_map={
                 "111111111111": "test_account",
             },
-        )
+        ),
     )
 
     # Test the _verbose_access_rules function
@@ -311,7 +346,9 @@ def permission_set_content():
 
 @pytest.mark.asyncio
 async def test_apply_to_account(mocker, permission_set_content):
-    class TestAwsIdentityCenterPermissionSetTemplate(AwsIdentityCenterPermissionSetTemplate):
+    class TestAwsIdentityCenterPermissionSetTemplate(
+        AwsIdentityCenterPermissionSetTemplate
+    ):
         def apply_resource_dict(self, aws_account: AWSAccount):
             return {
                 "Name": "TestPermissionSet",
@@ -341,10 +378,16 @@ async def test_apply_to_account(mocker, permission_set_content):
 
         return properties, access_rules
 
-    properties, access_rules = create_test_data()  # Reuse the helper function from the previous test
+    (
+        properties,
+        access_rules,
+    ) = create_test_data()  # Reuse the helper function from the previous test
     template = TestAwsIdentityCenterPermissionSetTemplate(
-        owner="TestOwner", properties=properties, access_rules=access_rules,
-        identifier="TestIdentifier", file_path="TestFilePath",
+        owner="TestOwner",
+        properties=properties,
+        access_rules=access_rules,
+        identifier="TestIdentifier",
+        file_path="TestFilePath",
     )
     aws_account = TestAWSAccount(
         account_id="111111111111",
@@ -360,8 +403,8 @@ async def test_apply_to_account(mocker, permission_set_content):
             org_account_map={
                 "111111111111": "test_account",
             },
-            permission_set_map={}
-        )
+            permission_set_map={},
+        ),
     )
 
     identity_center_client = await aws_account.get_boto3_client("sso-admin")
@@ -369,8 +412,10 @@ async def test_apply_to_account(mocker, permission_set_content):
         "PermissionSet": {"PermissionSetArn": "arn:aws:sso:::permissionSet/test"},
     }
 
-
-    with patch('iambic.plugins.v0_1_0.aws.identity_center.permission_set.models.boto_crud_call', return_value=permission_set_content):
+    with patch(
+        "iambic.plugins.v0_1_0.aws.identity_center.permission_set.models.boto_crud_call",
+        return_value=permission_set_content,
+    ):
         # Execute the _apply_to_account function
         account_change_details = await template._apply_to_account(aws_account)
 
@@ -383,8 +428,12 @@ async def test_apply_to_account(mocker, permission_set_content):
 
 
 @pytest.mark.asyncio
-async def test_apply_to_account_with_current_permission_set(mocker, permission_set_content):
-    class TestAwsIdentityCenterPermissionSetTemplate(AwsIdentityCenterPermissionSetTemplate):
+async def test_apply_to_account_with_current_permission_set(
+    mocker, permission_set_content
+):
+    class TestAwsIdentityCenterPermissionSetTemplate(
+        AwsIdentityCenterPermissionSetTemplate
+    ):
         def apply_resource_dict(self, aws_account: AWSAccount):
             return {
                 "Name": "TestPermissionSet",
@@ -395,7 +444,7 @@ async def test_apply_to_account_with_current_permission_set(mocker, permission_s
         async def get_boto3_client(self, *args, **kwargs):
             identity_center_client = AsyncMock()
             return identity_center_client
-        
+
     # Set up test data
     def create_test_data():
         properties = PermissionSetProperties(name="TestPermissionSet")
@@ -414,10 +463,16 @@ async def test_apply_to_account_with_current_permission_set(mocker, permission_s
 
         return properties, access_rules
 
-    properties, access_rules = create_test_data()  # Reuse the helper function from the previous test
+    (
+        properties,
+        access_rules,
+    ) = create_test_data()  # Reuse the helper function from the previous test
     template = TestAwsIdentityCenterPermissionSetTemplate(
-        owner="TestOwner", properties=properties, access_rules=access_rules,
-        identifier="TestIdentifier", file_path="TestFilePath",
+        owner="TestOwner",
+        properties=properties,
+        access_rules=access_rules,
+        identifier="TestIdentifier",
+        file_path="TestFilePath",
     )
     aws_account = TestAWSAccount(
         account_id="111111111111",
@@ -449,8 +504,8 @@ async def test_apply_to_account_with_current_permission_set(mocker, permission_s
                         }
                     ],
                 }
-            }
-        )
+            },
+        ),
     )
 
     identity_center_client = await aws_account.get_boto3_client("sso-admin")
@@ -458,16 +513,23 @@ async def test_apply_to_account_with_current_permission_set(mocker, permission_s
         "PermissionSet": {"PermissionSetArn": "arn:aws:sso:::permissionSet/test"},
     }
 
-    access_rules = [{
-        "account_id": "111111111111",
-        "resource_id": "TestPermissionSet",
-        "resource_type": "permission_set",
-        "resource_name": "TestPermissionSet",
-        "account_name": "test_account",
-    }]
+    access_rules = [
+        {
+            "account_id": "111111111111",
+            "resource_id": "TestPermissionSet",
+            "resource_type": "permission_set",
+            "resource_name": "TestPermissionSet",
+            "account_name": "test_account",
+        }
+    ]
 
-    with patch('iambic.plugins.v0_1_0.aws.identity_center.permission_set.models.boto_crud_call', return_value=permission_set_content), \
-         patch('iambic.plugins.v0_1_0.aws.identity_center.permission_set.models.get_permission_set_users_and_groups_as_access_rules', return_value=access_rules):
+    with patch(
+        "iambic.plugins.v0_1_0.aws.identity_center.permission_set.models.boto_crud_call",
+        return_value=permission_set_content,
+    ), patch(
+        "iambic.plugins.v0_1_0.aws.identity_center.permission_set.models.get_permission_set_users_and_groups_as_access_rules",
+        return_value=access_rules,
+    ):
         # Execute the _apply_to_account function
         account_change_details = await template._apply_to_account(aws_account)
 
@@ -483,14 +545,18 @@ async def test_apply_to_account_with_current_permission_set(mocker, permission_s
 @pytest.mark.usefixtures("setup_ctx")
 @mock_ssoadmin
 async def test_apply():
-    class TestAwsIdentityCenterPermissionSetTemplate(AwsIdentityCenterPermissionSetTemplate):
+    class TestAwsIdentityCenterPermissionSetTemplate(
+        AwsIdentityCenterPermissionSetTemplate
+    ):
         def evaluate_on_provider(self, *args, **kwargs):
             return MagicMock(return_value=True)
 
         def _apply_resource_dict(self, *args, **kwargs):
             return MagicMock(return_value={})
 
-        async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
+        async def _apply_to_account(
+            self, aws_account: AWSAccount
+        ) -> AccountChangeDetails:
             return AccountChangeDetails(
                 account="AWS_ACCOUNT",
                 resource_id="TestPermissionSet",
@@ -517,8 +583,11 @@ async def test_apply():
 
     properties, access_rules = create_test_data()
     template = TestAwsIdentityCenterPermissionSetTemplate(
-        owner="TestOwner", properties=properties, access_rules=access_rules,
-        identifier="TestIdentifier", file_path="TestFilePath",
+        owner="TestOwner",
+        properties=properties,
+        access_rules=access_rules,
+        identifier="TestIdentifier",
+        file_path="TestFilePath",
     )
 
     # Create a AWSConfig instance with TestAWSAccount
@@ -536,7 +605,7 @@ async def test_apply():
             org_account_map={
                 "111111111111": "test_account",
             },
-        )
+        ),
     )
     config = AWSConfig(accounts=[aws_account])
 
@@ -561,22 +630,28 @@ async def test_apply():
 @pytest.mark.usefixtures("setup_ctx")
 @mock_ssoadmin
 async def test_apply_with_exception():
-    class TestAwsIdentityCenterPermissionSetTemplate(AwsIdentityCenterPermissionSetTemplate):
+    class TestAwsIdentityCenterPermissionSetTemplate(
+        AwsIdentityCenterPermissionSetTemplate
+    ):
         def evaluate_on_provider(self, *args, **kwargs):
             return MagicMock(return_value=True)
 
         def _apply_resource_dict(self, *args, **kwargs):
             return MagicMock(return_value={})
 
-        async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
+        async def _apply_to_account(
+            self, aws_account: AWSAccount
+        ) -> AccountChangeDetails:
             return AccountChangeDetails(
                 account="AWS_ACCOUNT",
                 resource_id="TestPermissionSet",
-                exceptions_seen=[ProposedChange(
-                    change_type=ProposedChangeType.CREATE,
-                    account="AWS_ACCOUNT",
-                    exceptions_seen=[],
-                )],
+                exceptions_seen=[
+                    ProposedChange(
+                        change_type=ProposedChangeType.CREATE,
+                        account="AWS_ACCOUNT",
+                        exceptions_seen=[],
+                    )
+                ],
             )
 
     # Create a TestAwsIdentityCenterPermissionSetTemplate instance
@@ -599,8 +674,11 @@ async def test_apply_with_exception():
 
     properties, access_rules = create_test_data()
     template = TestAwsIdentityCenterPermissionSetTemplate(
-        owner="TestOwner", properties=properties, access_rules=access_rules,
-        identifier="TestIdentifier", file_path="TestFilePath",
+        owner="TestOwner",
+        properties=properties,
+        access_rules=access_rules,
+        identifier="TestIdentifier",
+        file_path="TestFilePath",
     )
 
     # Create a AWSConfig instance with TestAWSAccount
@@ -618,7 +696,7 @@ async def test_apply_with_exception():
             org_account_map={
                 "111111111111": "test_account",
             },
-        )
+        ),
     )
     config = AWSConfig(accounts=[aws_account])
 

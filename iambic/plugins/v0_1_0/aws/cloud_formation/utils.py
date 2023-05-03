@@ -44,6 +44,8 @@ def get_iambic_spoke_role_template_body(read_only=False) -> str:
 async def create_stack(
     client, stack_name: str, template_body: str, parameters: list[dict], **kwargs
 ) -> bool:
+    region = client.meta.region_name
+
     try:
         existing_stack = await legacy_paginated_search(
             client.describe_stacks,
@@ -55,7 +57,7 @@ async def create_stack(
                 "Stack already exists. Skipping creation. "
                 "If this is not the desired behavior, please delete the stack in the console and try again.\n",
                 stack_name=stack_name,
-                stack_url="https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks\n",
+                stack_url=f"https://{region}.console.aws.amazon.com/cloudformation/home?region={region}#/stacks\n",
             )
             return True
     except client.exceptions.ClientError as e:
@@ -102,12 +104,20 @@ async def create_stack(
         resource_status = stack_details.get("StackStatus")
 
     if resource_status == "CREATE_FAILED":
-        log.error(
-            "Unable to create AWS CloudFormation Stack",
-            stack_name=stack_name,
-            reason=stack_details.get("StackStatusReason"),
-        )
-        return False
+        soft_fail = bool("already exists." in stack_details.get("StackStatusReason"))
+        if soft_fail:
+            log.warning(
+                "Role already exists on account.",
+                stack_name=stack_name,
+                reason=stack_details.get("StackStatusReason"),
+            )
+        else:
+            log.error(
+                "Unable to create AWS CloudFormation Stack",
+                stack_name=stack_name,
+                reason=stack_details.get("StackStatusReason"),
+            )
+        return soft_fail
     return True
 
 
@@ -121,6 +131,8 @@ async def create_stack_set(
     operation_preferences: dict[str, Union[int, str]],
     **kwargs,
 ) -> bool:
+    region = client.meta.region_name
+
     try:
         await boto_crud_call(
             client.describe_stack_set,
@@ -130,7 +142,7 @@ async def create_stack_set(
             "StackSet already exists. Skipping creation. "
             "If this is not the desired behavior, please delete the stack in the console and try again.\n",
             stack_set_name=stack_set_name,
-            stack_set_url="https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacksets\n",
+            stack_set_url=f"https://{region}.console.aws.amazon.com/cloudformation/home?region={region}#/stacksets\n",
         )
         return True
     except client.exceptions.StackSetNotFoundException:
@@ -188,30 +200,46 @@ async def create_stack_set(
         ):
             return True
         else:
-            failed_instances = [
-                {
-                    "Account": instance["Account"],
-                    "Region": instance["Region"],
-                    "Status": instance.get("StackInstanceStatus", {}).get(
-                        "DetailedStatus"
-                    ),
-                    "StatusReason": instance.get("StatusReason"),
-                }
-                for instance in stack_instances
-                if instance.get("StackInstanceStatus", {}).get("DetailedStatus")
-                in ["FAILED", "CANCELLED"]
-            ]
-            log.error(
-                "Unable to create stack set instances",
-                stack_set_name=stack_set_name,
-                failed_instances=failed_instances,
-            )
-            return False
+            existing_instances = []
+            failed_instances = []
+            for instance in stack_instances:
+                if instance.get("StackInstanceStatus", {}).get("DetailedStatus") in [
+                    "FAILED",
+                    "CANCELLED",
+                ]:
+                    response_summary = {
+                        "Account": instance["Account"],
+                        "Region": instance["Region"],
+                        "Status": instance.get("StackInstanceStatus", {}).get(
+                            "DetailedStatus"
+                        ),
+                        "StatusReason": instance.get("StatusReason"),
+                    }
+                    if "already exists." in instance.get("StatusReason"):
+                        existing_instances.append(response_summary)
+                    else:
+                        failed_instances.append(response_summary)
+
+            if existing_instances:
+                log.warning(
+                    "Role already exists on account(s).",
+                    stack_set_name=stack_set_name,
+                    failed_instances=failed_instances,
+                )
+            if failed_instances:
+                log.error(
+                    "Unable to create stack set instances",
+                    stack_set_name=stack_set_name,
+                    failed_instances=failed_instances,
+                )
+
+            return not bool(failed_instances)
 
 
 async def create_change_detection_stacks(
     cf_client, org_id: str, org_account_id: str, role_arn: str = None
 ) -> bool:
+    region = cf_client.meta.region_name
     additional_kwargs = {"RoleARN": role_arn} if role_arn else {}
     stack_created = await create_stack(
         cf_client,
@@ -228,7 +256,7 @@ async def create_change_detection_stacks(
             parameters=[
                 {
                     "ParameterKey": "TargetEventBusArn",
-                    "ParameterValue": f"arn:aws:events:us-east-1:{org_account_id}:event-bus/IAMbicChangeDetectionEventBus",
+                    "ParameterValue": f"arn:aws:events:{region}:{org_account_id}:event-bus/IAMbicChangeDetectionEventBus",
                 }
             ],
             Capabilities=["CAPABILITY_NAMED_IAM"],
@@ -241,6 +269,7 @@ async def create_change_detection_stacks(
 async def create_change_detection_stack_sets(
     cf_client, org_client, org_account_id: str
 ) -> bool:
+    region = cf_client.meta.region_name
     org_roots = await legacy_paginated_search(
         org_client.list_roots, response_key="Roots"
     )
@@ -252,14 +281,14 @@ async def create_change_detection_stack_sets(
         parameters=[
             {
                 "ParameterKey": "TargetEventBusArn",
-                "ParameterValue": f"arn:aws:events:us-east-1:{org_account_id}:event-bus/IAMbicChangeDetectionEventBus",
+                "ParameterValue": f"arn:aws:events:{region}:{org_account_id}:event-bus/IAMbicChangeDetectionEventBus",
             }
         ],
         deployment_targets={
             "OrganizationalUnitIds": [root["Id"] for root in org_roots],
             "AccountFilterType": "NONE",
         },
-        deployment_regions=["us-east-1"],
+        deployment_regions=[region],
         operation_preferences={
             "MaxConcurrentCount": 1,
             "FailureToleranceCount": 1,
@@ -271,14 +300,15 @@ async def create_change_detection_stack_sets(
 async def create_iambic_eventbridge_stacks(
     cf_client, org_client, org_id: str, account_id: str, role_arn: str = None
 ) -> bool:
+    region = cf_client.meta.region_name
     successfully_created = await create_change_detection_stacks(
         cf_client, org_id, account_id, role_arn
     )
     if successfully_created:
         log.info(
-            "Creating stack instances. "
-            "You can check the progress here: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacksets/IAMbicForwardEventRule/stacks\n"
-            "WARNING: Don't Exit"
+            f"Creating stack instances. "
+            f"You can check the progress here: https://{region}.console.aws.amazon.com/cloudformation/home?region={region}#/stacksets/IAMbicForwardEventRule/stacks\n"
+            f"WARNING: Don't Exit"
         )
         return await create_change_detection_stack_sets(
             cf_client, org_client, account_id
@@ -293,6 +323,7 @@ async def create_spoke_role_stack_set(
     hub_account_id: str,
     read_only=False,
 ) -> bool:
+    region = cf_client.meta.region_name
     org_roots = await legacy_paginated_search(
         org_client.list_roots, response_key="Roots"
     )
@@ -312,7 +343,7 @@ async def create_spoke_role_stack_set(
             "OrganizationalUnitIds": [root["Id"] for root in org_roots],
             "AccountFilterType": "NONE",
         },
-        deployment_regions=["us-east-1"],
+        deployment_regions=[region],
         operation_preferences={
             "RegionConcurrencyType": "PARALLEL",
             "MaxConcurrentCount": 10,
@@ -395,11 +426,12 @@ async def create_iambic_role_stacks(
         spoke_role_read_only=read_only,
     )
     spoke_role_postfix = "ReadOnly" if read_only else ""
+    region = cf_client.meta.region_name
     if hub_role_created and org_client:
         log.info(
-            "Creating stack instances. "
-            f"You can check the progress here: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacksets/IambicSpokeRole{spoke_role_postfix}/stacks"
-            "WARNING: Don't Exit"
+            f"Creating stack instances. "
+            f"You can check the progress here: https://{region}.console.aws.amazon.com/cloudformation/home?region={region}#/stacksets/IambicSpokeRole{spoke_role_postfix}/stacks\n"
+            f"WARNING: Don't Exit"
         )
         return await create_spoke_role_stack_set(
             cf_client, org_client, hub_account_id, read_only=read_only

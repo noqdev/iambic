@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from okta.client import Client as OktaClient
 from pydantic import BaseModel, Extra, Field, SecretStr, validator
 
 from iambic.core.iambic_enum import IambicManaged
@@ -11,7 +12,6 @@ from iambic.plugins.v0_1_0.okta.app.models import OktaAppTemplate
 from iambic.plugins.v0_1_0.okta.group.models import OktaGroupTemplate
 from iambic.plugins.v0_1_0.okta.handlers import import_okta_resources, load
 from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate
-from okta.client import Client as OktaClient
 
 
 class OktaOrganization(BaseModel):
@@ -21,7 +21,7 @@ class OktaOrganization(BaseModel):
     request_timeout: int = 60
     client: Any = None  # OktaClient
     iambic_managed: Optional[IambicManaged] = Field(
-        IambicManaged.IMPORT_ONLY,
+        IambicManaged.UNDEFINED,
         description="Controls the directionality of iambic changes",
     )
 

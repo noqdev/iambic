@@ -7,10 +7,11 @@ from test.plugins.v0_1_0.okta.test_utils import (  # noqa: F401 # intentional fo
 import okta.models
 import pytest
 
-from iambic.core.context import ctx
 import iambic.plugins.v0_1_0.okta.models
+from iambic.core.context import ctx
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
+from iambic.plugins.v0_1_0.okta.models import UserStatus
 from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate, UserProperties
 from iambic.plugins.v0_1_0.okta.user.utils import (
     change_user_status,
@@ -20,7 +21,6 @@ from iambic.plugins.v0_1_0.okta.user.utils import (
     update_user_profile,
     update_user_status,
 )
-from iambic.plugins.v0_1_0.okta.models import UserStatus
 
 
 @pytest.mark.asyncio
@@ -172,6 +172,8 @@ class TestUpdateUserStatus:
             (UserStatus.deprovisioned, UserStatus.provisioned),
             (UserStatus.provisioned, UserStatus.active),
             (UserStatus.locked_out, UserStatus.active),
+            (UserStatus.provisioned, UserStatus.recovery),
+            (UserStatus.provisioned, UserStatus.password_expired),
         ],
     )
     async def test_update_user_status(
@@ -215,6 +217,43 @@ class TestUpdateUserStatus:
             "current_status": transition[0].value,
             "proposed_status": transition[1].value,
         }
+
+    @pytest.mark.asyncio
+    async def test_update_user_status_when_deleted(
+        self,
+        mock_okta_organization: OktaOrganization,  # noqa: F811 # intentional for mocks
+        mock_ctx,
+    ):
+        username = "example_username"
+        idp_name = "example.org"
+        user_properties = UserProperties(
+            username=username,
+            profile={"login": username},
+            status=UserStatus.deprovisioned.value,
+        )  # type: ignore
+
+        template = OktaUserTemplate(
+            file_path="example",
+            idp_name=idp_name,
+            properties=user_properties,
+            deleted=True,
+        )  # type: ignore
+
+        okta_user = await create_user(
+            template,
+            mock_okta_organization,
+        )
+        okta_user.deleted = True
+
+        mock_ctx(eval_only=True)
+        proposed_changes = await update_user_status(
+            okta_user,
+            UserStatus.provisioned.value,
+            mock_okta_organization,
+            {},
+        )
+
+        assert proposed_changes == []
 
 
 @pytest.mark.asyncio

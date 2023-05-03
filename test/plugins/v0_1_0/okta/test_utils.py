@@ -4,15 +4,15 @@ import json
 from collections import defaultdict, namedtuple
 from test.plugins.v0_1_0.okta.fake_okta_client import FakeOktaClient
 
-import pytest
-
 import okta.models
+import pytest
+from okta.errors.okta_api_error import OktaAPIError
+
 from iambic.core.context import ctx
 from iambic.core.exceptions import RateLimitException
 from iambic.plugins.v0_1_0.okta.exceptions import UserProfileNotUpdatableYet
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
 from iambic.plugins.v0_1_0.okta.utils import generate_user_profile, handle_okta_fn
-from okta.errors.okta_api_error import OktaAPIError
 
 
 @pytest.fixture

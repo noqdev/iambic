@@ -5,6 +5,7 @@ import functools
 from typing import TYPE_CHECKING, Any, List, Optional
 
 import okta.models as models
+
 from iambic.core.context import ctx
 from iambic.core.exceptions import RateLimitException
 from iambic.core.logger import log
@@ -254,6 +255,9 @@ async def update_user_status(
     current_status: str = user.status.value
     if current_status == new_status:
         return response
+    if user.deleted:
+        return response
+
     response.append(
         ProposedChange(
             change_type=ProposedChangeType.UPDATE,
