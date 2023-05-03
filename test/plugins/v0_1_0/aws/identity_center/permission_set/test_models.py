@@ -98,13 +98,29 @@ def test_description_validation_with_empty_string():
 
 
 def test_permission_boundary_with_customer_managed_policy_ref_with_default_path():
-    properties = PermissionSetProperties(name="foo", description="A", permissions_boundary={"customer_managed_policy_reference": {"name": "foo"}})
+    properties = PermissionSetProperties(
+        name="foo",
+        description="A",
+        permissions_boundary={"customer_managed_policy_reference": {"name": "foo"}},
+    )
     assert properties.permissions_boundary.customer_managed_policy_reference.path == "/"
 
 
 def test_permission_boundary_with_customer_managed_policy_ref_with_custom_path():
-    properties = PermissionSetProperties(name="foo", description="A", permissions_boundary={"customer_managed_policy_reference": {"name": "foo", "path": "/engineering/"}})
-    assert properties.permissions_boundary.customer_managed_policy_reference.path == "/engineering/"
+    properties = PermissionSetProperties(
+        name="foo",
+        description="A",
+        permissions_boundary={
+            "customer_managed_policy_reference": {
+                "name": "foo",
+                "path": "/engineering/",
+            }
+        },
+    )
+    assert (
+        properties.permissions_boundary.customer_managed_policy_reference.path
+        == "/engineering/"
+    )
 
 
 def test_description_validation_with_valid_string():

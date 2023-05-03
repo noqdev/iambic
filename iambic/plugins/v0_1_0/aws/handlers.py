@@ -165,6 +165,10 @@ async def apply_iam_templates(
     :param templates: The list of templates to apply.
     :param remote_worker: The remote worker to use for applying templates.
     """
+    if config.spoke_role_is_read_only:
+        log.critical("Unable to apply resources when spoke_role_is_read_only is True")
+        return []
+
     await generate_permission_set_map(config.accounts, templates)
 
     template_changes: list[TemplateChangeDetails] = []
