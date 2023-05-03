@@ -1000,9 +1000,6 @@ class ConfigurationWizard:
             if getattr(self, "boto3_session", None) is None:
                 # need bootstrapping
                 self.boto3_session = boto3.Session(region_name=self.aws_default_region)
-
-            if getattr(self, "boto3_session", None) is None:
-                # need bootstrapping
                 self.autodetected_org_settings = {}
 
             default_caller_identity = self.boto3_session.client(
