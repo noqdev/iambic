@@ -6,6 +6,7 @@
 ENHANCEMENTS:
 
 * Additional clarity in the wizard as it relates to AWS cloudformation changes.  
+* Added the ability to check the IAMbic version from the CLI.
 
 BUG FIXES:
 
