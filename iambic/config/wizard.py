@@ -1853,8 +1853,9 @@ class ConfigurationWizard:
             return
 
         session, _ = self.get_boto3_session_for_account(aws_org.org_account_id)
+        # cloudtrail is not cross-region, so we need to use us-east-1
         cf_client = session.client(
-            "cloudformation", region_name=self.aws_default_region
+            "cloudformation", region_name="us-east-1"  # self.aws_default_region
         )
         org_client = session.client(
             "organizations", region_name=self.aws_default_region
@@ -1875,7 +1876,9 @@ class ConfigurationWizard:
 
         role_name = IAMBIC_SPOKE_ROLE_NAME
         hub_account_id = self.hub_account_id
-        sqs_arn = f"arn:aws:sqs:{self.aws_default_region}:{hub_account_id}:IAMbicChangeDetectionQueue{IAMBIC_CHANGE_DETECTION_SUFFIX}"
+        # cloudtrail is not cross-region, so we need to use us-east-1
+        # sqs_arn = f"arn:aws:sqs:{self.aws_default_region}:{hub_account_id}:IAMbicChangeDetectionQueue{IAMBIC_CHANGE_DETECTION_SUFFIX}"
+        sqs_arn = f"arn:aws:sqs:us-east-1:{hub_account_id}:IAMbicChangeDetectionQueue{IAMBIC_CHANGE_DETECTION_SUFFIX}"
 
         if not self.existing_role_template_map:
             log.info("Loading AWS role templates...")

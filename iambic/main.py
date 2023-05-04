@@ -110,6 +110,7 @@ def run_expire(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
     "repo_dir",
     required=False,
     type=click.Path(exists=True),
+    default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
 def detect(repo_dir: str):
@@ -398,7 +399,7 @@ def config_discovery(repo_dir: str):
 )
 def import_(repo_dir: str):
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
-    config = asyncio.run(load_config(config_path))
+    config: Config = asyncio.run(load_config(config_path))
     check_and_update_resource_limit(config)
     exe_message = ExecutionMessage(
         execution_id=str(uuid.uuid4()), command=Command.IMPORT

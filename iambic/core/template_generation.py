@@ -1070,7 +1070,7 @@ def merge_model(  # noqa: C901
                 setattr(merged_model, key, new_value)
             else:
                 raise TypeError(
-                    f"Type of {type(new_value)} is not supported. {IAMBIC_ERR_MSG}"
+                    f"Type of {type(new_value)}({key}) is not supported. {IAMBIC_ERR_MSG}"
                 )
         elif key not in iambic_fields:
             setattr(merged_model, key, new_value)

@@ -21,6 +21,8 @@ from iambic.core.models import (
     BaseModel,
     BaseTemplate,
     ExpiryModel,
+    ProposedChange,
+    ProposedChangeType,
     ProviderChild,
     TemplateChangeDetails,
     Variable,
@@ -62,6 +64,11 @@ def get_spoke_role_arn(account_id: str, role_name=None) -> str:
     if not role_name:
         role_name = IAMBIC_SPOKE_ROLE_NAME
     return f"arn:aws:iam::{account_id}:role/{role_name}"
+
+
+class StatementEffect(str, Enum):
+    ALLOW = "Allow"
+    DENY = "Deny"
 
 
 @yaml_object(yaml)
@@ -299,6 +306,13 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
         description="The role arn to assume into when making calls to the account",
         exclude=True,
     )
+    organization: Optional[AWSOrganization] = Field(
+        None, description="The AWS Organization this account belongs to"
+    )
+    aws_config: Optional[AWSConfig] = Field(
+        None,
+        description="when an account is an organization account, it needs the AWS Config settings",
+    )
 
     class Config:
         fields = {"hub_session_info": {"exclude": True}}
@@ -446,6 +460,17 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
                         group["GroupId"]: group for group in user_or_group["Groups"]
                     }
 
+    async def set_account_organization_details(
+        self,
+        organization: AWSOrganization,
+        config: AWSConfig,
+    ):
+        """Set the account's organization details
+        when the account is the organization account
+        """
+        self.organization = organization
+        self.aws_config = config
+
     def dict(
         self,
         *,
@@ -465,6 +490,9 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
             "boto3_session_map",
             "hub_session_info",
             "identity_center_details",
+            "organization_account",
+            "organization",
+            "aws_config",
         }
         if exclude:
             exclude.update(required_exclude)
@@ -516,6 +544,11 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
             return {self.account_id, self.account_name.lower()}
         else:
             return set(self.account_id)
+
+    @property
+    def organization_account(self) -> bool:
+        """if current account is an organization account"""
+        return bool(self.organization and self.aws_config)
 
     def __str__(self):
         return f"{self.account_name} - ({self.account_id})"
@@ -781,13 +814,18 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
             *tasks, return_exceptions=True
         )
         proposed_changes: list[AccountChangeDetails] = []
-        exceptions_seen = set()
+        exceptions_seen = list()
 
         for account_change in account_changes:
             if isinstance(account_change, AccountChangeDetails):
                 proposed_changes.append(account_change)
             else:
-                exceptions_seen.add(str(account_change))
+                exceptions_seen.append(
+                    ProposedChange(
+                        change_type=ProposedChangeType.UNKNOWN,
+                        exceptions_seen=[str(account_change)],
+                    )  # type: ignore
+                )
 
         if exceptions_seen:
             exceptions_seen = list(exceptions_seen)
@@ -803,7 +841,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
                         resource_id=self.resource_id,
                         resource_type=self.resource_type,
                         exceptions_seen=exceptions_seen,
-                    )
+                    )  # type: ignore
                 )
 
         template_changes.extend_changes(proposed_changes)
@@ -816,18 +854,20 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
             else:
                 cmd_verb = "detecting"
             log_str = f"Error encountered when {cmd_verb} resource changes."
-        elif account_changes and ctx.execute:
-            if self.deleted:
-                self.delete()
-                log_str = "Successfully removed resource."
-            else:
-                log_str = "Successfully applied resource changes."
-        elif account_changes:
-            log_str = "Successfully detected required resource changes."
+            log.error(log_str, accounts=relevant_accounts_str, **log_params)
         else:
-            log_str = "No changes detected for resource."
+            if account_changes and ctx.execute:
+                if self.deleted:
+                    self.delete()
+                    log_str = "Successfully removed resource."
+                else:
+                    log_str = "Successfully applied resource changes."
+            elif account_changes:
+                log_str = "Successfully detected required resource changes."
+            else:
+                log_str = "No changes detected for resource."
 
-        log.info(log_str, accounts=relevant_accounts_str, **log_params)
+            log.info(log_str, accounts=relevant_accounts_str, **log_params)
         return template_changes
 
     @property
