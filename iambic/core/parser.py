@@ -18,11 +18,11 @@ from iambic.core.utils import transform_comments, yaml
 
 # we must avoid import multiprocessing pool in the module loading time
 if os.environ.get("AWS_LAMBDA_FUNCTION_NAME", False):
-    from multiprocessing import cpu_count
+    from multiprocessing import cpu_count, get_context
 
     from iambic.vendor.lambda_multiprocessing import Pool
 else:
-    from multiprocessing import Pool, cpu_count
+    from multiprocessing import Pool, cpu_count, get_context
 
 
 # line number is zero-th based
@@ -92,12 +92,22 @@ def load_template(template_path: str, raise_validation_err: bool = True) -> dict
             raise ValueError(f"{template_path} template has validation error.") from err
 
 
+def new_multiprocessing_pool(*args, **kwargs):
+    # we must avoid import multiprocessing pool in the module loading time
+    if os.environ.get("AWS_LAMBDA_FUNCTION_NAME", False):
+        # the vendor lambda function shim does not use fork. it uses pipe
+        return Pool(*args, **kwargs)
+    else:
+        return get_context("spawn").Pool(*args, **kwargs)
+
+
 def load_templates(
     template_paths: list[str], raise_validation_err: bool = True
 ) -> list[BaseTemplate]:
     templates = []
     load_template_fn = partial(load_template, raise_validation_err=raise_validation_err)
-    with Pool(max(1, cpu_count() // 2)) as p:
+    # read about "spawn" at https://pythonspeed.com/articles/python-multiprocessing/
+    with get_context("spawn").Pool(max(1, cpu_count() // 2)) as p:
         template_dicts = p.map(load_template_fn, template_paths)
         if getattr(sys, "gettrace", None):
             # When in debug mode, subprocesses can exit
