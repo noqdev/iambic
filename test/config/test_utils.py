@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import os
 import pathlib
+import resource
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
 
 import pytest
 
@@ -85,19 +85,15 @@ def config(repo_path):
     return test_config
 
 
-@patch("resource.setrlimit")
-@patch("resource.getrlimit")
-@patch("resource.RLIMIT_NOFILE")
-def test_check_and_update_resource_limit(
-    mock_rlimit, mock_getrlimit, mock_setrlimit, config
-):
-    mock_rlimit.value = 7
-    mock_getrlimit.return_value = (1024, 4096)
-    mock_setrlimit.return_value = None
+def test_check_and_update_resource_limit(config):
+    cur_soft_limit, cur_hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+    assert cur_soft_limit != 0
+    config.core.minimum_ulimit = cur_soft_limit * 2
     check_and_update_resource_limit(config)
-    mock_setrlimit.assert_called_once_with(
-        mock_rlimit, (config.core.minimum_ulimit, 4096)
-    )
+    new_soft_limit, new_hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+    assert new_soft_limit == config.core.minimum_ulimit
+    # restore original value
+    resource.setrlimit(resource.RLIMIT_NOFILE, (cur_soft_limit, cur_hard_limit))
 
 
 @pytest.mark.asyncio
