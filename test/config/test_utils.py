@@ -88,7 +88,16 @@ def config(repo_path):
 def test_check_and_update_resource_limit(config):
     cur_soft_limit, cur_hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
     assert cur_soft_limit != 0
-    config.core.minimum_ulimit = cur_soft_limit * 2
+    config.core.minimum_ulimit = cur_hard_limit - 1
+    if cur_soft_limit >= cur_hard_limit:
+        # host is already at high, let's simulate the other direction
+        resource.setrlimit(
+            resource.RLIMIT_NOFILE, (cur_soft_limit // 2, cur_hard_limit)
+        )
+        intermediate_soft_limit, intermediate_hard_limit = resource.getrlimit(
+            resource.RLIMIT_NOFILE
+        )
+        assert intermediate_soft_limit < config.core.minimum_ulimit
     check_and_update_resource_limit(config)
     new_soft_limit, new_hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
     assert new_soft_limit == config.core.minimum_ulimit
