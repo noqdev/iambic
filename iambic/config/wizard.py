@@ -45,6 +45,7 @@ from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
     create_iambic_eventbridge_stacks,
     create_iambic_role_stacks,
     create_spoke_role_stack,
+    parse_tags,
 )
 from iambic.plugins.v0_1_0.aws.handlers import apply as aws_apply
 from iambic.plugins.v0_1_0.aws.handlers import import_aws_resources
@@ -56,6 +57,7 @@ from iambic.plugins.v0_1_0.aws.iam.role.models import (
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import (
     ARN_RE,
+    IAMBIC_HUB_ROLE_NAME,
     IAMBIC_SPOKE_ROLE_NAME,
     AWSAccount,
     AWSIdentityCenter,
@@ -882,6 +884,20 @@ class ConfigurationWizard:
         elif not is_hub_account:
             profile_name = None
 
+        hub_role_name = questionary.text(
+            "Assign Iambic Hub Role Name: ",
+            default=IAMBIC_HUB_ROLE_NAME,
+        ).unsafe_ask()
+        spoke_role_name = questionary.text(
+            "Assign Iambic Spoke Role Name: ",
+            default=IAMBIC_SPOKE_ROLE_NAME,
+        ).unsafe_ask()
+        unparse_tags = questionary.text(
+            "Add Tags (leave blank or `team=ops_team, cost_center=engineering`): ",
+            default="",
+        ).unsafe_ask()
+        tags = parse_tags(unparse_tags)
+
         cf_client = session.client("cloudformation", region_name=default_region)
 
         if is_hub_account:
@@ -892,6 +908,11 @@ class ConfigurationWizard:
                     assume_as_arn=assume_as_arn,
                     role_arn=role_arn,
                     read_only=read_only,
+                    hub_role_stack_name=hub_role_name,
+                    hub_role_name=hub_role_name,
+                    spoke_role_stack_name=spoke_role_name,
+                    spoke_role_name=spoke_role_name,
+                    tags=tags,
                 )
             )
             if not created_successfully:
@@ -904,6 +925,11 @@ class ConfigurationWizard:
                     hub_account_id=account_id,
                     role_arn=role_arn,
                     read_only=read_only,
+                    hub_role_stack_name=hub_role_name,
+                    hub_role_name=hub_role_name,
+                    spoke_role_stack_name=spoke_role_name,
+                    spoke_role_name=spoke_role_name,
+                    tags=tags,
                 )
             )
             if not created_successfully:
@@ -918,13 +944,13 @@ class ConfigurationWizard:
         account = AWSAccount(
             account_id=account_id,
             account_name=account_name,
-            spoke_role_arn=get_spoke_role_arn(account_id),
+            spoke_role_arn=get_spoke_role_arn(account_id, role_name=spoke_role_name),
             iambic_managed=iambic_managed,
             aws_profile=profile_name,
             default_region=default_region,
         )
         if is_hub_account:
-            account.hub_role_arn = get_hub_role_arn(account_id)
+            account.hub_role_arn = get_hub_role_arn(account_id, role_name=hub_role_name)
         # account.partition = set_aws_account_partition(account.partition)
 
         confirm_command_exe("AWS Account", Operation.ADDED, requires_sync=requires_sync)
@@ -1174,6 +1200,20 @@ class ConfigurationWizard:
             log.info("Unable to add the AWS Org without creating the required roles.")
             return
 
+        hub_role_name = questionary.text(
+            "Assign Iambic Hub Role Name: ",
+            default=IAMBIC_HUB_ROLE_NAME,
+        ).unsafe_ask()
+        spoke_role_name = questionary.text(
+            "Assign Iambic Spoke Role Name: ",
+            default=IAMBIC_SPOKE_ROLE_NAME,
+        ).unsafe_ask()
+        unparse_tags = questionary.text(
+            "Add Tags (leave blank or `team=ops_team, cost_center=engineering`): ",
+            default="",
+        ).unsafe_ask()
+        tags = parse_tags(unparse_tags)
+
         created_successfully = asyncio.run(
             create_iambic_role_stacks(
                 cf_client=session.client(
@@ -1186,6 +1226,11 @@ class ConfigurationWizard:
                     "organizations", region_name=self.aws_default_region
                 ),
                 read_only=read_only,
+                hub_role_stack_name=hub_role_name,
+                hub_role_name=hub_role_name,
+                spoke_role_stack_name=spoke_role_name,
+                spoke_role_name=spoke_role_name,
+                tags=tags,
             )
         )
         if not created_successfully:
@@ -1196,10 +1241,11 @@ class ConfigurationWizard:
             org_id=org_id,
             org_account_id=account_id,
             default_rule=BaseAWSOrgRule(),
-            hub_role_arn=get_hub_role_arn(account_id),
+            hub_role_arn=get_hub_role_arn(account_id, role_name=hub_role_name),
             aws_profile=profile_name,
             spoke_role_is_read_only=read_only,
             default_region=self.aws_default_region,
+            preferred_spoke_role_name=spoke_role_name,
         )
         if self.config.aws.spoke_role_is_read_only:
             aws_org.default_rule.iambic_managed = IambicManaged.IMPORT_ONLY

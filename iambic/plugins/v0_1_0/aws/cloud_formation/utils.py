@@ -322,22 +322,33 @@ async def create_spoke_role_stack_set(
     org_client,
     hub_account_id: str,
     read_only=False,
+    stack_set_name=IAMBIC_SPOKE_ROLE_NAME,
+    hub_role_name=IAMBIC_HUB_ROLE_NAME,
+    spoke_role_name=IAMBIC_SPOKE_ROLE_NAME,
+    tags=None,
 ) -> bool:
     region = cf_client.meta.region_name
     org_roots = await legacy_paginated_search(
         org_client.list_roots, response_key="Roots"
     )
 
+    kwargs = {}
+
+    if tags:
+        kwargs["Tags"] = tags
+
     return await create_stack_set(
         cf_client,
-        stack_set_name="IambicSpokeRole",
+        stack_set_name=stack_set_name,
         template_body=get_iambic_spoke_role_template_body(read_only=read_only),
         parameters=[
             {
                 "ParameterKey": "HubRoleArn",
-                "ParameterValue": get_hub_role_arn(hub_account_id),
+                "ParameterValue": get_hub_role_arn(
+                    hub_account_id, role_name=hub_role_name
+                ),
             },
-            {"ParameterKey": "SpokeRoleName", "ParameterValue": IAMBIC_SPOKE_ROLE_NAME},
+            {"ParameterKey": "SpokeRoleName", "ParameterValue": spoke_role_name},
         ],
         deployment_targets={
             "OrganizationalUnitIds": [root["Id"] for root in org_roots],
@@ -350,6 +361,7 @@ async def create_spoke_role_stack_set(
             "FailureToleranceCount": 10,
         },
         Capabilities=["CAPABILITY_NAMED_IAM"],
+        **kwargs,
     )
 
 
@@ -358,20 +370,28 @@ async def create_spoke_role_stack(
     hub_account_id: str,
     role_arn: str = None,
     read_only=False,
+    stack_name=IAMBIC_SPOKE_ROLE_NAME,
+    hub_role_name=IAMBIC_HUB_ROLE_NAME,
+    spoke_role_name=IAMBIC_SPOKE_ROLE_NAME,
+    tags=None,
 ) -> bool:
     additional_kwargs = {"RoleARN": role_arn} if role_arn else {}
+    if tags:
+        additional_kwargs["Tags"] = tags
     return await create_stack(
         cf_client,
-        stack_name="IambicSpokeRole",
+        stack_name=stack_name,
         template_body=get_iambic_spoke_role_template_body(read_only=read_only),
         parameters=[
             {
                 "ParameterKey": "HubRoleArn",
-                "ParameterValue": get_hub_role_arn(hub_account_id),
+                "ParameterValue": get_hub_role_arn(
+                    hub_account_id, role_name=hub_role_name
+                ),
             },
             {
                 "ParameterKey": "SpokeRoleName",
-                "ParameterValue": IAMBIC_SPOKE_ROLE_NAME,
+                "ParameterValue": spoke_role_name,
             },
         ],
         Capabilities=["CAPABILITY_NAMED_IAM"],
@@ -384,17 +404,24 @@ async def create_hub_role_stack(
     hub_account_id: str,
     assume_as_arn: str,
     role_arn: str = None,
+    stack_name=IAMBIC_HUB_ROLE_NAME,
+    hub_role_name=IAMBIC_HUB_ROLE_NAME,
+    spoke_role_name=IAMBIC_SPOKE_ROLE_NAME,
+    tags=None,
 ) -> bool:
     additional_kwargs = {"RoleARN": role_arn} if role_arn else {}
+    if tags:
+        additional_kwargs["Tags"] = tags
+
     stack_created = await create_stack(
         cf_client,
-        stack_name="IambicHubRole",
+        stack_name=stack_name,
         template_body=get_iambic_hub_role_template_body(),
         parameters=[
-            {"ParameterKey": "HubRoleName", "ParameterValue": IAMBIC_HUB_ROLE_NAME},
+            {"ParameterKey": "HubRoleName", "ParameterValue": hub_role_name},
             {
                 "ParameterKey": "SpokeRoleName",
-                "ParameterValue": IAMBIC_SPOKE_ROLE_NAME,
+                "ParameterValue": spoke_role_name,
             },
             {"ParameterKey": "AssumeAsArn", "ParameterValue": assume_as_arn},
         ],
@@ -402,7 +429,14 @@ async def create_hub_role_stack(
         **additional_kwargs,
     )
     if stack_created:
-        return await create_spoke_role_stack(cf_client, hub_account_id, role_arn)
+        return await create_spoke_role_stack(
+            cf_client,
+            hub_account_id,
+            role_arn,
+            stack_name=spoke_role_name,
+            hub_role_name=hub_role_name,
+            spoke_role_name=spoke_role_name,
+        )
 
     return stack_created
 
@@ -414,12 +448,21 @@ async def create_iambic_role_stacks(
     role_arn: str = None,
     org_client=None,
     read_only=False,
+    hub_role_stack_name=IAMBIC_HUB_ROLE_NAME,
+    hub_role_name=IAMBIC_HUB_ROLE_NAME,
+    spoke_role_stack_name=IAMBIC_SPOKE_ROLE_NAME,
+    spoke_role_name=IAMBIC_SPOKE_ROLE_NAME,
+    tags=None,
 ) -> bool:
     hub_role_created = await create_hub_role_stack(
         cf_client,
         hub_account_id,
         assume_as_arn,
         role_arn,
+        stack_name=hub_role_stack_name,
+        hub_role_name=hub_role_name,
+        spoke_role_name=spoke_role_name,
+        tags=tags,
     )
     region = cf_client.meta.region_name
     if hub_role_created and org_client:
@@ -429,7 +472,27 @@ async def create_iambic_role_stacks(
             f"https://{region}.console.aws.amazon.com/cloudformation/home?region={region}#/stacksets/IambicSpokeRole/stacks\n"
         )
         return await create_spoke_role_stack_set(
-            cf_client, org_client, hub_account_id, read_only=read_only
+            cf_client,
+            org_client,
+            hub_account_id,
+            read_only=read_only,
+            stack_set_name=spoke_role_stack_name,
+            hub_role_name=hub_role_name,
+            spoke_role_name=spoke_role_name,
+            tags=tags,
         )
 
     return hub_role_created
+
+
+def parse_pair(s) -> dict:
+    key, value = s.rstrip().split("=")
+    return {"Key": key, "Value": value}
+
+
+def parse_tags(s) -> list[dict]:
+    if not s:
+        return None
+    else:
+        pairs = s.split(",")
+        return [parse_pair(p) for p in pairs]

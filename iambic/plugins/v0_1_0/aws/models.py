@@ -51,12 +51,16 @@ IAMBIC_HUB_ROLE_NAME = "IambicHubRole"
 IAMBIC_SPOKE_ROLE_NAME = "IambicSpokeRole"
 
 
-def get_hub_role_arn(account_id: str) -> str:
-    return f"arn:aws:iam::{account_id}:role/{IAMBIC_HUB_ROLE_NAME}"
+def get_hub_role_arn(account_id: str, role_name=None) -> str:
+    if not role_name:
+        role_name = IAMBIC_HUB_ROLE_NAME
+    return f"arn:aws:iam::{account_id}:role/{role_name}"
 
 
-def get_spoke_role_arn(account_id: str) -> str:
-    return f"arn:aws:iam::{account_id}:role/{IAMBIC_SPOKE_ROLE_NAME}"
+def get_spoke_role_arn(account_id: str, role_name=None) -> str:
+    if not role_name:
+        role_name = IAMBIC_SPOKE_ROLE_NAME
+    return f"arn:aws:iam::{account_id}:role/{role_name}"
 
 
 @yaml_object(yaml)
@@ -588,6 +592,10 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         False,
         description="if true, the spoke role will be limited to read-only permissions",
     )
+    preferred_spoke_role_name: Optional[str] = Field(
+        IAMBIC_SPOKE_ROLE_NAME,
+        description="SpokeRoleName use across organization",
+    )
 
     async def _create_org_account_instance(
         self, account: dict, session: boto3.Session
@@ -622,7 +630,9 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
             variables=account["variables"],
             identity_center_details=identity_center_details,
             iambic_managed=account_rule.iambic_managed,
-            spoke_role_arn=get_spoke_role_arn(account_id),
+            spoke_role_arn=get_spoke_role_arn(
+                account_id, role_name=self.preferred_spoke_role_name
+            ),
             hub_session_info=dict(boto3_session=session),
             default_region=region_name,
             boto3_session_map={},
