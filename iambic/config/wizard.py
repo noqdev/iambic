@@ -340,7 +340,7 @@ def confirm_command_exe(
 
 
 class ConfigurationWizard:
-    def __init__(self, repo_dir: str):
+    def __init__(self, repo_dir: str, is_more_options: bool = False):
         # TODO: Handle the case where the config file exists but is not valid
         self.existing_role_template_map = {}
         self.aws_account_map = {}
@@ -351,6 +351,7 @@ class ConfigurationWizard:
         self.caller_identity = {}
         self.profile_name = ""
         self._default_region = None
+        self._is_more_options = is_more_options
 
         asyncio.run(self.set_config_details())
         check_and_update_resource_limit(self.config)
@@ -884,14 +885,17 @@ class ConfigurationWizard:
         elif not is_hub_account:
             profile_name = None
 
-        hub_role_name = questionary.text(
-            "Assign Iambic Hub Role Name: ",
-            default=IAMBIC_HUB_ROLE_NAME,
-        ).unsafe_ask()
-        spoke_role_name = questionary.text(
-            "Assign Iambic Spoke Role Name: ",
-            default=IAMBIC_SPOKE_ROLE_NAME,
-        ).unsafe_ask()
+        hub_role_name = IAMBIC_HUB_ROLE_NAME
+        spoke_role_name = IAMBIC_SPOKE_ROLE_NAME
+        if self._is_more_options:
+            hub_role_name = questionary.text(
+                "Assign Iambic Hub Role Name: ",
+                default=IAMBIC_HUB_ROLE_NAME,
+            ).unsafe_ask()
+            spoke_role_name = questionary.text(
+                "Assign Iambic Spoke Role Name: ",
+                default=IAMBIC_SPOKE_ROLE_NAME,
+            ).unsafe_ask()
         unparse_tags = questionary.text(
             "Add Tags (leave blank or `team=ops_team, cost_center=engineering`): ",
             default="",
@@ -1200,14 +1204,17 @@ class ConfigurationWizard:
             log.info("Unable to add the AWS Org without creating the required roles.")
             return
 
-        hub_role_name = questionary.text(
-            "Assign Iambic Hub Role Name: ",
-            default=IAMBIC_HUB_ROLE_NAME,
-        ).unsafe_ask()
-        spoke_role_name = questionary.text(
-            "Assign Iambic Spoke Role Name: ",
-            default=IAMBIC_SPOKE_ROLE_NAME,
-        ).unsafe_ask()
+        hub_role_name = IAMBIC_HUB_ROLE_NAME
+        spoke_role_name = IAMBIC_SPOKE_ROLE_NAME
+        if self._is_more_options:
+            hub_role_name = questionary.text(
+                "Assign Iambic Hub Role Name: ",
+                default=IAMBIC_HUB_ROLE_NAME,
+            ).unsafe_ask()
+            spoke_role_name = questionary.text(
+                "Assign Iambic Spoke Role Name: ",
+                default=IAMBIC_SPOKE_ROLE_NAME,
+            ).unsafe_ask()
         unparse_tags = questionary.text(
             "Add Tags (leave blank or `team=ops_team, cost_center=engineering`): ",
             default="",
