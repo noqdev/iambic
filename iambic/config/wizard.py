@@ -351,7 +351,7 @@ class ConfigurationWizard:
         self._default_region = None
 
         asyncio.run(self.set_config_details())
-
+        check_and_update_resource_limit(self.config)
         log.debug("Starting configuration wizard", config_path=self.config_path)
 
     @property
