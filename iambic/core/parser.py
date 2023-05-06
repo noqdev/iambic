@@ -93,17 +93,28 @@ def load_template(template_path: str, raise_validation_err: bool = True) -> dict
 
 
 def load_templates(
-    template_paths: list[str], raise_validation_err: bool = True
+    template_paths: list[str],
+    raise_validation_err: bool = True,
+    use_multiprocessing=True,
 ) -> list[BaseTemplate]:
     templates = []
-    load_template_fn = partial(load_template, raise_validation_err=raise_validation_err)
-    with Pool(max(1, cpu_count() // 2)) as p:
-        template_dicts = p.map(load_template_fn, template_paths)
-        if getattr(sys, "gettrace", None):
-            # When in debug mode, subprocesses can exit
-            # before debugger can attach
-            # https://github.com/microsoft/debugpy/issues/712
-            time.sleep(0.5)
+    template_dicts = None
+
+    if use_multiprocessing:
+        load_template_fn = partial(
+            load_template, raise_validation_err=raise_validation_err
+        )
+        with Pool(max(1, cpu_count() // 2)) as p:
+            template_dicts = p.map(load_template_fn, template_paths)
+            if getattr(sys, "gettrace", None):
+                # When in debug mode, subprocesses can exit
+                # before debugger can attach
+                # https://github.com/microsoft/debugpy/issues/712
+                time.sleep(0.5)
+    else:
+        template_dicts = [
+            load_template(path, raise_validation_err) for path in template_paths
+        ]
 
     for template_dict in template_dicts:
         if not template_dict:
