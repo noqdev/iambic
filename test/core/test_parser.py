@@ -98,6 +98,20 @@ def test_load_templates(example_test_filesystem):
     assert len(templates) > 0
 
 
+def test_load_templates_without_multiprocessing(example_test_filesystem):
+    config_path, repo_dir = example_test_filesystem
+    with open(f"{repo_dir}/{TEST_TEMPLATE_PATH}", "r") as f:
+        before_template_content = "\n".join(f.readlines())
+    assert "tomorrow" in before_template_content
+
+    asyncio.run(load_config(config_path))
+    templates = [f"{repo_dir}/{TEST_TEMPLATE_PATH}"]
+    templates = load_templates(
+        templates, raise_validation_err=True, use_multiprocessing=False
+    )
+    assert len(templates) > 0
+
+
 def test_load_template(example_test_filesystem):
     config_path, repo_dir = example_test_filesystem
     with open(f"{repo_dir}/{TEST_TEMPLATE_PATH}", "r") as f:
