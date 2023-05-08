@@ -9,8 +9,11 @@ import pytest
 
 from iambic.config.dynamic_config import Config
 from iambic.config.utils import (
+    CF_INVALID_TAGS_MSG,
+    aws_cf_parse_key_value_string,
     check_and_update_resource_limit,
     resolve_config_template_path,
+    validate_aws_cf_input_tags,
 )
 from iambic.core.iambic_enum import IambicManaged
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -131,3 +134,35 @@ async def test_resolve_config_template_path_too_many_exception(
 async def test_resolve_config_template_path_no_config_exception(tmpdir):
     with pytest.raises(RuntimeError):
         await resolve_config_template_path(pathlib.Path(tmpdir))
+
+
+@pytest.mark.parametrize(
+    "s, expected_output",
+    [
+        ("", None),
+        ("cost_center=engineering", [{"Key": "cost_center", "Value": "engineering"}]),
+        (
+            "cost_center=engineering, team=ops",
+            [
+                {"Key": "cost_center", "Value": "engineering"},
+                {"Key": "team", "Value": "ops"},
+            ],
+        ),
+        ("cost_center", [{"Key": "cost_center", "Value": ""}]),
+    ],
+)
+def test_aws_cf_parse_key_value_string(s, expected_output):
+    assert aws_cf_parse_key_value_string(s) == expected_output
+
+
+@pytest.mark.parametrize(
+    "s, expected_output",
+    [
+        (",", CF_INVALID_TAGS_MSG),
+        ("", True),
+        ("cost_center=engineering", True),
+        ("cost_center=engineering, team=ops", True),
+    ],
+)
+def test_validate_aws_cf_input_tags(s, expected_output):
+    assert validate_aws_cf_input_tags(s) == expected_output

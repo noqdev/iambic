@@ -483,16 +483,3 @@ async def create_iambic_role_stacks(
         )
 
     return hub_role_created
-
-
-def parse_pair(s) -> dict:
-    key, value = s.rstrip().split("=")
-    return {"Key": key, "Value": value}
-
-
-def parse_tags(s) -> list[dict]:
-    if not s:
-        return None
-    else:
-        pairs = s.split(",")
-        return [parse_pair(p) for p in pairs]

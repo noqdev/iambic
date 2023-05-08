@@ -30,8 +30,10 @@ from iambic.config.dynamic_config import (
     process_config,
 )
 from iambic.config.utils import (
+    aws_cf_parse_key_value_string,
     check_and_update_resource_limit,
     resolve_config_template_path,
+    validate_aws_cf_input_tags,
 )
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command, IambicManaged
@@ -45,7 +47,6 @@ from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
     create_iambic_eventbridge_stacks,
     create_iambic_role_stacks,
     create_spoke_role_stack,
-    parse_tags,
 )
 from iambic.plugins.v0_1_0.aws.handlers import apply as aws_apply
 from iambic.plugins.v0_1_0.aws.handlers import import_aws_resources
@@ -885,22 +886,7 @@ class ConfigurationWizard:
         elif not is_hub_account:
             profile_name = None
 
-        hub_role_name = IAMBIC_HUB_ROLE_NAME
-        spoke_role_name = IAMBIC_SPOKE_ROLE_NAME
-        if self._is_more_options:
-            hub_role_name = questionary.text(
-                "Assign Iambic Hub Role Name: ",
-                default=IAMBIC_HUB_ROLE_NAME,
-            ).unsafe_ask()
-            spoke_role_name = questionary.text(
-                "Assign Iambic Spoke Role Name: ",
-                default=IAMBIC_SPOKE_ROLE_NAME,
-            ).unsafe_ask()
-        unparse_tags = questionary.text(
-            "Add Tags (leave blank or `team=ops_team, cost_center=engineering`): ",
-            default="",
-        ).unsafe_ask()
-        tags = parse_tags(unparse_tags)
+        hub_role_name, spoke_role_name, tags = self.set_aws_cf_customization()
 
         cf_client = session.client("cloudformation", region_name=default_region)
 
@@ -1204,22 +1190,7 @@ class ConfigurationWizard:
             log.info("Unable to add the AWS Org without creating the required roles.")
             return
 
-        hub_role_name = IAMBIC_HUB_ROLE_NAME
-        spoke_role_name = IAMBIC_SPOKE_ROLE_NAME
-        if self._is_more_options:
-            hub_role_name = questionary.text(
-                "Assign Iambic Hub Role Name: ",
-                default=IAMBIC_HUB_ROLE_NAME,
-            ).unsafe_ask()
-            spoke_role_name = questionary.text(
-                "Assign Iambic Spoke Role Name: ",
-                default=IAMBIC_SPOKE_ROLE_NAME,
-            ).unsafe_ask()
-        unparse_tags = questionary.text(
-            "Add Tags (leave blank or `team=ops_team, cost_center=engineering`): ",
-            default="",
-        ).unsafe_ask()
-        tags = parse_tags(unparse_tags)
+        hub_role_name, spoke_role_name, tags = self.set_aws_cf_customization()
 
         created_successfully = asyncio.run(
             create_iambic_role_stacks(
@@ -1837,6 +1808,26 @@ class ConfigurationWizard:
                 assume_role_arn=self.config.aws.hub_role_arn,
                 region=region,
             )
+
+    def set_aws_cf_customization(self):
+        hub_role_name = IAMBIC_HUB_ROLE_NAME
+        spoke_role_name = IAMBIC_SPOKE_ROLE_NAME
+        if self._is_more_options:
+            hub_role_name = questionary.text(
+                "Assign Iambic Hub Role Name: ",
+                default=IAMBIC_HUB_ROLE_NAME,
+            ).unsafe_ask()
+            spoke_role_name = questionary.text(
+                "Assign Iambic Spoke Role Name: ",
+                default=IAMBIC_SPOKE_ROLE_NAME,
+            ).unsafe_ask()
+        unparse_tags = questionary.text(
+            "Add Tags (leave blank or `team=ops_team, cost_center=engineering`): ",
+            default="",
+            validate=validate_aws_cf_input_tags,
+        ).ask()
+        tags = aws_cf_parse_key_value_string(unparse_tags)
+        return hub_role_name, spoke_role_name, tags
 
     def configuration_wizard_change_detection_setup(self, aws_org: AWSOrganization):
         click.echo(
