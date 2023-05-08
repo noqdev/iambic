@@ -806,6 +806,7 @@ class ConfigurationWizard:
                 > self.config.aws.min_accounts_required_for_wildcard_included_accounts
             )
         )
+        assume_as_arn = self.assume_as_arn
 
         if is_hub_account:
             account_id = self.hub_account_id
@@ -827,6 +828,8 @@ class ConfigurationWizard:
                     "Unable to add the AWS Account without creating the required roles."
                 )
                 return
+
+            role_arn = set_aws_role_arn(account_id)
 
         else:
             if requires_sync:
@@ -858,7 +861,6 @@ class ConfigurationWizard:
                 "What region should IAMbic use?", self.aws_default_region
             )
             role_arn = set_aws_role_arn(account_id)
-            assume_as_arn = self.assume_as_arn
 
             click.echo(
                 "\nIAMbic requires Hub and Spoke roles to be created which is deployed using CloudFormation.\n"
