@@ -469,7 +469,7 @@ async def create_iambic_role_stacks(
         log.info(
             f"WARNING: Do not exit; creating stack instances.\n"
             f"You can check the progress here:\n"
-            f"https://{region}.console.aws.amazon.com/cloudformation/home?region={region}#/stacksets/IambicSpokeRole/stacks\n"
+            f"https://{region}.console.aws.amazon.com/cloudformation/home?region={region}#/stacksets/{spoke_role_name}/stacks\n"
         )
         return await create_spoke_role_stack_set(
             cf_client,

@@ -117,7 +117,6 @@ def clear_stdin_buffer():
     """
     # Warning: This appears to work fine in a real terminal,
     # but not VSCode's Debug Terminal
-
     r, _, _ = select.select([sys.stdin], [], [], 0)
     while r:
         # If there is input waiting, read and discard it.
@@ -1815,14 +1814,18 @@ class ConfigurationWizard:
         hub_role_name = IAMBIC_HUB_ROLE_NAME
         spoke_role_name = IAMBIC_SPOKE_ROLE_NAME
         if self._is_more_options:
-            hub_role_name = questionary.text(
-                "Assign Iambic Hub Role Name: ",
-                default=IAMBIC_HUB_ROLE_NAME,
+            input_hub_role_name = questionary.text(
+                "(Optional) Iambic Hub Role Name: ",
+                default="",
             ).unsafe_ask()
-            spoke_role_name = questionary.text(
-                "Assign Iambic Spoke Role Name: ",
-                default=IAMBIC_SPOKE_ROLE_NAME,
+            input_spoke_role_name = questionary.text(
+                "(Optional) Iambic Spoke Role Name: ",
+                default="",
             ).unsafe_ask()
+            if input_hub_role_name:
+                hub_role_name = input_hub_role_name
+            if input_spoke_role_name:
+                spoke_role_name = input_spoke_role_name
         unparse_tags = questionary.text(
             "Add Tags (leave blank or `team=ops_team, cost_center=engineering`): ",
             default="",
