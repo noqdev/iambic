@@ -67,7 +67,7 @@ functional_wizard_test:
 .PHONY: functional_test
 functional_test:
 	pytest --cov-report html --cov iambic --cov-report lcov:cov_functional_tests.lcov --cov-report xml:cov_functional_tests.xml --cov-report html:cov_functional_tests.html  functional_tests --ignore functional_tests/test_github_cicd.py --ignore functional_tests/test_config_discovery.py -s -n auto --dist loadscope --reruns 3 --reruns-delay 5 -r aR --durations=20
-	pytest --cov-report html --cov iambic --cov-report lcov:cov_functional_tests_config_discovery.lcov --cov-report xml:cov_functional_tests_config_discovery.xml --cov-report html:cov_functional_tests_config_discovery.html  functional_tests/test_config_discovery.py functional_tests/test_wizard.py -s --durations=20
+	pytest --cov-report html --cov iambic --cov-report lcov:cov_functional_tests_config_discovery.lcov --cov-report xml:cov_functional_tests_config_discovery.xml --cov-report html:cov_functional_tests_config_discovery.html  functional_tests/test_config_discovery.py -s --durations=20
 # 	pytest --cov-report html --cov iambic functional_tests -s
 # 	pytest --cov-report html --cov iambic functional_tests/aws/role/test_create_template.py -s
 # 	pytest --cov-report html --cov iambic functional_tests/aws/managed_policy/test_template_expiration.py -s
