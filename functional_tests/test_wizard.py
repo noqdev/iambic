@@ -112,7 +112,8 @@ def test_setup_org_account(iam_spoke_role) -> None:
         tui.sendline("")  # use default
         tui.expect("What would you like to configure in AWS")
         tui.sendline(KEY_DOWN)  # down once to AWS Organizations
-        tui.sendline("")  # use default account number
+        tui.expect("Is this the case")
+        tui.sendline("")  # use default
         tui.expect("Proceed")
         tui.sendline("")  # use default
         tui.expect("AWS Organization ID")
@@ -122,6 +123,8 @@ def test_setup_org_account(iam_spoke_role) -> None:
         tui.expect("Identity ARN")
         tui.sendline("")  # use default
         tui.expect("Role ARN")
+        tui.sendline("")  # use default
+        tui.expect("Proceed")
         tui.sendline("")  # use default
         tui.expect("Add Tags")
         tui.sendline("\n")  # use default
