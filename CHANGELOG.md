@@ -16,7 +16,7 @@ BUG FIXES:
 
 THANKS:
 
-* `noq@phad.me`, `perpil` in [NoqCommunity](https://noqcommunity.slack.com/archives/C02P9E8BDK6/p1683275443604049) proposing tags support during IAMbic setup.
+* `Phil H.`, `David B.` in [NoqCommunity](https://noqcommunity.slack.com/archives/C02P9E8BDK6/p1683275443604049) proposing tags support during IAMbic setup.
 
 ## 0.6.1 (May 3rd, 2023)
 
