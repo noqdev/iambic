@@ -461,9 +461,17 @@ def init_plugins_cmd(repo_dir: str):
     default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory. Example: ~/iambic-templates",
 )
-def setup(repo_dir: str):
+@click.option(
+    "--more-options",
+    "is_more_options",
+    is_flag=True,
+    hidden=True,
+    default=False,
+    help="If enabled, wizard will ask more questions",
+)
+def setup(repo_dir: str, is_more_options: bool):
     ctx.command = Command.APPLY
-    ConfigurationWizard(repo_dir).run()
+    ConfigurationWizard(repo_dir, is_more_options=is_more_options).run()
 
 
 if __name__ == "__main__":
