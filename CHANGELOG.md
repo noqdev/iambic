@@ -1,11 +1,28 @@
 
 # Change Log
 
-## 0.6.1 (Target Date May 3rd, 2023)
+## 0.7.1 (May 9th, 2023)
 
 ENHANCEMENTS:
 
-* Additional clarity in the wizard as it relates to AWS cloudformation changes.  
+* Tag support on CloudFormation stack. These tags will propagate to IambicHubRole and
+IambicSpokeRole created. Wizard will prompt the user to either enter blank or
+in `key1=value1` format. To add multiple tags, use `key1=value1, key2=value2` format.
+
+BUG FIXES:
+
+* Fixes in wizard when user does not grant Iambic write access.
+* Fixes in wizard when setting up an individual AWS account instead of AWS Organization.
+
+THANKS:
+
+* `noq@phad.me`, `perpil` in [NoqCommunity](https://noqcommunity.slack.com/archives/C02P9E8BDK6/p1683275443604049) proposing tags support during IAMbic setup.
+
+## 0.6.1 (May 3rd, 2023)
+
+ENHANCEMENTS:
+
+* Additional clarity in the wizard as it relates to AWS cloudformation changes.
 * Added the ability to check the IAMbic version from the CLI.
 
 BUG FIXES:
@@ -17,7 +34,7 @@ THANKS:
 
 * [rjulian](https://github.com/rjulian) for reporting [#377](https://github.com/noqdev/iambic/pull/377).
 
-## 0.5.1 (Target Date May 2nd, 2023)
+## 0.5.1 (May 2nd, 2023)
 
 PERMISSION CHANGES:
 
