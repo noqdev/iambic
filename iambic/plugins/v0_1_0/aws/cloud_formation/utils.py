@@ -327,6 +327,13 @@ async def create_spoke_role_stack_set(
     spoke_role_name=IAMBIC_SPOKE_ROLE_NAME,
     tags=None,
 ) -> bool:
+    """Create stack instances in the member accounts.
+    This does not have special handling for delegated
+    administrator membership account.
+    TODO: If the org has delegated administrator account,
+    the IambicHubRole should be installed on delegated
+    administrator account.
+    """
     region = cf_client.meta.region_name
     org_roots = await legacy_paginated_search(
         org_client.list_roots, response_key="Roots"
@@ -399,16 +406,18 @@ async def create_spoke_role_stack(
     )
 
 
-async def create_hub_role_stack(
+async def create_hub_account_stacks(
     cf_client,
     hub_account_id: str,
     assume_as_arn: str,
     role_arn: str = None,
+    read_only=False,
     stack_name=IAMBIC_HUB_ROLE_NAME,
     hub_role_name=IAMBIC_HUB_ROLE_NAME,
     spoke_role_name=IAMBIC_SPOKE_ROLE_NAME,
     tags=None,
 ) -> bool:
+    """Create IambicHubRole and IambicSpokeRole in hub account"""
     additional_kwargs = {"RoleARN": role_arn} if role_arn else {}
     if tags:
         additional_kwargs["Tags"] = tags
@@ -433,6 +442,7 @@ async def create_hub_role_stack(
             cf_client,
             hub_account_id,
             role_arn,
+            read_only=read_only,
             stack_name=spoke_role_name,
             hub_role_name=hub_role_name,
             spoke_role_name=spoke_role_name,
@@ -454,11 +464,12 @@ async def create_iambic_role_stacks(
     spoke_role_name=IAMBIC_SPOKE_ROLE_NAME,
     tags=None,
 ) -> bool:
-    hub_role_created = await create_hub_role_stack(
+    hub_role_created = await create_hub_account_stacks(
         cf_client,
         hub_account_id,
         assume_as_arn,
         role_arn,
+        read_only=read_only,
         stack_name=hub_role_stack_name,
         hub_role_name=hub_role_name,
         spoke_role_name=spoke_role_name,
