@@ -32,19 +32,21 @@ def iam_spoke_role():
     yield response
 
 
-def test_setup_single_account(iam_spoke_role) -> None:
+@pytest.fixture
+def temp_templates_directory():
     temp_templates_directory = tempfile.mkdtemp(
         prefix="iambic_test_temp_templates_directory"
     )
+    old_cwd = os.getcwd()
+    os.chdir(temp_templates_directory)
+    yield temp_templates_directory
+    os.chdir(old_cwd)
+
+
+def test_setup_single_account(iam_spoke_role, temp_templates_directory) -> None:
     log_file = f"{temp_templates_directory}/test_setup_single_aws_account.txt"
     print(f"ui test log file is in {log_file}")
-    spawn_env = dict(os.environ)
-    spawn_env["PROMPT_TOOLKIT_NO_CPR"] = "1"
-    spawn_env["AWS_ACCESS_KEY_ID"] = iam_spoke_role["Credentials"]["AccessKeyId"]
-    spawn_env["AWS_SECRET_ACCESS_KEY"] = iam_spoke_role["Credentials"][
-        "SecretAccessKey"
-    ]
-    spawn_env["AWS_SESSION_TOKEN"] = iam_spoke_role["Credentials"]["SessionToken"]
+    spawn_env = create_env(iam_spoke_role)
     with open(log_file, "wb") as fout:
         tui = pexpect.spawn(
             "iambic setup",
@@ -81,19 +83,23 @@ def test_setup_single_account(iam_spoke_role) -> None:
         tui.expect("What would you like to do", timeout=120)
 
 
-def test_setup_org_account(iam_spoke_role) -> None:
-    temp_templates_directory = tempfile.mkdtemp(
-        prefix="iambic_test_temp_templates_directory"
-    )
-    log_file = f"{temp_templates_directory}/test_setup_org_account.txt"
-    print(f"ui test log file is in {log_file}")
+def create_env(iam_spoke_role):
     spawn_env = dict(os.environ)
+    if "IAMBIC_REPO_DIR" in spawn_env:
+        del spawn_env["IAMBIC_REPO_DIR"]
     spawn_env["PROMPT_TOOLKIT_NO_CPR"] = "1"
     spawn_env["AWS_ACCESS_KEY_ID"] = iam_spoke_role["Credentials"]["AccessKeyId"]
     spawn_env["AWS_SECRET_ACCESS_KEY"] = iam_spoke_role["Credentials"][
         "SecretAccessKey"
     ]
     spawn_env["AWS_SESSION_TOKEN"] = iam_spoke_role["Credentials"]["SessionToken"]
+    return spawn_env
+
+
+def test_setup_org_account(iam_spoke_role, temp_templates_directory) -> None:
+    log_file = f"{temp_templates_directory}/test_setup_org_account.txt"
+    print(f"ui test log file is in {log_file}")
+    spawn_env = create_env(iam_spoke_role)
     with open(log_file, "wb") as fout:
         tui = pexpect.spawn(
             "iambic setup",
@@ -137,7 +143,9 @@ def test_setup_org_account(iam_spoke_role) -> None:
         tui.expect("What would you like to configure", timeout=600)
 
 
-def test_setup_org_account_with_stack_creation(iam_spoke_role) -> None:
+def test_setup_org_account_with_stack_creation(
+    iam_spoke_role, temp_templates_directory
+) -> None:
     random_int = random.randint(0, 10000)
     unique_suffix = f"FuncTest{random_int}"
     iambic_hub_role_name = f"IambicHubRole{unique_suffix}"
@@ -145,18 +153,10 @@ def test_setup_org_account_with_stack_creation(iam_spoke_role) -> None:
     iambic_control_plane_region = "us-east-1"
 
     # stackset creation is slow. this test is known to be slow
-    temp_templates_directory = tempfile.mkdtemp(
-        prefix="iambic_test_temp_templates_directory"
-    )
     log_file = f"{temp_templates_directory}/test_setup_org_account.txt"
     print(f"ui test log file is in {log_file}")
-    spawn_env = dict(os.environ)
-    spawn_env["PROMPT_TOOLKIT_NO_CPR"] = "1"
-    spawn_env["AWS_ACCESS_KEY_ID"] = iam_spoke_role["Credentials"]["AccessKeyId"]
-    spawn_env["AWS_SECRET_ACCESS_KEY"] = iam_spoke_role["Credentials"][
-        "SecretAccessKey"
-    ]
-    spawn_env["AWS_SESSION_TOKEN"] = iam_spoke_role["Credentials"]["SessionToken"]
+    spawn_env = create_env(iam_spoke_role)
+
     with open(log_file, "wb") as fout:
         tui = pexpect.spawn(
             "iambic setup --more-options",
