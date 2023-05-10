@@ -1,6 +1,20 @@
 
 # Change Log
 
+## 0.7.3 (May 10th, 2023)
+
+BUG FIXES:
+
+* AWS plugin now supports legacy policy document schema. (This is an undocumented
+schema in which statement can be a single statement not wrapped inside an array.
+New policy editor will always use the array syntax; however, there are old policies
+that have the legacy syntax. IAMbic should handle it gracefully without crashing.)
+
+THANKS:
+
+* `Shreyas D` reported the issue [#397](https://github.com/noqdev/iambic/pull/397)
+
+
 ## 0.7.1 (May 9th, 2023)
 
 ENHANCEMENTS:
