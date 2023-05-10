@@ -33,6 +33,16 @@ EXAMPLE_POLICY_DOCUMENT = """
    ]
 }
 """
+EXAMPLE_LEGACY_POLICY_DOCUMENT = """
+{
+   "Version":"2012-10-17",
+   "Statement": {
+        "Effect":"Allow",
+        "Action":"acm:ListCertificates",
+        "Resource":"*"
+    }
+}
+"""
 EXAMPLE_TAG_KEY = "test_key"
 EXAMPLE_TAG_VALUE = "test_value"
 EXAMPLE_POLICY_ARN = "arn:aws:iam::123456789012:policy/example_managed_policy_name"
@@ -116,6 +126,21 @@ async def test_delete_managed_policy(mock_iam_client):
 @pytest.mark.asyncio
 async def test_apply_update_managed_policy(mock_iam_client):
     template_policy_document = json.loads(EXAMPLE_POLICY_DOCUMENT)
+    existing_policy_document = []
+    log_params = {}
+    proposed_changes = await apply_update_managed_policy(
+        mock_iam_client,
+        EXAMPLE_POLICY_ARN,
+        template_policy_document,
+        existing_policy_document,
+        log_params,
+    )
+    assert proposed_changes[0].change_type == ProposedChangeType.UPDATE
+
+
+@pytest.mark.asyncio
+async def test_apply_update_managed_policy_using_legacy_syntax(mock_iam_client):
+    template_policy_document = json.loads(EXAMPLE_LEGACY_POLICY_DOCUMENT)
     existing_policy_document = []
     log_params = {}
     proposed_changes = await apply_update_managed_policy(

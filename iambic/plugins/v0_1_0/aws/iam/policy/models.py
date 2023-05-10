@@ -181,7 +181,7 @@ class PolicyStatement(AccessModel, ExpiryModel):
 
 class AssumeRolePolicyDocument(AccessModel):
     version: str = "2008-10-17"
-    statement: Optional[List[PolicyStatement]] = None
+    statement: Optional[Union[List[PolicyStatement], PolicyStatement]] = None
 
     @property
     def resource_type(self) -> str:
@@ -197,7 +197,7 @@ class PolicyDocument(AccessModel, ExpiryModel):
         description="The name of the policy.",
     )
     version: Optional[str]
-    statement: Optional[List[PolicyStatement]] = Field(
+    statement: Optional[Union[List[PolicyStatement], PolicyStatement]] = Field(
         None,
         description="List of policy statements",
     )
@@ -213,7 +213,7 @@ class PolicyDocument(AccessModel, ExpiryModel):
 
 class ManagedPolicyDocument(AccessModel):
     version: Optional[str] = None
-    statement: Optional[List[PolicyStatement]] = Field(
+    statement: Optional[Union[List[PolicyStatement], PolicyStatement]] = Field(
         None,
         description="List of policy statements",
     )
