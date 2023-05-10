@@ -333,7 +333,14 @@ def transform_comments(yaml_dict):
     comment_dict = {}
     yaml_dict["metadata_commented_dict"] = comment_dict
     for key, comment in yaml_dict.ca.items.items():
-        comment_dict[key] = comment[2].value
+        # flatten comment for now since we do not have
+        # a lot of experience with more complex comment token
+        flatten_comment = None
+        if comment[2]:
+            flatten_comment = comment[2].value
+        elif comment[3] and type(comment[3]) == list:
+            flatten_comment = " ".join([token.value.strip() for token in comment[3]])
+        comment_dict[key] = flatten_comment
         value = yaml_dict[key]
         if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
             yaml_dict[key] = [transform_comments(n) for n in value]
