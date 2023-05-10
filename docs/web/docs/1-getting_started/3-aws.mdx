@@ -546,4 +546,108 @@ access_rules:
 
 #### 4.4 Attach temporary permissions to a permission set
 
-AWS Identity Center can be used to broker temporary AWS IAM credentials to human users. IAMbic supports <!-- #TODO finish this sentence -->
+AWS Identity Center can be used to broker temporary AWS IAM credentials to human users. IAMbic supports
+managing temporary permissions within AWS Identity Center Permission Sets.
+You can include an `expires_at` field within the inline policy statements in your Permission Set to
+specify when certain permissions should expire.
+
+Here's an example of a Permission Set with temporary permissions that will expire in 3 days:
+
+```yaml
+template_type: NOQ::AWS::IdentityCenter::PermissionSet
+identifier: iambic_test_permission_set
+properties:
+  name: iambic_test_permission_set
+  description: Permission set for testing IAMbic with temporary permissions
+  inline_policy:
+    expires_at: in 3 days
+    statement:
+      - action:
+          - "*"
+        effect: Deny
+        resource:
+          - "*"
+  managed_policies:
+    - arn: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+  permissions_boundary:
+    managed_policy_arn: arn:aws:iam::aws:policy/AWSDirectConnectReadOnlyAccess
+  session_duration: PT1H
+```
+
+After applying the changes to the Permission Set either manually, or through a GitHub PR, IAMbic will convert the relative timestamp (`in 3 days`) to an absolute time stamp,
+and expire the permissions after the time has elapsed.
+
+#### 4.5 Creating a Permission Set Across Accounts with Different Permissions Through Managed Policies
+
+In this section, we'll provide step-by-step instructions on how to create a Permission Set across
+accounts with different permissions through the use of a customer managed policy, which can be
+created separately through IAMbic.
+
+First, use the provided managed policy template, modify ACCOUNT_A and ACCOUNT_B to match your environment,
+and save the template:
+
+```yaml
+template_type: NOQ::AWS::IAM::ManagedPolicy
+included_accounts:
+  - '*'
+identifier: iambic_test_managed_policy
+properties:
+  policy_document:
+    statement:
+      - included_accounts:
+          - '*'
+        action:
+          - sqs:*
+        effect: Deny
+        resource:
+          - '*'
+      - included_accounts:
+          - demo-2
+        action:
+          - s3:*
+        effect: Deny
+        resource:
+          - '*'
+    version: '2012-10-17'
+  policy_name: iambic_test_managed_policy
+```
+
+1. Create a new file for the managed policy and save the provided template:
+
+```bash
+mkdir -p resources/aws/iam/managed_policy/all_accounts/
+code resources/aws/iam/managed_policy/all_accounts/iambic_test_managed_policy.yaml
+```
+
+2. Apply the changes using the IAMbic CLI:
+
+```bash
+iambic apply resources/aws/iam/managed_policy/all_accounts/iambic_test_managed_policy.yaml
+```
+
+3. Now, create a new Identity Center Permission Set template, or modify the existing one:
+
+```bash
+mkdir -p resources/aws/identity_center/permission_set/
+code resources/aws/identity_center/permission_set/iambic_test_permission_set.yaml
+```
+
+4. In the file, specify the template type, identifier, and properties for the Permission Set.
+Attach the customer-managed policy created in step 1:
+
+```yaml
+template_type: NOQ::AWS::IdentityCenter::PermissionSet
+identifier: iambic_test_permission_set
+properties:
+  name: iambic_test_permission_set
+  description: Permission set for testing IAMbic
+  customer_managed_policy_references:
+    - name: iambic_test_managed_policy
+  session_duration: PT1H
+```
+
+5. Apply the changes using the IAMbic CLI:
+
+```bash
+iambic apply resources/aws/identity_center/permission_set/iambic_test_permission_set.yaml
+```
