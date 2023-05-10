@@ -3,7 +3,7 @@ title: Deploy on GitHub
 ---
 
 ### Configuring GitHub to work with IAMbic
-These steps will ensure GitHub is confgured properly to work with IAMbic.
+These steps will ensure GitHub is configured properly to work with IAMbic.
 
 <!--
 
@@ -121,9 +121,9 @@ This page will walk you through the steps of configuring IAMbic, GitHub, and AWS
 ![IAMbic Git Flow](/img/git/iambic_git_flow.png)
 
 1. Developer Alice wants to create an application role. She creates a different branch, makes her changes, and submits a pull request with her changes to the IAMbic templates repository.
-2. Once the PR is created, the IAMbic GitHub action will run `iambic git-plan` to calculate the changes required due to the PR, and submits the proposed changes back into the PR as a comment.
+2. Once the PR is created, the IAMbic GitHub action will run `iambic plan --git-aware` to calculate the changes required due to the PR, and submits the proposed changes back into the PR as a comment.
 3. Reviewer Bob will review the template changes along with the proposed_changes. Bob may request additional changes.
-4. Optional: Developer Alice updates the PR. The IAMbic GitHub action will run `iambic git-plan` again to calculate the new changes required.
+4. Optional: Developer Alice updates the PR. The IAMbic GitHub action will run `iambic plan --git-aware` again to calculate the new changes required.
 5. Reviewer Bob approves the PR.
 6. Developer Alice comments with `iambic apply` in the PR.
 7. The IAMbic GitHub action will apply the changes in the PR.
@@ -225,7 +225,7 @@ properties:
             - logs:CreateLogGroup
           effect: Allow
           resource:
-            - arn:aws:logs:*:{{var.account_id}}:log-group:*:log-stream:
+            - "arn:aws:logs:*:{{var.account_id}}:log-group:*:log-stream:"
           sid: CreateLogGroup
         - action:
             - secretsmanager:GetSecretValue
@@ -261,7 +261,7 @@ properties:
 +          - sts:TagSession
 +        effect: Allow
 +        principal:
-+          aws: arn:aws:iam::{{account_id}}:role/iambic_github_app_lambda_execution
++          aws: arn:aws:iam::{{var.account_id}}:role/iambic_github_app_lambda_execution
 ```
 
 Update the IambicHubRole by running `iambic apply <path-to-iambic-hub-role-of-mgmt-account>`
@@ -314,31 +314,6 @@ Typical pull-requests review flow requires reviewers approval. Action such as au
 ### Finish setting up your local repo
 
 
-#### Install the IAMbic GitHub actions to `iambic-templates` repo
-
-1. In your template directory execute iambic setup
-2. Select `Generate GitHub Action Workflow`
-3. Complete `email`, `repository` name
-4. execute
-	```bash
-	git add .github
-	git commit -m "Install github actions"
-	git push origin HEAD
-	```
-
-<!-- #TODO should this be a code block? -->
-<!-- 1. Copy the following .github/workflows folder into your template directory.
-2. mkdir -p ~/github
-3. git clone https://github.com/noqdev/iambic-templates-example/ iambic-templates-example
-4. git clone \<YOUR OWN IAMBIC repo\> iambic-templates
-5. cd iambic-templates
-6. git checkout -b task/install_gh_actions origin/main
-7. cp -R ../iambic-templates-example/.github .
-8. git add .github
-9. git commit -m "Install github actions"
-10. git push origin HEAD
-11. Review the pull request in your repository and merge the pull request. -->
-
 #### Open a pull request on your iambic-template repo
 
 1. `git checkout -b task/change_description origin/main`
@@ -350,7 +325,7 @@ Typical pull-requests review flow requires reviewers approval. Action such as au
 	git push origin HEAD
 	```
 4. Create a pull request.
-5. The installed pull request action will comment with `iambic git-plan` to place the changes. <!-- #TODO place them as a comment in the PR? --> Any time you want iambic github action to re-plan the changes, you can comment `iambic git-plan`.
+5. The installed GitHub App will comment with plan the changes. Any time you want iambic github action to re-plan the changes, you can comment `iambic plan`.
 6. The plan will be a comment in line, as long as it is less than 65kb. (Be very careful with big plans because those are difficult for reviewers to review.) <!-- #TODO So then what? What's the alternative? -->
 7. Add reviewers to review your PR and plan that is in the PR comments.
 8. Once your reviewer approves your changes, add comment `iambic apply` to have iambic apply the changes. If the changes can be successfully applied, the PR will be automatically merged into main as well.
@@ -359,7 +334,7 @@ Typical pull-requests review flow requires reviewers approval. Action such as au
 
 ## FAQ
 
-1. The git-plan and git-apply process are performed via merge workflow. main branch is first checked out and then merge the changes requested in the PR. This is to ensure the plan is as up-to-date as possible. At any time if there is conflict, the requester should pull origin/main into the PR branch and allow iambic github action to replan the changes.
+1. The `plan` and `apply` process are performed via merge workflow. main branch is first checked out and then merge the changes requested in the PR. This is to ensure the plan is as up-to-date as possible. At any time if there is conflict, the requester should pull origin/main into the PR branch and allow iambic github action to replan the changes.
 
 2. Do I need a dedicated GitHub account to run IAMbic?
 
@@ -369,7 +344,7 @@ Typical pull-requests review flow requires reviewers approval. Action such as au
 
 	A: #TODO
 
-4. Can I set IAMbic to run on just a small porton of my cloud? How do I do that?
+4. Can I set IAMbic to run on just a small portion of my cloud? How do I do that?
 
 	A: #TODO
 
