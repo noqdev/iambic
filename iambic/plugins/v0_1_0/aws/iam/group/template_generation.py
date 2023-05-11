@@ -59,6 +59,7 @@ def get_templated_group_file_path(
     group_dir: str,
     group_name: str,
     included_accounts: list[str],
+    group_path: str = None,
 ) -> str:
     if included_accounts is not None and len(included_accounts) > 1:
         separator = "multi_account"
@@ -76,7 +77,21 @@ def get_templated_group_file_path(
         .replace(".", "_")
         .lower()
     )
-    return str(os.path.join(group_dir, separator, f"{file_name}.yaml"))
+
+    # using path components from path attribute
+    if group_path:
+        group_path_components = group_path.split("/")
+        # get rid of empty component
+        group_path_components = [
+            component for component in group_path_components if component
+        ]
+
+    # stitch desired location together
+    os_paths = [group_dir, separator]
+    os_paths.extend(group_path_components)
+    os_paths.append(f"{file_name}.yaml")
+
+    return str(os.path.join(*os_paths))
 
 
 async def generate_account_group_resource_files(
@@ -303,6 +318,7 @@ async def create_templated_group(  # noqa: C901
         group_dir,
         group_name,
         group_template_params.get("included_accounts"),
+        group_path=path,
     )
     return create_or_update_template(
         file_path,

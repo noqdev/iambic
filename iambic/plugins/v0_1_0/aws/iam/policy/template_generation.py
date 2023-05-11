@@ -58,6 +58,7 @@ def get_templated_managed_policy_file_path(
     policy_name: str,
     included_accounts: list[str],
     account_map: dict[str, AWSAccount],
+    managed_policy_path: str = None,
 ):
     if len(included_accounts) > 1:
         separator = "multi_account"
@@ -74,7 +75,21 @@ def get_templated_managed_policy_file_path(
         .replace(".", "_")
         .lower()
     )
-    return str(os.path.join(managed_policy_dir, separator, f"{file_name}.yaml"))
+
+    # using path components from path attribute
+    if managed_policy_path:
+        managed_policy_path_components = managed_policy_path.split("/")
+        # get rid of empty component
+        managed_policy_path_components = [
+            component for component in managed_policy_path_components if component
+        ]
+
+    # stitch desired location together
+    os_paths = [managed_policy_dir, separator]
+    os_paths.extend(managed_policy_path_components)
+    os_paths.append(f"{file_name}.yaml")
+
+    return str(os.path.join(*os_paths))
 
 
 async def generate_account_managed_policy_resource_files(
@@ -290,6 +305,7 @@ async def create_templated_managed_policy(  # noqa: C901
         managed_policy_name,
         template_params.get("included_accounts"),
         aws_account_map,
+        managed_policy_path=path,
     )
     return create_or_update_template(
         file_path,

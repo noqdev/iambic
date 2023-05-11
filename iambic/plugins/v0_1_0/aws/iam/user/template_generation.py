@@ -61,6 +61,7 @@ def get_templated_user_file_path(
     user_dir: str,
     user_name: str,
     included_accounts: list[str],
+    user_path: str = None,
 ) -> str:
     if included_accounts is not None and len(included_accounts) > 1:
         separator = "multi_account"
@@ -78,7 +79,21 @@ def get_templated_user_file_path(
         .replace(".", "_")
         .lower()
     )
-    return str(os.path.join(user_dir, separator, f"{file_name}.yaml"))
+
+    # using path components from path attribute
+    if user_path:
+        user_path_components = user_path.split("/")
+        # get rid of empty component
+        user_path_components = [
+            component for component in user_path_components if component
+        ]
+
+    # stitch desired location together
+    os_paths = [user_dir, separator]
+    os_paths.extend(user_path_components)
+    os_paths.append(f"{file_name}.yaml")
+
+    return str(os.path.join(*os_paths))
 
 
 async def generate_account_user_resource_files(
@@ -387,6 +402,7 @@ async def create_templated_user(  # noqa: C901
         user_dir,
         user_name,
         user_template_params.get("included_accounts"),
+        user_path=path,
     )
     return create_or_update_template(
         file_path,
