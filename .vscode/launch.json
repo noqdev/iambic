@@ -183,6 +183,18 @@
             "justMyCode": true
         },
         {
+            "name": "Iambic: Convert",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
+            "args": [
+                "convert",
+            ],
+            "justMyCode": true
+        },
+        {
             "name": "Iambic: Lambda App Import",
             "type": "python",
             "request": "launch",

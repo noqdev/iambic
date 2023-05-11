@@ -8,11 +8,14 @@ from unittest.mock import patch
 
 import pytest
 from mock import AsyncMock
+from stringcase import pascalcase, snakecase
 
 from iambic.core.models import BaseModel
 from iambic.core.utils import (
     GlobalRetryController,
+    convert_between_json_and_yaml,
     create_commented_map,
+    recursively_convert_dict_keys,
     simplify_dt,
     sort_dict,
     transform_comments,
@@ -261,3 +264,30 @@ async def test_gather_templates(tmpdir):
     # despite the function signature returns a list, we expect all
     # elements to be unique.
     assert len(result) == len(set(result))
+
+
+def test_recursively_convert_dict_keys():
+    # Test converting dictionary keys to snake_case
+    data = {"MyKey": {"InnerKey": "value"}}
+    expected_result = {"my_key": {"inner_key": "value"}}
+    result = recursively_convert_dict_keys(data, snakecase)
+    assert result == expected_result
+
+    # Test converting dictionary keys to PascalCase
+    data = {"my_key": {"inner_key": "value"}}
+    expected_result = {"MyKey": {"InnerKey": "value"}}
+    result = recursively_convert_dict_keys(data, pascalcase)
+    assert result == expected_result
+
+
+def test_convert_between_json_and_yaml():
+    # Test converting JSON to YAML
+    json_input = '{"MyKey": {"InnerKey": "value"}}'
+    yaml_output = convert_between_json_and_yaml(json_input)
+    assert "my_key:\n  inner_key: value\n" in yaml_output
+
+    # Test converting YAML to JSON
+    yaml_input = "my_key:\n  inner_key: value\n"
+    json_output = convert_between_json_and_yaml(yaml_input)
+    expected_json_output = '{\n  "MyKey": {\n    "InnerKey": "value"\n  }\n}'
+    assert json_output == expected_json_output

@@ -731,3 +731,57 @@ async def remove_expired_resources(
                 setattr(resource, field_name, new_value)
 
     return resource
+
+
+def recursively_convert_dict_keys(
+    obj: Union[dict, list], convert_function: callable[[str], str]
+) -> Union[dict, list, str]:
+    """
+    Recursively traverse a dictionary or list, converting all dictionary keys using the provided conversion function.
+
+    :param obj: The dictionary or list to convert.
+    :param convert_function: A function that takes a string and returns a string.
+    :return: The converted dictionary or list.
+    """
+    if isinstance(obj, list):
+        return [recursively_convert_dict_keys(i, convert_function) for i in obj]
+    elif isinstance(obj, dict):
+        new_dict = {}
+        for k, v in obj.items():
+            new_key = convert_function(k)
+            new_dict[new_key] = recursively_convert_dict_keys(v, convert_function)
+        return new_dict
+    return obj
+
+
+def convert_between_json_and_yaml(input_string: str) -> str:
+    """
+    Convert a string from AWS PascalCase JSON to IAMbic compatible YAML, or visa-versa.
+    When converting from JSON to YAML, dictionary keys are converted from PascalCase to snake_case.
+    When converting from YAML to JSON, dictionary keys are converted from snake_case to PascalCase.
+
+    :param input_string: The input string, which should be valid JSON or YAML.
+    :return: The converted string.
+    """
+    from json import JSONDecodeError
+
+    from stringcase import pascalcase, snakecase
+
+    from iambic.core.utils import yaml
+
+    try:
+        # Try parsing the input as JSON
+        data = json.loads(input_string)
+        # Convert keys from PascalCase/camelCase to snake_case
+        converted_data = recursively_convert_dict_keys(data, snakecase)
+        # Convert to YAML
+        output = yaml.dump(converted_data)
+    except JSONDecodeError:
+        # If the input is not JSON, try parsing it as YAML
+        data = yaml.load(input_string)
+        # Convert keys from snake_case to PascalCase
+        converted_data = recursively_convert_dict_keys(data, pascalcase)
+        # Convert to JSON
+        output = json.dumps(converted_data, indent=2)
+
+    return output
