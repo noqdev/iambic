@@ -30,8 +30,10 @@ from iambic.config.dynamic_config import (
     process_config,
 )
 from iambic.config.utils import (
+    aws_cf_parse_key_value_string,
     check_and_update_resource_limit,
     resolve_config_template_path,
+    validate_aws_cf_input_tags,
 )
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command, IambicManaged
@@ -56,6 +58,7 @@ from iambic.plugins.v0_1_0.aws.iam.role.models import (
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import (
     ARN_RE,
+    IAMBIC_HUB_ROLE_NAME,
     IAMBIC_SPOKE_ROLE_NAME,
     AWSAccount,
     AWSIdentityCenter,
@@ -114,7 +117,6 @@ def clear_stdin_buffer():
     """
     # Warning: This appears to work fine in a real terminal,
     # but not VSCode's Debug Terminal
-
     r, _, _ = select.select([sys.stdin], [], [], 0)
     while r:
         # If there is input waiting, read and discard it.
@@ -338,7 +340,7 @@ def confirm_command_exe(
 
 
 class ConfigurationWizard:
-    def __init__(self, repo_dir: str):
+    def __init__(self, repo_dir: str, is_more_options: bool = False):
         # TODO: Handle the case where the config file exists but is not valid
         self.existing_role_template_map = {}
         self.aws_account_map = {}
@@ -349,6 +351,7 @@ class ConfigurationWizard:
         self.caller_identity = {}
         self.profile_name = ""
         self._default_region = None
+        self._is_more_options = is_more_options
 
         asyncio.run(self.set_config_details())
         check_and_update_resource_limit(self.config)
@@ -802,6 +805,7 @@ class ConfigurationWizard:
                 > self.config.aws.min_accounts_required_for_wildcard_included_accounts
             )
         )
+        assume_as_arn = self.assume_as_arn
 
         if is_hub_account:
             account_id = self.hub_account_id
@@ -823,6 +827,8 @@ class ConfigurationWizard:
                     "Unable to add the AWS Account without creating the required roles."
                 )
                 return
+
+            role_arn = set_aws_role_arn(account_id)
 
         else:
             if requires_sync:
@@ -854,7 +860,6 @@ class ConfigurationWizard:
                 "What region should IAMbic use?", self.aws_default_region
             )
             role_arn = set_aws_role_arn(account_id)
-            assume_as_arn = self.assume_as_arn
 
             click.echo(
                 "\nIAMbic requires Hub and Spoke roles to be created which is deployed using CloudFormation.\n"
@@ -882,6 +887,8 @@ class ConfigurationWizard:
         elif not is_hub_account:
             profile_name = None
 
+        hub_role_name, spoke_role_name, tags = self.set_aws_cf_customization()
+
         cf_client = session.client("cloudformation", region_name=default_region)
 
         if is_hub_account:
@@ -892,6 +899,11 @@ class ConfigurationWizard:
                     assume_as_arn=assume_as_arn,
                     role_arn=role_arn,
                     read_only=read_only,
+                    hub_role_stack_name=hub_role_name,
+                    hub_role_name=hub_role_name,
+                    spoke_role_stack_name=spoke_role_name,
+                    spoke_role_name=spoke_role_name,
+                    tags=tags,
                 )
             )
             if not created_successfully:
@@ -904,6 +916,11 @@ class ConfigurationWizard:
                     hub_account_id=account_id,
                     role_arn=role_arn,
                     read_only=read_only,
+                    hub_role_stack_name=hub_role_name,
+                    hub_role_name=hub_role_name,
+                    spoke_role_stack_name=spoke_role_name,
+                    spoke_role_name=spoke_role_name,
+                    tags=tags,
                 )
             )
             if not created_successfully:
@@ -918,13 +935,13 @@ class ConfigurationWizard:
         account = AWSAccount(
             account_id=account_id,
             account_name=account_name,
-            spoke_role_arn=get_spoke_role_arn(account_id),
+            spoke_role_arn=get_spoke_role_arn(account_id, role_name=spoke_role_name),
             iambic_managed=iambic_managed,
             aws_profile=profile_name,
             default_region=default_region,
         )
         if is_hub_account:
-            account.hub_role_arn = get_hub_role_arn(account_id)
+            account.hub_role_arn = get_hub_role_arn(account_id, role_name=hub_role_name)
         # account.partition = set_aws_account_partition(account.partition)
 
         confirm_command_exe("AWS Account", Operation.ADDED, requires_sync=requires_sync)
@@ -1174,6 +1191,8 @@ class ConfigurationWizard:
             log.info("Unable to add the AWS Org without creating the required roles.")
             return
 
+        hub_role_name, spoke_role_name, tags = self.set_aws_cf_customization()
+
         created_successfully = asyncio.run(
             create_iambic_role_stacks(
                 cf_client=session.client(
@@ -1186,6 +1205,11 @@ class ConfigurationWizard:
                     "organizations", region_name=self.aws_default_region
                 ),
                 read_only=read_only,
+                hub_role_stack_name=hub_role_name,
+                hub_role_name=hub_role_name,
+                spoke_role_stack_name=spoke_role_name,
+                spoke_role_name=spoke_role_name,
+                tags=tags,
             )
         )
         if not created_successfully:
@@ -1196,10 +1220,11 @@ class ConfigurationWizard:
             org_id=org_id,
             org_account_id=account_id,
             default_rule=BaseAWSOrgRule(),
-            hub_role_arn=get_hub_role_arn(account_id),
+            hub_role_arn=get_hub_role_arn(account_id, role_name=hub_role_name),
             aws_profile=profile_name,
             spoke_role_is_read_only=read_only,
             default_region=self.aws_default_region,
+            preferred_spoke_role_name=spoke_role_name,
         )
         if self.config.aws.spoke_role_is_read_only:
             aws_org.default_rule.iambic_managed = IambicManaged.IMPORT_ONLY
@@ -1784,6 +1809,30 @@ class ConfigurationWizard:
                 assume_role_arn=self.config.aws.hub_role_arn,
                 region=region,
             )
+
+    def set_aws_cf_customization(self):
+        hub_role_name = IAMBIC_HUB_ROLE_NAME
+        spoke_role_name = IAMBIC_SPOKE_ROLE_NAME
+        if self._is_more_options:
+            input_hub_role_name = questionary.text(
+                "(Optional) Iambic Hub Role Name: ",
+                default="",
+            ).unsafe_ask()
+            input_spoke_role_name = questionary.text(
+                "(Optional) Iambic Spoke Role Name: ",
+                default="",
+            ).unsafe_ask()
+            if input_hub_role_name:
+                hub_role_name = input_hub_role_name
+            if input_spoke_role_name:
+                spoke_role_name = input_spoke_role_name
+        unparse_tags = questionary.text(
+            "Add Tags (leave blank or `team=ops_team, cost_center=engineering`): ",
+            default="",
+            validate=validate_aws_cf_input_tags,
+        ).ask()
+        tags = aws_cf_parse_key_value_string(unparse_tags)
+        return hub_role_name, spoke_role_name, tags
 
     def configuration_wizard_change_detection_setup(self, aws_org: AWSOrganization):
         click.echo(

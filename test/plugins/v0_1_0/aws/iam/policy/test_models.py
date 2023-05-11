@@ -1,10 +1,99 @@
 from __future__ import annotations
 
+import json
+
 from iambic.core.template_generation import merge_model
 from iambic.plugins.v0_1_0.aws.iam.policy.models import (
+    ManagedPolicyDocument,
     ManagedPolicyProperties,
     PolicyDocument,
 )
+
+
+def test_managed_policy_list_statements_schema():
+    aws_api_response = """
+{
+    "Version": "2012-10-17",
+    "Statement": [{
+        "Sid": "VisualEditor0",
+        "Effect": "Allow",
+        "Action": "sts:GetCallerIdentity",
+        "Resource": "*"
+    }]
+}
+    """
+    kwargs = json.loads(aws_api_response)
+    document = ManagedPolicyDocument(**kwargs)
+    assert document is not None
+    assert document.statement[0].action == "sts:GetCallerIdentity"
+
+
+def test_managed_policy_legacy_dictionary_schema():
+    aws_api_response = """
+{
+    "Version": "2012-10-17",
+    "Statement": {
+        "Sid": "VisualEditor0",
+        "Effect": "Allow",
+        "Action": "sts:GetCallerIdentity",
+        "Resource": "*"
+    }
+}
+    """
+    kwargs = json.loads(aws_api_response)
+    document = ManagedPolicyDocument(**kwargs)
+    assert document is not None
+    assert document.statement.action == "sts:GetCallerIdentity"
+
+
+def test_merge_managed_policy_document_from_dict_to_list(aws_accounts):
+    existing_statement_list = {
+        "effect": "Allow",
+        "sid": "ExpireStatement",
+        "expires_at": "2023-01-24",
+    }
+
+    existing_document = ManagedPolicyDocument(
+        policy_name="foo", version="bar", statement=existing_statement_list
+    )
+    new_statement_list = [{"effect": "Allow", "sid": "ExpireStatement"}]
+    new_document = ManagedPolicyDocument(
+        policy_name="foo", version="bar", statement=new_statement_list
+    )
+    merged_document: ManagedPolicyDocument = merge_model(
+        new_document, existing_document, aws_accounts
+    )
+
+    assert (
+        merged_document.statement[0].expires_at
+        == existing_document.statement.expires_at
+    )
+
+
+def test_merge_managed_policy_document_from_list_to_dict(aws_accounts):
+    existing_statement_list = [
+        {
+            "effect": "Allow",
+            "sid": "ExpireStatement",
+            "expires_at": "2023-01-24",
+        }
+    ]
+
+    existing_document = ManagedPolicyDocument(
+        policy_name="foo", version="bar", statement=existing_statement_list
+    )
+    new_statement_list = {"effect": "Allow", "sid": "ExpireStatement"}
+    new_document = ManagedPolicyDocument(
+        policy_name="foo", version="bar", statement=new_statement_list
+    )
+    merged_document: ManagedPolicyDocument = merge_model(
+        new_document, existing_document, aws_accounts
+    )
+
+    assert (
+        merged_document.statement.expires_at
+        == existing_document.statement[0].expires_at
+    )
 
 
 def test_merge_policy_document_with_sid(aws_accounts):

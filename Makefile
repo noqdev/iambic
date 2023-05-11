@@ -60,6 +60,10 @@ push_manifest:
 test:
 	python -m pytest -c pytest.ini
 
+.PHONY: functional_wizard_test
+functional_wizard_test:
+	pytest --cov-report html --cov iambic --cov-report lcov:cov_functional_tests_wizard.lcov --cov-report xml:cov_functional_tests_wizard.xml --cov-report html:cov_functional_tests_wizard.html  functional_tests/test_wizard.py -s --durations=20
+
 .PHONY: functional_test
 functional_test:
 	pytest --cov-report html --cov iambic --cov-report lcov:cov_functional_tests.lcov --cov-report xml:cov_functional_tests.xml --cov-report html:cov_functional_tests.html  functional_tests --ignore functional_tests/test_github_cicd.py --ignore functional_tests/test_config_discovery.py -s -n auto --dist loadscope --reruns 3 --reruns-delay 5 -r aR --durations=20
