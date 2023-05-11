@@ -150,7 +150,7 @@ permissions from your cloud provider(s).
 ![IAMbic Git Flow](/img/git/github-settings-menu.png)
 
 3. Add a branch protection rule.
-4. Set the branch name pattern to `main`.
+4. Set the branch name pattern to `main` (Or the name of your default branch, if it isn't `main`).
 5. Configure the options
 	1. Enable "Require a pull request before merging".
 	1. Enable "Require Approvals".
@@ -261,7 +261,7 @@ properties:
 +          - sts:TagSession
 +        effect: Allow
 +        principal:
-+          aws: arn:aws:iam::{{account_id}}:role/iambic_github_app_lambda_execution
++          aws: arn:aws:iam::{{var.account_id}}:role/iambic_github_app_lambda_execution
 ```
 
 Update the IambicHubRole by running `iambic apply <path-to-iambic-hub-role-of-mgmt-account>`
@@ -299,13 +299,15 @@ Return to the GitHub App settings page to connect the GitHub App to the Lambda t
 16. Select your IAMbic templates repository under "Repository access" section.
 17. Click Save.
 
-### Enable iambic-integrations to bypass review rules for "main" branch
+### Enable iambic-integrations to bypass review rules for default branch
 
-Typical pull-requests review flow requires reviewers approval. Action such as auto import, auto expire require changes being pushed back into main branch without manual approvals.
+
+In the typical review flow for pull requests, approval from reviewers is necessary. However, certain actions like auto import or auto expiration
+involve pushing changes back to the default branch without requiring manual approvals.
 
 1. Go to your iambic templates repository settings (https://github.com/ExampleOrg/ExampleIambicTemplatesRepository/settings).
 2. Click "Branches" in the top left navigation.
-3. Click on "Edit" for "main" under "Branch protection rules".
+3. Click on "Edit" for your default branch (typically "main" or "master") under "Branch protection rules".
 4. Click on "Allow specified actors to bypass required pull requests".
 5. In "Search for people, teams or apps", type in `iambic-integrations` to click on the GitHub App we have created.
 6. Click "Save changes".
@@ -341,25 +343,31 @@ Typical pull-requests review flow requires reviewers approval. Action such as au
 
 #### Open a pull request on your iambic-template repo
 
-1. `git checkout -b task/change_description origin/main`
-2. Edit one of your description within your templates, like `resources/github/iam_role_lambda.yaml`. <!-- #TODO edit to what?? -->
-3. Add your changes to your branch, and push it to github:
+1. `default_branch=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')`
+2. `git checkout -b task/change_description "$default_branch"`
+3. Edit one of your description within your templates, like `resources/github/iam_role_lambda.yaml`. <!-- #TODO edit to what?? -->
+4. Add your changes to your branch, and push it to github:
 	```bash
 	git add resources/github/iam_role_lambda.yaml
 	git commit -m "Change Description"
 	git push origin HEAD
 	```
-4. Create a pull request.
-5. The installed pull request action will comment with `iambic git-plan` to place the changes. <!-- #TODO place them as a comment in the PR? --> Any time you want iambic github action to re-plan the changes, you can comment `iambic git-plan`.
-6. The plan will be a comment in line, as long as it is less than 65kb. (Be very careful with big plans because those are difficult for reviewers to review.) <!-- #TODO So then what? What's the alternative? -->
-7. Add reviewers to review your PR and plan that is in the PR comments.
-8. Once your reviewer approves your changes, add comment `iambic apply` to have iambic apply the changes. If the changes can be successfully applied, the PR will be automatically merged into main as well.
+5. Create a pull request.
+6. The installed pull request action will comment with `iambic git-plan` to place the changes. <!-- #TODO place them as a comment in the PR? --> Any time you want iambic github action to re-plan the changes, you can comment `iambic git-plan`.
+7. The plan will be a comment in line, as long as it is less than 65kb. (Be very careful with big plans because those are difficult for reviewers to review.) <!-- #TODO So then what? What's the alternative? -->
+8. Add reviewers to review your PR and plan that is in the PR comments.
+9. Once your reviewer approves your changes, add comment `iambic apply` to have iambic apply the changes. If the changes can be successfully applied, the PR will be automatically merged into main as well.
 
 <!--
 
 ## FAQ
 
-1. The git-plan and git-apply process are performed via merge workflow. main branch is first checked out and then merge the changes requested in the PR. This is to ensure the plan is as up-to-date as possible. At any time if there is conflict, the requester should pull origin/main into the PR branch and allow iambic github action to replan the changes.
+1. The process of executing the git-plan and git-apply is carried out using the merge workflow.
+Initially, the default branch is checked out, and then the requested changes in the PR are merged into
+it. This ensures that the plan remains as up-to-date as possible. If conflicts arise at any point,
+the requester should pull their default branch (typically `main` or `master`) into the PR branch,
+resolve the conflicts, push the changes back to the branch, and allow the iambic GitHub action to
+replan the changes.
 
 2. Do I need a dedicated GitHub account to run IAMbic?
 
