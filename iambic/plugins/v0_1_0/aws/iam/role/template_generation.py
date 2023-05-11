@@ -61,6 +61,7 @@ def get_templated_role_file_path(
     role_dir: str,
     role_name: str,
     included_accounts: list[str],
+    role_path: str = None,
 ) -> str:
     if included_accounts is not None and len(included_accounts) > 1:
         separator = "multi_account"
@@ -78,7 +79,21 @@ def get_templated_role_file_path(
         .replace(".", "_")
         .lower()
     )
-    return str(os.path.join(role_dir, separator, f"{file_name}.yaml"))
+
+    # using path components from path attribute
+    if role_path:
+        role_path_components = role_path.split("/")
+        # get rid of empty component
+        role_path_components = [
+            component for component in role_path_components if component
+        ]
+
+    # stitch desired location together
+    os_paths = [role_dir, separator]
+    os_paths.extend(role_path_components)
+    os_paths.append(f"{file_name}.yaml")
+
+    return str(os.path.join(*os_paths))
 
 
 async def generate_account_role_resource_files(
@@ -409,6 +424,7 @@ async def create_templated_role(  # noqa: C901
         role_dir,
         role_name,
         role_template_params.get("included_accounts"),
+        role_path=path,
     )
     return create_or_update_template(
         file_path,
