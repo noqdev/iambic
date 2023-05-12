@@ -329,7 +329,7 @@ involve pushing changes back to the default branch without requiring manual appr
 	```
 5. Create a pull request.
 6. The installed GitHub App will comment with plan the changes. Any time you want iambic github action to re-plan the changes, you can comment `iambic plan`.
-7. The plan will be a comment in line, as long as it is less than 65kb. (Be very careful with big plans because those are difficult for reviewers to review.) <!-- #TODO So then what? What's the alternative? -->
+7. The plan will be a comment in line, as long as it is less than 65kb. Larger plans are uploaded to a gist and linked as a comment in the PR
 8. Add reviewers to review your PR and plan that is in the PR comments.
 9. Once your reviewer approves your changes, add comment `iambic apply` to have iambic apply the changes. If the changes can be successfully applied, the PR will be automatically merged into main as well.
 
