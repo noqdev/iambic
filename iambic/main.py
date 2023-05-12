@@ -24,6 +24,7 @@ from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage, TemplateChangeDetails
 from iambic.core.parser import load_templates
 from iambic.core.utils import (
+    convert_between_json_and_yaml,
     exceptions_in_proposed_changes,
     gather_templates,
     init_writable_directory,
@@ -472,6 +473,17 @@ def init_plugins_cmd(repo_dir: str):
 def setup(repo_dir: str, is_more_options: bool):
     ctx.command = Command.APPLY
     ConfigurationWizard(repo_dir, is_more_options=is_more_options).run()
+
+
+@cli.command()
+def convert():
+    """
+    Convert a string from AWS PascalCase JSON to IAMbic compatible YAML, or visa-versa.
+    """
+    user_input = click.edit()
+    if user_input is not None:
+        output = convert_between_json_and_yaml(user_input)
+        click.echo(output)
 
 
 if __name__ == "__main__":
