@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import Union
+from typing import Optional, Union
 
 import pytest
 from pydantic import Extra
@@ -12,6 +12,46 @@ from iambic.core.template_generation import (
     group_dict_attribute,
     merge_model,
 )
+
+
+class SampleGroup(BaseModel, AccessModelMixin):
+    group_id: int
+
+    @property
+    def resource_type(self):
+        return "group:"
+
+    @property
+    def resource_id(self):
+        return self.group_id
+
+    @property
+    def included_children(self):
+        return ["*"]
+
+    def set_included_children(self, value):
+        pass
+
+    @property
+    def excluded_children(self):
+        return []
+
+    def set_excluded_children(self, value):
+        pass
+
+    @property
+    def included_parents(self):
+        return ["*"]
+
+    def set_included_parents(self, value):
+        pass
+
+    @property
+    def excluded_parents(self):
+        return []
+
+    def set_excluded_parents(self, value):
+        pass
 
 
 class SampleNote(BaseModel, AccessModelMixin):
@@ -59,7 +99,8 @@ class SampleNote(BaseModel, AccessModelMixin):
 
 
 class SampleModel(BaseModel):
-    note: Union[str, SampleNote, list[SampleNote]]
+    note: Optional[Union[str, SampleNote, list[SampleNote]]]
+    group: Optional[Union[int, SampleGroup, list[SampleGroup]]]
 
     class Config:
         arbitrary_types_allowed = True
@@ -76,20 +117,55 @@ class SampleModel(BaseModel):
 
 def test_merge_model_mix_types_1():
     # going from not a list to a list
-    existing_model = SampleModel(note=SampleNote(note="foo"))
-    new_model = SampleModel(note=[SampleNote(note="bar")])
+    existing_model = SampleModel(
+        note=SampleNote(note="foo"), group=SampleGroup(group_id=1)
+    )
+    new_model = SampleModel(
+        note=[SampleNote(note="bar")], group=[SampleGroup(group_id=2)]
+    )
     updated_model: SampleModel = merge_model(new_model, existing_model, [])
     assert updated_model.note[0].note == "bar"
+    assert updated_model.group[0].group_id == 2
 
 
 def test_merge_model_mix_types_2():
     # going from list[AccessModelMixin] to a primitive
-    existing_model = SampleModel(note=[SampleNote(note="foo")])
-    new_model = SampleModel(note="bar")
+    existing_model = SampleModel(
+        note=[SampleNote(note="foo")], group=[SampleGroup(group_id=1)]
+    )
+    new_model = SampleModel(note="bar", group=2)
     updated_model: SampleModel = merge_model(new_model, existing_model, [])
-    assert (
+    assert (  # Be careful: it's note[0] because existing list is type list on note
         updated_model.note[0].note == "bar"
-    )  # be careful why it's note[0] because existing list is type list on note
+    )
+
+    # int is treated differently because there is no new_instance_from_string method
+    assert updated_model.group == 2
+
+
+def test_merge_model_mix_types_3():
+    # going from list[AccessModelMixin] to AccessModelMixin
+    existing_model = SampleModel(
+        note=[SampleNote(note="foo")], group=[SampleGroup(group_id=1)]
+    )
+    new_model = SampleModel(note=SampleNote(note="bar"), group=SampleGroup(group_id=2))
+    updated_model: SampleModel = merge_model(new_model, existing_model, [])
+    assert updated_model.note.note == "bar"
+    assert updated_model.group.group_id == 2
+
+
+@pytest.mark.skip(reason="Not sure if this is a scenario IAMbic needs to handle.")
+def test_merge_model_mix_types_4():
+    # going from AccessModelMixin to a primitive
+    existing_model = SampleModel(
+        note=SampleNote(note="foo"), group=SampleGroup(group_id=1)
+    )
+    new_model = SampleModel(note="bar", group=2)
+    updated_model: SampleModel = merge_model(new_model, existing_model, [])
+    assert updated_model.note.note == "bar"
+
+    # int is treated differently because there is no new_instance_from_string method
+    assert updated_model.group == 2
 
 
 @pytest.mark.asyncio

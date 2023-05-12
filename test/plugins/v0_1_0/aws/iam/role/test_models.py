@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from iambic.core.template_generation import merge_model
+from iambic.core.utils import IAMBIC_ERR_MSG
 from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate, RoleProperties
 from iambic.plugins.v0_1_0.aws.models import AWSAccount, Description
 
@@ -66,7 +67,7 @@ def test_merge_role_template_from_base_model_to_unsupported_type(
     assert type(new_document.properties.permissions_boundary) is float
     with pytest.raises(
         TypeError,
-        match=f"Type of {type(new_document.properties.permissions_boundary)} is not supported. Please file a github issue",
+        match=f"Type of {type(new_document.properties.permissions_boundary)} is not supported. {IAMBIC_ERR_MSG}",
     ):
         _ = merge_model(new_document, existing_document, aws_accounts)
 

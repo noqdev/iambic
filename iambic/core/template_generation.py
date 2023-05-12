@@ -11,6 +11,7 @@ from iambic.core.logger import log
 from iambic.core.models import AccessModelMixin, BaseModel, BaseTemplate, ProviderChild
 from iambic.core.parser import load_templates
 from iambic.core.utils import (
+    IAMBIC_ERR_MSG,
     evaluate_on_provider,
     gather_templates,
     get_provider_value,
@@ -898,7 +899,7 @@ def merge_model_list(
     return merged_list
 
 
-def merge_model(
+def merge_model(  # noqa: C901
     new_model: BaseModel,
     existing_model: BaseModel,
     all_provider_children: list[ProviderChild],
@@ -990,16 +991,55 @@ def merge_model(
                     elif not isinstance(new_value, list):
                         new_value = [new_value]
 
-                    new_value = merge_access_model_list(
-                        new_value, existing_value, all_provider_children
-                    )
+                    if all(isinstance(x, AccessModelMixin) for x in new_value):
+                        try:
+                            new_value = merge_access_model_list(
+                                new_value, existing_value, all_provider_children
+                            )
+                        except Exception as err:
+                            log.exception(
+                                f"Failed to merge template attribute. {IAMBIC_ERR_MSG}",
+                                key=key,
+                                new_value=[
+                                    {"value": str(val), "type": type(val)}
+                                    for val in new_value
+                                ],
+                                existing_value=[
+                                    {"value": str(val), "type": type(val)}
+                                    for val in existing_value
+                                ],
+                                err=repr(err),
+                            )
+                            raise
+
                     setattr(
                         merged_model, key, new_value if value_as_list else new_value[0]
                     )
                 elif isinstance(inner_element, BaseModel):
-                    new_value = merge_model_list(
-                        new_value, existing_value, all_provider_children
-                    )
+                    if not isinstance(new_value, list):
+                        new_value = [new_value]
+
+                    if all(isinstance(x, BaseModel) for x in new_value):
+                        try:
+                            new_value = merge_model_list(
+                                new_value, existing_value, all_provider_children
+                            )
+                        except Exception as err:
+                            log.exception(
+                                f"Failed to merge template attribute. {IAMBIC_ERR_MSG}",
+                                key=key,
+                                new_value=[
+                                    {"value": str(val), "type": type(val)}
+                                    for val in new_value
+                                ],
+                                existing_value=[
+                                    {"value": str(val), "type": type(val)}
+                                    for val in existing_value
+                                ],
+                                err=repr(err),
+                            )
+                            raise
+
                     setattr(
                         merged_model, key, new_value if value_as_list else new_value[0]
                     )
@@ -1030,7 +1070,7 @@ def merge_model(
                 setattr(merged_model, key, new_value)
             else:
                 raise TypeError(
-                    f"Type of {type(new_value)} is not supported. Please file a github issue"
+                    f"Type of {type(new_value)} is not supported. {IAMBIC_ERR_MSG}"
                 )
         elif key not in iambic_fields:
             setattr(merged_model, key, new_value)

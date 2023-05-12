@@ -30,6 +30,11 @@ if TYPE_CHECKING:
 
 NOQ_TEMPLATE_REGEX = r".*template_type:\n?.*NOQ::"
 RATE_LIMIT_STORAGE: dict[str, int] = {}
+IAMBIC_ERR_MSG = (
+    "Please file a github issue or message us on the slack community channel. "
+    "Include as much of the traceback and this error message as possible. "
+    "Be sure to redact any sensitive information."
+)
 
 __WRITABLE_DIRECTORY__ = pathlib.Path.home()
 
