@@ -15,7 +15,7 @@ from iambic.core.utils import (
     GlobalRetryController,
     convert_between_json_and_yaml,
     create_commented_map,
-    recursively_convert_dict_keys,
+    normalize_dict_keys,
     simplify_dt,
     sort_dict,
     transform_comments,
@@ -266,17 +266,17 @@ async def test_gather_templates(tmpdir):
     assert len(result) == len(set(result))
 
 
-def test_recursively_convert_dict_keys():
+def test_normalize_dict_keys():
     # Test converting dictionary keys to snake_case
     data = {"MyKey": {"InnerKey": "value"}}
     expected_result = {"my_key": {"inner_key": "value"}}
-    result = recursively_convert_dict_keys(data, snakecase)
+    result = normalize_dict_keys(data, snakecase)
     assert result == expected_result
 
     # Test converting dictionary keys to PascalCase
     data = {"my_key": {"inner_key": "value"}}
     expected_result = {"MyKey": {"InnerKey": "value"}}
-    result = recursively_convert_dict_keys(data, pascalcase)
+    result = normalize_dict_keys(data, pascalcase)
     assert result == expected_result
 
 
