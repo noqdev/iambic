@@ -6,9 +6,6 @@ from test.plugins.v0_1_0.aws.iam.policy.test_utils import (
     EXAMPLE_TAG_KEY,
     EXAMPLE_TAG_VALUE,
 )
-from test.plugins.v0_1_0.aws.identity_center.permission_set.test_template_generation import (
-    permission_set_content,
-)
 from test.plugins.v0_1_0.aws.identity_center.permission_set.test_utils import (
     EXAMPLE_IDENTITY_CENTER_INSTANCE_ARN,
     EXAMPLE_PERMISSION_SET_NAME,
@@ -624,15 +621,6 @@ async def test_apply():
         ),
     )
     config = AWSConfig(accounts=[aws_account])
-
-    # Mock the evaluate_on_provider and _apply_to_account functions
-    account_change_details = AccountChangeDetails(
-        org_id="o-1234567890",
-        resource_id="TestPermissionSet",
-        resource_type="AwsIdentityCenterPermissionSetTemplate",
-        proposed_changes=[],
-        account="test_account",
-    )
 
     # Execute the apply function
     result = await template.apply(config)

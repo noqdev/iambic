@@ -4,7 +4,6 @@ import uuid
 from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
 from iambic.config.dynamic_config import load_config
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage

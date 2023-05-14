@@ -31,7 +31,7 @@ jobs:
         id: run-test
         run: |
           python3 -m venv env
-          . env/bin/activate && pip install poetry setuptools pip --upgrade && poetry install && make test
+          . env/bin/activate && pip install poetry setuptools pip --upgrade && poetry install && pre-commit run -a && make test
       - name: Upload coverage reports to Codecov
         if: ${{ github.repository == 'noqdev/iambic' }}
         uses: codecov/codecov-action@v3
