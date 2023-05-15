@@ -2,6 +2,17 @@
 requires = [ "poetry-core",]
 build-backend = "poetry.core.masonry.api"
 
+[tool.isort]
+# Ensure that all other pyproject.toml files in this repository have the same isort settings
+known_first_party = ["iambic"]
+src_paths = ["iambic","test","functional_tests","build_utils"]
+known_third_party = ["_pytest", "okta", "github", "pydantic", "rich"]
+profile = "black"
+add_imports = ["from __future__ import annotations"]
+skip_gitignore = true
+line_length = 88
+
+
 [tool.poetry]
 name = "iambic-core"
 packages = [

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 from random import randint
 from test.plugins.v0_1_0.azure_ad.test_utils import (  # noqa: F401 # intentional for mocks

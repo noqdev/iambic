@@ -5,7 +5,6 @@ import random
 from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
 from iambic.plugins.v0_1_0.azure_ad.group.models import GroupTemplateProperties
 from iambic.plugins.v0_1_0.azure_ad.group.utils import list_groups
 from iambic.plugins.v0_1_0.azure_ad.user.models import UserTemplateProperties
