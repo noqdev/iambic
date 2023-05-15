@@ -8,7 +8,6 @@ import okta.models
 import pytest
 
 import iambic.plugins.v0_1_0.okta.models
-from iambic.core.context import ctx
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.okta.iambic_plugin import OktaOrganization
 from iambic.plugins.v0_1_0.okta.models import UserStatus

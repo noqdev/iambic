@@ -171,7 +171,7 @@ def exe_message():
             *path_dirs,
             file_name_and_extension: str = None,
             flatten_results: bool = False,
-        ) -> List[dict]:
+        ) -> list[dict]:
             return MagicMock()
 
     return TestExecutionMessage(
@@ -311,9 +311,7 @@ async def test_create_templated_permission_set(
         create_or_update_template = MagicMock()
         group_int_or_str_attribute = AsyncMock()
         group_dict_attribute = AsyncMock()
-        get_templated_permission_set_file_path = MagicMock(
-            return_value="test_file_path"
-        )
+        MagicMock(return_value="test_file_path")
 
         with patch(
             "iambic.plugins.v0_1_0.aws.utils.calculate_import_preference",
