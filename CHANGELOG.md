@@ -9,7 +9,7 @@ BUG FIXES:
 * Flatten multiline comment when they are not attached to a YAML dict key
 
 ENHANCEMENTS:
-* Added an `iambic convert` command to convert an AWS policy to the IAMbic formatted yaml 
+* Added an `iambic convert` command to convert an AWS policy to the IAMbic formatted yaml
 
 THANKS:
 
