@@ -1,6 +1,21 @@
 
 # Change Log
 
+## 0.7.6 (May 15th, 2023)
+
+BUG FIXES:
+
+* Handling merge models when the new value is an int
+* Flatten multiline comment when they are not attached to a YAML dict key
+
+ENHANCEMENTS:
+* Added an `iambic convert` command to convert an AWS policy to the IAMbic formatted yaml 
+
+THANKS:
+
+* `Shreyas D` for reporting the merge model issue
+* `Phil H, Michael W` for suggesting the `iambic convert` command
+
 ## 0.7.3 (May 10th, 2023)
 
 BUG FIXES:
