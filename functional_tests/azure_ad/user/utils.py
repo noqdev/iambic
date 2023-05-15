@@ -4,7 +4,6 @@ import os
 import random
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
 from iambic.plugins.v0_1_0.azure_ad.user.models import AzureActiveDirectoryUserTemplate
 
 

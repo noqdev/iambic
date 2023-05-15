@@ -6,16 +6,13 @@ import shutil
 import tempfile
 
 # test_your_module.py
-from io import StringIO
-from typing import Any, Callable, Generator
-from unittest.mock import AsyncMock
+from typing import Any
 
 import git
 import pytest
 import yaml
 from git import GitCommandError, Repo
 from mock import MagicMock
-from pytest_mock import MockerFixture
 
 import iambic.plugins.v0_1_0.example
 from iambic.config.dynamic_config import load_config
@@ -228,16 +225,6 @@ def test_create_templates_for_modified_files_with_multi_account_incl_star_suppor
 ):
     templates: list[BaseTemplate] = create_templates_for_modified_files(
         test_config_path_two_accounts_plus_org,
-        git_diff_parameterized(TEST_TEMPLATE_MULTI_ACCOUNT_INC_STAR_YAML),
-    )
-    assert templates[0].properties.name == "after"
-
-
-def test_create_templates_for_modified_files_with_multi_account_incl_star_support(
-    test_config_path_two_accounts_plus_org, git_diff_parameterized: list[Any]
-):
-    templates: list[BaseTemplate] = create_templates_for_modified_files(
-        test_config_path_two_accounts_plus_org,
         git_diff_parameterized(TEST_TEMPLATE_MULTI_ACCOUNT_EXC_STAR_YAML),
     )
     assert templates[0].properties.name == "after"
@@ -408,7 +395,7 @@ def test_create_templates_for_deleted_files(mocker):
     )
 
     # Mock the log.info function
-    mock_log_info = mocker.patch("iambic.core.git.log.info")
+    mocker.patch("iambic.core.git.log.info")
 
     # Test the create_templates_for_deleted_files function
     with mocker.patch("iambic.core.git.TEMPLATES", mock_templates):

@@ -18,3 +18,8 @@ A clear and concise description of any alternative solutions or features you've 
 
 **Additional context**
 Add any other context or screenshots about the feature request here.
+
+**Community Engagement**
+Help us prioritize this request and express your support by adding a 👍 reaction to the original issue. This will assist both the community and the maintainers in addressing this request.
+
+Please avoid leaving "+1" or "me too" comments as they create extra noise for issue followers and do not assist in prioritizing the request. If you are considering working on this issue or have already submitted a pull request, kindly leave a comment.

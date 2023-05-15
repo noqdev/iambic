@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Union
 
 from iambic.core.template_generation import (
