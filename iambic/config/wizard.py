@@ -916,9 +916,7 @@ class ConfigurationWizard:
                     hub_account_id=account_id,
                     role_arn=role_arn,
                     read_only=read_only,
-                    hub_role_stack_name=hub_role_name,
                     hub_role_name=hub_role_name,
-                    spoke_role_stack_name=spoke_role_name,
                     spoke_role_name=spoke_role_name,
                     tags=tags,
                 )
