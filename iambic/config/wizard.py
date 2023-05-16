@@ -991,7 +991,7 @@ class ConfigurationWizard:
         else:
             account = self.config.aws.accounts[0]
 
-        choices = ["Go back", "Update IAMbic control", "Update Region"]
+        choices = ["Go back", "Update region"]
         if not account.org_id:
             choices.append("Update name")
 
@@ -1002,7 +1002,7 @@ class ConfigurationWizard:
             ).unsafe_ask()
             if action == "Go back":
                 return
-            elif action == "Update name":
+            elif action == "Update region":
                 account.default_region = set_aws_region(
                     "What region should IAMbic use?", account.default_region
                 )
