@@ -58,6 +58,7 @@ from iambic.plugins.v0_1_0.aws.iam.role.models import (
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import (
     ARN_RE,
+    IAMBIC_CHANGE_DETECTION_SUFFIX,
     IAMBIC_HUB_ROLE_NAME,
     IAMBIC_SPOKE_ROLE_NAME,
     AWSAccount,
@@ -1874,7 +1875,7 @@ class ConfigurationWizard:
 
         role_name = IAMBIC_SPOKE_ROLE_NAME
         hub_account_id = self.hub_account_id
-        sqs_arn = f"arn:aws:sqs:{self.aws_default_region}:{hub_account_id}:IAMbicChangeDetectionQueue"
+        sqs_arn = f"arn:aws:sqs:{self.aws_default_region}:{hub_account_id}:IAMbicChangeDetectionQueue{IAMBIC_CHANGE_DETECTION_SUFFIX}"
 
         if not self.existing_role_template_map:
             log.info("Loading AWS role templates...")
