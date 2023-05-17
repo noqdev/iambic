@@ -47,8 +47,8 @@ if TYPE_CHECKING:
 
 ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{var.account_id}}):(.+)$)|^\*$"
 
-IAMBIC_HUB_ROLE_NAME = "IambicHubRole"
-IAMBIC_SPOKE_ROLE_NAME = "IambicSpokeRole"
+IAMBIC_HUB_ROLE_NAME = os.getenv("IAMBIC_HUB_ROLE_NAME", "IambicHubRole")
+IAMBIC_SPOKE_ROLE_NAME = os.getenv("IAMBIC_SPOKE_ROLE_NAME", "IambicSpokeRole")
 
 
 def get_hub_role_arn(account_id: str, role_name=None) -> str:
