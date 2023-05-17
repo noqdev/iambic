@@ -33,7 +33,7 @@ def calculate_import_preference(existing_template):
 
 
 async def boto_crud_call(
-    boto_fnc, retryable_errors: list = None, **kwargs
+    boto_fnc, retryable_errors: Optional[list] = None, **kwargs
 ) -> Union[list, dict]:
     """Responsible for calls to boto. Adds async support and error handling
     :param boto_fnc:

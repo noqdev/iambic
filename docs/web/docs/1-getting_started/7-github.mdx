@@ -330,29 +330,42 @@ Typical pull-requests review flow requires reviewers approval. Action such as au
 7. Add reviewers to review your PR and plan that is in the PR comments.
 8. Once your reviewer approves your changes, add comment `iambic apply` to have iambic apply the changes. If the changes can be successfully applied, the PR will be automatically merged into main as well.
 
+## FAQ
+
+1. After I've deployed the Docker as a Lambda function, how do I update it?
+
+  A: To update the Docker image used for the Lambda function, you simply need to run `terraform apply` again from the `deployment/github_app` directory.
+  This will pull the latest version of the IAMbic Docker image and update your Lambda function to use it.
+
+
 <!--
 
 ## FAQ
 
-1. The `plan` and `apply` process are performed via merge workflow. main branch is first checked out and then merge the changes requested in the PR. This is to ensure the plan is as up-to-date as possible. At any time if there is conflict, the requester should pull origin/main into the PR branch and allow iambic github action to replan the changes.
+1. After I've deployed the Docker as a Lambda function, how do I update it?
 
-2. Do I need a dedicated GitHub account to run IAMbic?
+  A: To update the Docker image used for the Lambda function, you simply need to run `terraform apply` again from the `deployment/github_app` directory.
+  This will pull the latest version of the IAMbic Docker image and update your Lambda function to use it.
 
-	A: #TODO
+2. The `plan` and `apply` process are performed via merge workflow. main branch is first checked out and then merge the changes requested in the PR. This is to ensure the plan is as up-to-date as possible. At any time if there is conflict, the requester should pull origin/main into the PR branch and allow iambic github action to replan the changes.
 
-3. Can I use my existing GitHub repos to run IAMbic?
-
-	A: #TODO
-
-4. Can I set IAMbic to run on just a small portion of my cloud? How do I do that?
+3. Do I need a dedicated GitHub account to run IAMbic?
 
 	A: #TODO
 
-5. How do I debug the GitHub App?
+4. Can I use my existing GitHub repos to run IAMbic?
 
 	A: #TODO
 
-6. How do I update the GitHub App Lambda?
+5. Can I set IAMbic to run on just a small portion of my cloud? How do I do that?
+
+	A: #TODO
+
+6. How do I debug the GitHub App?
+
+	A: #TODO
+
+7. How do I update the GitHub App Lambda?
 
 	A: #TODO
 

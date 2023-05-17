@@ -47,6 +47,10 @@ from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
     create_iambic_eventbridge_stacks,
     create_iambic_role_stacks,
     create_spoke_role_stack,
+    delete_change_detection_stack_sets,
+    delete_change_detection_stacks,
+    delete_iambic_role_stacks,
+    delete_spoke_role_stack_set,
 )
 from iambic.plugins.v0_1_0.aws.handlers import apply as aws_apply
 from iambic.plugins.v0_1_0.aws.handlers import import_aws_resources
@@ -953,6 +957,85 @@ class ConfigurationWizard:
             self.config.aws = asyncio.run(aws_load(self.config.aws))
             asyncio.run(self.sync_config_aws_accounts([account]))
 
+    def configuration_wizard_aws_account_remove(self):
+        account_names = [account.account_name for account in self.config.aws.accounts]
+        account_id_to_config_elem_map = {
+            account.account_id: elem
+            for elem, account in enumerate(self.config.aws.accounts)
+        }
+        if len(account_names) > 1:
+            action = questionary.autocomplete(
+                "Which AWS Account would you like to remove?",
+                choices=["Go back", *account_names],
+                style=CUSTOM_AUTO_COMPLETE_STYLE,
+            ).unsafe_ask()
+            if action == "Go back":
+                return
+            account = next(
+                (
+                    account
+                    for account in self.config.aws.accounts
+                    if account.account_name == action
+                ),
+                None,
+            )
+            if not account:
+                log.debug("Could not find AWS Account")
+                return
+
+        elif not account_names:
+            log.info(
+                "No removable accounts found.\n"
+                "TIP: An AWS account cannot be removed if it attached to an Organization in the config."
+            )
+            return
+        else:
+            account = self.config.aws.accounts[0]
+
+        confirm_remove_prompt = "Are you sure you want to remove the selected account?"
+
+        if account.is_hub_account:
+            confirm_remove_prompt = (
+                "You are attempting to remove a Hub Account. "
+                "This will remove all spoke accounts as well.\n" + confirm_remove_prompt
+            )
+
+        confirm_remove = questionary.confirm(
+            confirm_remove_prompt,
+        ).unsafe_ask()
+
+        if confirm_remove:
+            session, _ = self.get_boto3_session_for_account(account.account_id)
+            cf_client = session.client(
+                "cloudformation", region_name=self.aws_default_region
+            )
+            org_client = session.client(
+                "organizations", region_name=self.aws_default_region
+            )
+
+            if account.is_hub_account:
+                asyncio.run(
+                    delete_iambic_role_stacks(
+                        cf_client,
+                        org_client,
+                    )
+                )
+                self.config.aws.accounts = []
+                self.config.aws.organizations = []
+            else:
+                asyncio.run(
+                    delete_spoke_role_stack_set(
+                        cf_client,
+                        org_client,
+                    )
+                )
+                del self.config.aws.accounts[
+                    account_id_to_config_elem_map[account.account_id]
+                ]
+            asyncio.run(self.run_import_aws_resources())
+            self.config.write()
+            log.info(f"AWS Account {account.account_name} has been removed.")
+
     def configuration_wizard_aws_account_edit(self):
         account_names = [
             account.account_name
@@ -1002,7 +1085,7 @@ class ConfigurationWizard:
             ).unsafe_ask()
             if action == "Go back":
                 return
-            elif action == "Update name":
+            elif action == "Update Region":
                 account.default_region = set_aws_region(
                     "What region should IAMbic use?", account.default_region
                 )
@@ -1068,7 +1151,7 @@ class ConfigurationWizard:
             identity_arn = get_identity_arn(default_caller_identity)
             click.echo(
                 f"\nIAMbic detected you are using {identity_arn} for AWS access.\n"
-                f"This identity will require the ability to create"
+                f"This identity will require the ability to create and manage "
                 f"CloudFormation stacks, stack sets, and stack set instances."
             )
             if questionary.confirm("Would you like to use this identity?").ask():
@@ -1091,9 +1174,12 @@ class ConfigurationWizard:
     def configuration_wizard_aws_accounts(self):
         while True:
             if self.config.aws and self.config.aws.accounts:
+                choices = ["Go back", "Add AWS Account", "Edit AWS Account"]
+                if len(self.config.aws.accounts) > 1:
+                    choices.append("Remove AWS Account")
                 action = questionary.select(
                     "What would you like to do?",
-                    choices=["Go back", "Add AWS Account", "Edit AWS Account"],
+                    choices=choices,
                 ).unsafe_ask()
                 if action == "Go back":
                     return
@@ -1101,6 +1187,8 @@ class ConfigurationWizard:
                     self.configuration_wizard_aws_account_add()
                 elif action == "Edit AWS Account":
                     self.configuration_wizard_aws_account_edit()
+                elif action == "Remove AWS Account":
+                    self.configuration_wizard_aws_account_remove()
             else:
                 self.configuration_wizard_aws_account_add()
 
@@ -1288,9 +1376,10 @@ class ConfigurationWizard:
             "but you may also manually configure accounts."
         )
         while True:
+            choices = ["Go back", "AWS Organizations", "AWS Accounts"]
             action = questionary.select(
                 "What would you like to configure in AWS?",
-                choices=["Go back", "AWS Organizations", "AWS Accounts"],
+                choices=choices,
             ).unsafe_ask()
             if action == "Go back":
                 return
@@ -1832,7 +1921,34 @@ class ConfigurationWizard:
         tags = aws_cf_parse_key_value_string(unparse_tags)
         return hub_role_name, spoke_role_name, tags
 
+    def configuration_wizard_change_detection_teardown(self, aws_org: AWSOrganization):
+        self.setup_aws_configuration()
+        click.echo(
+            "\nTo teardown change detection for IAMbic, the CloudFormation stacks and stack set will be deleted.\n"
+        )
+        if not questionary.confirm("Proceed with teardown?").unsafe_ask():
+            return
+
+        session, _ = self.get_boto3_session_for_account(aws_org.org_account_id)
+        cf_client = session.client(
+            "cloudformation", region_name=self.aws_default_region
+        )
+        org_client = session.client(
+            "organizations", region_name=self.aws_default_region
+        )
+
+        # Delete IAMbic change detection stacks
+        asyncio.run(delete_change_detection_stacks(cf_client))
+
+        # Delete IAMbic change detection stack set
+        asyncio.run(delete_change_detection_stack_sets(cf_client, org_client))
+        self.config.aws.sqs_cloudtrail_changes_queues = []
+        self.config.write()
+
+        click.echo("Change detection teardown completed.")
+
     def configuration_wizard_change_detection_setup(self, aws_org: AWSOrganization):
+        self.setup_aws_configuration()
         click.echo(
             "\nTo setup change detection for iambic it requires creating CloudFormation stacks "
             "and a CloudFormation stack set.\n"
@@ -1841,6 +1957,12 @@ class ConfigurationWizard:
             "If you have already manually deployed the templates, answer yes to proceed.\n"
             "IAMbic will validate that your stacks have been deployed successfully and will not attempt to replace them."
         )
+        unparse_tags = questionary.text(
+            "Add Tags (leave blank or `team=ops_team, cost_center=engineering`): ",
+            default="",
+            validate=validate_aws_cf_input_tags,
+        ).ask()
+        tags = aws_cf_parse_key_value_string(unparse_tags)
         if not questionary.confirm("Proceed?").unsafe_ask():
             return
 
@@ -1859,6 +1981,7 @@ class ConfigurationWizard:
                 aws_org.org_id,
                 aws_org.org_account_id,
                 self.cf_role_arn,
+                tags=tags,
             )
         )
         if not successfully_created:
@@ -1910,6 +2033,11 @@ class ConfigurationWizard:
                     and not self.config.aws.sqs_cloudtrail_changes_queues
                 ):
                     choices.append("Setup AWS change detection")
+                elif (
+                    self.config.aws.organizations
+                    and self.config.aws.sqs_cloudtrail_changes_queues
+                ):
+                    choices.append("Teardown AWS change detection")
 
             choices.append("Done")
 
@@ -1962,6 +2090,10 @@ class ConfigurationWizard:
                         log.info(
                             "Unable to edit this attribute without CloudFormation permissions."
                         )
+                elif action == "Teardown AWS change detection":
+                    self.configuration_wizard_change_detection_teardown(
+                        self.config.aws.organizations[0]
+                    )
             except KeyboardInterrupt:
                 ...
 
