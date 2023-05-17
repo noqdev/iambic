@@ -6,15 +6,19 @@ Parameters:
   OrgID:
     Type: String
     Description: AWS Organization ID.
+  Suffix:
+    Type: String
+    Description: Suffix to append to the name of the EventBridge Bus and SQS Queue.
+    Default: ""
 Resources:
   IAMbicEventBus:
     Type: 'AWS::Events::EventBus'
     Properties:
-      Name: 'IAMbicChangeDetectionEventBus'
+      Name: !Sub 'IAMbicChangeDetectionEventBus${Suffix}'
   IAMbicEventBusPolicy:
     Type: 'AWS::Events::EventBusPolicy'
     Properties:
-      StatementId: 'IAMbicEventBusPolicy'
+      StatementId: !Sub 'IAMbicEventBusPolicy${Suffix}'
       EventBusName: !Ref IAMbicEventBus
       Statement:
         Effect: "Allow"
@@ -29,7 +33,7 @@ Resources:
   IAMbicEventRule:
     Type: 'AWS::Events::Rule'
     Properties:
-      Name: IAMbicChangeDetectionRule
+      Name: !Sub 'IAMbicChangeDetectionRule${Suffix}'
       Description: 'Captures changes when an Identity is created/Updated/deleted.'
       EventBusName: !Ref IAMbicEventBus
       EventPattern:
@@ -39,6 +43,7 @@ Resources:
           eventSource:
             - iam.amazonaws.com
             - sso.amazonaws.com
+            - organizations.amazonaws.com
           eventName:
             - prefix: Create
             - prefix: Update
@@ -60,7 +65,7 @@ Resources:
   IAMbicChangeDetectionQueue:
     Type: 'AWS::SQS::Queue'
     Properties:
-      QueueName: IAMbicChangeDetectionQueue
+      QueueName: !Sub 'IAMbicChangeDetectionQueue${Suffix}'
       MessageRetentionPeriod: 604800
   IAMbicChangeDetectionQueueSQSPolicy:
     Type: AWS::SQS::QueuePolicy

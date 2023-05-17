@@ -5,11 +5,15 @@ Description: >-
 Parameters:
   TargetEventBusArn:
     Type: String
+  Suffix:
+    Type: String
+    Description: Suffix to append to the name of the role, rule, and other resources
+    Default: ""
 Resources:
   IAMbicEventForwardingRole:
     Type: 'AWS::IAM::Role'
     Properties:
-      RoleName: 'IAMbicEventForwardingRole'
+      RoleName: !Sub 'IAMbicEventForwardingRole${Suffix}'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -31,7 +35,7 @@ Resources:
   IAMbicEventForwardingRule:
     Type: 'AWS::Events::Rule'
     Properties:
-      Name: IAMbicEventForwardingRule
+      Name: !Sub 'IAMbicEventForwardingRule${Suffix}'
       Description: 'Captures IAM and SSO events and forwards the events to the IAMbicEventBus for processing.'
       EventBusName: default
       EventPattern:
@@ -41,6 +45,7 @@ Resources:
           eventSource:
             - iam.amazonaws.com
             - sso.amazonaws.com
+            - organizations.amazonaws.com
           eventName:
             - prefix: Create
             - prefix: Update

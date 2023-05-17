@@ -58,6 +58,7 @@ from iambic.plugins.v0_1_0.aws.iam.role.models import (
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import (
     ARN_RE,
+    IAMBIC_CHANGE_DETECTION_SUFFIX,
     IAMBIC_HUB_ROLE_NAME,
     IAMBIC_SPOKE_ROLE_NAME,
     AWSAccount,
@@ -1833,6 +1834,7 @@ class ConfigurationWizard:
         return hub_role_name, spoke_role_name, tags
 
     def configuration_wizard_change_detection_setup(self, aws_org: AWSOrganization):
+        self.setup_aws_configuration()
         click.echo(
             "\nTo setup change detection for iambic it requires creating CloudFormation stacks "
             "and a CloudFormation stack set.\n"
@@ -1841,6 +1843,12 @@ class ConfigurationWizard:
             "If you have already manually deployed the templates, answer yes to proceed.\n"
             "IAMbic will validate that your stacks have been deployed successfully and will not attempt to replace them."
         )
+        unparse_tags = questionary.text(
+            "Add Tags (leave blank or `team=ops_team, cost_center=engineering`): ",
+            default="",
+            validate=validate_aws_cf_input_tags,
+        ).ask()
+        tags = aws_cf_parse_key_value_string(unparse_tags)
         if not questionary.confirm("Proceed?").unsafe_ask():
             return
 
@@ -1859,6 +1867,7 @@ class ConfigurationWizard:
                 aws_org.org_id,
                 aws_org.org_account_id,
                 self.cf_role_arn,
+                tags=tags,
             )
         )
         if not successfully_created:
@@ -1866,7 +1875,7 @@ class ConfigurationWizard:
 
         role_name = IAMBIC_SPOKE_ROLE_NAME
         hub_account_id = self.hub_account_id
-        sqs_arn = f"arn:aws:sqs:{self.aws_default_region}:{hub_account_id}:IAMbicChangeDetectionQueue"
+        sqs_arn = f"arn:aws:sqs:{self.aws_default_region}:{hub_account_id}:IAMbicChangeDetectionQueue{IAMBIC_CHANGE_DETECTION_SUFFIX}"
 
         if not self.existing_role_template_map:
             log.info("Loading AWS role templates...")

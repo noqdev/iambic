@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import os
 from datetime import datetime, timedelta
-from typing import Union
+from typing import Any, Optional, Union
 
 from iambic.core.logger import log
 from iambic.plugins.v0_1_0.aws.models import (
+    IAMBIC_CHANGE_DETECTION_SUFFIX,
     IAMBIC_HUB_ROLE_NAME,
     IAMBIC_SPOKE_ROLE_NAME,
     get_hub_role_arn,
@@ -237,27 +238,45 @@ async def create_stack_set(
 
 
 async def create_change_detection_stacks(
-    cf_client, org_id: str, org_account_id: str, role_arn: str = None
+    cf_client,
+    org_id: str,
+    org_account_id: str,
+    role_arn: str = None,
+    tags: Optional[dict] = None,
 ) -> bool:
     region = cf_client.meta.region_name
-    additional_kwargs = {"RoleARN": role_arn} if role_arn else {}
+    additional_kwargs: dict[str, Any] = {"RoleARN": role_arn} if role_arn else {}
+
+    if tags:
+        additional_kwargs["Tags"] = tags
+
     stack_created = await create_stack(
         cf_client,
-        stack_name="IAMbicCentralChangeRule",
+        stack_name=f"IAMbicCentralChangeRule{IAMBIC_CHANGE_DETECTION_SUFFIX}",
         template_body=get_central_rule_template_body(),
-        parameters=[{"ParameterKey": "OrgID", "ParameterValue": org_id}],
+        parameters=[
+            {"ParameterKey": "OrgID", "ParameterValue": org_id},
+            {
+                "ParameterKey": "Suffix",
+                "ParameterValue": IAMBIC_CHANGE_DETECTION_SUFFIX,
+            },
+        ],
         **additional_kwargs,
     )
     if stack_created:
         stack_created = await create_stack(
             cf_client,
-            stack_name="IAMbicForwardEventRule",
+            stack_name=f"IAMbicForwardEventRule{IAMBIC_CHANGE_DETECTION_SUFFIX}",
             template_body=get_rule_forwarding_template_body(),
             parameters=[
                 {
                     "ParameterKey": "TargetEventBusArn",
-                    "ParameterValue": f"arn:aws:events:{region}:{org_account_id}:event-bus/IAMbicChangeDetectionEventBus",
-                }
+                    "ParameterValue": f"arn:aws:events:{region}:{org_account_id}:event-bus/IAMbicChangeDetectionEventBus{IAMBIC_CHANGE_DETECTION_SUFFIX}",
+                },
+                {
+                    "ParameterKey": "Suffix",
+                    "ParameterValue": IAMBIC_CHANGE_DETECTION_SUFFIX,
+                },
             ],
             Capabilities=["CAPABILITY_NAMED_IAM"],
             **additional_kwargs,
@@ -267,22 +286,32 @@ async def create_change_detection_stacks(
 
 
 async def create_change_detection_stack_sets(
-    cf_client, org_client, org_account_id: str
+    cf_client,
+    org_client,
+    org_account_id: str,
+    tags: Optional[dict] = None,
 ) -> bool:
     region = cf_client.meta.region_name
     org_roots = await legacy_paginated_search(
         org_client.list_roots, response_key="Roots"
     )
+    kwargs = {}
+    if tags:
+        kwargs["Tags"] = tags
 
     return await create_stack_set(
         cf_client,
-        stack_set_name="IAMbicForwardEventRule",
+        stack_set_name=f"IAMbicForwardEventRule{IAMBIC_CHANGE_DETECTION_SUFFIX}",
         template_body=get_rule_forwarding_template_body(),
         parameters=[
             {
                 "ParameterKey": "TargetEventBusArn",
-                "ParameterValue": f"arn:aws:events:{region}:{org_account_id}:event-bus/IAMbicChangeDetectionEventBus",
-            }
+                "ParameterValue": f"arn:aws:events:{region}:{org_account_id}:event-bus/IAMbicChangeDetection{IAMBIC_CHANGE_DETECTION_SUFFIX}EventBus",
+            },
+            {
+                "ParameterKey": "Suffix",
+                "ParameterValue": IAMBIC_CHANGE_DETECTION_SUFFIX,
+            },
         ],
         deployment_targets={
             "OrganizationalUnitIds": [root["Id"] for root in org_roots],
@@ -290,28 +319,35 @@ async def create_change_detection_stack_sets(
         },
         deployment_regions=[region],
         operation_preferences={
-            "MaxConcurrentCount": 1,
-            "FailureToleranceCount": 1,
+            "RegionConcurrencyType": "PARALLEL",
+            "MaxConcurrentCount": 100,
+            "FailureToleranceCount": 100,
         },
         Capabilities=["CAPABILITY_NAMED_IAM"],
+        **kwargs,
     )
 
 
 async def create_iambic_eventbridge_stacks(
-    cf_client, org_client, org_id: str, account_id: str, role_arn: str = None
+    cf_client,
+    org_client,
+    org_id: str,
+    account_id: str,
+    role_arn: str = None,
+    tags=None,
 ) -> bool:
     region = cf_client.meta.region_name
     successfully_created = await create_change_detection_stacks(
-        cf_client, org_id, account_id, role_arn
+        cf_client, org_id, account_id, role_arn, tags
     )
     if successfully_created:
         log.info(
             f"WARNING: Do not exit; creating stack instances.\n"
             f"You can check the progress here:\n"
-            f"https://{region}.console.aws.amazon.com/cloudformation/home?region={region}#/stacksets/IAMbicForwardEventRule/stacks\n"
+            f"https://{region}.console.aws.amazon.com/cloudformation/home?region={region}#/stacksets/IAMbicForwardEventRule{IAMBIC_CHANGE_DETECTION_SUFFIX}/stacks\n"
         )
         return await create_change_detection_stack_sets(
-            cf_client, org_client, account_id
+            cf_client, org_client, account_id, tags
         )
 
     return successfully_created
@@ -364,8 +400,8 @@ async def create_spoke_role_stack_set(
         deployment_regions=[region],
         operation_preferences={
             "RegionConcurrencyType": "PARALLEL",
-            "MaxConcurrentCount": 10,
-            "FailureToleranceCount": 10,
+            "MaxConcurrentCount": 100,
+            "FailureToleranceCount": 100,
         },
         Capabilities=["CAPABILITY_NAMED_IAM"],
         **kwargs,
