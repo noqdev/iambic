@@ -446,6 +446,7 @@ async def create_hub_account_stacks(
             stack_name=spoke_role_name,
             hub_role_name=hub_role_name,
             spoke_role_name=spoke_role_name,
+            tags=tags,
         )
 
     return stack_created
