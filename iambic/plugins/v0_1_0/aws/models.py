@@ -479,6 +479,17 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
         )
+
+        if "variables" in resp:
+            resp["variables"] = [
+                i
+                for i in resp.get("variables", [])
+                if i.get("key") not in ["account_id", "account_name"]
+            ]
+
+            if resp["variables"] == []:
+                resp.pop("variables")
+
         return sort_dict(
             resp,
             [
