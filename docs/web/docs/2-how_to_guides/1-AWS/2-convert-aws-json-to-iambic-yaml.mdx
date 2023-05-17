@@ -1,3 +1,47 @@
 ---
 title: Converting IAM Policy Syntax to IAMbic YAML
 ---
+
+IAMbic provides a Policy Converter that allows you to convert AWS IAM Policies to IAMbic-compatible YAML and vice versa.
+This tool is available both as a command-line interface (CLI) using `iambic convert` and a web tool at
+[https://www.iambic.org/tools/policy-converter](https://www.iambic.org/tools/policy-converter).
+
+## How to use
+
+### CLI
+
+#### Convert AWS IAM Policies to IAMbic-compatible YAML
+
+1. Open your terminal.
+2. Run the command `iambic convert`. This will open your default text editor.
+3. Paste the AWS IAM policy JSON that you want to convert into the editor.
+4. Save and close the editor.
+5. The converted IAMbic-compatible YAML will be printed in the terminal.
+
+#### Convert IAMbic-compatible YAML to AWS IAM Policies
+
+1. Open your terminal.
+2. Run the command `iambic convert`. This will open your default text editor.
+3. Paste the IAMbic-compatible YAML that you want to convert into the editor.
+4. Save and close the editor.
+5. The converted AWS IAM policy JSON will be printed in the terminal.
+
+### Web Tool
+
+#### Convert AWS IAM Policies to IAMbic-compatible YAML
+
+1. Navigate to [https://www.iambic.org/tools/policy-converter](https://www.iambic.org/tools/policy-converter) in your web browser.
+2. Paste the AWS IAM policy JSON into the editor labeled "JSON".
+3. The converted IAMbic-compatible YAML will automatically appear in the "IAMbic-compatible YAML" editor.
+
+#### Convert IAMbic-compatible YAML to AWS IAM Policies
+
+1. Navigate to [https://www.iambic.org/tools/policy-converter](https://www.iambic.org/tools/policy-converter) in your web browser.
+2. Paste the IAMbic-compatible YAML into the editor labeled "IAMbic-compatible YAML".
+3. The converted AWS IAM policy JSON will automatically appear in the "JSON" editor.
+
+## Using IAM Policy Simulator or AWS Policy Generator
+
+You can directly paste IAM policies from the [IAM Policy Simulator](https://policysim.aws.amazon.com/) or
+ [AWS Policy Generator](https://awspolicygen.s3.amazonaws.com/policygen.html) into the IAMbic Policy Converter
+ to convert them. Simply follow the steps above for converting AWS IAM Policies to IAMbic-compatible YAML or vice versa.

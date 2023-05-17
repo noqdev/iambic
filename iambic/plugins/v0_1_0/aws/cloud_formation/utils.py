@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 from datetime import datetime, timedelta
-from typing import Union
+from typing import Any, Optional, Union
 
 from iambic.core.logger import log
 from iambic.plugins.v0_1_0.aws.models import (
@@ -237,9 +237,18 @@ async def create_stack_set(
 
 
 async def create_change_detection_stacks(
-    cf_client, org_id: str, org_account_id: str, role_arn: str = None
+    cf_client,
+    org_id: str,
+    org_account_id: str,
+    role_arn: str = None,
+    tags: Optional[dict] = None,
 ) -> bool:
     region = cf_client.meta.region_name
+    additional_kwargs: dict[str, Any] = {"RoleARN": role_arn} if role_arn else {}
+
+    if tags:
+        additional_kwargs["Tags"] = tags
+
     additional_kwargs = {"RoleARN": role_arn} if role_arn else {}
     stack_created = await create_stack(
         cf_client,
@@ -267,12 +276,18 @@ async def create_change_detection_stacks(
 
 
 async def create_change_detection_stack_sets(
-    cf_client, org_client, org_account_id: str
+    cf_client,
+    org_client,
+    org_account_id: str,
+    tags: Optional[dict] = None,
 ) -> bool:
     region = cf_client.meta.region_name
     org_roots = await legacy_paginated_search(
         org_client.list_roots, response_key="Roots"
     )
+    kwargs = {}
+    if tags:
+        kwargs["Tags"] = tags
 
     return await create_stack_set(
         cf_client,
@@ -294,15 +309,21 @@ async def create_change_detection_stack_sets(
             "FailureToleranceCount": 1,
         },
         Capabilities=["CAPABILITY_NAMED_IAM"],
+        **kwargs,
     )
 
 
 async def create_iambic_eventbridge_stacks(
-    cf_client, org_client, org_id: str, account_id: str, role_arn: str = None
+    cf_client,
+    org_client,
+    org_id: str,
+    account_id: str,
+    role_arn: str = None,
+    tags=None,
 ) -> bool:
     region = cf_client.meta.region_name
     successfully_created = await create_change_detection_stacks(
-        cf_client, org_id, account_id, role_arn
+        cf_client, org_id, account_id, role_arn, tags
     )
     if successfully_created:
         log.info(
@@ -311,7 +332,7 @@ async def create_iambic_eventbridge_stacks(
             f"https://{region}.console.aws.amazon.com/cloudformation/home?region={region}#/stacksets/IAMbicForwardEventRule/stacks\n"
         )
         return await create_change_detection_stack_sets(
-            cf_client, org_client, account_id
+            cf_client, org_client, account_id, tags
         )
 
     return successfully_created
