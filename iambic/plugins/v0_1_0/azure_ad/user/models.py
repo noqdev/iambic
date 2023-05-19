@@ -35,7 +35,10 @@ class UserStatus(Enum):
 
 
 class UserTemplateProperties(BaseModel, ExpiryModel):
-    user_id: Optional[str] = Field("", description="Unique identifier for the user")
+    user_id: Optional[str] = Field(
+        "",
+        description="Unique identifier for the user. This value is imported by IAMbic, and doesn't need to be manually set.",
+    )
     username: str
     display_name: str
     mail_nickname: Optional[str]

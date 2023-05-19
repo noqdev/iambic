@@ -1,7 +1,8 @@
 # Example IAMbic Templates Repository
 
 A sample IAMbic Templates repository is available at: [Example Repository](https://github.com/noqdev/iambic-templates-examples).
-This repository showcases the different features of IAMbic.
+This repository showcases the different features of IAMbic. Check out the [IAMOps Philosophy docs](/reference/iamops_philosophy) for specific examples of IAMOps in
+a GitHub workflow using this repository.
 
 ## Initial Setup
 The `iambic setup` wizard was utilized to generate this file: [iambic_config.yaml](https://github.com/noqdev/iambic-templates-examples/blob/main/config/iambic_config.yaml).
@@ -100,27 +101,7 @@ tree -d
             └── development
 ```
 
-## IAMOps Flow
-A comprehensive IAMOps flow is demonstrated [in this pull request](https://github.com/noqdev/iambic-templates-examples/pull/13).
-In it, we request the creation of an Identity Center Permission set. Here is the flow:
+## Example IAMOps Workflows in Git
 
-1. We submit our [initial commit](https://github.com/noqdev/iambic-templates-examples/pull/13/commits/cf1cfd6192415342ae2b52ca18f118f46194afdc),
-    where we request temporary access for the engineering group, with a relative expiration period of 4 years.
-    The second policy statement in our list of inline policies expires in 6 years, and our managed policy attachment expires in 5 years.
-   ![Initial Commit](/img/aws/iamops_flow_1.png)
-
-2. IAMbic responds to the commit with the output of a plan.
-   ![Git Plan Output](/img/aws/iamops_flow_2_git_plan.png)
-
-3. Our request is approved by a peer with write access to the repository.
-
-4. We don't merge the PR right away. Instead, we comment `iambic apply` on the PR. This instructs IAMbic to apply the changes to the cloud,
-   commit updates to the PR, and merge the change into the main branch once successful.
-
-5. IAMbic successfully applies the change and converts our relative expiration dates from Step 1 to absolute expiration dates in [this commit](https://github.com/noqdev/iambic-templates-examples/pull/13/commits/048fa7466d5b208d72bcb76cace8b3dea14091ff).
-   ![IAMbic Commit](/img/aws/iamops_flow_3_iambic_commit.png)
-
-6. IAMbic comments on the PR with the result of the `iambic apply` command.
-
-7. IAMbic merges the branch into the default branch of the repository, thus completing our flow.
-   ![Applied Change](/img/aws/iamops_flow_4_apply.png)
+End-to-end IAMbic workflows in Git are available in the
+[IAMOps Philosophy docs](/reference/iamops_philosophy).

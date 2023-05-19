@@ -25,7 +25,7 @@ Easily manage and streamline cloud Identity and Access Management (IAM) with IAM
 - **Extendable**: Integrate with various clouds and applications through a powerful plugin architecture.
 - **Auditable**: Track changes to IAM policies, permissions, and rules with Git history. For AWS, IAmbic annotates out-of-band commits with details from CloudTrail.
 
-Check out [IAMbic Template Examples](https://docs.iambic.org/reference/example_iambic_templates_repository) for a sneak peak at a Git repository maintained by IAMbic.
+Check out [IAMbic IAMOps Philosophy](/reference/iamops_philosophy) and an [example IAMbic templates repository](https://github.com/noqdev/iambic-templates-examples) to see a real-life example of IAMbic.
 
 ## 📣 Let's chat
 Do you want to connect with our contributors?

@@ -35,7 +35,10 @@ class MemberDataType(Enum):
 
 
 class Member(BaseModel, ExpiryModel):
-    id: Optional[str] = None
+    id: Optional[str] = Field(
+        None,
+        description="Unique ID for the member. This value is imported by IAMbic, and doesn't need to be manually set.",
+    )
     name: str
     data_type: MemberDataType
     """TODO: validate name
@@ -94,7 +97,7 @@ class GroupTemplateProperties(ExpiryModel, BaseModel):
     )
     group_id: Optional[str] = Field(
         None,
-        description="Unique Group ID for the group. Usually it's {idp-name}-{name}",
+        description="Unique Group ID for the group. This value is imported by IAMbic, and doesn't need to be manually set.",
     )
     description: Optional[str] = Field("", description="Description of the group")
     group_types: Optional[list[str]] = Field(

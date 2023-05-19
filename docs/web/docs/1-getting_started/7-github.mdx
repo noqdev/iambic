@@ -3,7 +3,17 @@ title: Deploy on GitHub
 ---
 
 ### Configuring GitHub to work with IAMbic
-These steps will ensure GitHub is configured properly to work with IAMbic.
+These steps will guide you through the process of setting up an IAMOps/GitOps workflow using
+GitHub Actions and an IAMbic Lambda function.
+
+:::note
+
+The instructions below leverage GitHub Action hosted runners. Github bills usage of action runners to the nearest full minute.
+You can find more details [here](https://docs.github.com/en/billing/managing-billing-for-github-actions/about-billing-for-github-actions).
+To avoid being charged, you might consider using self-hosted runners. Alternatively, you can reduce the frequency of your IAMbic
+action runs by changing their schedules after you have completed the setup process below.
+
+:::
 
 <!--
 
@@ -141,6 +151,7 @@ permissions from your cloud provider(s).
 	1. Configure the repository to require approvals before Merging Pull Requests.
 	2. Add GitHub Apps
 4. Have an AWS admin configure federated login <!-- #TODO link to how to configure federated login --> for IAMbic GitHub actions.
+
 
 #### Configure your GitHub Repository to require approvals before merging
 
