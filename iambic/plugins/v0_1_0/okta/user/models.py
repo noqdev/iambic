@@ -44,7 +44,7 @@ class Assignment(BaseModel):
 class UserProperties(BaseModel):
     username: str = Field(..., description="Username of the user")
     user_id: str = Field(
-        None,
+        "",
         description="Unique User ID for the user. This value is imported by IAMbic, and doesn't need to be manually set.",
     )
     status: UserStatus = Field(UserStatus.active, description="Status of the user")
