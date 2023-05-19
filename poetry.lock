@@ -3174,6 +3174,18 @@ files = [
 ]
 
 [[package]]
+name = "tomlkit"
+version = "0.11.8"
+description = "Style preserving TOML library"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "tomlkit-0.11.8-py3-none-any.whl", hash = "sha256:8c726c4c202bdb148667835f68d68780b9a003a9ec34167b6c673b38eff2a171"},
+    {file = "tomlkit-0.11.8.tar.gz", hash = "sha256:9330fc7faa1db67b541b28e62018c17d20be733177d290a13b24c62d1614e0c3"},
+]
+
+[[package]]
 name = "types-aiofiles"
 version = "23.1.0.2"
 description = "Typing stubs for aiofiles"
@@ -3755,4 +3767,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "60de1f0428b2cc975905ee6d51c53a5f91232d7108ff734c27d905e2c5e6e493"
+content-hash = "423ca494f695cd4eaf529d08d7b1244cd7864f65712f9d83cc4ec1228a2e0eec"

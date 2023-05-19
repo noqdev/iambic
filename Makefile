@@ -89,3 +89,14 @@ build_docker_base_image:
 upload_docker_base_image:
 	@echo "--> Uploading Iambic Docker base container image"
 	$(docker_base_image_buildx) --push .
+
+.PHONY: check_aws_creds
+check_aws_creds:
+	@aws sts get-caller-identity > /dev/null || (echo "Invalid or no AWS credentials provided."; exit 1)
+
+.PHONY: update_lambda
+update_lambda: check_aws_creds
+	@cd deployment/github_app && \
+	terraform init && \
+	terraform refresh && \
+	terraform apply $(if $(AUTO_APPROVE),-auto-approve)

@@ -1,0 +1,129 @@
+# Example IAMbic Templates Repository
+
+A sample IAMbic Templates repository is available at: [Example Repository](https://github.com/noqdev/iambic-templates-examples).
+This repository showcases the different features of IAMbic.
+
+## Initial Setup
+The `iambic setup` wizard was utilized to generate this file: [iambic_config.yaml](https://github.com/noqdev/iambic-templates-examples/blob/main/config/iambic_config.yaml).
+
+The configuration in `iambic_config.yaml` tells IAMbic to extract secrets from AWS Secrets Manager:
+
+```yaml
+extends:
+  - assume_role_arn: arn:aws:iam::580605962305:role/IambicSpokeRole
+    key: AWS_SECRETS_MANAGER
+    value: arn:aws:secretsmanager:us-east-1:580605962305:secret:iambic-config-secrets-c03d249e-a067-461c-a6a4-7d7d97f40bda-Bpuwi1
+```
+
+The secrets in AWS Secrets Manager are stored as YAML. Here's an example of how secrets look like in AWS Secrets Manager:
+
+```yaml
+secrets:
+  okta:
+    organizations:
+      - idp_name: development
+        org_url: https://dev-12345.okta.com/
+        api_token: API_TOKEN
+        iambic_managed: import_only
+  azure_ad:
+    organizations:
+      - idp_name: iambic
+        tenant_id: TENANT_ID
+        client_id: CLIENT_ID
+        client_secret: CLIENT_SECRET
+        iambic_managed: read_and_write
+  google_workspace:
+    workspaces:
+      - idp_name: "iambic.org"
+        subjects:
+          - domain: "iambic.org"
+            service_account: "SERVICE_ACCOUNT.iam.gserviceaccount.com"
+        type: "service_account"
+        project_id: "PROJECT_ID"
+        private_key_id: "PRIVATE_KEY_ID"
+        private_key: "-----BEGIN PRIVATE....-----...-----END PRIVATE...-----\n"
+        client_email: "PROJECT_ID@PROJECT_ID.iam.gserviceaccount.com"
+        client_id: "CLIENT_ID"
+        auth_uri: "https://accounts.google.com/o/oauth2/auth"
+        token_uri: "https://oauth2.googleapis.com/token"
+        auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs"
+        client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/..."
+```
+
+## Resource Organization
+By default, IAMbic organizes your resources into folders based on the provider, resource type, and additional context, like AWS account names.
+However, you are free to move files outside of this structure. IAMbic will identify existing templates that exist for discovered resources, and will not attempt to
+move it. This flexibility allows you to organize your resources according to your needs, for instance, by environment (dev, stage, prod) or by team
+(engineering, finance, etc).
+
+```bash
+tree -d
+.
+├── config
+└── resources
+    ├── aws
+    │   ├── iam
+    │   │   ├── group
+    │   │   │   └── all_accounts
+    │   │   ├── managed_policy
+    │   │   │   ├── all_accounts
+    │   │   │   ├── iambic_test_org_account
+    │   │   │   ├── iambic_test_spoke_account_1
+    │   │   │   └── iambic_test_spoke_account_2
+    │  
+
+```bash
+    │   │   ├── role
+    │   │   │   ├── all_accounts
+    │   │   │   ├── iambic_test_org_account
+    │   │   │   ├── iambic_test_spoke_account_1
+    │   │   │   ├── iambic_test_spoke_account_2
+    │   │   │   ├── iambic_test_spoke_account_3
+    │   │   │   └── multi_account
+    │   │   └── user
+    │   │       ├── all_accounts
+    │   │       ├── iambic_test_org_account
+    │   │       └── iambic_test_spoke_account_1
+    │   └── identity_center
+    │       └── permission_set
+    ├── azure_ad
+    │   ├── group
+    │   │   └── iambic
+    │   └── user
+    │       └── iambic
+    ├── google_workspace
+    │   └── group
+    │       └── iambic.org
+    └── okta
+        ├── app
+        │   └── development
+        ├── group
+        │   └── development
+        └── user
+            └── development
+```
+
+## IAMOps Flow
+A comprehensive IAMOps flow is demonstrated [in this pull request](https://github.com/noqdev/iambic-templates-examples/pull/13).
+In it, we request the creation of an Identity Center Permission set. Here is the flow:
+
+1. We submit our [initial commit](https://github.com/noqdev/iambic-templates-examples/pull/13/commits/cf1cfd6192415342ae2b52ca18f118f46194afdc),
+    where we request temporary access for the engineering group, with a relative expiration period of 4 years.
+    The second policy statement in our list of inline policies expires in 6 years, and our managed policy attachment expires in 5 years.
+   ![Initial Commit](/img/aws/iamops_flow_1.png)
+
+2. IAMbic responds to the commit with the output of a plan.
+   ![Git Plan Output](/img/aws/iamops_flow_2_git_plan.png)
+
+3. Our request is approved by a peer with write access to the repository.
+
+4. We don't merge the PR right away. Instead, we comment `iambic apply` on the PR. This instructs IAMbic to apply the changes to the cloud,
+   commit updates to the PR, and merge the change into the main branch once successful.
+
+5. IAMbic successfully applies the change and converts our relative expiration dates from Step 1 to absolute expiration dates in [this commit](https://github.com/noqdev/iambic-templates-examples/pull/13/commits/048fa7466d5b208d72bcb76cace8b3dea14091ff).
+   ![IAMbic Commit](/img/aws/iamops_flow_3_iambic_commit.png)
+
+6. IAMbic comments on the PR with the result of the `iambic apply` command.
+
+7. IAMbic merges the branch into the default branch of the repository, thus completing our flow.
+   ![Applied Change](/img/aws/iamops_flow_4_apply.png)
