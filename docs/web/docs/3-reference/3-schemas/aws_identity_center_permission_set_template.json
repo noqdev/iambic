@@ -22,7 +22,7 @@
     },
     "deleted": {
       "title": "Deleted",
-      "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is run.",
+      "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
       "default": false,
       "type": "boolean"
     },
@@ -188,12 +188,14 @@
         },
         "deleted": {
           "title": "Deleted",
-          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is run.",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
         },
         "path": {
           "title": "Path",
+          "description": "The path to the IAM policy that you have configured in each account where you want to deploy your permission set. The default is /. For more information, see Friendly names and paths in the IAM User Guide.",
+          "default": "/",
           "type": "string"
         },
         "name": {
@@ -202,7 +204,6 @@
         }
       },
       "required": [
-        "path",
         "name"
       ],
       "additionalProperties": false
@@ -231,15 +232,15 @@
         },
         "deleted": {
           "title": "Deleted",
-          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is run.",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
         },
         "customer_managed_policy_reference": {
           "$ref": "#/definitions/CustomerManagedPolicyReference"
         },
-        "policy_arn": {
-          "title": "Policyarn",
+        "managed_policy_arn": {
+          "title": "Managedpolicyarn",
           "type": "string"
         }
       },
@@ -332,7 +333,7 @@
         },
         "deleted": {
           "title": "Deleted",
-          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is run.",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
         },
@@ -504,7 +505,7 @@
         },
         "deleted": {
           "title": "Deleted",
-          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is run.",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
         },
@@ -547,7 +548,7 @@
         },
         "deleted": {
           "title": "Deleted",
-          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is run.",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
         },
@@ -625,7 +626,7 @@
         },
         "deleted": {
           "title": "Deleted",
-          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is run.",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
         },
@@ -745,7 +746,7 @@
         },
         "deleted": {
           "title": "Deleted",
-          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is run.",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
         },
