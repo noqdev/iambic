@@ -115,7 +115,10 @@ def generate_docs():
 title: Template Schema
 ---
 
-These schema models are automatically generated.\n\n"""
+These schema models are automatically generated. Check out
+[IAMbic IAMOps Philosophy](/reference/iamops_philosophy) and the
+[example IAMbic templates repository](https://github.com/noqdev/iambic-templates-examples) to see a real-life
+examples of IAMbic templates and GitOps flows.\n\n"""
     schema_md_str += "# AWS Template Models\n"
     schema_md_str = create_model_schemas(
         parser, schema_dir, schema_md_str, aws_template_models
