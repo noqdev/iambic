@@ -1,11 +1,16 @@
+[![noqdev - iambic](https://img.shields.io/static/v1?label=noqdev&message=iambic&color=blue&logo=github)](https://github.com/noqdev/iambic "Go to GitHub repo")
 [![Supported Versions](https://img.shields.io/pypi/pyversions/iambic-core.svg)](https://pypi.org/project/iambic-core)
 [![codecov.io](https://codecov.io/github/noqdev/iambic/coverage.svg?branch=main)](https://codecov.io/github/noqdev/iambic?branch=main)
+[![stars - iambic](https://img.shields.io/github/stars/noqdev/iambic?style=social)](https://github.com/noqdev/iambic)
+[![forks - iambic](https://img.shields.io/github/forks/noqdev/iambic?style=social)](https://github.com/noqdev/iambic)
+
+[![slack](https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white)](https://communityinviter.com/apps/noqcommunity/noq)
 
 # IAMbic: Cloud IAM as Code
 
 "IAMbic: the Terraform of Cloud IAM"
 
-Easily manage and streamline cloud Identity and Access Management (IAM) with IAMbic, a multi-cloud IAM control plane. Discover more at [https://docs.iambic.org](https://docs.iambic.org).
+Easily manage and streamline cloud Identity and Access Management (IAM) with IAMbic, a multi-cloud IAM control plane. Discover more at [https://docs.iambic.org](https://docs.iambic.org). 
 
 ## Key Features
 
@@ -19,6 +24,8 @@ Easily manage and streamline cloud Identity and Access Management (IAM) with IAM
 - **Centralized Management**: IAMbic keeps Git updated with the latest, complete state of your cloud environment, maintaining a single source of truth for auditing and compliance across multiple cloud providers in Git.
 - **Extendable**: Integrate with various clouds and applications through a powerful plugin architecture.
 - **Auditable**: Track changes to IAM policies, permissions, and rules with Git history. For AWS, IAmbic annotates out-of-band commits with details from CloudTrail.
+
+The [iambic-templates-examples](https://github.com/noqdev/iambic-templates-examples) repository provides sample templates that are imported and maintained by IAMbic.
 
 ## 📣 Let's chat
 Do you want to connect with our contributors?
