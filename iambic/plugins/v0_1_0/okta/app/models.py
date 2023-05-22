@@ -37,7 +37,8 @@ class AppProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the app")
     status: Optional[Status] = Field(None, description="Status of the app")
     id: Optional[str] = Field(
-        None, description="Unique App ID for the app. Usually it's {idp-name}-{name}"
+        None,
+        description="Unique ID for the app. This value is imported by IAMbic, and doesn't need to be manually set.",
     )
     file_path: str = Field(
         "",

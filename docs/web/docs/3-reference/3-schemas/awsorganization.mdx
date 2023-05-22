@@ -20,6 +20,8 @@
     - : Refer to *[#/definitions/BaseAWSOrgRule](#definitions/BaseAWSOrgRule)*.
 - **`account_rules`** *(array)*: A list of rules used to determine how organization accounts are handled. Default: `[]`.
   - **Items**: Refer to *[#/definitions/AWSOrgAccountRule](#definitions/AWSOrgAccountRule)*.
+- **`spoke_role_is_read_only`** *(boolean)*: if true, the spoke role will be limited to read-only permissions. Default: `false`.
+- **`preferred_spoke_role_name`** *(string)*: SpokeRoleName use across organization. Default: `"IambicSpokeRoleCurtis"`.
 ## Definitions
 
 

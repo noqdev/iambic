@@ -9,6 +9,7 @@
 - **`min_accounts_required_for_wildcard_included_accounts`** *(integer)*: Iambic will set included_accounts = * on imported resources that exist on all accounts if the minimum number of accounts is met. Default: `3`.
 - **`sqs_cloudtrail_changes_queues`** *(array)*: Default: `[]`.
   - **Items** *(string)*
+- **`spoke_role_is_read_only`** *(boolean)*: aws iambic spoke role is configured as read_only. If true, it will restrict IAMbic capability in AWS. Default: `false`.
 ## Definitions
 
 
@@ -68,6 +69,8 @@ configurations for other models used in IAMbic.
       - : Refer to *[#/definitions/BaseAWSOrgRule](#definitions/BaseAWSOrgRule)*.
   - **`account_rules`** *(array)*: A list of rules used to determine how organization accounts are handled. Default: `[]`.
     - **Items**: Refer to *[#/definitions/AWSOrgAccountRule](#definitions/AWSOrgAccountRule)*.
+  - **`spoke_role_is_read_only`** *(boolean)*: if true, the spoke role will be limited to read-only permissions. Default: `false`.
+  - **`preferred_spoke_role_name`** *(string)*: SpokeRoleName use across organization. Default: `"IambicSpokeRoleCurtis"`.
 
 <a id="definitions/Partition"></a>
 

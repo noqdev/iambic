@@ -33,6 +33,12 @@
       "items": {
         "type": "string"
       }
+    },
+    "spoke_role_is_read_only": {
+      "title": "Spoke Role Is Read Only",
+      "description": "aws iambic spoke role is configured as read_only. If true, it will restrict IAMbic capability in AWS",
+      "default": false,
+      "type": "boolean"
     }
   },
   "definitions": {
@@ -210,6 +216,18 @@
           "items": {
             "$ref": "#/definitions/AWSOrgAccountRule"
           }
+        },
+        "spoke_role_is_read_only": {
+          "title": "Spoke Role Is Read Only",
+          "description": "if true, the spoke role will be limited to read-only permissions",
+          "default": false,
+          "type": "boolean"
+        },
+        "preferred_spoke_role_name": {
+          "title": "Preferred Spoke Role Name",
+          "description": "SpokeRoleName use across organization",
+          "default": "IambicSpokeRoleCurtis",
+          "type": "string"
         }
       },
       "required": [

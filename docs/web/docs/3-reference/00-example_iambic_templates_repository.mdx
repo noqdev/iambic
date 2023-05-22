@@ -1,0 +1,107 @@
+# Example IAMbic Templates Repository
+
+A sample IAMbic Templates repository is available at: [Example Repository](https://github.com/noqdev/iambic-templates-examples).
+This repository showcases the different features of IAMbic. Check out the [IAMOps Philosophy docs](/reference/iamops_philosophy) for specific examples of IAMOps in
+a GitHub workflow using this repository.
+
+## Initial Setup
+The `iambic setup` wizard was utilized to generate this file: [iambic_config.yaml](https://github.com/noqdev/iambic-templates-examples/blob/main/config/iambic_config.yaml).
+
+The configuration in `iambic_config.yaml` tells IAMbic to extract secrets from AWS Secrets Manager:
+
+```yaml
+extends:
+  - assume_role_arn: arn:aws:iam::580605962305:role/IambicSpokeRole
+    key: AWS_SECRETS_MANAGER
+    value: arn:aws:secretsmanager:us-east-1:580605962305:secret:iambic-config-secrets-c03d249e-a067-461c-a6a4-7d7d97f40bda-Bpuwi1
+```
+
+The secrets in AWS Secrets Manager are stored as YAML. Here's an example of how secrets look like in AWS Secrets Manager:
+
+```yaml
+secrets:
+  okta:
+    organizations:
+      - idp_name: development
+        org_url: https://dev-12345.okta.com/
+        api_token: API_TOKEN
+        iambic_managed: import_only
+  azure_ad:
+    organizations:
+      - idp_name: iambic
+        tenant_id: TENANT_ID
+        client_id: CLIENT_ID
+        client_secret: CLIENT_SECRET
+        iambic_managed: read_and_write
+  google_workspace:
+    workspaces:
+      - idp_name: "iambic.org"
+        subjects:
+          - domain: "iambic.org"
+            service_account: "SERVICE_ACCOUNT.iam.gserviceaccount.com"
+        type: "service_account"
+        project_id: "PROJECT_ID"
+        private_key_id: "PRIVATE_KEY_ID"
+        private_key: "-----BEGIN PRIVATE....-----...-----END PRIVATE...-----\n"
+        client_email: "PROJECT_ID@PROJECT_ID.iam.gserviceaccount.com"
+        client_id: "CLIENT_ID"
+        auth_uri: "https://accounts.google.com/o/oauth2/auth"
+        token_uri: "https://oauth2.googleapis.com/token"
+        auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs"
+        client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/..."
+```
+
+## Resource Organization
+By default, IAMbic organizes your resources into folders based on the provider, resource type, and additional context, like AWS account names.
+However, you are free to move files outside of this structure. IAMbic will identify existing templates that exist for discovered resources, and will not attempt to
+move it. This flexibility allows you to organize your resources according to your needs, for instance, by environment (dev, stage, prod) or by team
+(engineering, finance, etc).
+
+```bash
+tree -d
+.
+├── config
+└── resources
+    ├── aws
+    │   ├── iam
+    │   │   ├── group
+    │   │   │   └── all_accounts
+    │   │   ├── managed_policy
+    │   │   │   ├── all_accounts
+    │   │   │   ├── iambic_test_org_account
+    │   │   │   ├── iambic_test_spoke_account_1
+    │   │   │   └── iambic_test_spoke_account_2
+    │   │   ├── role
+    │   │   │   ├── all_accounts
+    │   │   │   ├── iambic_test_org_account
+    │   │   │   ├── iambic_test_spoke_account_1
+    │   │   │   ├── iambic_test_spoke_account_2
+    │   │   │   ├── iambic_test_spoke_account_3
+    │   │   │   └── multi_account
+    │   │   └── user
+    │   │       ├── all_accounts
+    │   │       ├── iambic_test_org_account
+    │   │       └── iambic_test_spoke_account_1
+    │   └── identity_center
+    │       └── permission_set
+    ├── azure_ad
+    │   ├── group
+    │   │   └── iambic
+    │   └── user
+    │       └── iambic
+    ├── google_workspace
+    │   └── group
+    │       └── iambic.org
+    └── okta
+        ├── app
+        │   └── development
+        ├── group
+        │   └── development
+        └── user
+            └── development
+```
+
+## Example IAMOps Workflows in Git
+
+End-to-end IAMbic workflows in Git are available in the
+[IAMOps Philosophy docs](/reference/iamops_philosophy).

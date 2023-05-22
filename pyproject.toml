@@ -70,6 +70,7 @@ msal = "^1.21.0"
 aiohttp = "^3.8.4"
 pyopenssl = "^23.0.0"
 stringcase = "^1.2.0"
+tomlkit = "^0.11.8"
 
 [tool.poetry.scripts]
 iambic = "iambic.main:cli"

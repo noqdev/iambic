@@ -54,7 +54,7 @@
         },
         "iambic_managed": {
           "description": "Controls the directionality of iambic changes",
-          "default": "import_only",
+          "default": "undefined",
           "allOf": [
             {
               "$ref": "#/definitions/IambicManaged"

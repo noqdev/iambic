@@ -95,7 +95,8 @@ class User(UserSimple):
 class GroupProperties(ExpiryModel, BaseModel):
     name: str = Field(..., description="Name of the group")
     group_id: str = Field(
-        "", description="Unique Group ID for the group. Usually it's {idp-name}-{name}"
+        "",
+        description="Unique Group ID for the group. This value is imported by IAMbic, and doesn't need to be manually set.",
     )
     file_path: str = Field(
         "", description="File path of the group", exclude=True, hidden_from_schema=True
