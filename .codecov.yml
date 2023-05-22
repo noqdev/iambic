@@ -1,0 +1,13 @@
+coverage:
+  range: "70...75"
+  status:
+    project:
+      default:
+        target: 75%
+        if_not_found: failure
+        if_ci_failed: error
+    patch:
+      default:
+        target: 75%
+        if_not_found: failure
+        if_ci_failed: error
