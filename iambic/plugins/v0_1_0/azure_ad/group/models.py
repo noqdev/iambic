@@ -8,7 +8,7 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 from aiohttp import ClientResponseError
-from pydantic import Field
+from pydantic import Extra, Field
 
 from iambic.core.context import ctx
 from iambic.core.logger import log
@@ -198,6 +198,9 @@ class GroupTemplateProperties(ExpiryModel, BaseModel):
         if "mail_nickname" not in data:
             data["mail_nickname"] = data.get("name")
         super().__init__(**data)
+
+    class Config:
+        extra = Extra.ignore
 
     @property
     def resource_type(self) -> str:

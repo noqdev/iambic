@@ -7,7 +7,7 @@ from itertools import chain
 from typing import Optional
 
 from aiohttp import ClientResponseError
-from pydantic import Field
+from pydantic import Extra, Field
 
 from iambic.core.context import ctx
 from iambic.core.logger import log
@@ -75,6 +75,9 @@ class UserTemplateProperties(BaseModel, ExpiryModel):
     user_principal_name: Optional[str] = Field(
         None, description="User principal name of the user", exclude=True
     )
+
+    class Config:
+        extra = Extra.ignore
 
     @property
     def resource_type(self) -> str:
