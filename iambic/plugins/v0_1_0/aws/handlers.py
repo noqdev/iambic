@@ -756,6 +756,12 @@ async def discover_new_aws_accounts(
         for account in org_accounts:
             if config_account_idx_map.get(account.account_id) is None:
                 config.accounts.append(account)
+                config.accounts[-1].variables.extend(
+                    [
+                        Variable(key="account_id", value=account.account_id),
+                        Variable(key="account_name", value=account.account_name),
+                    ]
+                )
                 log.warning(
                     "New AWS account discovered. Adding account to config.",
                     account_id=account.account_id,
