@@ -23,8 +23,8 @@
                 "--color=yes",
                 "--verbose",
                 // Temporarily uncomment locally to limit scope of tests
-                "-k",
-                "test_google",
+                // "-k",
+                // "test_google",
                 "${workspaceFolder}/functional_tests",
             ],
             "envFile": "${workspaceFolder}/.env",
