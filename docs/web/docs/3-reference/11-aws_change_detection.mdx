@@ -1,0 +1,44 @@
+---
+title: Implementing Change Detection with IAMbic on AWS
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+## Introduction
+
+IAMbic, in a standard production deployment, periodically imports your cloud resources into Git, establishing an "eventually consistent" state
+between your Git repository and your Cloud IAM. This process can be resource-intensive as it involves fetching all resources from the cloud,
+comparing them to your existing IAMbic templates, and updating them if needed.
+
+By default, this `import` operation runs every four hours
+in a standard production deployment via GitHub using the
+[iambic-import.yml Github Action template](https://github.com/noqdev/iambic/blob/main/iambic/github/templates/iambic-import.yml).
+
+However, if you're like us, you'd want a more real-time reflection of your IAM in Git, desiring changes to be visible
+soon after their occurrence. For AWS, this is achievable via AWS Change Detection. This feature utilizes AWS EventBridge and
+SQS to promptly identify modifications to your IAM resources. A [GitHub action](https://github.com/noqdev/iambic/blob/main/iambic/github/templates/iambic-detect.yml)
+can be ran frequently to perform the inexpensive operation of reading an SQS queue, and refreshing the cloud resources that have changed.
+By default, this action runs every 15 minutes. If you're using self-hosted runners, and have a normal IAM setup,
+you should be able to run the detection flow every minute. Git would typically be updated with the actual state of your cloud IAM
+within a few minutes of the change occurring.
+
+## Understanding AWS Change Detection in IAMbic
+
+AWS Change Detection operates by setting up a [Cloudformation Stack](https://github.com/noqdev/iambic/blob/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates/IdentityRuleDestination.yml)
+on your Organizational Management account. This stack is responsible for:
+
+1. Establishing an EventBridge Event Bus for IAMbic, facilitating the receipt of messages from any other event bus within your organization.
+2. Creating an EventBridge change detection rule that monitors create, update, and delete (CRUD) events on IAM or Identity Center resources.
+3. Producing an SQS queue that acts as a target for receiving corresponding events.
+
+In addition, IAMbic employs a [Cloudformation Stackset](https://github.com/noqdev/iambic/blob/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates/IdentityRuleForwarder.yml)
+to set up an EventBridge rule and an IAM role across *all other accounts* in your Organization. These keep track of CRUD events on IAM or Identity Center resources
+on the respective account, and forward them to the Event Bus that was created on your Organizational Management account.
+
+## Configuring AWS Change Detection
+
+Setting up change detection with IAMbic is a straightforward process. Run the command `iambic setup` and choose
+`Setup AWS change detection`. This option will only appear if you have previously configured an AWS Organization.
+
+Executing this command will initiate the Cloudformation Stack and Stackset on your behalf,
+effectively activating AWS Change Detection for your IAM resources.
