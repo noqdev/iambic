@@ -434,5 +434,12 @@ async def update_group_members(
 
         log.info(log_str, users=[user.email for user in users_to_add], **log_params)
     if tasks:
-        await asyncio.gather(*tasks)
+        res = await asyncio.gather(*tasks, return_exceptions=True)
+        for r in res:
+            if not isinstance(r, Exception):
+                continue
+            if isinstance(r, HttpError) and r.reason in ["Member already exists."]:
+                continue
+            raise r
+
     return response
