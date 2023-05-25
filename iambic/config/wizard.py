@@ -663,7 +663,6 @@ class ConfigurationWizard:
             command=Command.IMPORT,
             provider_type="aws",
         )
-        self.config.aws = asyncio.run(aws_load(self.config.aws))
         await import_aws_resources(
             exe_message,
             self.config.aws,
@@ -704,8 +703,6 @@ class ConfigurationWizard:
     async def sync_config_aws_org(self, run_config_discovery: bool = True):
         if not self.config.aws:
             self.config.aws = AWSConfig()
-
-        self.config.aws = await aws_load(self.config.aws)
 
         self.aws_account_map = {}
         current_command = ctx.command
