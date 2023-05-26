@@ -402,6 +402,9 @@ def evaluate_on_provider(
     """
     from iambic.core.models import AccessModelMixin
 
+    if getattr(resource, "organization_account_needed", None):
+        return getattr(provider_details, "organization_account", False)
+
     no_op_values = [IambicManaged.DISABLED]
     if exclude_import_only:
         no_op_values.append(IambicManaged.IMPORT_ONLY)

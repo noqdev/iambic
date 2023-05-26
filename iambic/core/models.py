@@ -310,6 +310,8 @@ class ProposedChangeType(Enum):
     DELETE = "Delete"
     ATTACH = "Attach"
     DETACH = "Detach"
+    # This is used for states that we don't know how to handle. e.g. Exceptions during apply time
+    UNKNOWN = "Unknown"
 
 
 class ProposedChange(PydanticBaseModel):

@@ -106,7 +106,9 @@ async def paginated_search(
         for response_key in response_keys:
             results[response_key].extend(response.get(response_key, []))
 
-        if not response["IsTruncated"] or (max_results and len(results) >= max_results):
+        if not response.get("IsTruncated") or (
+            max_results and len(results) >= max_results
+        ):
             return results if retain_key else results[response_key]
         else:
             search_kwargs["Marker"] = response["Marker"]

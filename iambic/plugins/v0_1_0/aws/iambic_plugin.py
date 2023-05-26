@@ -6,6 +6,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, validator
 
 from iambic.core.iambic_plugin import ProviderPlugin
+from iambic.core.models import ExecutionMessage
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.aws.handlers import (
     apply,
@@ -23,6 +24,7 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AwsIdentityCenterPermissionSetTemplate,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount, AWSOrganization
+from iambic.plugins.v0_1_0.aws.organizations.scp.models import AwsScpPolicyTemplate
 
 
 class AWSConfig(BaseModel):
@@ -105,6 +107,33 @@ class AWSConfig(BaseModel):
         aws_account = aws_account_map[account_id]
         return await aws_account.get_boto3_session(region_name)
 
+    async def get_organization_accounts(self) -> list[AWSAccount]:
+        org_accounts = []
+        # each organization has an account, retrieve it
+        for org in self.organizations:
+            org_accounts += filter(
+                lambda acc: acc.account_id == org.org_account_id, self.accounts
+            )
+
+        return org_accounts
+
+    async def get_organization_from_account(self, account_id) -> AWSOrganization:
+        """Get the organization that owns the account"""
+        return list(
+            filter(lambda org: account_id == org.org_account_id, self.organizations)
+        )[0]
+
+    async def get_command_by_organization_account(
+        self, command: ExecutionMessage
+    ) -> list[ExecutionMessage]:
+        commands = []
+        for org in self.organizations:
+            command_cp = command.copy()
+            command_cp.provider_id = org.org_account_id
+            commands.append(command_cp)
+
+        return commands
+
 
 IAMBIC_PLUGIN = ProviderPlugin(
     config_name="aws",
@@ -122,5 +151,6 @@ IAMBIC_PLUGIN = ProviderPlugin(
         AwsIamRoleTemplate,
         AwsIamUserTemplate,
         AwsIamManagedPolicyTemplate,
+        AwsScpPolicyTemplate,
     ],
 )

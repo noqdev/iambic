@@ -59,6 +59,20 @@ Resources:
                   - sqs:GetQueueUrl
                   - sqs:GetQueueAttributes
                 Resource:
-                  - 'arn:aws:sqs:*:*:IAMbicChangeDetectionQueue'
+                  - 'arn:aws:sqs:*:*:IAMbicChangeDetectionQueue*'
+              - Sid: SCPsReadWrite
+                Effect: Allow
+                Action:
+                - organizations:CreatePolicy
+                - organizations:DeletePolicy
+                - organizations:DescribePolicy
+                - organizations:UpdatePolicy
+                - organizations:ListPolicies
+                - organizations:AttachPolicy
+                - organizations:DetachPolicy
+                - organizations:TagResource
+                - organizations:UntagResource
+                - organizations:ListTagsForResource
+                Resource: '*'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/ReadOnlyAccess'

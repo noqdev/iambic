@@ -15,6 +15,7 @@ from iambic.core.utils import (
     GlobalRetryController,
     convert_between_json_and_yaml,
     create_commented_map,
+    evaluate_on_provider,
     normalize_dict_keys,
     simplify_dt,
     sort_dict,
@@ -291,3 +292,13 @@ def test_convert_between_json_and_yaml():
     json_output = convert_between_json_and_yaml(yaml_input)
     expected_json_output = '{\n  "MyKey": {\n    "InnerKey": "value"\n  }\n}'
     assert json_output == expected_json_output
+
+
+def test_evaluate_on_provider_organization_account(mocker):
+    resource = mocker.Mock()
+    provider_details = mocker.Mock()
+
+    resource.organization_account_needed = True
+    provider_details.organization_account = True
+
+    assert evaluate_on_provider(resource, provider_details)

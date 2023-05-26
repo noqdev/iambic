@@ -5,7 +5,7 @@ import base64
 import json
 import uuid
 from itertools import chain
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Coroutine, Union
 
 import boto3
 
@@ -27,6 +27,7 @@ from iambic.plugins.v0_1_0.aws.event_bridge.models import (
     ManagedPolicyMessageDetails,
     PermissionSetMessageDetails,
     RoleMessageDetails,
+    SCPMessageDetails,
     UserMessageDetails,
 )
 from iambic.plugins.v0_1_0.aws.iam.group.models import AWS_IAM_GROUP_TEMPLATE_TYPE
@@ -59,6 +60,15 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
     generate_permission_set_map,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
+from iambic.plugins.v0_1_0.aws.organizations.scp.models import AWS_SCP_POLICY_TEMPLATE
+from iambic.plugins.v0_1_0.aws.organizations.scp.template_generation import (
+    collect_aws_scp_policies,
+    generate_aws_scp_policy_templates,
+    get_organizations_account_map,
+)
+from iambic.plugins.v0_1_0.aws.organizations.scp.utils import (
+    service_control_policy_is_enabled,
+)
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -78,7 +88,7 @@ async def load(config: AWSConfig) -> AWSConfig:
         orgs_accounts = await asyncio.gather(
             *[org.get_accounts() for org in config.organizations]
         )
-        for org_accounts in orgs_accounts:
+        for org_accounts, org in zip(orgs_accounts, config.organizations):
             for account in org_accounts:
                 if (
                     account_elem := config_account_idx_map.get(account.account_id)
@@ -89,6 +99,15 @@ async def load(config: AWSConfig) -> AWSConfig:
                     config.accounts[
                         account_elem
                     ].identity_center_details = account.identity_center_details
+
+                    # if the account is an organization account, set the organization details
+                    if org.org_account_id == account.account_id:
+                        await config.accounts[
+                            account_elem
+                        ].set_account_organization_details(
+                            organization=org,
+                            config=config,
+                        )
                 else:
                     log.warning(
                         "Account not found in config. Account will be ignored.",
@@ -374,7 +393,7 @@ async def import_aws_resources(
     messages: list = None,
     remote_worker=None,
 ):
-    tasks = []
+    tasks: list[Coroutine] = []
 
     if not exe_message.metadata or exe_message.metadata["service"] == "identity_center":
         identity_center_template_map = None
@@ -396,6 +415,10 @@ async def import_aws_resources(
             )
         )
 
+    tasks += await import_organization_resources(
+        exe_message, config, base_output_dir, messages, remote_worker
+    )  # type: ignore
+
     if not exe_message.metadata or exe_message.metadata["service"] == "iam":
         iam_template_map = None
 
@@ -414,8 +437,8 @@ async def import_aws_resources(
                 "iam",
                 [
                     collect_aws_roles,
-                    collect_aws_groups,
                     collect_aws_users,
+                    collect_aws_groups,
                     collect_aws_managed_policies,
                 ],
                 [
@@ -433,6 +456,54 @@ async def import_aws_resources(
     await asyncio.gather(*tasks)
 
 
+async def import_organization_resources(
+    exe_message: ExecutionMessage,
+    config: AWSConfig,
+    base_output_dir: str,
+    messages: list = None,
+    remote_worker=None,
+) -> list[Coroutine]:
+    tasks = []
+    if not config.organizations:
+        return tasks
+    exe_messages = await config.get_command_by_organization_account(exe_message)
+    scp_template_map = await get_existing_template_map(
+        repo_dir=base_output_dir,
+        template_type=AWS_SCP_POLICY_TEMPLATE,
+        nested=True,
+    )
+
+    for exe_msg in exe_messages:
+        aws_account_map: dict[str, AWSAccount] = await get_organizations_account_map(
+            exe_msg, config
+        )
+        aws_account = aws_account_map[exe_msg.provider_id]  # type: ignore
+        org_client = await aws_account.get_boto3_client("organizations")
+
+        if not (await service_control_policy_is_enabled(org_client)):
+            pass
+
+        # this is also configured at aws config load method
+        await aws_account.set_account_organization_details(
+            await config.get_organization_from_account(exe_msg.provider_id), config
+        )
+        tasks.append(
+            import_service_resources(
+                exe_msg,
+                config,
+                base_output_dir,
+                "scp",
+                [collect_aws_scp_policies],
+                [generate_aws_scp_policy_templates],
+                messages,
+                remote_worker,
+                scp_template_map,
+            )
+        )
+
+    return tasks
+
+
 async def detect_changes(  # noqa: C901
     config: AWSConfig, repo_dir: str
 ) -> Union[str, None]:
@@ -445,6 +516,7 @@ async def detect_changes(  # noqa: C901
     group_messages = []
     managed_policy_messages = []
     permission_set_messages = []
+    scp_messages = []
     commit_message = "Out of band changes detected.\nSummary:\n"
 
     for queue_arn in config.sqs_cloudtrail_changes_queues:
@@ -510,6 +582,7 @@ async def detect_changes(  # noqa: C901
                     if actor != identity_arn:
                         account_id = decoded_message.get("recipientAccountId")
                         request_params = decoded_message["requestParameters"]
+                        response_elements = decoded_message["responseElements"]
                         event = decoded_message["eventName"]
                         resource_id = None
                         resource_type = None
@@ -575,6 +648,34 @@ async def detect_changes(  # noqa: C901
                                     permission_set_arn=permission_set_arn,
                                 )
                             )
+                        elif scp_policy_id := SCPMessageDetails.get_policy_id(
+                            request_params,
+                            response_elements,
+                        ):
+                            resource_id = scp_policy_id
+                            resource_type = "SCPPolicy"
+                            scp_messages.append(
+                                SCPMessageDetails(
+                                    account_id=account_id,
+                                    policy_id=scp_policy_id,
+                                    delete=bool(event == "DeletePolicy"),
+                                    event=event,
+                                )
+                            )
+                        elif SCPMessageDetails.tag_event(
+                            event,
+                            decoded_message["eventSource"],
+                        ):
+                            resource_id = request_params.get("resourceId")
+                            resource_type = "SCPPolicy"
+                            scp_messages.append(
+                                SCPMessageDetails(
+                                    account_id=account_id,
+                                    policy_id=resource_id,
+                                    delete=False,
+                                    event=event,
+                                )
+                            )
 
                         if resource_id:
                             commit_message = (
@@ -598,8 +699,15 @@ async def detect_changes(  # noqa: C901
     collect_tasks = []
     iam_template_map = None
     identity_center_template_map = None
+    scp_template_map = None
 
-    if role_messages or user_messages or group_messages or managed_policy_messages:
+    if (
+        role_messages
+        or user_messages
+        or group_messages
+        or managed_policy_messages
+        or scp_messages
+    ):
         iam_template_map = await get_existing_template_map(
             repo_dir=repo_dir,
             template_type="AWS::IAM.*",
@@ -610,6 +718,13 @@ async def detect_changes(  # noqa: C901
         identity_center_template_map = await get_existing_template_map(
             repo_dir=repo_dir,
             template_type="AWS::IdentityCenter.*",
+            nested=True,
+        )
+
+    if scp_messages:
+        scp_template_map = await get_existing_template_map(
+            repo_dir=repo_dir,
+            template_type=AWS_SCP_POLICY_TEMPLATE,
             nested=True,
         )
 
@@ -640,6 +755,22 @@ async def detect_changes(  # noqa: C901
                 permission_set_messages,
             )
         )
+    if scp_messages:
+        exe_messages = await config.get_command_by_organization_account(exe_message)
+
+        # for each execution message (by organization), collect the SCP policies.
+        for message in exe_messages:
+            if current_messages := [
+                m for m in scp_messages if m.account_id == message.provider_id
+            ]:
+                collect_tasks.append(
+                    collect_aws_scp_policies(
+                        message,
+                        config,
+                        scp_template_map,
+                        current_messages,
+                    )
+                )
 
     if collect_tasks:
         await asyncio.gather(*collect_tasks)
@@ -683,6 +814,23 @@ async def detect_changes(  # noqa: C901
                     permission_set_messages,
                 )
             )
+        if scp_messages:
+            exe_messages = await config.get_command_by_organization_account(exe_message)
+
+            # for each execution message (by organization), collect the SCP policies.
+            for message in exe_messages:
+                if current_messages := [
+                    m for m in scp_messages if m.account_id == message.provider_id
+                ]:
+                    tasks.append(
+                        generate_aws_scp_policy_templates(
+                            message,
+                            config,
+                            repo_dir,
+                            scp_template_map,
+                            current_messages,
+                        )
+                    )
         await asyncio.gather(*tasks)
 
         return commit_message
