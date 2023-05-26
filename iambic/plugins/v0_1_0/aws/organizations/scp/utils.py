@@ -168,13 +168,12 @@ async def get_policy(client, policyId: str) -> ServiceControlPolicyItem:
     wait=wait_exponential(multiplier=1, min=4, max=15),
 )
 async def detach_policy(client, policyId, targetId):
-    log.info(f"Detaching policy {policyId} from {targetId}")
     await boto_crud_call(
         client.detach_policy,
         PolicyId=policyId,
         TargetId=targetId,
     )
-    log.info(f"Detached policy {policyId} from {targetId}")
+    log.debug(f"Detached policy {policyId} from {targetId}")
 
 
 @retry(
@@ -202,11 +201,9 @@ async def delete_policy(client, policyId: str, *args, **kwargs):
 
     await asyncio.gather(*targets_tasks)
 
-    log.info(f"Deleting policy {policyId}")
-
     await boto_crud_call(client.delete_policy, PolicyId=policyId)
 
-    log.info(f"Deleted policy {policyId}")
+    log.debug(f"Deleted policy {policyId}")
 
 
 @retry(
@@ -492,7 +489,7 @@ def __apply_tags(
                 Tags=tags_to_apply,
             )
             tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
-        log.info(log_str, tags=tags_to_apply, **log_params)
+        log.debug(log_str, tags=tags_to_apply, **log_params)
 
     return tasks, response
 
@@ -535,7 +532,7 @@ def __remove_tags(client, policy, current_policy, log_params):
                 TagKeys=tags_to_remove,
             )
             tasks.append(plugin_apply_wrapper(apply_awaitable, proposed_changes))
-        log.info(log_str, tags=tags_to_remove, **log_params)
+        log.debug(log_str, tags=tags_to_remove, **log_params)
 
     return tasks, response
 
@@ -600,7 +597,7 @@ def __apply_targets(
 
             tasks.append(plugin_apply_wrapper(attach_policies(), proposed_changes))
 
-        log.info(log_str, tags=targets_to_apply, **log_params)
+        log.debug(log_str, tags=targets_to_apply, **log_params)
 
     return tasks, response
 
@@ -668,6 +665,6 @@ def __remove_targets(
                     )
 
             tasks.append(plugin_apply_wrapper(detach_policies(), proposed_changes))
-        log.info(log_str, tags=targets_to_remove, **log_params)
+        log.debug(log_str, tags=targets_to_remove, **log_params)
 
     return tasks, response
