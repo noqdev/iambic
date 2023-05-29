@@ -286,6 +286,9 @@ async def apply_update_policy(
     Returns:
         list[ProposedChange]: list of proposed changes
     """
+
+    from iambic.plugins.v0_1_0.aws.organizations.scp.models import PolicyDocumentItem
+
     current_value = dict(
         Name=current_policy.get("Name"),
         Description=current_policy.get("Description"),
@@ -295,7 +298,7 @@ async def apply_update_policy(
     new_value = dict(
         Name=policy.get("PolicyName"),
         Description=policy.get("Description"),
-        Content=policy["PolicyDocument"],
+        Content=PolicyDocumentItem.parse_obj(policy["PolicyDocument"]).dict(),
     )
 
     diff = await aio_wrapper(
@@ -306,7 +309,7 @@ async def apply_update_policy(
         ignore_order=True,
     )
 
-    if not diff.get("values_changed"):
+    if diff == {}:
         return []
 
     tasks = []
