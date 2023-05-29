@@ -80,6 +80,32 @@ TEST_COMMENTED_YAML = """forrest:  # forrest-comment
 """
 
 
+# be careful with this test, as the check is format sensitive
+def test_file_header_commented_yaml():
+    MULTILINE_YAML = """# HEADER LINE 1
+# HEADER LINE 2
+name: simple_tree
+"""
+    yaml_dict = yaml.load(MULTILINE_YAML)
+    yaml_dict = transform_comments(yaml_dict)
+    commented_model = TreeModel(**yaml_dict)
+    commented_map = create_commented_map(commented_model.dict())
+    as_yaml = yaml.dump(commented_map)
+    assert MULTILINE_YAML == as_yaml
+
+
+# be careful with this test, as the check is format sensitive
+def test_no_file_header_commented_yaml():
+    MULTILINE_YAML = """name: simple_tree
+"""
+    yaml_dict = yaml.load(MULTILINE_YAML)
+    yaml_dict = transform_comments(yaml_dict)
+    commented_model = TreeModel(**yaml_dict)
+    commented_map = create_commented_map(commented_model.dict())
+    as_yaml = yaml.dump(commented_map)
+    assert MULTILINE_YAML == as_yaml
+
+
 def test_commented_yaml():
     yaml_dict = yaml.load(TEST_COMMENTED_YAML)
     yaml_dict = transform_comments(yaml_dict)
@@ -87,6 +113,51 @@ def test_commented_yaml():
     commented_map = create_commented_map(commented_model.dict())
     as_yaml = yaml.dump(commented_map)
     assert "COMMENT" in as_yaml
+
+
+# be careful with this test, as the check is format sensitive
+def test_file_footer_commented_yaml():
+    MULTILINE_YAML = """name: simple_tree  # LINE 1
+# LINE 2
+"""
+    yaml_dict = yaml.load(MULTILINE_YAML)
+    yaml_dict = transform_comments(yaml_dict)
+    commented_model = TreeModel(**yaml_dict)
+    commented_map = create_commented_map(commented_model.dict())
+    as_yaml = yaml.dump(commented_map)
+    assert MULTILINE_YAML == as_yaml
+
+
+# be careful with this test, as the check is format sensitive
+# this test case is commented out because raumel actually cannot write
+# out such pre-value-comments.
+# def test_after_key_pre_value_commented_yaml():
+#     MULTILINE_YAML = """name:
+#   # pre-value-comment
+#   simple_tree  # LINE 1
+# # LINE 2
+# """
+#     yaml_dict = yaml.load(MULTILINE_YAML)
+#     yaml_dict = transform_comments(yaml_dict)
+#     commented_model = TreeModel(**yaml_dict)
+#     commented_map = create_commented_map(commented_model.dict())
+#     as_yaml = yaml.dump(commented_map)
+#     assert MULTILINE_YAML == as_yaml
+
+
+# be careful with this test, as the check is format sensitive
+def test_after_key_pre_key_commented_yaml():
+    MULTILINE_YAML = """tree:
+  # pre-key-comment
+  name: simple_tree  # LINE 1
+# LINE 2
+"""
+    yaml_dict = yaml.load(MULTILINE_YAML)
+    yaml_dict = transform_comments(yaml_dict)
+    commented_model = TreeContainer(**yaml_dict)
+    commented_map = create_commented_map(commented_model.dict())
+    as_yaml = yaml.dump(commented_map)
+    assert MULTILINE_YAML == as_yaml
 
 
 def test_inner_comment():

@@ -339,15 +339,22 @@ def transform_comments(yaml_dict):
 
     comment_dict = {}
     yaml_dict["metadata_commented_dict"] = comment_dict
+    if yaml_dict.ca.comment:
+        comment_dict["__file_header__"] = yaml_dict.ca.comment[
+            1
+        ]  # this is intentional, index 1 is the header, index 0 is the footer...
+        # process multiline comments from array structure
+        if comment_dict["__file_header__"]:
+            comment_dict["__file_header__"] = "".join(
+                [
+                    comment_token.value
+                    for comment_token in comment_dict["__file_header__"]
+                ]
+            )
     for key, comment in yaml_dict.ca.items.items():
-        # flatten comment for now since we do not have
-        # a lot of experience with more complex comment token
-        flatten_comment = None
-        if comment[2]:
-            flatten_comment = comment[2].value
-        elif comment[3] and type(comment[3]) == list:
-            flatten_comment = " ".join([token.value.strip() for token in comment[3]])
-        comment_dict[key] = flatten_comment
+        comment_dict[
+            key
+        ] = comment  # comment is a array of [pre_key, post_key, pre_value, post_value]
         value = yaml_dict[key]
         if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
             yaml_dict[key] = [transform_comments(n) for n in value]
@@ -372,8 +379,45 @@ def create_commented_map(_dict: dict):
             value = [create_commented_map(n) for n in value]
         elif isinstance(value, dict):
             value = create_commented_map(value)
-        commented_map.insert(index, key, value, comment_key_to_comment.get(key, None))
+        commented_map.insert(index, key, value, None)
+        maybe_comment = comment_key_to_comment.get(key, None)
+        if maybe_comment:
+            if maybe_comment[0]:
+                # post_key comment
+                commented_map.yaml_set_comment_before_after_key(
+                    key=key,
+                    after="".join(
+                        [comment_token.value for comment_token in maybe_comment[0]]
+                    ),
+                )
+            if maybe_comment[1]:
+                # pre_key comment
+                commented_map.yaml_set_comment_before_after_key(
+                    key=key,
+                    before="".join(
+                        [comment_token.value for comment_token in maybe_comment[1]]
+                    ),
+                )
+            if maybe_comment[2]:
+                # post value comment
+                commented_map.yaml_add_eol_comment(
+                    key=key, comment=maybe_comment[2].value
+                )
+            if maybe_comment[3]:
+                # pre value comment
+                pre_value_comment = "".join(
+                    [comment_token.value for comment_token in maybe_comment[3]]
+                )
+                if pre_value_comment[0] == "#":
+                    # patch silly raumel behavior: it can add additional # character
+                    pre_value_comment = pre_value_comment[1:]
+                    pre_value_comment = pre_value_comment.strip()
+                commented_map.yaml_set_comment_before_after_key(
+                    key=key, after=pre_value_comment
+                )
         index = index + 1
+    if comment_key_to_comment.get("__file_header__", None):
+        commented_map.yaml_set_start_comment(comment_key_to_comment["__file_header__"])
     return commented_map
 
 
