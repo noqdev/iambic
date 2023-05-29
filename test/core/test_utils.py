@@ -101,6 +101,20 @@ forrest:
     assert "# comment line 1" in as_yaml
 
 
+def test_commented_out_list_element_yaml():
+    MULTILINE_YAML = """
+forrest:
+  - name: simple_tree # COMMENT
+  # - name: commented_out_tree
+    """
+    yaml_dict = yaml.load(MULTILINE_YAML)
+    yaml_dict = transform_comments(yaml_dict)
+    commented_model = ForrestModel(**yaml_dict)
+    commented_map = create_commented_map(commented_model.dict())
+    as_yaml = yaml.dump(commented_map)
+    assert "commented_out_tree" in as_yaml
+
+
 class TestGlobalRetryController(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.wait_time = 1

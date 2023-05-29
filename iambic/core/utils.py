@@ -351,6 +351,9 @@ def transform_comments(yaml_dict):
             yaml_dict[key] = [transform_comments(n) for n in value]
         elif isinstance(value, dict):
             yaml_dict[key] = transform_comments(value)
+    for key, value in yaml_dict.items():
+        if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
+            yaml_dict[key] = [transform_comments(n) for n in value]
     return yaml_dict
 
 
