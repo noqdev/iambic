@@ -67,6 +67,10 @@ class TreeModel(BaseModel):
     name: str
 
 
+class TreeContainer(BaseModel):
+    tree: TreeModel
+
+
 class ForrestModel(BaseModel):
     forrest: List[TreeModel]
 
@@ -80,6 +84,19 @@ def test_commented_yaml():
     yaml_dict = yaml.load(TEST_COMMENTED_YAML)
     yaml_dict = transform_comments(yaml_dict)
     commented_model = ForrestModel(**yaml_dict)
+    commented_map = create_commented_map(commented_model.dict())
+    as_yaml = yaml.dump(commented_map)
+    assert "COMMENT" in as_yaml
+
+
+def test_inner_comment():
+    MULTILINE_YAML = """
+  tree:
+    name: simple_tree # COMMENT
+    """
+    yaml_dict = yaml.load(MULTILINE_YAML)
+    yaml_dict = transform_comments(yaml_dict)
+    commented_model = TreeContainer(**yaml_dict)
     commented_map = create_commented_map(commented_model.dict())
     as_yaml = yaml.dump(commented_map)
     assert "COMMENT" in as_yaml

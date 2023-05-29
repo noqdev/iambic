@@ -335,6 +335,8 @@ def sort_dict(original, prioritize=None):
 
 
 def transform_comments(yaml_dict):
+    from ruamel.yaml import CommentedMap
+
     comment_dict = {}
     yaml_dict["metadata_commented_dict"] = comment_dict
     for key, comment in yaml_dict.ca.items.items():
@@ -354,6 +356,8 @@ def transform_comments(yaml_dict):
     for key, value in yaml_dict.items():
         if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
             yaml_dict[key] = [transform_comments(n) for n in value]
+        elif isinstance(value, CommentedMap):
+            yaml_dict[key] = transform_comments(value)
     return yaml_dict
 
 
