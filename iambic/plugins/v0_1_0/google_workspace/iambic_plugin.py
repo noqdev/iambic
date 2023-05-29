@@ -44,7 +44,7 @@ class GoogleProject(BaseModel):
     token_uri: str
     auth_provider_x509_cert_url: str
     client_x509_cert_url: str
-    variables: Optional[list[Variable]] = Field(
+    variables: list[Variable] = Field(
         [],
         description="A list of variables to be used when creating templates",
     )

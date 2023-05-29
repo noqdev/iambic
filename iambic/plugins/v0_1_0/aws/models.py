@@ -284,7 +284,7 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
         Partition.AWS,
         description="The AWS partition the account is in. Options are aws, aws-us-gov, and aws-cn",
     )
-    variables: Optional[List[Variable]] = Field(
+    variables: list[Variable] = Field(
         [],
         description="A list of variables to be used when creating templates",
     )
