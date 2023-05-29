@@ -160,6 +160,21 @@ def test_after_key_pre_key_commented_yaml():
     assert MULTILINE_YAML == as_yaml
 
 
+# be careful with this test, as the check is format sensitive
+def test_after_value_newline_commented_yaml_2():
+    MULTILINE_YAML = """tree:
+  # pre-key-comment
+  name: simple_tree
+  # LINE 1
+"""
+    yaml_dict = yaml.load(MULTILINE_YAML)
+    yaml_dict = transform_comments(yaml_dict)
+    commented_model = TreeContainer(**yaml_dict)
+    commented_map = create_commented_map(commented_model.dict())
+    as_yaml = yaml.dump(commented_map)
+    assert MULTILINE_YAML == as_yaml
+
+
 def test_inner_comment():
     MULTILINE_YAML = """
   tree:

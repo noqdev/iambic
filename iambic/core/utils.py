@@ -408,6 +408,12 @@ def create_commented_map(_dict: dict):
             if maybe_comment[2]:
                 # post value comment
                 commented_map.yaml_add_eol_comment(key=key, comment=maybe_comment[2])
+                if maybe_comment[2][0] == "\n":
+                    # patch silly raumel behavior: when comment is `\n  # line 1`,
+                    # current implementation adds another `# ` before the \n
+                    commented_map.ca._items[key][2]._value = maybe_comment[
+                        2
+                    ]  # brittle to raumel implementation
             if maybe_comment[3]:
                 # pre value comment
                 pre_value_comment = maybe_comment[3]
