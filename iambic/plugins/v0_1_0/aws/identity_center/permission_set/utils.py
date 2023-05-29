@@ -608,6 +608,7 @@ async def apply_permission_set_inline_policy(
             template_inline_policy,
             report_repetition=True,
             ignore_order=True,
+            exclude_regex_paths=["metadata_commented_dict"],
         )
 
     if template_inline_policy and (not existing_inline_policy or bool(policy_drift)):
@@ -690,6 +691,7 @@ async def apply_permission_set_permission_boundary(
             template_permission_boundary,
             report_repetition=True,
             ignore_order=True,
+            exclude_regex_paths=["metadata_commented_dict"],
         )
 
     if template_permission_boundary and (
