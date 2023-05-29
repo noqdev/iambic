@@ -334,6 +334,15 @@ def sort_dict(original, prioritize=None):
     return d
 
 
+def flatten_comment_data(data):
+    if type(data) == list:
+        return "".join([comment_token.value for comment_token in data])
+    elif data:
+        return data.value
+    else:
+        return data
+
+
 def transform_comments(yaml_dict):
     from ruamel.yaml import CommentedMap
 
@@ -352,9 +361,11 @@ def transform_comments(yaml_dict):
                 ]
             )
     for key, comment in yaml_dict.ca.items.items():
-        comment_dict[
-            key
-        ] = comment  # comment is a array of [pre_key, post_key, pre_value, post_value]
+        # comment is a array of [pre_key, post_key, pre_value, post_value]
+        # convert comment into only primitive types because
+        # pydantic will require custom serializer
+        comments = [flatten_comment_data(element) for element in comment]
+        comment_dict[key] = comments
         value = yaml_dict[key]
         if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
             yaml_dict[key] = [transform_comments(n) for n in value]
@@ -386,28 +397,20 @@ def create_commented_map(_dict: dict):
                 # post_key comment
                 commented_map.yaml_set_comment_before_after_key(
                     key=key,
-                    after="".join(
-                        [comment_token.value for comment_token in maybe_comment[0]]
-                    ),
+                    after=maybe_comment[0],
                 )
             if maybe_comment[1]:
                 # pre_key comment
                 commented_map.yaml_set_comment_before_after_key(
                     key=key,
-                    before="".join(
-                        [comment_token.value for comment_token in maybe_comment[1]]
-                    ),
+                    before=maybe_comment[1],
                 )
             if maybe_comment[2]:
                 # post value comment
-                commented_map.yaml_add_eol_comment(
-                    key=key, comment=maybe_comment[2].value
-                )
+                commented_map.yaml_add_eol_comment(key=key, comment=maybe_comment[2])
             if maybe_comment[3]:
                 # pre value comment
-                pre_value_comment = "".join(
-                    [comment_token.value for comment_token in maybe_comment[3]]
-                )
+                pre_value_comment = maybe_comment[3]
                 if pre_value_comment[0] == "#":
                     # patch silly raumel behavior: it can add additional # character
                     pre_value_comment = pre_value_comment[1:]
