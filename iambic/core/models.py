@@ -77,7 +77,7 @@ class IambicPydanticBaseModel(PydanticBaseModel):
         set(), description="metadata for iambic", exclude=True, hidden_from_schema=True
     )
     metadata_commented_dict: dict = Field(
-        {}, description="yaml inline comments", hidden_from_schema=True
+        {}, description="yaml comments", hidden_from_schema=True
     )
 
     def __init__(self, *args, **kwargs):

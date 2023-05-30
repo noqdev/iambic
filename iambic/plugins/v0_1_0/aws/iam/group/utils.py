@@ -249,6 +249,7 @@ async def apply_group_inline_policies(
                 policy_document,
                 ignore_order=True,
                 report_repetition=True,
+                exclude_regex_paths=["metadata_commented_dict"],
             )
 
             # DeepDiff will return type changes as actual type functions and not strings,

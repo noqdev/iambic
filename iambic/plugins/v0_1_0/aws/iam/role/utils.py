@@ -275,6 +275,7 @@ async def update_assume_role_policy(
             template_policy_document,
             report_repetition=True,
             ignore_order=True,
+            exclude_regex_paths=["metadata_commented_dict"],
         )
 
         # DeepDiff will return type changes as actual type functions and not strings,
@@ -565,6 +566,7 @@ async def apply_role_inline_policies(
                 policy_document,
                 ignore_order=True,
                 report_repetition=True,
+                exclude_regex_paths=["metadata_commented_dict"],
             )
 
             # DeepDiff will return type changes as actual type functions and not strings,

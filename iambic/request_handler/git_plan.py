@@ -22,6 +22,7 @@ async def plan_git_changes(
     """
     ctx_eval_only_original_value = ctx.eval_only
     ctx.eval_only = True
+    changes = []
     try:
         changes = await apply_git_changes(config_path, repo_dir)
     finally:
