@@ -24,6 +24,11 @@ You will then practice using IAMbic to to create, manipulate, and expire a test 
 10. Provide temporary (break-glass) access to your AWS Identity Center Permission Sets
 11. Create and Manage an IAM Managed Policy
 
+#### Practice with Service Control Policies (SCPs)
+12. Import existing Service Control Policies
+13. Create a Policy
+14. Attach a Policy to an AWS account, OU, or the root of your AWS Organization
+
 
 ## Prerequisites
 
@@ -651,3 +656,96 @@ properties:
 ```bash
 iambic apply resources/aws/identity_center/permission_set/iambic_test_permission_set.yaml
 ```
+
+
+## 5. Service Control Policies
+
+:::tip
+Want to get a better grasp of Service Control Policies? We've got you covered! Our
+[blog post](https://www.noq.dev/blog/scps-protecting-your-aws-environment-and-your-job) provides real-life examples,
+useful tips for safe usage, and a practical guide on how to check your CloudTrail logs to ensure the SCPs you're
+using are safe.
+:::
+
+This section will walk you through the process of managing, creating, and attaching Service Control Policies (SCPs)
+to your accounts, Organizational Units (OUs), or your entire organization. We'll also touch on how to prevent
+drift in your SCPs.
+
+First, make sure IAMbic is set up with the correct AWS account and region for your AWS Organization.
+If it's set up correctly, you'll see an `aws.organizations` section in your `iambic_config.yaml` file.
+If you don't have a Service Control Policy in your AWS Organization yet, you might want to add
+one before moving forward.
+
+If AWS Organizations isn't set up yet, run `iambic setup`, select `AWS`, then `AWS Organizations`,
+and follow the prompts to set up IAMbic.
+
+:::note
+Just a heads up, IAMbic only captures customer-managed SCPs. AWS-managed SCPs, like
+`FullAWSAccess`, aren't captured by IAMbic.
+:::
+
+### 5.1 - Importing Existing Service Control Policies
+
+To import your existing SCPs, simply run the command `iambic import`. Your e
+xisting customer-managed SCPs will then appear as IAMbic YAML templates under
+`resources/aws/organizations/scp/ORG_ACCOUNT_NAME`, where `ORG_ACCOUNT_NAME` is the name of your
+AWS Organization's management account.
+
+### 5.2 - Creating a New Service Control Policy
+
+This section will guide you through creating a new SCP. SCPs are like guardrails that can be applied
+across your organization. Since they can potentially cause outages if not applied correctly,
+it's crucial to test them thoroughly before implementing. For this tutorial, we'll create SCPs
+that only contain Allow statements to avoid accidental outages.
+
+Replace the following placeholders in the template:
+
+- `ORG_ACCOUNT_NAME`: Your AWS Organization's management account name.
+- `ORG_ACCOUNT_ID`: Your AWS Organization's management account ID.
+- `ORG_ID`: Your AWS Organization ID.
+- `ORG_ROOT_ID`: The ID of your organization's root (You can find this in the AWS Console under `Organizations > Root`).
+
+Here's a step-by-step guide:
+
+1. Create a new file for the SCP and save the template provided:
+
+```bash
+mkdir -p resources/aws/organizations/scp/ORG_ACCOUNT_NAME/
+code resources/aws/organizations/scp/ORG_ACCOUNT_NAME/iambic_test_scp.yaml
+```
+
+2. In the new file, specify the template type, identifier, and properties for the SCP.
+The `iambic_managed: enforced` flag will [prevent drift](/how_to_guides/prevent-drift)
+in a production [GitOps/IAMOps](/reference/iamops_philosophy) setup.
+
+This SCP should be a no-op, as it does not restrict any action
+
+```yaml
+template_type: NOQ::AWS::Organizations::SCP
+account_id: ORG_ACCOUNT_ID
+identifier: IambicTestSCP
+iambic_managed: enforced
+org_id: ORG_ID
+properties:
+  policy_document:
+    statement:
+      - action:
+          - '*'
+        effect: Allow
+        resource:
+          - '*'
+    version: '2012-10-17'
+  policy_name: IambicTestSCP
+  targets:
+    roots:
+      - ORG_ROOT_ID
+```
+
+3. Apply the changes using the IAMbic CLI:
+
+```bash
+iambic apply resources/aws/organizations/scp/ORG_ACCOUNT_NAME/iambic_test_scp.yaml
+```
+
+In a production setup, any SCPs that are added or modified will automatically be captured in Git
+by IAMbic. This allows for a full audit trail of changes to your SCPs through Git History.
