@@ -167,6 +167,39 @@ properties:
 Create an AWS Identity Center (SSO) permission set with varying permissions based on the AWS account. See the [Getting Started guide for AWS](https://docs.iambic.org/getting_started/aws), the AWS IC/SSO Permission Set section of our [Example Templates repository](https://github.com/noqdev/iambic-templates-examples/blob/main/resources/aws/identity_center/permission_set/design.yaml), and our blog post on [Tailoring AWS Identity Center (SSO) Permissions Per Account with IAMbic](https://www.noq.dev/blog/tailor-aws-identity-center-sso-permissions-per-account-with-iambic) for more information.
 
 ```yaml
+template_type: NOQ::AWS::IdentityCenter::PermissionSet
+access_rules:
+  - expires_at: 2028-05-19T14:17 UTC
+    groups:
+      - engineering
+identifier: design
+properties:
+  name: design
+  customer_managed_policy_references:
+    - name: base_deny
+  inline_policy:
+    statement:
+      - action:
+          - ec2:list*
+        effect: Deny
+        resource:
+          - '*'
+      - action:
+          - ec2:list*
+        effect: Deny
+        expires_at: 2033-05-19T14:17 UTC
+        resource:
+          - '*'
+  managed_policies:
+    - arn: arn:aws:iam::aws:policy/AWSHealthFullAccess
+  permissions_boundary:
+    customer_managed_policy_reference:
+      name: base_permission_boundary
+  session_duration: PT4H
+  tags:
+    - key: owner
+      value: design@example.com
+```
 
 ### Okta Application Assignments
 
