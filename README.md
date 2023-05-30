@@ -28,6 +28,7 @@ Easily manage and streamline cloud Identity and Access Management (IAM) with IAM
 Check out [IAMbic IAMOps Philosophy](/reference/iamops_philosophy) and an [example IAMbic templates repository](https://github.com/noqdev/iambic-templates-examples) to see a real-life example of IAMbic.
 
 ## 📣 Let's chat
+
 Do you want to connect with our contributors?
 
 Just click the button below and follow the instructions.
@@ -36,7 +37,12 @@ Just click the button below and follow the instructions.
 
 ## Getting Started
 
-Dive into IAMbic with our [quick-start guide](http://docs.iambic.org/getting_started/) and explore powerful template examples for AWS Multi-Account Roles, Dynamic Permissions, Okta Applications and Group Assignments, Azure Active Directory Users and Groups, and Google Workspace Group Assignments. We are rapidly expanding support for existing resources and cloud providers, so check back often!
+Dive into IAMbic with our [quick-start guide](http://docs.iambic.org/getting_started/) and explore powerful
+[template examples](https://github.com/noqdev/iambic-templates-examples/) for AWS Multi-Account Roles,
+Identity Center (SSO) Permission Sets, Service Control Policies, Dynamic Permissions,
+Okta Applications and Group Assignments, Azure Active Directory Users and Groups, and Google Workspace Group Assignments.
+
+We are rapidly expanding support for existing resources and cloud providers, so check back often!
 
 ## Installing IAMbic and Supported Versions
 
@@ -54,9 +60,10 @@ Here are some examples showcasing IAMbic's capabilities:
 
 #### AWS Multi-Account Cloudwatch Role
 
-Create a Cloudwatch role with static permissions across three accounts, dynamically generating role names based on the account the role is deployed to. This template would
-result in the creation of three roles: "dev_cloudwatch",
-"staging_cloudwatch", and "prod_cloudwatch" on the respective AWS accounts. See the [Getting Started guide for AWS](https://docs.iambic.org/getting_started/aws) for more information.
+Create a Cloudwatch role with static permissions across three accounts, dynamically generating role names based on the account the role is deployed to. This template would result in the creation of three roles: "dev_cloudwatch",
+"staging_cloudwatch", and "prod_cloudwatch" on the respective AWS accounts.
+
+See the [Getting Started guide for AWS](https://docs.iambic.org/getting_started/aws), the AWS IAM Role section of our [Example Templates repository](https://github.com/noqdev/iambic-templates-examples/blob/main/resources/aws/iam/role/all_accounts/account_name_iambic_test_role.yaml), and our [blog post on multi-account roles](https://www.noq.dev/blog/aws-permission-bouncers-letting-loose-in-dev-keeping-it-tight-in-prod) for more information.
 
 ```yaml
 template_type: NOQ::AWS::IAM::Role
@@ -155,6 +162,12 @@ properties:
       value: devops
 ```
 
+### AWS Identity Center (SSO) Permission Sets
+
+Create an AWS Identity Center (SSO) permission set with varying permissions based on the AWS account. See the [Getting Started guide for AWS](https://docs.iambic.org/getting_started/aws), the AWS IC/SSO Permission Set section of our [Example Templates repository](https://github.com/noqdev/iambic-templates-examples/blob/main/resources/aws/identity_center/permission_set/design.yaml), and our blog post on [Tailoring AWS Identity Center (SSO) Permissions Per Account with IAMbic](https://www.noq.dev/blog/tailor-aws-identity-center-sso-permissions-per-account-with-iambic) for more information.
+
+```yaml
+
 ### Okta Application Assignments
 
 Manage Okta application assignments, including expiration dates for specific users. See the [Getting Started guide for Okta](https://docs.iambic.org/getting_started/okta) for more information.
@@ -171,6 +184,61 @@ properties:
       expires_at: 2023-09-01T00:00 UTC
   status: ACTIVE
 ```
+
+### AWS Service Control Policies
+
+Managing access to AWS services can be a tricky business. That's where Service Control Policies (SCPs) come in. SCPs allow you to define what services and actions are accessible within your AWS accounts. With IAMbic, you can import your existing SCPs, create new ones that restrict access to specific AWS services, and prevent any drift from occurring to ensure that you're protecting sensitive information the way you intend.
+
+For instance, let's say you want to limit access to certain AWS regions. You can create an SCP that denies access to all regions except those you specify. This can be particularly useful if you're looking to maintain tighter control over your data residency and compliance.
+
+Here's an example of how you can set this up:
+
+```yaml
+template_type: NOQ::AWS::Organizations::SCP
+account_id: '123456789012'
+iambic_managed: enforced
+identifier: RestrictRegions
+org_id: o-123456
+properties:
+  policy_document:
+    statement:
+      - condition:
+          StringNotEquals:
+            aws:RequestedRegion:
+              - us-east-1
+              - us-west-2
+        effect: Deny
+        not_action:
+          - a4b:*
+          - budgets:*
+          - ce:*
+          - chime:*
+          - cloudfront:*
+          - cur:*
+          - globalaccelerator:*
+          - health:*
+          - iam:*
+          - importexport:*
+          - mobileanalytics:*
+          - organizations:*
+          - route53:*
+          - route53domains:*
+          - shield:*
+          - support:*
+          - trustedadvisor:*
+          - waf:*
+          - wellarchitected:*
+        resource:
+          - '*'
+  policy_name: RestrictRegions
+  targets:
+    roots:
+      - r-123
+```
+
+In this example, the SCP named `RestrictRegions` denies access to all AWS regions except `us-east-1` and `us-west-2`. It also excludes certain global services from the restriction.
+
+For more information on how to get started with AWS and SCPs, check out our [Getting Started guide for AWS](https://docs.iambic.org/getting_started/aws) and the [AWS SCP Section of our Example Templates repository](https://github.com/noqdev/iambic-templates-examples/blob/main/resources/aws/organizations/scp/iambic_test_org_account/restrict_regions.yaml). You can also learn more about tailoring AWS Identity Center (SSO) permissions per account with IAMbic in our [blog post](https://noq-0.webflow.io/blog/scps-protecting-your-aws-environment-and-your-job).
 
 ### Okta Group Assignments
 
