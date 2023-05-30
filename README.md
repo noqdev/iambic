@@ -238,7 +238,7 @@ properties:
 
 In this example, the SCP named `RestrictRegions` denies access to all AWS regions except `us-east-1` and `us-west-2`. It also excludes certain global services from the restriction.
 
-For more information on how to get started with AWS and SCPs, check out our [Getting Started guide for AWS](https://docs.iambic.org/getting_started/aws) and the [AWS SCP Section of our Example Templates repository](https://github.com/noqdev/iambic-templates-examples/blob/main/resources/aws/organizations/scp/iambic_test_org_account/restrict_regions.yaml). You can also learn more about tailoring AWS Identity Center (SSO) permissions per account with IAMbic in our [blog post](https://www.noq.dev/blog/tailor-aws-identity-center-sso-permissions-per-account-with-iambic).
+For more information on how to get started with AWS and SCPs, check out our [Getting Started guide for AWS](https://docs.iambic.org/getting_started/aws) and the [AWS SCP Section of our Example Templates repository](https://github.com/noqdev/iambic-templates-examples/blob/main/resources/aws/organizations/scp/iambic_test_org_account/restrict_regions.yaml). You can also learn more about tailoring AWS Identity Center (SSO) permissions per account with IAMbic in our [blog post](https://noq-0.webflow.io/blog/scps-protecting-your-aws-environment-and-your-job).
 
 ### Okta Group Assignments
 
