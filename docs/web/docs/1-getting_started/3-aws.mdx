@@ -660,39 +660,43 @@ iambic apply resources/aws/identity_center/permission_set/iambic_test_permission
 
 ## 5. Service Control Policies
 
-In this section, we'll guide you through managing, creating, and attaching Service Control Policies (SCPs)
-to your accounts, Organizational Units (OUs), or your entire organization. We'll also discuss how
-to prevent drift in your SCPs.
+:::tip
+Want to get a better grasp of Service Control Policies? We've got you covered! Our
+[blog post](https://www.noq.dev/blog/scps-protecting-your-aws-environment-and-your-job) provides real-life examples,
+useful tips for safe usage, and a practical guide on how to check your CloudTrail logs to ensure the SCPs you're
+using are safe.
+:::
 
-Ensure that IAMbic is configured with the appropriate AWS account and region for your
-AWS Organization. If correctly configured, you should see an `aws.organizations` section in
-your `iambic_config.yaml` file.
+This section will walk you through the process of managing, creating, and attaching Service Control Policies (SCPs)
+to your accounts, Organizational Units (OUs), or your entire organization. We'll also touch on how to prevent
+drift in your SCPs.
 
-If AWS Organizations is not yet configured, execute `iambic setup`, select `AWS`, then
-`AWS Organizations`, and follow the prompts to configure IAMbic.
+First, make sure IAMbic is set up with the correct AWS account and region for your AWS Organization.
+If it's set up correctly, you'll see an `aws.organizations` section in your `iambic_config.yaml` file.
+If you don't have a Service Control Policy in your AWS Organization yet, you might want to add
+one before moving forward.
+
+If AWS Organizations isn't set up yet, run `iambic setup`, select `AWS`, then `AWS Organizations`,
+and follow the prompts to set up IAMbic.
 
 :::note
-Please note that IAMbic only captures customer-managed SCPs. AWS-managed SCPs, such as
-`FullAWSAccess` (The only one, to our knowledge), aren't captured by IAMbic.
+Just a heads up, IAMbic only captures customer-managed SCPs. AWS-managed SCPs, like
+`FullAWSAccess`, aren't captured by IAMbic.
 :::
 
 ### 5.1 - Importing Existing Service Control Policies
 
-Follow the steps below to import your existing SCPs:
-
-1. Run the command `iambic import`.
-
-Your existing customer-managed SCPs should now appear as IAMbic YAML templates under
-`resources/aws/organizations/scp/ORG_ACCOUNT_NAME`. Here, `ORG_ACCOUNT_NAME` is the name of your
+To import your existing SCPs, simply run the command `iambic import`. Your e
+xisting customer-managed SCPs will then appear as IAMbic YAML templates under
+`resources/aws/organizations/scp/ORG_ACCOUNT_NAME`, where `ORG_ACCOUNT_NAME` is the name of your
 AWS Organization's management account.
 
 ### 5.2 - Creating a New Service Control Policy
 
-This section provides a step-by-step guide on creating a new SCP. SCPs serve as governance
-guardrails that can be applied across your organization. Since improper application can
-potentially cause outages, it's important to thoroughly test SCPs before implementation.
-For the purposes of this tutorial, we'll create SCPs that only contain `Allow` statements to prevent
-accidental outages.
+This section will guide you through creating a new SCP. SCPs are like guardrails that can be applied
+across your organization. Since they can potentially cause outages if not applied correctly,
+it's crucial to test them thoroughly before implementing. For this tutorial, we'll create SCPs
+that only contain Allow statements to avoid accidental outages.
 
 Replace the following placeholders in the template:
 
@@ -700,6 +704,8 @@ Replace the following placeholders in the template:
 - `ORG_ACCOUNT_ID`: Your AWS Organization's management account ID.
 - `ORG_ID`: Your AWS Organization ID.
 - `ORG_ROOT_ID`: The ID of your organization's root (You can find this in the AWS Console under `Organizations > Root`).
+
+Here's a step-by-step guide:
 
 1. Create a new file for the SCP and save the template provided:
 
@@ -709,8 +715,10 @@ code resources/aws/organizations/scp/ORG_ACCOUNT_NAME/iambic_test_scp.yaml
 ```
 
 2. In the new file, specify the template type, identifier, and properties for the SCP.
-The `iambic_managed: enforced` section will [prevent drift](/how_to_guides/prevent-drift) in a
-production [GitOps/IAMOps](/reference/iamops_philosophy) setup.
+The `iambic_managed: enforced` flag will [prevent drift](/how_to_guides/prevent-drift)
+in a production [GitOps/IAMOps](/reference/iamops_philosophy) setup.
+
+This SCP should be a no-op, as it does not restrict any action
 
 ```yaml
 template_type: NOQ::AWS::Organizations::SCP
@@ -733,7 +741,7 @@ properties:
       - ORG_ROOT_ID
 ```
 
-3. Apply the changes using the IAMbic command-line interface:
+3. Apply the changes using the IAMbic CLI:
 
 ```bash
 iambic apply resources/aws/organizations/scp/ORG_ACCOUNT_NAME/iambic_test_scp.yaml
