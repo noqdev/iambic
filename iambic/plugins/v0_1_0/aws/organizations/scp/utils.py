@@ -307,6 +307,7 @@ async def apply_update_policy(
         new_value,
         report_repetition=True,
         ignore_order=True,
+        exclude_regex_paths=["metadata_commented_dict"],
     )
 
     if diff == {}:

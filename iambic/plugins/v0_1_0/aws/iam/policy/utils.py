@@ -168,6 +168,7 @@ async def apply_update_managed_policy(
         template_policy_document,
         ignore_order=True,
         report_repetition=True,
+        exclude_regex_paths=["metadata_commented_dict"],
     )
     # DeepDiff will return type changes as actual type functions and not strings,
     # and this will cause json serialization to fail later on when we process
