@@ -1,6 +1,47 @@
 
 # Change Log
 
+## 0.8.1 (Target May 30, 2023)
+
+BUG FIXES:
+
+* Explicitly setting `account_id` and `account_name` variables during AWS Account Setup Wizard [#430](https://github.com/noqdev/iambic/pull/430)
+* Create iambic docker user in the docker image creation [#435](https://github.com/noqdev/iambic/pull/435)
+* Handled unbound changes variable on plan_git_changes [#434](https://github.com/noqdev/iambic/pull/434)
+* Detect changes between policy documents [#436](https://github.com/noqdev/iambic/pull/436)
+* More robust yaml comments interaction between templates and subsequent import [#437](https://github.com/noqdev/iambic/pull/437)
+
+ENHANCEMENTS:
+
+* Development experience changes on removing pytest.ini for ease for run-and-debug [#428](https://github.com/noqdev/iambic/pull/428)
+* Docs for AWS Change Detection [#429](https://github.com/noqdev/iambic/pull/429)
+* Docs for IAMbic gist repo usage [#432](https://github.com/noqdev/iambic/pull/432)
+
+## 0.7.18 (May 24th, 2023)
+
+BUG FIXES:
+
+* Fix merge model int handling (impact subsequent importing) [#410](https://github.com/noqdev/iambic/pull/410)
+* Fixed wizard prompt when editing an AWS account. [#415](https://github.com/noqdev/iambic/pull/415)
+* Fix missing tags on IambicSpokeRole in the management account [#416](https://github.com/noqdev/iambic/pull/416)
+* Fix change detection setup for isolated runs [#417](https://github.com/noqdev/iambic/pull/417)
+* Ignore extra fields provided by Azure AD [#424](https://github.com/noqdev/iambic/pull/425)
+* Upgrade requests from 2.30.0 to 2.31.0 [#425](https://github.com/noqdev/iambic/pull/425)
+* Move IAMbic default docker image to ship with Python 3.10.8 instead of 3.11.1 Setup Wizard [#427](https://github.com/noqdev/iambic/pull/427)
+
+ENHANCEMENTS:
+
+* Development experience changes on customizing hub and spoke role  [#422](https://github.com/noqdev/iambic/pull/422)
+* Docs referencing IAMOps flow [#420](https://github.com/noqdev/iambic/pull/420)
+* Development experience changes on requiring greater than 75% coverage [#422](https://github.com/noqdev/iambic/pull/422)
+
+THANKS:
+
+* `datfinesoul` for reporting missing tags on IambicSpokeRole creation in management account [#406](https://github.com/noqdev/iambic/pull/406)
+* `datfinesoul` for reporting AWS change detection setup issue [#407](https://github.com/noqdev/iambic/pull/407)
+* `mxw-sec` for reviewing [#420](https://github.com/noqdev/iambic/pull/420)
+* `sprkyco` for reporting directory extension Azure AD issue [#423](https://github.com/noqdev/iambic/pull/423)
+
 ## 0.7.6 (May 15th, 2023)
 
 BUG FIXES:
@@ -10,6 +51,7 @@ BUG FIXES:
 
 ENHANCEMENTS:
 * Added an `iambic convert` command to convert an AWS policy to the IAMbic formatted yaml
+* Default relative directory leverages `path` information from IAM resources. [#400](https://github.com/noqdev/iambic/pull/400)
 
 THANKS:
 
