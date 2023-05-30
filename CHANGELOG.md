@@ -1,21 +1,23 @@
 
 # Change Log
 
-## 0.8.1 (Target May 30, 2023)
+## 0.8.1 (May 30, 2023)
 
 BUG FIXES:
 
 * Explicitly setting `account_id` and `account_name` variables during AWS Account Setup Wizard [#430](https://github.com/noqdev/iambic/pull/430)
-* Create iambic docker user in the docker image creation [#435](https://github.com/noqdev/iambic/pull/435)
+* Create iambic docker user before assigning file permissions [#435](https://github.com/noqdev/iambic/pull/435)
 * Handled unbound changes variable on plan_git_changes [#434](https://github.com/noqdev/iambic/pull/434)
 * Detect changes between policy documents [#436](https://github.com/noqdev/iambic/pull/436)
 * More robust yaml comments interaction between templates and subsequent import [#437](https://github.com/noqdev/iambic/pull/437)
 
 ENHANCEMENTS:
 
+* AWS SCP (Service Control Policy) support. [#384](https://github.com/noqdev/iambic/pull/384)
 * Development experience changes on removing pytest.ini for ease for run-and-debug [#428](https://github.com/noqdev/iambic/pull/428)
 * Docs for AWS Change Detection [#429](https://github.com/noqdev/iambic/pull/429)
 * Docs for IAMbic gist repo usage [#432](https://github.com/noqdev/iambic/pull/432)
+* SCP Quickstart Docs [#433](https://github.com/noqdev/iambic/pull/433)
 
 ## 0.7.18 (May 24th, 2023)
 
