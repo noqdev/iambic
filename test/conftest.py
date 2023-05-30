@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import itertools
 import json
 import os
 
@@ -15,7 +14,6 @@ from iambic.config.dynamic_config import (
     create_pydantic_model,
     load_plugins,
 )
-from iambic.config.templates import TEMPLATES
 from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import Variable
@@ -240,13 +238,6 @@ def test_config(test_config_path_two_accounts_plus_org):
         ),
     )
 
-    TEMPLATES.set_templates(
-        list(
-            itertools.chain.from_iterable(
-                [plugin.templates for plugin in config.plugin_instances]
-            )
-        )
-    )
     return config
 
 

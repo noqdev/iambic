@@ -8,7 +8,7 @@ import subprocess
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Type, Union
 from uuid import uuid4
 
 import ujson as json
@@ -155,9 +155,24 @@ class Config(BaseTemplate):
 
     @property
     def configured_plugins(self):
-        return [
-            plugin for plugin in self.plugin_instances if self.get_config_plugin(plugin)
-        ]
+        plugin_instances = getattr(self, "plugin_instances", [])
+
+        return [plugin for plugin in plugin_instances if self.get_config_plugin(plugin)]
+
+    @property
+    def templates(self):
+        templates = []
+        for plugin in self.configured_plugins:
+            templates.extend([template for template in plugin.templates])
+
+        return templates
+
+    @property
+    def template_map(self) -> dict[str, Type[BaseTemplate]]:
+        return {
+            template.__fields__["template_type"].default: template
+            for template in self.templates
+        }
 
     async def set_config_secrets(self):
         if self.extends:
@@ -470,8 +485,6 @@ async def process_config(
     configure_plugins: bool = True,
     approved_plugins_only: bool = False,
 ) -> Config:
-    from iambic.config.templates import TEMPLATES
-
     if approved_plugins_only:
         default_plugins = [
             plugin.location for plugin in Config.__fields__["plugins"].default
@@ -499,13 +512,6 @@ async def process_config(
         await config.configure_plugins()
         log.info("Plugins loaded successfully...")
 
-    TEMPLATES.set_templates(
-        list(
-            itertools.chain.from_iterable(
-                [plugin.templates for plugin in config.plugin_instances]
-            )
-        )
-    )
     return config
 
 
