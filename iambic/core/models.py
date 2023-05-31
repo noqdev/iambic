@@ -493,6 +493,11 @@ class BaseTemplate(
         IambicManaged.UNDEFINED,
         description="Controls the directionality of Iambic changes",
     )
+    is_memory_only: Optional[bool] = Field(
+        False,
+        description="if true, it's in-memory only used for clean up operation",
+        hidden_from_schema=True,
+    )
 
     def dict(
         self,
@@ -551,6 +556,9 @@ class BaseTemplate(
 
     def delete(self):
         log.info("Deleting template file", file_path=self.file_path)
+        if self.is_memory_only:
+            log.info("template file is in-memory-only", file_path=self.file_path)
+            return
         try:
             repo = Repo(self.file_path, search_parent_directories=True)
             # why force=True? Expire could have modified the local contents
