@@ -182,21 +182,23 @@ By installing IAMbic GitHub App, the app can integrate the pull-request and merg
 
 ### Create a GitHub App in your organization
 
-1. Visit your Organization's GitHub App settings. The path is `Settings > Developer Settings > New GitHub App`. Navigation URL will look like `github.com/organizations/ExampleOrg/settings/apps`
-	1. You need to have Settings Permission over the Organization
-2. Click "New GitHub App"
-3. Input `Iambic Integrations` for "GitHub App name".
-4. Input `https://docs.iambic.org/` for "Homepage URL".
-5. Uncheck "Active" for "Webhook".
-6. Configure Permissions
-	1. Select "Read and Write" for "Content" Under "Repository/Permissions".
-	2. Select "Read and Write" for "Issues" Under "Repository/Permissions".
-	3. Select "Read and Write" for "Pull requests" Under "Repository/Permissions".
-9. Leave the default value ("Only on this account") for "Where can this GitHub App be installed?".
-10. Click "Create GitHub App".
-11. Scroll down to "Private Keys".
-12. Click "Generate a private key".
-13. The private key should be downloaded automatically.
+:::tip
+
+Permission explanation
+* repository contents read-and-write permission is to able to push to main for PR merging and periodic import cloud settings into repository.
+* pull requests read-and-write permission is to able to update the branches when it turns relative time string into absolute time string.
+* issue read-and-write permission is to write comments into pull requests during IAMbic plan and apply process.
+
+:::
+
+1. Modify `your_org_name` to your Github organization name and paste it into your browser.
+```
+https://github.com/organizations/your_org_name/settings/apps/new?name=iambic-integration-for-your_org_name&description=iambic-github-integration&url=https%3A%2F%2Fnoq.dev%2F&webhook_active=false&events[]=meta&events[]=issue_comment&&events[]=pull_request&contents=write&pull_requests=write&issues=write
+```
+2. Click "Create GitHub App".
+3. Scroll down to "Private Keys".
+4. Click "Generate a private key".
+5. The private key should be downloaded automatically.
 
 
 ## Create an Additional GitHub Repository for IAMbic Plan and Apply Summaries
