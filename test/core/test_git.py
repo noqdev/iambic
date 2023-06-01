@@ -399,7 +399,13 @@ def test_create_templates_for_deleted_files(mocker):
 
     # Test the create_templates_for_deleted_files function
     with mocker.patch("iambic.core.git.TEMPLATES", mock_templates):
-        result = create_templates_for_deleted_files(deleted_files)
+        result: list[BaseTemplate] = create_templates_for_deleted_files(deleted_files)
 
     # Check if the returned templates are correct
     assert len(result) == 1
+
+    # check returned template is marked as in_memory_only
+    assert result[0].is_memory_only
+
+    # verify delete() won't crash because in-memory template delete is no-op
+    result[0].delete()
