@@ -43,7 +43,9 @@ properties:
     run_apply(IAMBIC_TEST_DETAILS.config, [test_user_fp])
 
     # Test Reading Template
-    user_template = load_templates([test_user_fp])[0]
+    user_template = load_templates(
+        [test_user_fp], IAMBIC_TEST_DETAILS.config.okta.template_map
+    )[0]
     assert user_template.properties.username == username
 
     # Test Updating Template
@@ -52,7 +54,9 @@ properties:
     # Sleep to give profile time to propagate
     time.sleep(30)
     run_apply(IAMBIC_TEST_DETAILS.config, [test_user_fp])
-    user_template = load_templates([test_user_fp])[0]
+    user_template = load_templates(
+        [test_user_fp], IAMBIC_TEST_DETAILS.config.okta.template_map
+    )[0]
     assert user_template.properties.profile["firstName"] == "TestNameChange"
 
     # set the template to import_only
@@ -79,14 +83,18 @@ properties:
 
     run_apply(IAMBIC_TEST_DETAILS.config, [test_user_fp])
 
-    user_template = load_templates([test_user_fp])[0]
+    user_template = load_templates(
+        [test_user_fp], IAMBIC_TEST_DETAILS.config.okta.template_map
+    )[0]
     # Expire user
     user_template.expires_at = datetime.datetime.now(
         datetime.timezone.utc
     ) - datetime.timedelta(days=1)
     user_template.write()
     run_apply(IAMBIC_TEST_DETAILS.config, [test_user_fp])
-    user_template = load_templates([test_user_fp])[0]
+    user_template = load_templates(
+        [test_user_fp], IAMBIC_TEST_DETAILS.config.okta.template_map
+    )[0]
     assert user_template.deleted is True
     # Needed to really delete the user and file
     user_template.force_delete = True

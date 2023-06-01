@@ -134,7 +134,9 @@ async def generate_group_templates(
 
     base_path = os.path.expanduser(output_dir)
     existing_template_map = await get_existing_template_map(
-        base_path, GOOGLE_GROUP_TEMPLATE_TYPE
+        base_path,
+        GOOGLE_GROUP_TEMPLATE_TYPE,
+        config.template_map,
     )
     all_resource_ids = set()
 

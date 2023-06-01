@@ -76,12 +76,17 @@ async def collect_org_groups(exe_message: ExecutionMessage, config: AzureADConfi
 
 
 async def generate_group_templates(
-    exe_message: ExecutionMessage, output_dir: str, detect_messages: list = None
+    config: AzureADConfig,
+    exe_message: ExecutionMessage,
+    output_dir: str,
+    detect_messages: list = None,
 ):
     """Create the templates for all collected groups in the domain"""
     base_path = os.path.expanduser(output_dir)
     existing_template_map = await get_existing_template_map(
-        base_path, AZURE_AD_GROUP_TEMPLATE_TYPE
+        base_path,
+        AZURE_AD_GROUP_TEMPLATE_TYPE,
+        config.template_map,
     )
     all_resource_ids = set()
 

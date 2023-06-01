@@ -25,6 +25,12 @@ from iambic.core.git import (
     get_remote_default_branch,
 )
 from iambic.core.models import BaseTemplate
+from iambic.core.template import TemplateMixin
+from iambic.plugins.v0_1_0.example.local_file.models import (
+    ExampleLocalFileMultiAccountTemplate,
+    ExampleLocalFileMultiAccountTemplateProperties,
+    ExampleLocalFileTemplate,
+)
 
 TEST_TEMPLATE_YAML = """template_type: NOQ::Example::LocalFile
 name: test_template
@@ -201,30 +207,53 @@ def git_diff_parameterized(request):
     return wrapped
 
 
+@pytest.fixture(scope="function")
+def template_mixin_fake():
+    config = TemplateMixin()
+    config.templates = [
+        ExampleLocalFileTemplate,
+        ExampleLocalFileMultiAccountTemplateProperties,
+        ExampleLocalFileMultiAccountTemplate,
+    ]
+
+    return config
+
+
 def test_create_templates_for_modified_files_without_multi_account_support(
     git_diff_parameterized: list[Any],
+    template_mixin_fake,
 ):
+    config = template_mixin_fake
+
     templates: list[BaseTemplate] = create_templates_for_modified_files(
-        None, git_diff_parameterized(TEST_TEMPLATE_YAML)
+        config, git_diff_parameterized(TEST_TEMPLATE_YAML)
     )
     assert templates[0].properties.name == "after"
 
 
 def test_create_templates_for_modified_files_with_multi_account_support(
-    test_config_path_two_accounts_plus_org, git_diff_parameterized: list[Any]
+    test_config_path_two_accounts_plus_org,
+    git_diff_parameterized: list[Any],
+    template_mixin_fake,
 ):
+    config = template_mixin_fake
+
     templates: list[BaseTemplate] = create_templates_for_modified_files(
-        test_config_path_two_accounts_plus_org,
+        config,
         git_diff_parameterized(TEST_TEMPLATE_MULTI_ACCOUNT_YAML),
     )
     assert templates[0].properties.name == "after"
 
 
 def test_create_templates_for_modified_files_with_multi_account_incl_star_support(
-    test_config_path_two_accounts_plus_org, git_diff_parameterized: list[Any]
+    test_config_path_two_accounts_plus_org,
+    git_diff_parameterized: list[Any],
+    template_mixin_fake,
 ):
+    config = template_mixin_fake
+
     templates: list[BaseTemplate] = create_templates_for_modified_files(
-        test_config_path_two_accounts_plus_org,
+        config,
         git_diff_parameterized(TEST_TEMPLATE_MULTI_ACCOUNT_EXC_STAR_YAML),
     )
     assert templates[0].properties.name == "after"
@@ -364,9 +393,15 @@ class MockTemplate:
 
     __fields__ = {"template_type": MagicMock(default="type1")}
 
+    def delete(self):
+        pass
+
 
 class MockTemplate2(MockTemplate):
     __fields__ = {"template_type": MagicMock(default="type2")}
+
+    def __init__(self, file_path, template_type, deleted=True):
+        super().__init__(file_path, template_type, deleted)
 
 
 def test_create_templates_for_deleted_files(mocker):
@@ -379,14 +414,11 @@ def test_create_templates_for_deleted_files(mocker):
     )
 
     deleted_files = [git_diff1, git_diff2]
-
-    # Mock the template_map in TEMPLATES
-    mock_templates = mocker.MagicMock(
-        templates=[
-            MockTemplate,
-            MockTemplate2,
-        ]
-    )
+    mixin = TemplateMixin()
+    mixin.templates = [  # type: ignore
+        MockTemplate,
+        MockTemplate2,
+    ]
 
     # Mock the yaml.load function
     mocker.patch(
@@ -398,8 +430,7 @@ def test_create_templates_for_deleted_files(mocker):
     mocker.patch("iambic.core.git.log.info")
 
     # Test the create_templates_for_deleted_files function
-    with mocker.patch("iambic.core.git.TEMPLATES", mock_templates):
-        result: list[BaseTemplate] = create_templates_for_deleted_files(deleted_files)
+    result = create_templates_for_deleted_files(deleted_files, mixin.template_map)
 
     # Check if the returned templates are correct
     assert len(result) == 1

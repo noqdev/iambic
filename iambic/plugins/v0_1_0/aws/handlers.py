@@ -401,6 +401,7 @@ async def import_aws_resources(
             identity_center_template_map = await get_existing_template_map(
                 repo_dir=base_output_dir,
                 template_type="AWS::IdentityCenter.*",
+                template_map=config.template_map,
                 nested=True,
             )
 
@@ -426,6 +427,7 @@ async def import_aws_resources(
             iam_template_map = await get_existing_template_map(
                 repo_dir=base_output_dir,
                 template_type="AWS::IAM.*",
+                template_map=config.template_map,
                 nested=True,
             )
 
@@ -470,6 +472,7 @@ async def import_organization_resources(
     scp_template_map = await get_existing_template_map(
         repo_dir=base_output_dir,
         template_type=AWS_SCP_POLICY_TEMPLATE,
+        template_map=config.template_map,
         nested=True,
     )
 
@@ -711,6 +714,7 @@ async def detect_changes(  # noqa: C901
         iam_template_map = await get_existing_template_map(
             repo_dir=repo_dir,
             template_type="AWS::IAM.*",
+            template_map=config.template_map,
             nested=True,
         )
 
@@ -718,6 +722,7 @@ async def detect_changes(  # noqa: C901
         identity_center_template_map = await get_existing_template_map(
             repo_dir=repo_dir,
             template_type="AWS::IdentityCenter.*",
+            template_map=config.template_map,
             nested=True,
         )
 
@@ -725,6 +730,7 @@ async def detect_changes(  # noqa: C901
         scp_template_map = await get_existing_template_map(
             repo_dir=repo_dir,
             template_type=AWS_SCP_POLICY_TEMPLATE,
+            template_map=config.template_map,
             nested=True,
         )
 
@@ -933,7 +939,12 @@ async def discover_new_aws_accounts(
         sub_message.command = Command.APPLY
         sub_config = config.copy()
         sub_config.accounts = accounts_to_apply
-        await apply(exe_message, sub_config, load_templates(templates), remote_worker)
+        await apply(
+            exe_message,
+            sub_config,
+            load_templates(templates, config.template_map),
+            remote_worker,
+        )
 
     return run_import
 

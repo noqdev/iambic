@@ -16,18 +16,11 @@ from iambic.plugins.v0_1_0.aws.handlers import (
     import_aws_resources,
     load,
 )
-from iambic.plugins.v0_1_0.aws.iam.group.models import AwsIamGroupTemplate
-from iambic.plugins.v0_1_0.aws.iam.policy.models import AwsIamManagedPolicyTemplate
-from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate
-from iambic.plugins.v0_1_0.aws.iam.user.models import AwsIamUserTemplate
-from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
-    AwsIdentityCenterPermissionSetTemplate,
-)
 from iambic.plugins.v0_1_0.aws.models import AWSAccount, AWSOrganization
-from iambic.plugins.v0_1_0.aws.organizations.scp.models import AwsScpPolicyTemplate
+from iambic.plugins.v0_1_0.aws.templates import AwsTemplateMixin
 
 
-class AWSConfig(BaseModel):
+class AWSConfig(BaseModel, AwsTemplateMixin):
     organizations: list[AWSOrganization] = Field(
         [], description="A list of AWS Organizations to be managed by iambic"
     )
@@ -135,6 +128,8 @@ class AWSConfig(BaseModel):
         return commands
 
 
+mixin = AwsTemplateMixin()
+
 IAMBIC_PLUGIN = ProviderPlugin(
     config_name="aws",
     version=PLUGIN_VERSION,
@@ -145,12 +140,5 @@ IAMBIC_PLUGIN = ProviderPlugin(
     async_decode_secret_callable=decode_aws_secret,
     async_detect_changes_callable=detect_changes,
     async_discover_upstream_config_changes_callable=aws_account_update_and_discovery,
-    templates=[
-        AwsIdentityCenterPermissionSetTemplate,
-        AwsIamGroupTemplate,
-        AwsIamRoleTemplate,
-        AwsIamUserTemplate,
-        AwsIamManagedPolicyTemplate,
-        AwsScpPolicyTemplate,
-    ],
+    templates=mixin.templates,
 )

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import typing
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import googleapiclient.discovery
 from google.oauth2 import service_account
@@ -13,17 +13,15 @@ from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.models import Variable
 from iambic.core.utils import aio_wrapper
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
-from iambic.plugins.v0_1_0.google_workspace.group.models import (
-    GoogleWorkspaceGroupTemplate,
-)
 from iambic.plugins.v0_1_0.google_workspace.handlers import (
     import_google_resources,
     load,
 )
+from iambic.plugins.v0_1_0.google_workspace.template import GoogleWorkspaceTemplateMixin
 
 if TYPE_CHECKING:  # pragma: no cover
-    MappingIntStrAny = typing.Mapping[int | str, Any]
-    AbstractSetIntStr = typing.AbstractSet[int | str]
+    MappingIntStrAny = typing.Mapping[Union[int, str], Any]
+    AbstractSetIntStr = typing.AbstractSet[Union[int, str]]
 
 
 class GoogleSubject(BaseModel):
@@ -122,7 +120,7 @@ class GoogleProject(BaseModel):
         return self._service_connection_map[key]
 
 
-class GoogleWorkspaceConfig(BaseModel):
+class GoogleWorkspaceConfig(BaseModel, GoogleWorkspaceTemplateMixin):
     workspaces: list[GoogleProject]
 
     @validator(
@@ -146,6 +144,8 @@ class GoogleWorkspaceConfig(BaseModel):
         raise Exception(f"Could not find workspace for project_id {project_id}")
 
 
+mixin = GoogleWorkspaceTemplateMixin()
+
 IAMBIC_PLUGIN = ProviderPlugin(
     config_name="google_workspace",
     version=PLUGIN_VERSION,
@@ -153,7 +153,5 @@ IAMBIC_PLUGIN = ProviderPlugin(
     requires_secret=True,
     async_import_callable=import_google_resources,
     async_load_callable=load,
-    templates=[
-        GoogleWorkspaceGroupTemplate,
-    ],
+    templates=mixin.templates,
 )

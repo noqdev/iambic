@@ -695,7 +695,11 @@ class ConfigurationWizard:
             )
             sub_config = self.config.aws.copy()
             sub_config.accounts = accounts
-            await aws_apply(exe_message, sub_config, load_templates(templates))
+            await aws_apply(
+                exe_message,
+                sub_config,
+                load_templates(templates, self.config.template_map),
+            )
             ctx.command = current_command
 
         await self.run_import_aws_resources()
@@ -1883,7 +1887,9 @@ class ConfigurationWizard:
         if not self.existing_role_template_map:
             log.info("Loading AWS role templates...")
             self.existing_role_template_map = asyncio.run(
-                get_existing_template_map(self.repo_dir, AWS_IAM_ROLE_TEMPLATE_TYPE)
+                get_existing_template_map(
+                    self.repo_dir, AWS_IAM_ROLE_TEMPLATE_TYPE, self.config.template_map
+                )
             )
 
         role_template: AwsIamRoleTemplate = self.existing_role_template_map.get(

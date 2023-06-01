@@ -115,6 +115,7 @@ async def permission_set_full_import(detect_messages: list = None):
     identity_center_template_map = await get_existing_template_map(
         repo_dir=IAMBIC_TEST_DETAILS.template_dir_path,
         template_type="AWS::IdentityCenter.*",
+        template_map=IAMBIC_TEST_DETAILS.config.aws.template_map,
         nested=True,
     )
     await collect_aws_permission_sets(

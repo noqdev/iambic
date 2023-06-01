@@ -4,15 +4,12 @@ from pydantic import BaseModel, Field, validator
 
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
-from iambic.plugins.v0_1_0.azure_ad.group.models import (
-    AzureActiveDirectoryGroupTemplate,
-)
 from iambic.plugins.v0_1_0.azure_ad.handlers import import_azure_ad_resources, load
 from iambic.plugins.v0_1_0.azure_ad.models import AzureADOrganization
-from iambic.plugins.v0_1_0.azure_ad.user.models import AzureActiveDirectoryUserTemplate
+from iambic.plugins.v0_1_0.azure_ad.template import AzureAdTemplateMixin
 
 
-class AzureADConfig(BaseModel):
+class AzureADConfig(BaseModel, AzureAdTemplateMixin):
     organizations: list[AzureADOrganization] = Field(
         description="A list of Azure Active Directory organizations."
     )
@@ -38,6 +35,8 @@ class AzureADConfig(BaseModel):
         raise Exception(f"Could not find organization for IDP {idp_name}")
 
 
+mixin = AzureAdTemplateMixin()
+
 IAMBIC_PLUGIN = ProviderPlugin(
     config_name="azure_ad",
     version=PLUGIN_VERSION,
@@ -45,5 +44,5 @@ IAMBIC_PLUGIN = ProviderPlugin(
     async_import_callable=import_azure_ad_resources,
     async_load_callable=load,
     requires_secret=True,
-    templates=[AzureActiveDirectoryGroupTemplate, AzureActiveDirectoryUserTemplate],
+    templates=mixin.templates,
 )

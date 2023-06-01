@@ -72,12 +72,17 @@ async def collect_org_users(exe_message: ExecutionMessage, config: OktaConfig):
 
 
 async def generate_user_templates(
-    exe_message: ExecutionMessage, output_dir: str, detect_messages: list = None
+    config: OktaConfig,
+    exe_message: ExecutionMessage,
+    output_dir: str,
+    detect_messages: list = None,
 ):
     """List all users in the domain, along with members and settings"""
     base_path = os.path.expanduser(output_dir)
     existing_template_map = await get_existing_template_map(
-        base_path, OKTA_USER_TEMPLATE_TYPE
+        base_path,
+        OKTA_USER_TEMPLATE_TYPE,
+        config.template_map,
     )
     all_resource_ids = set()
 

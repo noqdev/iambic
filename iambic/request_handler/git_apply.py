@@ -45,7 +45,11 @@ async def apply_git_changes(
 
     config = await load_config(config_path)
     file_changes = await retrieve_git_changes(
-        repo_dir, allow_dirty=allow_dirty, from_sha=from_sha, to_sha=to_sha
+        repo_dir,
+        config.template_map,
+        allow_dirty=allow_dirty,
+        from_sha=from_sha,
+        to_sha=to_sha,
     )
     if (
         not file_changes["new_files"]
@@ -59,15 +63,18 @@ async def apply_git_changes(
         execution_id=str(uuid.uuid4()), command=Command.APPLY
     )
     new_templates = load_templates(
-        [git_diff.path for git_diff in file_changes["new_files"]]
+        [git_diff.path for git_diff in file_changes["new_files"]],
+        config.template_map,
     )
 
     deleted_templates = create_templates_for_deleted_files(
-        file_changes["deleted_files"]
+        file_changes["deleted_files"],
+        config.template_map,
     )
 
     modified_templates_doubles = create_templates_for_modified_files(
-        config, file_changes["modified_files"]
+        config,
+        file_changes["modified_files"],
     )
 
     # You can only flag expired resources on new/modified-templates
@@ -76,7 +83,8 @@ async def apply_git_changes(
             template.file_path
             for template in itertools.chain(new_templates, modified_templates_doubles)
             if os.path.exists(template.file_path)
-        ]
+        ],
+        config.template_map,
     )
 
     template_changes = await config.run_apply(
@@ -87,7 +95,8 @@ async def apply_git_changes(
     # note modified_templates_exist_in_repo has different entries from create_templates_for_modified_files because
     # create_templates_for_modified_files actually has two template instance per a single modified file
     modified_templates_exist_in_repo = load_templates(
-        [git_diff.path for git_diff in file_changes["modified_files"]]
+        [git_diff.path for git_diff in file_changes["modified_files"]],
+        config.template_map,
     )
     commit_deleted_templates(
         repo_dir, modified_templates_exist_in_repo, template_changes

@@ -66,7 +66,7 @@ async def import_azure_ad_resources(
 
     if base_runner:
         generator_tasks = [
-            generate_group_templates(exe_message, base_output_dir),
-            generate_user_templates(exe_message, base_output_dir),
+            generate_group_templates(config, exe_message, base_output_dir),
+            generate_user_templates(config, exe_message, base_output_dir),
         ]
         await asyncio.gather(*generator_tasks)

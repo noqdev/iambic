@@ -131,6 +131,7 @@ async def test_collect_aws_groups(
     iam_template_map = await get_existing_template_map(
         repo_dir=templates_base_dir,
         template_type="AWS::IAM.*",
+        template_map=config.template_map,
         nested=True,
     )
 
@@ -156,6 +157,7 @@ async def test_generate_aws_group_templates(
     iam_template_map = await get_existing_template_map(
         repo_dir=templates_base_dir,
         template_type="AWS::IAM.*",
+        template_map=config.template_map,
         nested=True,
     )
 

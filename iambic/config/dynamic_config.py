@@ -8,7 +8,7 @@ import subprocess
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Type, Union
+from typing import List, Optional, Union
 from uuid import uuid4
 
 import ujson as json
@@ -21,6 +21,7 @@ from iambic.core.exceptions import MultipleSecretsNotAcceptedException
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
+from iambic.core.template import TemplateMixin
 from iambic.core.utils import sort_dict, yaml
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, azure_ad, google_workspace, okta
 
@@ -94,7 +95,7 @@ class ExtendsConfig(BaseModel):
     external_id: Optional[str]
 
 
-class Config(BaseTemplate):
+class Config(BaseTemplate, TemplateMixin):
     template_type: str = "NOQ::Core::Config"
     version: str = Field(
         description="Do not change! The version of iambic this repo is compatible with.",
@@ -166,13 +167,6 @@ class Config(BaseTemplate):
             templates.extend([template for template in plugin.templates])
 
         return templates
-
-    @property
-    def template_map(self) -> dict[str, Type[BaseTemplate]]:
-        return {
-            template.__fields__["template_type"].default: template
-            for template in self.templates
-        }
 
     async def set_config_secrets(self):
         if self.extends:
@@ -301,9 +295,7 @@ class Config(BaseTemplate):
 
         return template_changes
 
-    async def run_detect_changes(
-        self, repo_dir: str, run_import_as_fallback: bool = False
-    ) -> Union[str, None]:
+    async def run_detect_changes(self, repo_dir: str) -> Union[str, None]:
         change_str_list = await asyncio.gather(
             *[
                 plugin.async_detect_changes_callable(
@@ -313,16 +305,6 @@ class Config(BaseTemplate):
                 if plugin.async_detect_changes_callable
             ]
         )
-        if run_import_as_fallback:
-            await asyncio.gather(
-                *[
-                    plugin.async_import_callable(
-                        self.get_config_plugin(plugin), repo_dir
-                    )
-                    for plugin in self.configured_plugins
-                    if not plugin.async_detect_changes_callable
-                ]
-            )
 
         if change_str_list := [
             change_str for change_str in change_str_list if change_str

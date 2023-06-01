@@ -45,7 +45,9 @@ properties:
     run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
 
     # Test Reading Template
-    group_template: GoogleWorkspaceGroupTemplate = load_templates([test_group_fp])[0]
+    group_template: GoogleWorkspaceGroupTemplate = load_templates(
+        [test_group_fp], IAMBIC_TEST_DETAILS.config.google_workspace.template_map
+    )[0]
     assert group_template.properties.members[2].email == "iambic_test_user_2@iambic.org"
 
     # Test attach members
@@ -81,7 +83,9 @@ properties:
     group_template.write()
     time.sleep(60)  # Let it propagate
     run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
-    group_template = load_templates([test_group_fp])[0]
+    group_template = load_templates(
+        [test_group_fp], IAMBIC_TEST_DETAILS.config.google_workspace.template_map
+    )[0]
     assert len(group_template.properties.members) == 2
     # Set expiry for the entire group
     group_template.expires_at = datetime.datetime.now() - datetime.timedelta(days=1)
@@ -89,5 +93,7 @@ properties:
     time.sleep(60)  # Let it propagate
     run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
 
-    group_template = load_templates([test_group_fp])[0]
+    group_template = load_templates(
+        [test_group_fp], IAMBIC_TEST_DETAILS.config.google_workspace.template_map
+    )[0]
     assert group_template.deleted is True

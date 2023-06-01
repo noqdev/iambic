@@ -6,12 +6,11 @@ import sys
 import time
 import traceback
 from functools import partial
-from typing import Union
+from typing import Type, Union
 
 from pydantic import ValidationError
 from ruamel.yaml.scanner import ScannerError
 
-from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate
 from iambic.core.utils import transform_comments, yaml
@@ -94,6 +93,7 @@ def load_template(template_path: str, raise_validation_err: bool = True) -> dict
 
 def load_templates(
     template_paths: list[str],
+    template_map: dict[str, Type[BaseTemplate]],
     raise_validation_err: bool = True,
     use_multiprocessing=True,
 ) -> list[BaseTemplate]:
@@ -121,7 +121,7 @@ def load_templates(
             continue
 
         try:
-            template_cls = TEMPLATES.template_map[template_dict["template_type"]]
+            template_cls = template_map[template_dict["template_type"]]
             template_cls.update_forward_refs()
             templates.append(template_cls(**template_dict))
         except KeyError:

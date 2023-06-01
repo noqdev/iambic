@@ -97,3 +97,10 @@ class ProviderPlugin(PydanticBaseModel):
     templates: list[Type[BaseTemplate]] = Field(
         description="The list of templates used for this provider."
     )
+
+    @property
+    def template_map(self) -> dict[str, Type[BaseTemplate]]:
+        return {
+            template.__fields__["template_type"].default: template
+            for template in self.templates
+        }

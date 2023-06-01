@@ -108,9 +108,12 @@ async def test_apply_git_changes(templates_repo):
 @pytest.mark.asyncio
 async def test_apply_git_changes_with_deleted_template_due_to_git_apply(templates_repo):
     config_path, repo_dir = templates_repo
+    config = await load_config(config_path)
     repo = Repo(repo_dir)
     sha_before_git_apply = repo.head.commit.hexsha
-    template = load_templates([f"{repo_dir}/{TEST_TEMPLATE_PATH}"])[0]
+    template = load_templates(
+        [f"{repo_dir}/{TEST_TEMPLATE_PATH}"], config.template_map
+    )[0]
     assert template.deleted is False
     template.deleted = True
     template.write()
