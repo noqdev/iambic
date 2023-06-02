@@ -95,7 +95,7 @@ class ExtendsConfig(BaseModel):
     external_id: Optional[str]
 
 
-class Config(BaseTemplate, ConfigMixin):
+class Config(ConfigMixin, BaseTemplate):
     template_type: str = "NOQ::Core::Config"
     version: str = Field(
         description="Do not change! The version of iambic this repo is compatible with.",

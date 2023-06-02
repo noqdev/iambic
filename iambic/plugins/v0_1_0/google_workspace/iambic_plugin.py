@@ -11,13 +11,13 @@ from pydantic import BaseModel, Field, SecretStr, validator
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.models import Variable
+from iambic.core.template import ConfigMixin
 from iambic.core.utils import aio_wrapper
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.google_workspace.handlers import (
     import_google_resources,
     load,
 )
-from iambic.plugins.v0_1_0.google_workspace.template import GoogleWorkspaceConfigMixin
 
 if TYPE_CHECKING:  # pragma: no cover
     MappingIntStrAny = typing.Mapping[Union[int, str], Any]
@@ -120,7 +120,17 @@ class GoogleProject(BaseModel):
         return self._service_connection_map[key]
 
 
-class GoogleWorkspaceConfig(BaseModel, GoogleWorkspaceConfigMixin):
+def get_google_templates():
+    from iambic.plugins.v0_1_0.google_workspace.group.models import (
+        GoogleWorkspaceGroupTemplate,
+    )
+
+    return [
+        GoogleWorkspaceGroupTemplate,
+    ]
+
+
+class GoogleWorkspaceConfig(ConfigMixin, BaseModel):
     workspaces: list[GoogleProject]
 
     @validator(
@@ -143,8 +153,10 @@ class GoogleWorkspaceConfig(BaseModel, GoogleWorkspaceConfigMixin):
                 return w
         raise Exception(f"Could not find workspace for project_id {project_id}")
 
+    @property
+    def templates(self):
+        return get_google_templates()
 
-mixin = GoogleWorkspaceConfigMixin()
 
 IAMBIC_PLUGIN = ProviderPlugin(
     config_name="google_workspace",
@@ -153,5 +165,5 @@ IAMBIC_PLUGIN = ProviderPlugin(
     requires_secret=True,
     async_import_callable=import_google_resources,
     async_load_callable=load,
-    templates=mixin.templates,
+    templates=get_google_templates(),
 )

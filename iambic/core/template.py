@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Type
 
-from pydantic import Field
-
 from iambic.core.models import BaseTemplate
 
 

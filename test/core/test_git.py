@@ -209,14 +209,16 @@ def git_diff_parameterized(request):
 
 @pytest.fixture(scope="function")
 def template_mixin_fake():
-    config = ConfigMixin()
-    config.templates = [
-        ExampleLocalFileTemplate,
-        ExampleLocalFileMultiAccountTemplateProperties,
-        ExampleLocalFileMultiAccountTemplate,
-    ]
+    class FakeMixin(ConfigMixin):
+        @property
+        def templates(self):
+            return [
+                ExampleLocalFileTemplate,
+                ExampleLocalFileMultiAccountTemplateProperties,
+                ExampleLocalFileMultiAccountTemplate,
+            ]
 
-    return config
+    return FakeMixin()
 
 
 def test_create_templates_for_modified_files_without_multi_account_support(
@@ -414,11 +416,13 @@ def test_create_templates_for_deleted_files(mocker):
     )
 
     deleted_files = [git_diff1, git_diff2]
+    mocker.patch(
+        "iambic.core.template.ConfigMixin.templates",
+        new_callable=mocker.PropertyMock,
+        return_value=[MockTemplate, MockTemplate2],
+    )
+
     mixin = ConfigMixin()
-    mixin.templates = [  # type: ignore
-        MockTemplate,
-        MockTemplate2,
-    ]
 
     # Mock the yaml.load function
     mocker.patch(
