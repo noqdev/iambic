@@ -6,10 +6,10 @@ from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.azure_ad.handlers import import_azure_ad_resources, load
 from iambic.plugins.v0_1_0.azure_ad.models import AzureADOrganization
-from iambic.plugins.v0_1_0.azure_ad.template import AzureAdTemplateMixin
+from iambic.plugins.v0_1_0.azure_ad.template import AzureAdConfigMixin
 
 
-class AzureADConfig(BaseModel, AzureAdTemplateMixin):
+class AzureADConfig(BaseModel, AzureAdConfigMixin):
     organizations: list[AzureADOrganization] = Field(
         description="A list of Azure Active Directory organizations."
     )
@@ -35,7 +35,7 @@ class AzureADConfig(BaseModel, AzureAdTemplateMixin):
         raise Exception(f"Could not find organization for IDP {idp_name}")
 
 
-mixin = AzureAdTemplateMixin()
+mixin = AzureAdConfigMixin()
 
 IAMBIC_PLUGIN = ProviderPlugin(
     config_name="azure_ad",

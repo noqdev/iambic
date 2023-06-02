@@ -5,14 +5,14 @@ from pydantic import BaseModel
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.example.handlers import import_example_resources, load
-from iambic.plugins.v0_1_0.example.template import ExampleTemplateMixin
+from iambic.plugins.v0_1_0.example.template import ExampleConfigMixin
 
 
-class ExampleConfig(BaseModel, ExampleTemplateMixin):
+class ExampleConfig(BaseModel, ExampleConfigMixin):
     pass
 
 
-mixin = ExampleTemplateMixin()
+mixin = ExampleConfigMixin()
 
 IAMBIC_PLUGIN = ProviderPlugin(
     config_name="example",

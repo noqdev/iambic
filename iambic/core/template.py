@@ -7,10 +7,10 @@ from pydantic import Field
 from iambic.core.models import BaseTemplate
 
 
-class TemplateMixin:
-    templates: list[Type[BaseTemplate]] = Field(
-        description="The list of templates used for this provider."
-    )
+class ConfigMixin:
+    @property
+    def templates(self) -> list[Type[BaseTemplate]]:
+        raise NotImplementedError
 
     @property
     def template_map(self) -> dict[str, Type[BaseTemplate]]:

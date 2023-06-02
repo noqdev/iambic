@@ -9,7 +9,7 @@ from iambic.core.iambic_enum import IambicManaged
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.okta.handlers import import_okta_resources, load
-from iambic.plugins.v0_1_0.okta.template import OktaTemplateMixin
+from iambic.plugins.v0_1_0.okta.template import OktaConfigMixin
 
 
 class OktaOrganization(BaseModel):
@@ -40,7 +40,7 @@ class OktaOrganization(BaseModel):
         return self.client
 
 
-class OktaConfig(BaseModel, OktaTemplateMixin):
+class OktaConfig(BaseModel, OktaConfigMixin):
     organizations: list[OktaOrganization] = Field(
         description="A list of Okta organizations."
     )
@@ -66,7 +66,7 @@ class OktaConfig(BaseModel, OktaTemplateMixin):
         raise Exception(f"Could not find organization for IDP {idp_name}")
 
 
-mixin = OktaTemplateMixin()
+mixin = OktaConfigMixin()
 
 IAMBIC_PLUGIN = ProviderPlugin(
     config_name="okta",

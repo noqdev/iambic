@@ -25,7 +25,7 @@ from iambic.core.git import (
     get_remote_default_branch,
 )
 from iambic.core.models import BaseTemplate
-from iambic.core.template import TemplateMixin
+from iambic.core.template import ConfigMixin
 from iambic.plugins.v0_1_0.example.local_file.models import (
     ExampleLocalFileMultiAccountTemplate,
     ExampleLocalFileMultiAccountTemplateProperties,
@@ -209,7 +209,7 @@ def git_diff_parameterized(request):
 
 @pytest.fixture(scope="function")
 def template_mixin_fake():
-    config = TemplateMixin()
+    config = ConfigMixin()
     config.templates = [
         ExampleLocalFileTemplate,
         ExampleLocalFileMultiAccountTemplateProperties,
@@ -414,7 +414,7 @@ def test_create_templates_for_deleted_files(mocker):
     )
 
     deleted_files = [git_diff1, git_diff2]
-    mixin = TemplateMixin()
+    mixin = ConfigMixin()
     mixin.templates = [  # type: ignore
         MockTemplate,
         MockTemplate2,

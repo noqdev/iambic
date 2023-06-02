@@ -17,7 +17,7 @@ from iambic.plugins.v0_1_0.google_workspace.handlers import (
     import_google_resources,
     load,
 )
-from iambic.plugins.v0_1_0.google_workspace.template import GoogleWorkspaceTemplateMixin
+from iambic.plugins.v0_1_0.google_workspace.template import GoogleWorkspaceConfigMixin
 
 if TYPE_CHECKING:  # pragma: no cover
     MappingIntStrAny = typing.Mapping[Union[int, str], Any]
@@ -120,7 +120,7 @@ class GoogleProject(BaseModel):
         return self._service_connection_map[key]
 
 
-class GoogleWorkspaceConfig(BaseModel, GoogleWorkspaceTemplateMixin):
+class GoogleWorkspaceConfig(BaseModel, GoogleWorkspaceConfigMixin):
     workspaces: list[GoogleProject]
 
     @validator(
@@ -144,7 +144,7 @@ class GoogleWorkspaceConfig(BaseModel, GoogleWorkspaceTemplateMixin):
         raise Exception(f"Could not find workspace for project_id {project_id}")
 
 
-mixin = GoogleWorkspaceTemplateMixin()
+mixin = GoogleWorkspaceConfigMixin()
 
 IAMBIC_PLUGIN = ProviderPlugin(
     config_name="google_workspace",

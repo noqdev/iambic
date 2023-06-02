@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, validator
 
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.models import ExecutionMessage
+from iambic.core.template import ConfigMixin
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.aws.handlers import (
     apply,
@@ -17,10 +18,29 @@ from iambic.plugins.v0_1_0.aws.handlers import (
     load,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount, AWSOrganization
-from iambic.plugins.v0_1_0.aws.templates import AwsTemplateMixin
 
 
-class AWSConfig(BaseModel, AwsTemplateMixin):
+def get_aws_templates():
+    from iambic.plugins.v0_1_0.aws.iam.group.models import AwsIamGroupTemplate
+    from iambic.plugins.v0_1_0.aws.iam.policy.models import AwsIamManagedPolicyTemplate
+    from iambic.plugins.v0_1_0.aws.iam.role.models import AwsIamRoleTemplate
+    from iambic.plugins.v0_1_0.aws.iam.user.models import AwsIamUserTemplate
+    from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
+        AwsIdentityCenterPermissionSetTemplate,
+    )
+    from iambic.plugins.v0_1_0.aws.organizations.scp.models import AwsScpPolicyTemplate
+
+    return [
+        AwsIdentityCenterPermissionSetTemplate,
+        AwsIamGroupTemplate,
+        AwsIamRoleTemplate,
+        AwsIamUserTemplate,
+        AwsIamManagedPolicyTemplate,
+        AwsScpPolicyTemplate,
+    ]
+
+
+class AWSConfig(ConfigMixin, BaseModel):
     organizations: list[AWSOrganization] = Field(
         [], description="A list of AWS Organizations to be managed by iambic"
     )
@@ -76,6 +96,10 @@ class AWSConfig(BaseModel, AwsTemplateMixin):
                 if account.hub_role_arn
             ][0]
 
+    @property
+    def templates(self):
+        return get_aws_templates()
+
     async def set_identity_center_details(self, account_id: str = None):
         if self.accounts:
             if account_id:
@@ -128,8 +152,6 @@ class AWSConfig(BaseModel, AwsTemplateMixin):
         return commands
 
 
-mixin = AwsTemplateMixin()
-
 IAMBIC_PLUGIN = ProviderPlugin(
     config_name="aws",
     version=PLUGIN_VERSION,
@@ -140,5 +162,5 @@ IAMBIC_PLUGIN = ProviderPlugin(
     async_decode_secret_callable=decode_aws_secret,
     async_detect_changes_callable=detect_changes,
     async_discover_upstream_config_changes_callable=aws_account_update_and_discovery,
-    templates=mixin.templates,
+    templates=get_aws_templates(),
 )

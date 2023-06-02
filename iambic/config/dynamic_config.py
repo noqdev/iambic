@@ -21,7 +21,7 @@ from iambic.core.exceptions import MultipleSecretsNotAcceptedException
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
-from iambic.core.template import TemplateMixin
+from iambic.core.template import ConfigMixin
 from iambic.core.utils import sort_dict, yaml
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, azure_ad, google_workspace, okta
 
@@ -95,7 +95,7 @@ class ExtendsConfig(BaseModel):
     external_id: Optional[str]
 
 
-class Config(BaseTemplate, TemplateMixin):
+class Config(BaseTemplate, ConfigMixin):
     template_type: str = "NOQ::Core::Config"
     version: str = Field(
         description="Do not change! The version of iambic this repo is compatible with.",
