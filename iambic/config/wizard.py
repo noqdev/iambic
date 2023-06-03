@@ -616,9 +616,22 @@ class ConfigurationWizard:
             with contextlib.suppress(
                 ClientError, NoCredentialsError, FileNotFoundError
             ):
-                self.autodetected_org_settings = self.boto3_session.client(
+                org_client = self.boto3_session.client(
                     "organizations", region_name=self.aws_default_region
-                ).describe_organization()["Organization"]
+                )
+                self.autodetected_org_settings = org_client.describe_organization()[
+                    "Organization"
+                ]
+                self._has_cf_permissions = (
+                    "member.org.stacksets.cloudformation.amazonaws.com"
+                    in [
+                        p["ServicePrincipal"]
+                        for p in org_client.list_aws_service_access_for_organization()[
+                            "EnabledServicePrincipals"
+                        ]
+                    ]
+                )
+
             break
 
     def get_boto3_session_for_account(self, account_id: str, region_name: str = None):
@@ -1079,9 +1092,16 @@ class ConfigurationWizard:
                 with contextlib.suppress(
                     ClientError, NoCredentialsError, FileNotFoundError
                 ):
-                    self.autodetected_org_settings = self.boto3_session.client(
-                        "organizations"
-                    ).describe_organization()["Organization"]
+                    org_client = self.boto3_session.client("organizations")
+                    self.autodetected_org_settings = org_client.describe_organization()[
+                        "Organization"
+                    ]
+                    self._has_cf_permissions = "member.org.stacksets.cloudformation.amazonaws.com" in [
+                        p["ServicePrincipal"]
+                        for p in org_client.list_aws_service_access_for_organization()[
+                            "EnabledServicePrincipals"
+                        ]
+                    ]
             else:
                 self.set_boto3_session()
         else:
@@ -1271,12 +1291,24 @@ class ConfigurationWizard:
         asyncio.run(self.sync_config_aws_org())
 
     def configuration_wizard_aws_organizations(self):
-        # Currently only 1 org per config is supported.
-        click.echo(
-            "\nIf you would like to use AWS Organizations, the IAMbic hub account you configured must be the same "
-            "AWS account as your AWS Organization."
-        )
-        if questionary.confirm("Is this the case?").unsafe_ask():
+        def maybe_prompt():
+            if (
+                self.autodetected_org_settings
+                and self.hub_account_id
+                == self.autodetected_org_settings["MasterAccountId"]
+            ):
+                # https://github.com/noqdev/iambic/issues/405
+                # no need to prompt because we succeed in detecting organization and hub_account_id matches the org management account
+                return True
+            else:
+                # Currently only 1 org per config is supported.
+                click.echo(
+                    "\nIf you would like to use AWS Organizations, the IAMbic hub account you configured must be the same "
+                    "AWS account as your AWS Organization."
+                )
+                return questionary.confirm("Is this the case?").unsafe_ask()
+
+        if maybe_prompt():
             if self.config.aws and self.config.aws.organizations:
                 self.configuration_wizard_aws_organizations_edit()
             else:

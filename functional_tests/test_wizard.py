@@ -120,10 +120,6 @@ def test_setup_org_account(iam_spoke_role, temp_templates_directory) -> None:
         tui.sendline("")  # use default
         tui.expect("What would you like to configure in AWS")
         tui.sendline(KEY_DOWN)  # down once to AWS Organizations
-        tui.expect("Is this the case")
-        tui.sendline("")  # use default
-        tui.expect("Proceed")
-        tui.sendline("")  # use default
         tui.expect("AWS Organization ID")
         tui.sendline("")  # use default
         tui.expect("Grant IambicSpokeRole write access")
@@ -177,10 +173,6 @@ def test_setup_org_account_with_stack_creation(
         tui.sendline("")  # use default
         tui.expect("What would you like to configure in AWS")
         tui.sendline(KEY_DOWN)  # down once to AWS Organizations
-        tui.expect("Is this the case")
-        tui.sendline("")  # use default
-        tui.expect("Proceed")
-        tui.sendline("")  # use default
         tui.expect("AWS Organization ID")
         tui.sendline("")  # use default
         tui.expect("Grant IambicSpokeRole write access")
