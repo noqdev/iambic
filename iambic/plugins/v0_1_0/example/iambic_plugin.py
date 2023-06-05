@@ -3,7 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 from iambic.core.iambic_plugin import ProviderPlugin
-from iambic.core.template import ConfigMixin
+from iambic.core.models import ConfigMixin
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.example.handlers import import_example_resources, load
 

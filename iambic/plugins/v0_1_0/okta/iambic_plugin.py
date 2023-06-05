@@ -7,7 +7,7 @@ from pydantic import BaseModel, Extra, Field, SecretStr, validator
 
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.iambic_plugin import ProviderPlugin
-from iambic.core.template import ConfigMixin
+from iambic.core.models import ConfigMixin
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.okta.handlers import import_okta_resources, load
 

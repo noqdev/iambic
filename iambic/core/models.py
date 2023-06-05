@@ -19,6 +19,7 @@ from typing import (
     List,
     Optional,
     Set,
+    Type,
     Union,
     get_args,
     get_origin,
@@ -736,3 +737,16 @@ class ExecutionMessage(PydanticBaseModel):
 class ExecutionResponse(ExecutionMessage):
     status: ExecutionStatus
     errors: Optional[list[str]]
+
+
+class ConfigMixin:
+    @property
+    def templates(self) -> list[Type[BaseTemplate]]:
+        raise NotImplementedError
+
+    @property
+    def template_map(self) -> dict[str, Type[BaseTemplate]]:
+        return {
+            template.__fields__["template_type"].default: template
+            for template in self.templates
+        }

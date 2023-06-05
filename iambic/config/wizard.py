@@ -698,7 +698,7 @@ class ConfigurationWizard:
             await aws_apply(
                 exe_message,
                 sub_config,
-                load_templates(templates, self.config.template_map),
+                load_templates(templates, sub_config.template_map),
             )
             ctx.command = current_command
 

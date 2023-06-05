@@ -3,7 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field, validator
 
 from iambic.core.iambic_plugin import ProviderPlugin
-from iambic.core.template import ConfigMixin
+from iambic.core.models import ConfigMixin
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.azure_ad.handlers import import_azure_ad_resources, load
 from iambic.plugins.v0_1_0.azure_ad.models import AzureADOrganization

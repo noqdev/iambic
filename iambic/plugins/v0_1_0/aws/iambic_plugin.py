@@ -6,8 +6,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, validator
 
 from iambic.core.iambic_plugin import ProviderPlugin
-from iambic.core.models import ExecutionMessage
-from iambic.core.template import ConfigMixin
+from iambic.core.models import ConfigMixin, ExecutionMessage
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.aws.handlers import (
     apply,

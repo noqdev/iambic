@@ -20,8 +20,12 @@ from iambic.core.context import ctx
 from iambic.core.exceptions import MultipleSecretsNotAcceptedException
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
-from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
-from iambic.core.template import ConfigMixin
+from iambic.core.models import (
+    BaseTemplate,
+    ConfigMixin,
+    ExecutionMessage,
+    TemplateChangeDetails,
+)
 from iambic.core.utils import sort_dict, yaml
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, azure_ad, google_workspace, okta
 

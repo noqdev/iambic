@@ -10,8 +10,7 @@ from pydantic import BaseModel, Field, SecretStr, validator
 
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.iambic_plugin import ProviderPlugin
-from iambic.core.models import Variable
-from iambic.core.template import ConfigMixin
+from iambic.core.models import ConfigMixin, Variable
 from iambic.core.utils import aio_wrapper
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.google_workspace.handlers import (
