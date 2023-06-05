@@ -167,7 +167,13 @@ async def retrieve_git_changes(
                     ):
                         continue  # Just renamed but no file changes
 
-                    template_cls = template_map[main_template_dict["template_type"]]
+                    if not (
+                        template_cls := _get_template_map(
+                            template_map, main_template_dict
+                        )
+                    ):
+                        continue
+
                     main_template = template_cls(
                         file_path=deleted_file.path, **main_template_dict
                     )
@@ -198,7 +204,9 @@ def create_templates_for_deleted_files(
     templates = []
     for git_diff in deleted_files:
         template_dict = yaml.load(StringIO(git_diff.content))
-        template_cls = template_map[template_dict["template_type"]]
+        if not (template_cls := _get_template_map(template_map, template_dict)):
+            continue
+
         template = template_cls(file_path=git_diff.path, **template_dict)
         template.is_memory_only = True
         if template.deleted is True:
@@ -380,3 +388,16 @@ def create_templates_for_modified_files(
         templates.append(template)
 
     return templates
+
+
+def _get_template_map(
+    template_map: dict[str, Type[BaseTemplate]],
+    main_template_dict: dict,
+) -> Type[BaseTemplate] | None:
+    template_cls = template_map.get(main_template_dict.get("template_type", "N/A"))
+    if not template_cls:
+        log.error(
+            f"Template type not found: {main_template_dict.get('template_type', 'N/A')}"
+        )
+
+    return template_cls

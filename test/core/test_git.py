@@ -443,3 +443,37 @@ def test_create_templates_for_deleted_files(mocker):
 
     # verify delete() won't crash because in-memory template delete is no-op
     result[0].delete()
+
+
+def test_get_template_map_return_none(mocker):
+    from iambic.core.logger import log
+
+    spy = mocker.spy(log, "error")
+
+    from iambic.core.git import _get_template_map
+
+    template_map = {"Mock::Template": MockTemplate("path1.yaml", "type1")}
+    template_dict = {
+        "template_type": "Mock::NotExist",
+    }
+
+    assert not _get_template_map(template_map, template_dict)  # type: ignore
+
+    spy.assert_called_once()
+
+
+def test_get_template_map_return_template(mocker):
+    from iambic.core.logger import log
+
+    spy = mocker.spy(log, "error")
+
+    from iambic.core.git import _get_template_map
+
+    template_map = {"Mock::Template": MockTemplate("path1.yaml", "type1")}
+    template_dict = {
+        "template_type": "Mock::Template",
+    }
+
+    assert _get_template_map(template_map, template_dict)  # type: ignore
+
+    spy.assert_not_called()
