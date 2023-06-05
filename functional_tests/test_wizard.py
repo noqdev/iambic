@@ -68,7 +68,7 @@ def test_setup_single_account(iam_spoke_role, temp_templates_directory) -> None:
         tui.expect("What would you like to configure in AWS")
         tui.sendline(KEY_DOWN * 2)  # down twice to AWS Accounts
         tui.sendline("")  # use default account number
-        tui.expect("Proceed")
+        tui.expect("Provide the ARN of the identity")
         tui.sendline("")  # use default
         tui.expect("What is the name of the AWS Account")
         tui.sendline("hub_account")  # use default
