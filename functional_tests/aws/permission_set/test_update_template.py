@@ -5,9 +5,9 @@ import datetime
 from unittest import IsolatedAsyncioTestCase
 
 import pytest
-
 from functional_tests.aws.permission_set.utils import generate_permission_set_template
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core import noq_json as json
 from iambic.core.context import ctx
 from iambic.core.models import ProposedChangeType

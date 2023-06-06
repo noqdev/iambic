@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 from googleapiclient.errors import UnknownApiNameOrVersion
-from mock import MagicMock, patch
 
 from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import (
     GoogleProject,

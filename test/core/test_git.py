@@ -7,12 +7,12 @@ import tempfile
 
 # test_your_module.py
 from typing import Any
+from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import git
 import pytest
 import yaml
 from git import GitCommandError, Repo
-from mock import MagicMock
 
 import iambic.plugins.v0_1_0.example
 from iambic.config.dynamic_config import load_config
@@ -261,10 +261,10 @@ def test_create_templates_for_modified_files_with_multi_account_incl_star_suppor
 
 
 @pytest.mark.asyncio
-async def test_get_origin_head(mocker):
+async def test_get_origin_head():
     # Mock the Repo instance and its related attributes
-    mock_repo = mocker.MagicMock(spec=Repo)
-    mock_remote = mocker.MagicMock()
+    mock_repo = MagicMock(spec=Repo)
+    mock_remote = MagicMock()
     mock_repo.remotes.origin = mock_remote
 
     # Test case 1: Origin/HEAD exists
@@ -286,8 +286,8 @@ async def test_get_origin_head(mocker):
 
     # Test case 2: Origin/HEAD does not exist
     mock_refs = [
-        mocker.MagicMock(name="origin/main"),
-        mocker.MagicMock(name="origin/dev"),
+        MagicMock(name="origin/main"),
+        MagicMock(name="origin/dev"),
     ]
     mock_remote.refs = mock_refs
 
@@ -299,7 +299,7 @@ async def test_get_origin_head(mocker):
 
 
 @pytest.mark.asyncio
-async def test_clone_git_repos(mocker, test_config):
+async def test_clone_git_repos(test_config, os_path: None, mocked_repo: MagicMock):
     # Prepare the configuration object
     config = MagicMock()
     config.secrets.get.return_value = {
@@ -309,33 +309,31 @@ async def test_clone_git_repos(mocker, test_config):
         ]
     }
 
-    # Mock the os.path.join function
-    mocker.patch("os.path.join", side_effect=lambda *args: "/".join(args))
-
     # Mock the Repo class and its methods
-    mock_repo = mocker.patch("iambic.core.git.Repo", autospec=True)
-    mock_clone_from = mocker.patch.object(iambic.core.git.Repo, "clone_from")
+    with patch.object(iambic.core.git.Repo, "clone_from") as mock_clone_from:
 
-    # Mock the git attribute of the Repo instance
-    mock_git = mocker.MagicMock()
-    mock_repo.return_value.git = mock_git
+        # Mock the git attribute of the Repo instance
+        mock_git = MagicMock()
+        mocked_repo.return_value.git = mock_git
 
-    # Mock the GitCommandError exception
-    mock_git_error = mocker.patch("iambic.core.git.GitCommandError", autospec=True)
-    mock_git_error.stderr = "already exists and is not an empty directory"
+        # Mock the GitCommandError exception
+        with patch("iambic.core.git.GitCommandError", autospec=True) as mock_git_error:
+            mock_git_error.stderr = "already exists and is not an empty directory"
 
-    # Test the clone_git_repos function
-    repo_dir = "test_repo_dir"
-    repos = await clone_git_repos(config, repo_dir)
+            # Test the clone_git_repos function
+            repo_dir = "test_repo_dir"
+            repos = await clone_git_repos(config, repo_dir)
 
-    assert "repo1" in list(repos.keys())
-    assert "repo2" in list(repos.keys())
+            assert "repo1" in list(repos.keys())
+            assert "repo2" in list(repos.keys())
 
-    assert mock_clone_from.call_count == 2
+            assert mock_clone_from.call_count == 2
 
 
 @pytest.mark.asyncio
-async def test_clone_git_repos_with_git_error(mocker, test_config):
+async def test_clone_git_repos_with_git_error(
+    test_config, os_path: None, mocked_repo: MagicMock
+):
     # Prepare the configuration object
     config = MagicMock()
     config.secrets.get.return_value = {
@@ -344,12 +342,6 @@ async def test_clone_git_repos_with_git_error(mocker, test_config):
             {"name": "repo2", "uri": "https://github.com/user/repo2.git"},
         ]
     }
-
-    # Mock the os.path.join function
-    mocker.patch("os.path.join", side_effect=lambda *args: "/".join(args))
-
-    # Mock the Repo class and its methods
-    mock_repo = mocker.patch("iambic.core.git.Repo", autospec=True)
 
     # Raise GitCommandError when cloning the second repository
     def clone_from_side_effect(uri, path):
@@ -357,33 +349,32 @@ async def test_clone_git_repos_with_git_error(mocker, test_config):
             git_error = GitCommandError("clone", "mocked error")
             git_error.stderr = "already exists and is not an empty directory"
             raise git_error
-        return mock_repo.return_value
+        return mocked_repo.return_value
 
-    mock_clone_from = mocker.patch.object(
+    with patch.object(
         iambic.core.git.Repo, "clone_from", side_effect=clone_from_side_effect
-    )
+    ) as mock_clone_from:
+        # Mock the git attribute of the Repo instance
+        mock_git = MagicMock()
+        mocked_repo.return_value.git = mock_git
 
-    # Mock the git attribute of the Repo instance
-    mock_git = mocker.MagicMock()
-    mock_repo.return_value.git = mock_git
+        # Test the clone_git_repos function
+        repo_dir = "test_repo_dir"
+        repos = await clone_git_repos(config, repo_dir)
 
-    # Test the clone_git_repos function
-    repo_dir = "test_repo_dir"
-    repos = await clone_git_repos(config, repo_dir)
+        # Verify the expected calls were made
+        mock_clone_from.assert_has_calls(
+            [
+                call("https://github.com/user/repo1.git", "test_repo_dir/repo1"),
+                call("https://github.com/user/repo2.git", "test_repo_dir/repo2"),
+            ],
+            any_order=True,
+        )
+        mock_git.pull.assert_called_once()
 
-    # Verify the expected calls were made
-    mock_clone_from.assert_has_calls(
-        [
-            mocker.call("https://github.com/user/repo1.git", "test_repo_dir/repo1"),
-            mocker.call("https://github.com/user/repo2.git", "test_repo_dir/repo2"),
-        ],
-        any_order=True,
-    )
-    mock_git.pull.assert_called_once()
-
-    # Check if the returned repos are correct
-    assert set(repos.keys()) == {"repo1", "repo2"}
-    assert all(isinstance(repo, Repo) for repo in repos.values())
+        # Check if the returned repos are correct
+        assert set(repos.keys()) == {"repo1", "repo2"}
+        assert all(isinstance(repo, Repo) for repo in repos.values())
 
 
 class MockTemplate:
@@ -405,75 +396,65 @@ class MockTemplate2(MockTemplate):
         super().__init__(file_path, template_type, deleted)
 
 
-def test_create_templates_for_deleted_files(mocker):
+def test_create_templates_for_deleted_files():
     # Mock the GitDiff objects
-    git_diff1 = mocker.MagicMock(
-        content="template_type: type1\n", file_path="path1.yaml"
-    )
-    git_diff2 = mocker.MagicMock(
-        content="template_type: type2\n", file_path="path2.yaml"
-    )
+    git_diff1 = MagicMock(content="template_type: type1\n", file_path="path1.yaml")
+    git_diff2 = MagicMock(content="template_type: type2\n", file_path="path2.yaml")
 
     deleted_files = [git_diff1, git_diff2]
-    mocker.patch(
+    with patch(
         "iambic.core.models.ConfigMixin.templates",
-        new_callable=mocker.PropertyMock,
+        new_callable=PropertyMock,
         return_value=[MockTemplate, MockTemplate2],
-    )
+    ):
+        mixin = ConfigMixin()
 
-    mixin = ConfigMixin()
+        # Mock the yaml.load function
+        with patch(
+            "iambic.core.git.yaml.load",
+            side_effect=lambda x: yaml.load(x, Loader=yaml.SafeLoader),
+        ):
+            # Mock the log.info function
+            with patch("iambic.core.git.log.info"):
+                # Test the create_templates_for_deleted_files function
+                result = create_templates_for_deleted_files(
+                    deleted_files, mixin.template_map
+                )
 
-    # Mock the yaml.load function
-    mocker.patch(
-        "iambic.core.git.yaml.load",
-        side_effect=lambda x: yaml.load(x, Loader=yaml.SafeLoader),
-    )
+                # Check if the returned templates are correct
+                assert len(result) == 1
 
-    # Mock the log.info function
-    mocker.patch("iambic.core.git.log.info")
+                # check returned template is marked as in_memory_only
+                assert result[0].is_memory_only
 
-    # Test the create_templates_for_deleted_files function
-    result = create_templates_for_deleted_files(deleted_files, mixin.template_map)
-
-    # Check if the returned templates are correct
-    assert len(result) == 1
-
-    # check returned template is marked as in_memory_only
-    assert result[0].is_memory_only
-
-    # verify delete() won't crash because in-memory template delete is no-op
-    result[0].delete()
+                # verify delete() won't crash because in-memory template delete is no-op
+                result[0].delete()
 
 
-def test_get_template_map_return_none(mocker):
+def test_get_template_map_return_none():
+    from iambic.core.git import _get_template_map
     from iambic.core.logger import log
 
-    spy = mocker.spy(log, "error")
+    with patch.object(log, "error") as mocked_error:
+        template_map = {"Mock::Template": MockTemplate("path1.yaml", "type1")}
+        template_dict = {
+            "template_type": "Mock::NotExist",
+        }
 
+        assert not _get_template_map(template_map, template_dict)  # type: ignore
+        mocked_error.assert_called_once()
+
+
+def test_get_template_map_return_template():
     from iambic.core.git import _get_template_map
-
-    template_map = {"Mock::Template": MockTemplate("path1.yaml", "type1")}
-    template_dict = {
-        "template_type": "Mock::NotExist",
-    }
-
-    assert not _get_template_map(template_map, template_dict)  # type: ignore
-
-    spy.assert_called_once()
-
-
-def test_get_template_map_return_template(mocker):
     from iambic.core.logger import log
 
-    spy = mocker.spy(log, "error")
+    with patch.object(log, "error") as mocked_error:
+        template_map = {"Mock::Template": MockTemplate("path1.yaml", "type1")}
+        template_dict = {
+            "template_type": "Mock::Template",
+        }
 
-    from iambic.core.git import _get_template_map
+        assert _get_template_map(template_map, template_dict)  # type: ignore
 
-    template_map = {"Mock::Template": MockTemplate("path1.yaml", "type1")}
-    template_dict = {
-        "template_type": "Mock::Template",
-    }
-
-    assert _get_template_map(template_map, template_dict)  # type: ignore
-
-    spy.assert_not_called()
+        mocked_error.assert_not_called()

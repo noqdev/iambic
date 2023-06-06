@@ -3,6 +3,7 @@ from __future__ import annotations
 from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.aws.models import Tag
 from iambic.plugins.v0_1_0.aws.organizations.scp.models import (
