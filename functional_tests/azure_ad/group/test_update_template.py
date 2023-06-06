@@ -132,10 +132,14 @@ class UpdateMS365GroupTestCase(BaseMS365TestCase):
         self.template.write(exclude_unset=False)
 
         # Write new template, apply, and confirm access removed
-        await flag_expired_resources([self.template.file_path])
+        await flag_expired_resources(
+            [self.template.file_path], IAMBIC_TEST_DETAILS.config.azure_ad.template_map
+        )
         await IAMBIC_TEST_DETAILS.config.run_apply(exe_message, [self.template])
 
-        group = load_templates([self.template.file_path])[0]
+        group = load_templates(
+            [self.template.file_path], IAMBIC_TEST_DETAILS.config.azure_ad.template_map
+        )[0]
         group_members = [member.name for member in group.properties.members]
         self.assertIn(unexpired_member, group_members)
         self.assertNotIn(expired_member, group_members)

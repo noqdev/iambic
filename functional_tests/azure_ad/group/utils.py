@@ -52,6 +52,7 @@ async def group_full_import():
         IAMBIC_TEST_DETAILS.config.azure_ad,
     )
     await generate_group_templates(
+        IAMBIC_TEST_DETAILS.config.azure_ad,
         exe_message,
         IAMBIC_TEST_DETAILS.config.aws,
         IAMBIC_TEST_DETAILS.template_dir_path,

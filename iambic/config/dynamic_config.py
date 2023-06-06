@@ -20,7 +20,12 @@ from iambic.core.context import ctx
 from iambic.core.exceptions import MultipleSecretsNotAcceptedException
 from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.core.logger import log
-from iambic.core.models import BaseTemplate, ExecutionMessage, TemplateChangeDetails
+from iambic.core.models import (
+    BaseTemplate,
+    ConfigMixin,
+    ExecutionMessage,
+    TemplateChangeDetails,
+)
 from iambic.core.utils import sort_dict, yaml
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, azure_ad, google_workspace, okta
 
@@ -94,7 +99,7 @@ class ExtendsConfig(BaseModel):
     external_id: Optional[str]
 
 
-class Config(BaseTemplate):
+class Config(ConfigMixin, BaseTemplate):
     template_type: str = "NOQ::Core::Config"
     version: str = Field(
         description="Do not change! The version of iambic this repo is compatible with.",
@@ -155,9 +160,17 @@ class Config(BaseTemplate):
 
     @property
     def configured_plugins(self):
-        return [
-            plugin for plugin in self.plugin_instances if self.get_config_plugin(plugin)
-        ]
+        plugin_instances = getattr(self, "plugin_instances", [])
+
+        return [plugin for plugin in plugin_instances if self.get_config_plugin(plugin)]
+
+    @property
+    def templates(self):
+        templates = []
+        for plugin in self.configured_plugins:
+            templates.extend([template for template in plugin.templates])
+
+        return templates
 
     async def set_config_secrets(self):
         if self.extends:
@@ -286,9 +299,7 @@ class Config(BaseTemplate):
 
         return template_changes
 
-    async def run_detect_changes(
-        self, repo_dir: str, run_import_as_fallback: bool = False
-    ) -> Union[str, None]:
+    async def run_detect_changes(self, repo_dir: str) -> Union[str, None]:
         change_str_list = await asyncio.gather(
             *[
                 plugin.async_detect_changes_callable(
@@ -298,16 +309,6 @@ class Config(BaseTemplate):
                 if plugin.async_detect_changes_callable
             ]
         )
-        if run_import_as_fallback:
-            await asyncio.gather(
-                *[
-                    plugin.async_import_callable(
-                        self.get_config_plugin(plugin), repo_dir
-                    )
-                    for plugin in self.configured_plugins
-                    if not plugin.async_detect_changes_callable
-                ]
-            )
 
         if change_str_list := [
             change_str for change_str in change_str_list if change_str
@@ -470,8 +471,6 @@ async def process_config(
     configure_plugins: bool = True,
     approved_plugins_only: bool = False,
 ) -> Config:
-    from iambic.config.templates import TEMPLATES
-
     if approved_plugins_only:
         default_plugins = [
             plugin.location for plugin in Config.__fields__["plugins"].default
@@ -499,13 +498,6 @@ async def process_config(
         await config.configure_plugins()
         log.info("Plugins loaded successfully...")
 
-    TEMPLATES.set_templates(
-        list(
-            itertools.chain.from_iterable(
-                [plugin.templates for plugin in config.plugin_instances]
-            )
-        )
-    )
     return config
 
 

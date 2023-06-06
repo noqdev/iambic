@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Union
+from typing import Type, Union
 
 import xxhash
 
@@ -21,7 +21,10 @@ from iambic.core.utils import (
 
 
 async def get_existing_template_map(
-    repo_dir: str, template_type: str, nested: bool = False
+    repo_dir: str,
+    template_type: str,
+    template_map: dict[str, Type[BaseTemplate]],
+    nested: bool = False,
 ) -> dict:
     """Used to keep track of existing templates on import
 
@@ -32,7 +35,9 @@ async def get_existing_template_map(
     :param nested: If true, will return a map of {template_type: {resource_id: template}}
     :return: {resource_id: template}
     """
-    templates = load_templates(await gather_templates(repo_dir, template_type))
+    templates = load_templates(
+        await gather_templates(repo_dir, template_type), template_map
+    )
     if not nested:
         return {template.resource_id: template for template in templates}
 

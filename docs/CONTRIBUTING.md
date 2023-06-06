@@ -73,9 +73,6 @@ This method is responsible for conditionally updating, creating, or deleting the
 For example, the AWS role template also carries with it tag resources, inline policy resources, instances profiles, etc.
 This method will not only upsert or delete the role but also these related resources.
 
-### Add the class to `iambic.config.templates.TEMPLATES`
-This list is used for validation and resolving the template type of a yaml file.
-
 ### Create an async function to import existing resources
 * Add the function to a module called `template_generation.py` that will be in the same package as the template's model.
 * Must group resources with identical `resource_id`

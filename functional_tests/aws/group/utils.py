@@ -66,6 +66,7 @@ async def group_full_import(detect_messages: list = None):
     iam_template_map = await get_existing_template_map(
         repo_dir=IAMBIC_TEST_DETAILS.template_dir_path,
         template_type="AWS::IAM.*",
+        template_map=IAMBIC_TEST_DETAILS.config.aws.template_map,
         nested=True,
     )
 

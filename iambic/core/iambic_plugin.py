@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Optional
+from typing import Any, Optional, Type
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
@@ -94,4 +94,13 @@ class ProviderPlugin(PydanticBaseModel):
         "This function must accept the params: (exe_message: ExecutionMessage, config: ProviderConfig, repo_dir: str, remote_worker: Worker = None)",
         hidden_from_schema=True,
     )
-    templates: list = Field(description="The list of templates used for this provider.")
+    templates: list[Type[BaseTemplate]] = Field(
+        description="The list of templates used for this provider."
+    )
+
+    @property
+    def template_map(self) -> dict[str, Type[BaseTemplate]]:
+        return {
+            template.__fields__["template_type"].default: template
+            for template in self.templates
+        }

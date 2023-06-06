@@ -92,9 +92,11 @@ def test_load_templates(example_test_filesystem):
         before_template_content = "\n".join(f.readlines())
     assert "tomorrow" in before_template_content
 
-    asyncio.run(load_config(config_path))
+    config = asyncio.run(load_config(config_path))
     templates = [f"{repo_dir}/{TEST_TEMPLATE_PATH}"]
-    templates = load_templates(templates, raise_validation_err=True)
+    templates = load_templates(
+        templates, config.template_map, raise_validation_err=True
+    )
     assert len(templates) > 0
 
 
@@ -104,10 +106,13 @@ def test_load_templates_without_multiprocessing(example_test_filesystem):
         before_template_content = "\n".join(f.readlines())
     assert "tomorrow" in before_template_content
 
-    asyncio.run(load_config(config_path))
+    config = asyncio.run(load_config(config_path))
     templates = [f"{repo_dir}/{TEST_TEMPLATE_PATH}"]
     templates = load_templates(
-        templates, raise_validation_err=True, use_multiprocessing=False
+        templates,
+        config.template_map,
+        raise_validation_err=True,
+        use_multiprocessing=False,
     )
     assert len(templates) > 0
 
@@ -130,11 +135,13 @@ def test_missing_required_fields_templates(example_test_filesystem):
         before_template_content = "\n".join(f.readlines())
     assert "tomorrow" in before_template_content
 
-    asyncio.run(load_config(config_path))
+    config = asyncio.run(load_config(config_path))
     templates = [f"{repo_dir}/{MISSING_REQUIRED_FIELDS_TEMPLATE_PATH}"]
     template_instances = []
     with pytest.raises(ValueError) as exc_info:
-        template_instances = load_templates(templates, raise_validation_err=True)
+        template_instances = load_templates(
+            templates, config.template_map, raise_validation_err=True
+        )
     assert len(template_instances) == 0
     if sys.version_info < (3, 10):
         exc = exc_info.value
@@ -155,11 +162,13 @@ def test_missing_required_fields_templates(example_test_filesystem):
 def test_malformed_yaml(example_test_filesystem):
     config_path, repo_dir = example_test_filesystem
 
-    asyncio.run(load_config(config_path))
+    config = asyncio.run(load_config(config_path))
     templates = [f"{repo_dir}/{MALFORMED_YAML_PATH}"]
     template_instances = []
     with pytest.raises(ValueError) as exc_info:
-        template_instances = load_templates(templates, raise_validation_err=True)
+        template_instances = load_templates(
+            templates, config.template_map, raise_validation_err=True
+        )
     assert len(template_instances) == 0
     if sys.version_info < (3, 10):
         exc = exc_info.value

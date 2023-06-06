@@ -71,8 +71,8 @@ async def import_okta_resources(
 
     if base_runner:
         generator_tasks = [
-            generate_app_templates(exe_message, base_output_dir),
-            generate_group_templates(exe_message, base_output_dir),
-            generate_user_templates(exe_message, base_output_dir),
+            generate_app_templates(config, exe_message, base_output_dir),
+            generate_group_templates(config, exe_message, base_output_dir),
+            generate_user_templates(config, exe_message, base_output_dir),
         ]
         await asyncio.gather(*generator_tasks)

@@ -185,7 +185,9 @@ class UpdateUserTestCase(IsolatedAsyncioTestCase):
         )
         self.template.write()
 
-        await flag_expired_resources([self.template.file_path])
+        await flag_expired_resources(
+            [self.template.file_path], IAMBIC_TEST_DETAILS.config.aws.template_map
+        )
         template = AwsIamUserTemplate.load(self.template.file_path)
 
         template_changes = await template.apply(IAMBIC_TEST_DETAILS.config.aws)

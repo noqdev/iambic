@@ -252,13 +252,17 @@ def run_apply(
             log.error("Please pass in specific templates to apply.")
             return template_changes
         templates = asyncio.run(gather_templates(repo_dir))
-    templates = load_templates(templates)
+    templates = load_templates(templates, config.template_map)  # type: ignore
     if enforced_only:
         templates = [t for t in templates if t.iambic_managed == IambicManaged.ENFORCED]
     if not templates:
         log.info("No templates found")
         return template_changes
-    asyncio.run(flag_expired_resources([template.file_path for template in templates]))
+    asyncio.run(
+        flag_expired_resources(
+            [template.file_path for template in templates], config.template_map
+        )
+    )
     template_changes = asyncio.run(config.run_apply(exe_message, templates))
     output_proposed_changes(template_changes, output_path=output_path)
 
@@ -362,7 +366,7 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
     asyncio.run(flag_expired_resources(templates))
     ctx.eval_only = True
     template_changes = asyncio.run(
-        config.run_apply(exe_message, load_templates(templates))
+        config.run_apply(exe_message, load_templates(templates, config.template_map))
     )
     output_proposed_changes(template_changes)
     screen_render_resource_changes(template_changes)
@@ -427,12 +431,12 @@ def import_(repo_dir: str):
 def lint(templates: list[str], repo_dir: str):
     ctx.eval_only = True
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
-    asyncio.run(load_config(config_path, configure_plugins=False))
+    config = asyncio.run(load_config(config_path, configure_plugins=False))
 
     if not templates:
         templates = asyncio.run(gather_templates(repo_dir))
 
-    templates = load_templates(templates, False)
+    templates = load_templates(templates, config.template_map, False)
     log.info("Formatting templates.")
     for template in templates:
         template.write()

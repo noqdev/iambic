@@ -131,6 +131,7 @@ async def scp_policy_full_import(detect_messages: list = None):
     scp_template_map = await get_existing_template_map(
         repo_dir=IAMBIC_TEST_DETAILS.template_dir_path,
         template_type=AWS_SCP_POLICY_TEMPLATE,
+        template_map=IAMBIC_TEST_DETAILS.config.aws.template_map,
         nested=True,
     )
 

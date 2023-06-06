@@ -7,11 +7,21 @@ from pydantic import BaseModel, Extra, Field, SecretStr, validator
 
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.iambic_plugin import ProviderPlugin
+from iambic.core.models import ConfigMixin
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
-from iambic.plugins.v0_1_0.okta.app.models import OktaAppTemplate
-from iambic.plugins.v0_1_0.okta.group.models import OktaGroupTemplate
 from iambic.plugins.v0_1_0.okta.handlers import import_okta_resources, load
-from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate
+
+
+def get_okta_templates():
+    from iambic.plugins.v0_1_0.okta.app.models import OktaAppTemplate
+    from iambic.plugins.v0_1_0.okta.group.models import OktaGroupTemplate
+    from iambic.plugins.v0_1_0.okta.user.models import OktaUserTemplate
+
+    return [
+        OktaAppTemplate,
+        OktaGroupTemplate,
+        OktaUserTemplate,
+    ]
 
 
 class OktaOrganization(BaseModel):
@@ -42,7 +52,7 @@ class OktaOrganization(BaseModel):
         return self.client
 
 
-class OktaConfig(BaseModel):
+class OktaConfig(ConfigMixin, BaseModel):
     organizations: list[OktaOrganization] = Field(
         description="A list of Okta organizations."
     )
@@ -67,6 +77,10 @@ class OktaConfig(BaseModel):
                 return o
         raise Exception(f"Could not find organization for IDP {idp_name}")
 
+    @property
+    def templates(self):
+        return get_okta_templates()
+
 
 IAMBIC_PLUGIN = ProviderPlugin(
     config_name="okta",
@@ -75,9 +89,5 @@ IAMBIC_PLUGIN = ProviderPlugin(
     requires_secret=True,
     async_import_callable=import_okta_resources,
     async_load_callable=load,
-    templates=[
-        OktaAppTemplate,
-        OktaGroupTemplate,
-        OktaUserTemplate,
-    ],
+    templates=get_okta_templates(),
 )

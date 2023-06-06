@@ -3,14 +3,13 @@ from __future__ import annotations
 import os
 import re
 from io import StringIO
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Type
 
 from deepdiff import DeepDiff
 from git import Repo
 from git.exc import GitCommandError
 from pydantic import BaseModel as PydanticBaseModel
 
-from iambic.config.templates import TEMPLATES
 from iambic.core.logger import log
 from iambic.core.models import BaseTemplate
 from iambic.core.parser import load_templates
@@ -79,6 +78,7 @@ def get_remote_default_branch(repo: Repo, remote_name: str = "origin"):
 
 async def retrieve_git_changes(
     repo_dir: str,
+    template_map: dict[str, Type[BaseTemplate]],
     allow_dirty: bool = False,
     from_sha=None,
     to_sha=None,
@@ -167,10 +167,14 @@ async def retrieve_git_changes(
                     ):
                         continue  # Just renamed but no file changes
 
-                    template_cls = TEMPLATES.template_map[
-                        main_template_dict["template_type"]
-                    ]
-                    main_template: BaseTemplate = template_cls(
+                    if not (
+                        template_cls := _get_template_map(
+                            template_map, main_template_dict
+                        )
+                    ):
+                        continue
+
+                    main_template = template_cls(
                         file_path=deleted_file.path, **main_template_dict
                     )
                     main_template.is_memory_only = True
@@ -189,7 +193,9 @@ async def retrieve_git_changes(
     return files
 
 
-def create_templates_for_deleted_files(deleted_files: list[GitDiff]) -> list:
+def create_templates_for_deleted_files(
+    deleted_files: list[GitDiff], template_map: dict[str, Type[BaseTemplate]]
+) -> list:
     """
     Create a class instance of the deleted file content with its template type
     If it wasn't deleted, set it to deleted
@@ -198,8 +204,10 @@ def create_templates_for_deleted_files(deleted_files: list[GitDiff]) -> list:
     templates = []
     for git_diff in deleted_files:
         template_dict = yaml.load(StringIO(git_diff.content))
-        template_cls = TEMPLATES.template_map[template_dict["template_type"]]
-        template: BaseTemplate = template_cls(file_path=git_diff.path, **template_dict)
+        if not (template_cls := _get_template_map(template_map, template_dict)):
+            continue
+
+        template = template_cls(file_path=git_diff.path, **template_dict)
         template.is_memory_only = True
         if template.deleted is True:
             continue
@@ -211,7 +219,8 @@ def create_templates_for_deleted_files(deleted_files: list[GitDiff]) -> list:
 
 
 def create_templates_for_modified_files(
-    config: Config, modified_files: list[GitDiff]
+    config: Config,
+    modified_files: list[GitDiff],
 ) -> list:
     """
     Create a class instance of the original file content and the new file content with its template type
@@ -222,7 +231,7 @@ def create_templates_for_modified_files(
     for git_diff in modified_files:
         main_template_dict = yaml.load(StringIO(git_diff.content))
         template_type_string = main_template_dict["template_type"]
-        template_cls = TEMPLATES.template_map.get(template_type_string, None)
+        template_cls = config.template_map.get(template_type_string, None)
 
         if template_cls is None:
             # well the case is the previous version is an unknown config type now.
@@ -237,7 +246,7 @@ def create_templates_for_modified_files(
 
         # template_dict = yaml.load(open(git_diff.path))
         # template = template_cls(file_path=git_diff.path, **template_dict)
-        template = load_templates([git_diff.path])[0]
+        template = load_templates([git_diff.path], config.template_map)[0]
 
         # EN-1634 dealing with providers that have no concept of multi-accounts
         # a hack to just ignore template that does not have included_accounts attribute
@@ -379,3 +388,16 @@ def create_templates_for_modified_files(
         templates.append(template)
 
     return templates
+
+
+def _get_template_map(
+    template_map: dict[str, Type[BaseTemplate]],
+    main_template_dict: dict,
+) -> Type[BaseTemplate] | None:
+    template_cls = template_map.get(main_template_dict.get("template_type", "N/A"))
+    if not template_cls:
+        log.error(
+            f"Template type not found: {main_template_dict.get('template_type', 'N/A')}"
+        )
+
+    return template_cls

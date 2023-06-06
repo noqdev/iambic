@@ -34,7 +34,9 @@ properties:
     run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
 
     # Test Reading Template
-    group_template = load_templates([test_group_fp])[0]
+    group_template = load_templates(
+        [test_group_fp], IAMBIC_TEST_DETAILS.config.okta.template_map
+    )[0]
     assert group_template.properties.members[2].username == "user3@example.com"
 
     # Expire `user3@example.com`
@@ -48,7 +50,9 @@ properties:
     # Write new template, apply, and confirm access removed
     group_template.write()
     run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
-    group_template = load_templates([test_group_fp])[0]
+    group_template = load_templates(
+        [test_group_fp], IAMBIC_TEST_DETAILS.config.okta.template_map
+    )[0]
     assert len(group_template.properties.members) == 2
 
     # set the template to import_only
@@ -80,7 +84,9 @@ properties:
     group_template.write()
     run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
 
-    group_template = load_templates([test_group_fp])[0]
+    group_template = load_templates(
+        [test_group_fp], IAMBIC_TEST_DETAILS.config.okta.template_map
+    )[0]
     assert group_template.deleted is True
 
     # make sure we turn relative time -> absolute time EN-1645

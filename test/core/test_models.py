@@ -188,14 +188,17 @@ def templates_repo():
 
 @pytest.mark.asyncio
 async def test_template_delete(templates_repo: tuple[str, str]):
-    _, repo_dir = templates_repo
+    config_path, repo_dir = templates_repo
+    config = await load_config(config_path)
 
     repo = git.Repo(repo_dir)
     diff_index = repo.index.diff("HEAD")
     # assert there is no local changes
     assert len(diff_index) == 0
 
-    template = load_templates([f"{repo_dir}/{TEST_TEMPLATE_PATH}"])[0]
+    template = load_templates(
+        [f"{repo_dir}/{TEST_TEMPLATE_PATH}"], config.template_map
+    )[0]
     template_path = str(template.file_path)
     template.delete()
     # verify the template has pending git removal status
