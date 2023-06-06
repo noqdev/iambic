@@ -4,7 +4,7 @@ During development, create a virtual environment and install the project via poe
 python -m venv env
 . env/bin/activate
 pip install poetry
-poetry install
+poetry install --with dev
 ```
 
 To ensure any changes not introducing regression, please run `make test` within the virtual environment
