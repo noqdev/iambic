@@ -3,11 +3,12 @@ from __future__ import annotations
 import asyncio
 import json
 from typing import Optional
+from unittest import mock
+from unittest.mock import AsyncMock, MagicMock
 
 import boto3
 import botocore
 import pytest
-from mock import AsyncMock, MagicMock
 from moto import mock_ssoadmin
 
 from iambic.core.models import ProposedChangeType, ProviderChild
@@ -344,7 +345,7 @@ async def test_create_account_assignment(mock_ssoadmin_client_bundle: tuple):
 @pytest.mark.asyncio
 @mock_ssoadmin
 async def test_create_account_assignment_creation_status_check(
-    mocker, mock_ssoadmin_client_bundle
+    mock_ssoadmin_client_bundle,
 ):
     MockBotoCrudCall = AsyncMock(
         autospec=True,
@@ -366,23 +367,26 @@ async def test_create_account_assignment_creation_status_check(
     resource_name = "Test Group"
     log_params = {"test_log_key": "test_log_value"}
 
-    mocker.patch(
+    with mock.patch(
         "iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils.boto_crud_call",
         new=MockBotoCrudCall,
-    )
-    task = asyncio.create_task(
-        create_account_assignment(
-            ssoadmin_client,
-            account_id,
-            instance_arn,
-            permission_set_arn,
-            resource_type,
-            resource_id,
-            resource_name,
-            log_params,
+    ):
+        task = asyncio.create_task(
+            create_account_assignment(
+                ssoadmin_client,
+                account_id,
+                instance_arn,
+                permission_set_arn,
+                resource_type,
+                resource_id,
+                resource_name,
+                log_params,
+            )
         )
-    )
-    await asyncio.sleep(1.0)
+        await asyncio.sleep(
+            1.0
+        )  # TODO: Remove these and instead wait for the actual task to complete!
+
     MockBotoCrudCall = AsyncMock(
         autospec=True,
         return_value={
@@ -392,12 +396,12 @@ async def test_create_account_assignment_creation_status_check(
             }
         },
     )
-    mocker.patch(
+    with mock.patch(
         "iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils.boto_crud_call",
         new=MockBotoCrudCall,
-    )
-    await asyncio.wait_for(task, timeout=2.0)
-    assert task.done()
+    ):
+        await asyncio.wait_for(task, timeout=2.0)
+        assert task.done()
 
 
 @pytest.mark.asyncio
@@ -468,7 +472,7 @@ async def test_delete_account_assignment(mock_ssoadmin_client_bundle: tuple):
 @pytest.mark.asyncio
 @mock_ssoadmin
 async def test_delete_account_assignment_creation_status_check(
-    mocker, mock_ssoadmin_client_bundle
+    mock_ssoadmin_client_bundle,
 ):
     MockBotoCrudCall = AsyncMock(
         autospec=True,
@@ -490,23 +494,26 @@ async def test_delete_account_assignment_creation_status_check(
     resource_name = "Test Group"
     log_params = {"test_log_key": "test_log_value"}
 
-    mocker.patch(
+    with mock.patch(
         "iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils.boto_crud_call",
         new=MockBotoCrudCall,
-    )
-    task = asyncio.create_task(
-        delete_account_assignment(
-            ssoadmin_client,
-            account_id,
-            instance_arn,
-            permission_set_arn,
-            resource_type,
-            resource_id,
-            resource_name,
-            log_params,
+    ):
+        task = asyncio.create_task(
+            delete_account_assignment(
+                ssoadmin_client,
+                account_id,
+                instance_arn,
+                permission_set_arn,
+                resource_type,
+                resource_id,
+                resource_name,
+                log_params,
+            )
         )
-    )
-    await asyncio.sleep(1.0)
+        await asyncio.sleep(
+            1.0
+        )  # TODO: Remove these and wait for the actual task to complete!
+
     MockBotoCrudCall = AsyncMock(
         autospec=True,
         return_value={
@@ -516,12 +523,12 @@ async def test_delete_account_assignment_creation_status_check(
             }
         },
     )
-    mocker.patch(
+    with mock.patch(
         "iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils.boto_crud_call",
         new=MockBotoCrudCall,
-    )
-    await asyncio.wait_for(task, timeout=2.0)
-    assert task.done()
+    ):
+        await asyncio.wait_for(task, timeout=2.0)
+        assert task.done()
 
 
 @pytest.mark.asyncio

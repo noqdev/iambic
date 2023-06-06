@@ -148,3 +148,6 @@ permission_set_dir
 
 # Terraform Variables
 *.tfvars
+
+# PyCharm
+.idea/

@@ -33,21 +33,6 @@ repos:
     types: [python]
     exclude: setup.py
 
-  - id: pytest
-    name: pytest
-    stages: [commit]
-    language: system
-    entry: poetry run pytest . --ignore functional_tests/ -s
-    types: [python]
-    pass_filenames: false
-
-  - id: pytest-cov
-    name: pytest
-    stages: [push]
-    language: system
-    entry: poetry run pytest --cov --cov-fail-under=0
-    types: [python]
-    pass_filenames: false
 - repo: https://github.com/igorshubovych/markdownlint-cli
   rev: v0.33.0
   hooks:

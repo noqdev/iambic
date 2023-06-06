@@ -11,10 +11,10 @@ from test.plugins.v0_1_0.aws.identity_center.permission_set.test_utils import (
     EXAMPLE_PERMISSION_SET_NAME,
 )
 from typing import Optional
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import boto3
 import pytest
-from mock import AsyncMock, MagicMock, patch
 from moto import mock_ssoadmin
 from pydantic import ValidationError
 
@@ -358,7 +358,7 @@ def permission_set_content():
 
 
 @pytest.mark.asyncio
-async def test_apply_to_account(mocker, permission_set_content):
+async def test_apply_to_account(permission_set_content):
     class TestAwsIdentityCenterPermissionSetTemplate(
         AwsIdentityCenterPermissionSetTemplate
     ):
@@ -441,9 +441,7 @@ async def test_apply_to_account(mocker, permission_set_content):
 
 
 @pytest.mark.asyncio
-async def test_apply_to_account_with_current_permission_set(
-    mocker, permission_set_content
-):
+async def test_apply_to_account_with_current_permission_set(permission_set_content):
     class TestAwsIdentityCenterPermissionSetTemplate(
         AwsIdentityCenterPermissionSetTemplate
     ):

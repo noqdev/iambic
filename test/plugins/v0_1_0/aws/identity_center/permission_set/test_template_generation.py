@@ -13,10 +13,10 @@ from test.plugins.v0_1_0.aws.identity_center.permission_set.test_utils import (
     EXAMPLE_IDENTITY_CENTER_INSTANCE_ARN,
     EXAMPLE_PERMISSION_SET_NAME,
 )
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import boto3
 import pytest
-from mock import AsyncMock, MagicMock, patch
 from moto import mock_ssoadmin
 
 import iambic
