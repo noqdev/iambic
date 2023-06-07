@@ -114,6 +114,10 @@ async def get_role(role_name: str, iam_client, include_policies: bool = True) ->
             current_role["InlinePolicies"] = await get_role_inline_policies(
                 role_name, iam_client, as_dict=False
             )
+
+        if not current_role.get("Tags"):
+            current_role["Tags"] = []
+
     except iam_client.exceptions.NoSuchEntityException:
         current_role = {}
 
