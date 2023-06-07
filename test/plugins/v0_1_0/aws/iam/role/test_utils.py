@@ -174,6 +174,14 @@ async def test_get_role_managed_policies(mock_iam_client):
 async def test_get_role(mock_iam_client):
     role = await get_role(EXAMPLE_ROLE_NAME, mock_iam_client)
     assert role["RoleName"] == EXAMPLE_ROLE_NAME
+    assert role["Tags"] == [{"Key": EXAMPLE_TAG_KEY, "Value": EXAMPLE_TAG_VALUE}]
+
+    # Remove the tags from the role and check that this is able to return the Tag dict as empty
+    mock_iam_client.untag_role(RoleName=EXAMPLE_ROLE_NAME, TagKeys=[EXAMPLE_TAG_KEY])
+
+    # Describe again:
+    role = await get_role(EXAMPLE_ROLE_NAME, mock_iam_client)
+    assert role["Tags"] == []
 
 
 @pytest.mark.asyncio
