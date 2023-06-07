@@ -99,10 +99,14 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
         # Check tags was NOT updated across all accounts the role is on
         for account_id, role in account_role_mapping.items():
             if role:
-                self.assertNotIn(
-                    "Tags",
-                    role,
-                    f"{account_id} should not have tags for role {self.role_name}",
+                # This is a default behavior introduced in PR #449
+                # boto3 itself doesn't automatically populate the value
+                # but our shim layer defaults imt to [] value to make it
+                # easy for before-and-after comparison.
+                self.assertEqual(
+                    [],
+                    role["Tags"],
+                    f"{account_id} should have empty tags for role {self.role_name}",
                 )
 
     async def test_update_description(self):
