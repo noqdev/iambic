@@ -4,8 +4,7 @@ import copy
 import os
 import tempfile
 import unittest
-
-from mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from iambic.core.context import ctx
 from iambic.core.models import ProposedChangeType, TemplateChangeDetails

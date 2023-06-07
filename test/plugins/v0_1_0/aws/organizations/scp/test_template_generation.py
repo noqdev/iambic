@@ -8,6 +8,7 @@ from test.plugins.v0_1_0.aws.iam.policy.test_utils import (  # noqa: F401 # inte
 from test.plugins.v0_1_0.aws.organizations.scp.test_utils import (
     EXAMPLE_POLICY_DESCRIPTION,
 )
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -46,7 +47,6 @@ def test_get_response_dir(mock_fs, mock_execution_message, mock_aws_account):
     )
 
 
-@pytest.mark.asyncio
 def test_get_template_file_path(mock_aws_account, mock_aws_config, mock_fs):
     _ = mock_aws_config()
     aws_account = mock_aws_account
@@ -80,9 +80,9 @@ class TestCollectPolicies:
         mock_aws_config,
         mock_aws_account,
         mock_execution_message,
-        mocker,
         mock_organizations_client,
         mock_fs,
+        mocker,
     ):
         config = mock_aws_config()
         exe_message = mock_execution_message()
@@ -209,7 +209,7 @@ class TestCollectPolicies:
             properties=template_properties,
             file_path="/",
         )
-        policy = mocker.Mock()
+        policy = MagicMock()
         policy.properties.policy_id = template_properties.get("policy_id")
         spy_resource_file_upsert = mocker.spy(
             template_generation, "resource_file_upsert"

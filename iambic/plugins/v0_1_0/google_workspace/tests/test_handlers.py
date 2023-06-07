@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import unittest.mock
+from unittest.mock import AsyncMock
 
 import pytest
-from mock import AsyncMock
 from pydantic import SecretStr
 
 from iambic.core.iambic_enum import IambicManaged

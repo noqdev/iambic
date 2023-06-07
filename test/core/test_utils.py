@@ -4,10 +4,9 @@ import asyncio
 import unittest
 from datetime import date, datetime, timezone
 from typing import List
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from mock import AsyncMock
 from stringcase import pascalcase, snakecase
 
 from iambic.core.models import BaseModel
@@ -234,7 +233,7 @@ class TestGlobalRetryController(unittest.IsolatedAsyncioTestCase):
     @patch.dict("iambic.core.utils.RATE_LIMIT_STORAGE")
     @patch("asyncio.sleep")
     async def test_retry_controller_retries_on_timeout_error(self, mock_sleep):
-        mock_func = AsyncMock(side_effect=TimeoutError)
+        mock_func = AsyncMock(__name__="AsyncMock", side_effect=TimeoutError)
         with self.assertRaises(TimeoutError):
             await self.retry_controller(mock_func)
         self.assertEqual(mock_func.call_count, self.max_retries)
@@ -246,7 +245,9 @@ class TestGlobalRetryController(unittest.IsolatedAsyncioTestCase):
         # Every time `mock_func` is called, it will raise a TimeoutError,
         # which will be caught by the retry controller and retried 9 times.
         # On the 10th try the exception will be raised.
-        mock_func = AsyncMock(side_effect=asyncio.exceptions.TimeoutError)
+        mock_func = AsyncMock(
+            __name__="AsyncMock", side_effect=asyncio.exceptions.TimeoutError
+        )
         # mock_rate_limit_storage.get.return_value = None
         with self.assertRaises(asyncio.exceptions.TimeoutError):
             await self.retry_controller(mock_func)
@@ -256,7 +257,7 @@ class TestGlobalRetryController(unittest.IsolatedAsyncioTestCase):
     @patch.dict("iambic.core.utils.RATE_LIMIT_STORAGE")
     @patch("asyncio.sleep")
     async def test_retry_controller_does_not_retry_on_other_errors(self, mock_sleep):
-        mock_func = AsyncMock(side_effect=Exception)
+        mock_func = AsyncMock(__name__="AsyncMock", side_effect=Exception)
         with self.assertRaises(Exception):
             await self.retry_controller(mock_func)
         self.assertEqual(mock_func.call_count, 1)
@@ -265,7 +266,7 @@ class TestGlobalRetryController(unittest.IsolatedAsyncioTestCase):
     @patch.dict("iambic.core.utils.RATE_LIMIT_STORAGE")
     @patch("asyncio.sleep")
     async def test_retry_controller_returns_result_on_success(self, mock_sleep):
-        mock_func = AsyncMock(return_value="success")
+        mock_func = AsyncMock(__name__="AsyncMock", return_value="success")
         result = await self.retry_controller(mock_func)
         self.assertEqual(result, "success")
         self.assertEqual(mock_func.call_count, 1)
@@ -274,7 +275,7 @@ class TestGlobalRetryController(unittest.IsolatedAsyncioTestCase):
     @patch.dict("iambic.core.utils.RATE_LIMIT_STORAGE")
     @patch("asyncio.sleep")
     async def test_retry_controller_retries_up_to_max_retries(self, mock_sleep):
-        mock_func = AsyncMock(side_effect=TimeoutError)
+        mock_func = AsyncMock(__name__="AsyncMock", side_effect=TimeoutError)
         with self.assertRaises(TimeoutError):
             await self.retry_controller(mock_func)
         self.assertEqual(mock_func.call_count, self.max_retries)
@@ -290,7 +291,7 @@ class TestGlobalRetryController(unittest.IsolatedAsyncioTestCase):
             fn_identifier=self.fn_identifier,
             max_retries=self.max_retries,
         )
-        mock_func = AsyncMock(side_effect=TimeoutError)
+        mock_func = AsyncMock(__name__="AsyncMock", side_effect=TimeoutError)
         with self.assertRaises(TimeoutError):
             await self.retry_controller(mock_func)
         self.assertGreaterEqual(mock_sleep.call_count, self.max_retries - 2)
@@ -411,9 +412,9 @@ def test_convert_between_json_and_yaml():
     assert json_output == expected_json_output
 
 
-def test_evaluate_on_provider_organization_account(mocker):
-    resource = mocker.Mock()
-    provider_details = mocker.Mock()
+def test_evaluate_on_provider_organization_account():
+    resource = MagicMock()
+    provider_details = MagicMock()
 
     resource.organization_account_needed = True
     provider_details.organization_account = True

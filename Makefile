@@ -8,6 +8,7 @@ clean:
 	rm -rf *.egg-info || echo $?
 	rm -rf .eggs/ || echo $?
 	rm -rf .pytest_cache/ || echo $?
+	rm -rf .coverage* || echo $
 	find . -name '*.pyc' -delete
 	find . -name '*.pyo' -delete
 	find . -name '*.egg-link' -delete

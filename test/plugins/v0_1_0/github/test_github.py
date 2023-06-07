@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+from unittest import mock
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import github
@@ -327,92 +328,98 @@ def test_issue_comment_with_clean_mergeable_state_with_additional_commits(
     mock_pull_request.merge.assert_called_with(sha=post_sha)
 
 
-def test_run_handler(mocker, mg):
-    mock_Github = mocker.MagicMock(name="Github")
-    mocker.patch("iambic.plugins.v0_1_0.github.github.github.Github", new=mock_Github)
+def test_run_handler():
     from iambic.plugins.v0_1_0.github.github import run_handler
 
-    # mg.generate_uut_mocks_with_asserts(run_handler)
-    arg = {
-        "token": "fake-token",
-        "event_name": "pull_request",
-        "iambic": {"GH_OVERRIDE_TOKEN": "GH_OVERRIDE_TOKEN"},
-        "repository": "exampleorg/iambic-templates",
-        "event": {"pull_request": {"number": 4}},
-    }
-    run_handler(arg)
-    assert 2 == mock_Github.call_count
-    mock_Github.assert_has_calls(
-        calls=[
-            call("fake-token"),
-            call("GH_OVERRIDE_TOKEN"),
-        ]
-    )
-    mock_Github.return_value.get_repo.assert_called_once_with(
-        "exampleorg/iambic-templates"
-    )
-    mock_Github.return_value.get_repo.return_value.get_pull.assert_called_once_with(4)
-    mock_Github.return_value.get_repo.return_value.get_pull.return_value.create_issue_comment.assert_called_once_with(
-        "iambic git-plan"
-    )
-    mock_Github.reset_mock()
-
-    arg = {
-        "token": "fake-token",
-        "event_name": "issue_comment",
-        "iambic": {"GH_OVERRIDE_TOKEN": "GH_OVERRIDE_TOKEN"},
-        "repository": "exampleorg/iambic-templates",
-        "event": {
-            "comment": {
-                "body": "iambic git-apply",
-            },
-            "issue": {"number": 4},
-            "repository": {
-                "clone_url": "https://github.com/exampleorg/iambic-templates.git"
-            },
-        },
-    }
-    run_handler(arg)
-    assert 1 == mock_Github.call_count
-    mock_Github.assert_called_once_with("fake-token")
-    mock_Github.return_value.get_repo.assert_called_once_with(
-        "exampleorg/iambic-templates"
-    )
-    mock_Github.return_value.get_repo.return_value.get_pull.assert_called_once_with(4)
-    mock_Github.return_value.get_repo.return_value.get_pull.return_value.mergeable_state.__ne__.assert_called_once_with(
-        "clean"
-    )
-    mock_Github.return_value.get_repo.return_value.get_pull.return_value.mergeable_state.__str__.assert_called_once_with()
-    mock_Github.return_value.get_repo.return_value.get_pull.return_value.create_issue_comment.assert_called_once()
-    assert (
-        "This probably means that the necessary approvals have not been granted for the request."
-        in mock_Github.return_value.get_repo.return_value.get_pull.return_value.create_issue_comment.call_args.args[
-            0
-        ]
-    )
-    mock_Github.reset_mock()
-
-    arg = {
-        "token": "fake-token",
-        "event_name": "iambic_command",
-        "iambic": {
-            "GH_OVERRIDE_TOKEN": "GH_OVERRIDE_TOKEN",
-            "IAMBIC_CLOUD_IMPORT_CMD": "import",
-        },
-        "repository": "exampleorg/iambic-templates",
-        "event": {
-            "comment": {
-                "body": "iambic git-apply",
-            },
-            "issue": {"number": 4},
-            "repository": {
-                "clone_url": "https://github.com/exampleorg/iambic-templates.git"
-            },
-        },
-    }
-    # TODO: Need to mock the paths
-    with pytest.raises(Exception):
+    mock_Github = MagicMock(name="Github")
+    with mock.patch(
+        "iambic.plugins.v0_1_0.github.github.github.Github", new=mock_Github
+    ):
+        # mg.generate_uut_mocks_with_asserts(run_handler)
+        arg = {
+            "token": "fake-token",
+            "event_name": "pull_request",
+            "iambic": {"GH_OVERRIDE_TOKEN": "GH_OVERRIDE_TOKEN"},
+            "repository": "exampleorg/iambic-templates",
+            "event": {"pull_request": {"number": 4}},
+        }
         run_handler(arg)
+        assert 2 == mock_Github.call_count
+        mock_Github.assert_has_calls(
+            calls=[
+                call("fake-token"),
+                call("GH_OVERRIDE_TOKEN"),
+            ]
+        )
+        mock_Github.return_value.get_repo.assert_called_once_with(
+            "exampleorg/iambic-templates"
+        )
+        mock_Github.return_value.get_repo.return_value.get_pull.assert_called_once_with(
+            4
+        )
+        mock_Github.return_value.get_repo.return_value.get_pull.return_value.create_issue_comment.assert_called_once_with(
+            "iambic git-plan"
+        )
+        mock_Github.reset_mock()
+
+        arg = {
+            "token": "fake-token",
+            "event_name": "issue_comment",
+            "iambic": {"GH_OVERRIDE_TOKEN": "GH_OVERRIDE_TOKEN"},
+            "repository": "exampleorg/iambic-templates",
+            "event": {
+                "comment": {
+                    "body": "iambic git-apply",
+                },
+                "issue": {"number": 4},
+                "repository": {
+                    "clone_url": "https://github.com/exampleorg/iambic-templates.git"
+                },
+            },
+        }
+        run_handler(arg)
+        assert 1 == mock_Github.call_count
+        mock_Github.assert_called_once_with("fake-token")
+        mock_Github.return_value.get_repo.assert_called_once_with(
+            "exampleorg/iambic-templates"
+        )
+        mock_Github.return_value.get_repo.return_value.get_pull.assert_called_once_with(
+            4
+        )
+        mock_Github.return_value.get_repo.return_value.get_pull.return_value.mergeable_state.__ne__.assert_called_once_with(
+            "clean"
+        )
+        mock_Github.return_value.get_repo.return_value.get_pull.return_value.mergeable_state.__str__.assert_called_once_with()
+        mock_Github.return_value.get_repo.return_value.get_pull.return_value.create_issue_comment.assert_called_once()
+        assert (
+            "This probably means that the necessary approvals have not been granted for the request."
+            in mock_Github.return_value.get_repo.return_value.get_pull.return_value.create_issue_comment.call_args.args[
+                0
+            ]
+        )
+        mock_Github.reset_mock()
+
+        arg = {
+            "token": "fake-token",
+            "event_name": "iambic_command",
+            "iambic": {
+                "GH_OVERRIDE_TOKEN": "GH_OVERRIDE_TOKEN",
+                "IAMBIC_CLOUD_IMPORT_CMD": "import",
+            },
+            "repository": "exampleorg/iambic-templates",
+            "event": {
+                "comment": {
+                    "body": "iambic git-apply",
+                },
+                "issue": {"number": 4},
+                "repository": {
+                    "clone_url": "https://github.com/exampleorg/iambic-templates.git"
+                },
+            },
+        }
+        # TODO: Need to mock the paths
+        with pytest.raises(Exception):
+            run_handler(arg)
 
 
 @pytest.fixture
