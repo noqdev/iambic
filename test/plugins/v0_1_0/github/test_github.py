@@ -459,6 +459,9 @@ def test_run_handler():
                 "comment": {
                     "body": "iambic git-apply",
                 },
+                "user": {
+                    "login": "fake-commenter",
+                },
                 "issue": {"number": 4},
                 "repository": {
                     "clone_url": "https://github.com/exampleorg/iambic-templates.git"
