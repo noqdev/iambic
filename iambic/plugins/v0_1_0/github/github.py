@@ -28,6 +28,7 @@ from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage, TemplateChangeDetails
 from iambic.core.utils import yaml
 from iambic.main import run_apply, run_detect, run_expire, run_git_apply, run_git_plan
+from iambic.plugins.v0_1_0.github.iambic_plugin import GithubConfig
 
 iambic_app = __import__("iambic.lambda.app", globals(), locals(), [], 0)
 lambda_run_handler = getattr(iambic_app, "lambda").app.run_handler
@@ -72,6 +73,7 @@ class HandleIssueCommentReturnCode(Enum):
     MERGEABLE_STATE_NOT_CLEAN = 3
     MERGED = 4
     PLANNED = 5
+    APPROVED = 6
 
 
 # context is a dictionary structure published by Github Action
@@ -293,6 +295,7 @@ def handle_issue_comment(
     github_client: github.Github, context: dict[str, Any]
 ) -> HandleIssueCommentReturnCode:
     comment_body = context["event"]["comment"]["body"]
+    comment_user_login = context["event"]["comment"]["user"]["login"]
     log_params = {"COMMENT_DISPATCH_MAP_KEYS": COMMENT_DISPATCH_MAP.keys()}
     log.info("COMMENT_DISPATCH_MAP keys", **log_params)
     if comment_body not in COMMENT_DISPATCH_MAP:
@@ -323,6 +326,7 @@ def handle_issue_comment(
         pull_number,
         pull_request_branch_name,
         repo_url,
+        comment_user_login=comment_user_login,
     )
 
 
@@ -336,6 +340,7 @@ def handle_iambic_git_apply(
     pull_request_branch_name: str,
     repo_url: str,
     proposed_changes_path: str = None,
+    comment_user_login: str = None,
 ):
     if pull_request.mergeable_state != MERGEABLE_STATE_CLEAN:
         # TODO log error and also make a comment to PR
@@ -488,6 +493,7 @@ def handle_iambic_git_plan(
     pull_request_branch_name: str,
     repo_url: str,
     proposed_changes_path: str = None,
+    comment_user_login: str = None,
 ):
     session_name = get_session_name(repo_name, pull_number)
     os.environ["IAMBIC_SESSION_NAME"] = session_name
@@ -516,6 +522,57 @@ def handle_iambic_git_plan(
         )
         copy_data_to_data_directory()
         return HandleIssueCommentReturnCode.PLANNED
+    except Exception as e:
+        captured_traceback = traceback.format_exc()
+        log.error("fault", exception=captured_traceback)
+        pull_request.create_issue_comment(
+            "exception during plan is {0} \n ```{1}```".format(
+                pull_request.mergeable_state, captured_traceback
+            )
+        )
+        raise e
+
+
+def handle_iambic_approve(
+    context: dict[str, Any],
+    github_client: github.Github,
+    templates_repo: github.Repo,
+    pull_request: PullRequest,
+    repo_name: str,
+    pull_number: str,
+    pull_request_branch_name: str,
+    repo_url: str,
+    proposed_changes_path: str = None,
+    comment_user_login: str = None,
+):
+    session_name = get_session_name(repo_name, pull_number)
+    os.environ["IAMBIC_SESSION_NAME"] = session_name
+
+    try:
+        repo_dir = get_lambda_repo_path()
+        _ = prepare_local_repo_for_new_commits(repo_url, repo_dir, "detect")
+        config_path = asyncio.run(resolve_config_template_path(repo_dir))
+        # it's important to load the config from main branch
+        # we want to guard against a requester directly changing the approver
+        # knowledge in the config of the iambic-template repository
+        main_config = asyncio.run(load_config(config_path))
+        github_main_config: GithubConfig = main_config.github
+        allowed_bot_approver = github_main_config.allowed_bot_approver
+
+        if (
+            comment_user_login is not None
+            and comment_user_login == allowed_bot_approver
+        ):
+            pull_request.create_review(
+                event="APPROVE", body="react to `approve` from `comment_user_login`"
+            )
+            return HandleIssueCommentReturnCode.APPROVED
+        else:
+            pull_request.create_issue_comment(
+                f"`{comment_user_login}` is not configured to approve PR via iambic"
+            )
+            return HandleIssueCommentReturnCode.UNDEFINED
+
     except Exception as e:
         captured_traceback = traceback.format_exc()
         log.error("fault", exception=captured_traceback)
@@ -816,6 +873,7 @@ COMMENT_DISPATCH_MAP: dict[str, Callable] = {
     "iambic git-plan": handle_iambic_git_plan,
     "iambic apply": handle_iambic_git_apply,
     "iambic plan": handle_iambic_git_plan,
+    "iambic approve": handle_iambic_approve,
 }
 
 if __name__ == "__main__":

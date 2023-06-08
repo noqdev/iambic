@@ -3,7 +3,7 @@ from __future__ import annotations
 import shutil
 import tempfile
 from unittest import mock
-from unittest.mock import MagicMock, PropertyMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, call, patch
 
 import github
 import pytest
@@ -43,6 +43,9 @@ def issue_comment_git_apply_context():
         "event": {
             "comment": {
                 "body": "iambic git-apply",
+                "user": {
+                    "login": "fake-commenter",
+                },
             },
             "issue": {
                 "number": 1,
@@ -50,6 +53,9 @@ def issue_comment_git_apply_context():
             "repository": {
                 "clone_url": "https://github.com/example-org/iambic-templates.git",
             },
+        },
+        "user": {
+            "login": "faker-user",
         },
     }
 
@@ -68,6 +74,37 @@ def issue_comment_git_plan_context():
         "event": {
             "comment": {
                 "body": "iambic git-plan",
+                "user": {
+                    "login": "fake-commenter",
+                },
+            },
+            "issue": {
+                "number": 1,
+            },
+            "repository": {
+                "clone_url": "https://github.com/example-org/iambic-templates.git",
+            },
+        },
+    }
+
+
+@pytest.fixture
+def issue_comment_git_approve_context():
+    return {
+        "server_url": "https://github.com",
+        "run_id": "12345",
+        "run_attempt": "1",
+        "token": "fake-token",
+        "sha": "fake-sha",
+        "ref": "fake-branch",
+        "repository": "example.com/iambic-templates",
+        "event_name": "issue_comment",
+        "event": {
+            "comment": {
+                "body": "iambic approve",
+                "user": {
+                    "login": "fake-commenter",
+                },
             },
             "issue": {
                 "number": 1,
@@ -91,6 +128,26 @@ def mock_lambda_run_handler():
             with tempfile.TemporaryDirectory() as tmpdirname:
                 with patch("iambic.lambda.app.REPO_BASE_PATH", tmpdirname):
                     yield _mock_lambda_run_handler
+
+
+@pytest.fixture
+def mock_resolve_config_template_path():
+    async_mock = AsyncMock()
+    with patch(
+        "iambic.plugins.v0_1_0.github.github.resolve_config_template_path",
+        side_effect=async_mock,
+    ) as _mock_resolve_config_template_path:
+        yield _mock_resolve_config_template_path
+
+
+@pytest.fixture
+def mock_load_config():
+    async_mock = AsyncMock()
+    with patch(
+        "iambic.plugins.v0_1_0.github.github.load_config", side_effect=async_mock
+    ) as _load_config:
+        async_mock.return_value.github.allowed_bot_approver = "fake-commenter"
+        yield _load_config
 
 
 @pytest.fixture
@@ -289,6 +346,37 @@ def test_issue_comment_with_git_plan(
     handle_issue_comment(mock_github_client, issue_comment_git_plan_context)
     assert mock_run_git_plan.called
     assert not mock_pull_request.merge.called
+
+
+def test_issue_comment_with_allowed_approver(
+    mock_github_client,
+    issue_comment_git_approve_context,
+    mock_repository,
+    mock_resolve_config_template_path,
+    mock_load_config,
+):
+    mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
+    assert mock_repository
+    assert mock_resolve_config_template_path
+    assert mock_load_config
+    handle_issue_comment(mock_github_client, issue_comment_git_approve_context)
+    assert mock_pull_request.create_review.called is True
+
+
+def test_issue_comment_with_not_allowed_approver(
+    mock_github_client,
+    issue_comment_git_approve_context,
+    mock_repository,
+    mock_resolve_config_template_path,
+    mock_load_config,
+):
+    mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
+    assert mock_repository
+    assert mock_resolve_config_template_path
+    assert mock_load_config
+    mock_load_config.side_effect.return_value.github.allowed_bot_approver = None
+    handle_issue_comment(mock_github_client, issue_comment_git_approve_context)
+    assert mock_pull_request.create_review.called is False
 
 
 # verify if there are changes during git_apply. those changes are push

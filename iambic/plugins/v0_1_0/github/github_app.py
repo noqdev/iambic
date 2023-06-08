@@ -29,6 +29,7 @@ from iambic.plugins.v0_1_0.github.github import (
     _handle_expire,
     _handle_import,
     github_app_workflow_wrapper,
+    handle_iambic_approve,
     handle_iambic_git_apply,
     handle_iambic_git_plan,
     iambic_app,
@@ -229,11 +230,12 @@ def handle_issue_comment(
         log.error("handle_issue_comment: no op", **log_params)
         return HandleIssueCommentReturnCode.NO_MATCHING_BODY
 
-    # FIXME: Need to find a mechanism to avoid infinite loop
-    # the following is a very crude one
     if comment_user_login.endswith("[bot]"):
-        # return early
-        return HandleIssueCommentReturnCode.UNDEFINED
+        if comment_body != "iambic approve":
+            # return early unless it's the approve attempt
+            # the approve handler require to walk the full config
+            # to determine.
+            return HandleIssueCommentReturnCode.UNDEFINED
 
     repo_name = webhook_payload["repository"]["full_name"]
     pull_number = webhook_payload["issue"]["number"]
@@ -262,6 +264,7 @@ def handle_issue_comment(
         pull_request_branch_name,
         repo_url,
         proposed_changes_path=getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH,
+        comment_user_login=comment_user_login,
     )
 
 
@@ -309,6 +312,7 @@ COMMENT_DISPATCH_MAP: dict[str, Callable] = {
     "iambic git-plan": handle_iambic_git_plan,
     "iambic apply": handle_iambic_git_apply,
     "iambic plan": handle_iambic_git_plan,
+    "iambic approve": handle_iambic_approve,
 }
 
 WORKFLOW_DISPATCH_MAP: dict[str, Callable] = {

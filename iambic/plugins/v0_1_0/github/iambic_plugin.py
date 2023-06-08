@@ -6,6 +6,8 @@ from iambic.core.iambic_plugin import ProviderPlugin
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.github.handlers import import_github_resources, load
 
+DEFAULT_ALLOWED_BOT_APPROVER = None
+
 
 class GithubConfig(BaseModel):
     commit_message_user_name: str = Field(
@@ -29,6 +31,10 @@ class GithubConfig(BaseModel):
     commit_message_for_git_apply: str = Field(
         default="Replace relative time with absolute time",
         description="Commit message to use during changes through git-apply",
+    )
+    allowed_bot_approver: str = Field(
+        default=DEFAULT_ALLOWED_BOT_APPROVER,
+        description="Default login for allowed bot approver",
     )
 
 
