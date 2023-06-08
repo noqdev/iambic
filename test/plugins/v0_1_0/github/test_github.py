@@ -458,9 +458,9 @@ def test_run_handler():
             "event": {
                 "comment": {
                     "body": "iambic git-apply",
-                },
-                "user": {
-                    "login": "fake-commenter",
+                    "user": {
+                        "login": "fake-commenter",
+                    },
                 },
                 "issue": {"number": 4},
                 "repository": {
