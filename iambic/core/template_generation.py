@@ -975,7 +975,11 @@ def merge_model(  # noqa: C901
         new_value = getattr(new_model, key)
         value_as_list = isinstance(new_value, list)
         existing_value = getattr(existing_model, key)
-        if isinstance(existing_value, list):
+        if key in iambic_fields:
+            # not something we want to merge because
+            # this is metadata only, not in the cloud-side
+            continue
+        elif isinstance(existing_value, list):
             if len(existing_value) > 0:
                 inner_element = existing_value[0]
 
