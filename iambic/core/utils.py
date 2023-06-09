@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Coroutine, Optional, Union
 from urllib.parse import unquote_plus
 
 import aiofiles
+import jwt
 from asgiref.sync import sync_to_async
 from ruamel.yaml import YAML
 
@@ -832,3 +833,60 @@ def convert_between_json_and_yaml(input_string: str) -> str:
         output = json.dumps(converted_data, indent=2)
 
     return output
+
+
+def jws_encode_with_past_time(payload, private_key, algorithm, valid_period_in_minutes):
+    """
+    How to use?
+
+    # Generate a new ECDSA private key
+    from cryptography.hazmat.primitives.asymmetric import ec
+    private_key = ec.generate_private_key(ec.SECP256R1())  # This is equivalent to the ES256 algorithm
+    public_key = private_key.public_key()
+
+    # or load from PEM
+    from cryptography.hazmat.primitives import serialization
+    loaded_private_key = serialization.load_pem_private_key(
+        allowed_bot_approver_pub_key_string.encode("utf-8")
+    )
+
+    # payload
+    payload = {
+        "repo": "example.com/iambic-templates",
+        "pr": 1,
+        "signee": [
+            "user1@example.org",
+            "user2@example.org",
+        ]
+    }
+    algorithm = "ES256"
+    valid_period_in_minutes = 15
+    encoded_jwt = jws_encode_with_past_time(payload, private_pem, algorithm, valid_period_in_minutes)
+    """
+    import datetime as _datetime
+
+    reference_time = _datetime.datetime.now() + _datetime.timedelta(
+        minutes=valid_period_in_minutes
+    )
+    payload["exp"] = int(reference_time.timestamp())
+
+    encoded_jwt = jwt.encode(payload, private_key, algorithm=algorithm)
+    return encoded_jwt
+
+
+def decode_with_reference_time(encoded_jwt, public_key, algorithms, reference_time):
+    import datetime as _datetime
+
+    payload = jwt.decode(
+        encoded_jwt, public_key, algorithms=algorithms, options={"verify_exp": False}
+    )
+    exp = payload.get("exp")
+
+    if exp is not None:
+        exp = _datetime.datetime.fromtimestamp(exp)
+        if reference_time > exp:
+            raise jwt.exceptions.ExpiredSignatureError(
+                f"Signature has expired: ref: {reference_time} exp: {exp}"
+            )
+
+    return payload

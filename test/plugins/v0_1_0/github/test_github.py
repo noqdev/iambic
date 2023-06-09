@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import json
 import shutil
 import tempfile
 from unittest import mock
-from unittest.mock import MagicMock, PropertyMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, call, patch
 
 import github
 import pytest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 
+from iambic.core.utils import jws_encode_with_past_time
 from iambic.plugins.v0_1_0.github.github import (
     BODY_MAX_LENGTH,
     MERGEABLE_STATE_BLOCKED,
@@ -21,6 +25,7 @@ from iambic.plugins.v0_1_0.github.github import (
     handle_pull_request,
     maybe_merge,
 )
+from iambic.plugins.v0_1_0.github.iambic_plugin import GithubBotApprover
 
 
 @pytest.fixture
@@ -43,6 +48,9 @@ def issue_comment_git_apply_context():
         "event": {
             "comment": {
                 "body": "iambic git-apply",
+                "user": {
+                    "login": "fake-commenter",
+                },
             },
             "issue": {
                 "number": 1,
@@ -50,6 +58,9 @@ def issue_comment_git_apply_context():
             "repository": {
                 "clone_url": "https://github.com/example-org/iambic-templates.git",
             },
+        },
+        "user": {
+            "login": "faker-user",
         },
     }
 
@@ -68,6 +79,37 @@ def issue_comment_git_plan_context():
         "event": {
             "comment": {
                 "body": "iambic git-plan",
+                "user": {
+                    "login": "fake-commenter",
+                },
+            },
+            "issue": {
+                "number": 1,
+            },
+            "repository": {
+                "clone_url": "https://github.com/example-org/iambic-templates.git",
+            },
+        },
+    }
+
+
+@pytest.fixture
+def issue_comment_git_approve_context():
+    return {
+        "server_url": "https://github.com",
+        "run_id": "12345",
+        "run_attempt": "1",
+        "token": "fake-token",
+        "sha": "fake-sha",
+        "ref": "fake-branch",
+        "repository": "example.com/iambic-templates",
+        "event_name": "issue_comment",
+        "event": {
+            "comment": {
+                "body": "iambic approve",
+                "user": {
+                    "login": "fake-commenter",
+                },
             },
             "issue": {
                 "number": 1,
@@ -91,6 +133,28 @@ def mock_lambda_run_handler():
             with tempfile.TemporaryDirectory() as tmpdirname:
                 with patch("iambic.lambda.app.REPO_BASE_PATH", tmpdirname):
                     yield _mock_lambda_run_handler
+
+
+@pytest.fixture
+def mock_resolve_config_template_path():
+    async_mock = AsyncMock()
+    with patch(
+        "iambic.plugins.v0_1_0.github.github.resolve_config_template_path",
+        side_effect=async_mock,
+    ) as _mock_resolve_config_template_path:
+        yield _mock_resolve_config_template_path
+
+
+@pytest.fixture
+def mock_load_config():
+    async_mock = AsyncMock()
+    with patch(
+        "iambic.plugins.v0_1_0.github.github.load_config", side_effect=async_mock
+    ) as _load_config:
+        async_mock.return_value.github.allowed_bot_approvers = [
+            GithubBotApprover(login="fake-commenter", es256_pub_key="")
+        ]
+        yield _load_config
 
 
 @pytest.fixture
@@ -291,6 +355,89 @@ def test_issue_comment_with_git_plan(
     assert not mock_pull_request.merge.called
 
 
+def test_issue_comment_with_allowed_approver(
+    mock_github_client,
+    issue_comment_git_approve_context,
+    mock_repository,
+    mock_resolve_config_template_path,
+    mock_load_config,
+):
+    mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
+    assert mock_repository
+    assert mock_resolve_config_template_path
+    assert mock_load_config
+
+    approver: GithubBotApprover = (
+        mock_load_config.side_effect.return_value.github.allowed_bot_approvers[0]
+    )
+
+    # Generate a new ECDSA private key
+    private_key = ec.generate_private_key(
+        ec.SECP256R1()
+    )  # This is equivalent to the ES256 algorithm
+    public_key = private_key.public_key()
+
+    # Convert keys to PEM format
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    assert private_pem
+    public_pem = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    assert public_pem
+
+    approver.es256_pub_key = public_pem.decode("utf-8")
+    payload = {
+        "repo": "example.com/iambic-templates",
+        "pr": 1,
+        "signee": [
+            "user1@example.org",
+            "user2@example.org",
+        ],
+    }
+    algorithm = "ES256"
+    valid_period_in_minutes = 15
+    encoded_jwt = jws_encode_with_past_time(
+        payload, private_pem, algorithm, valid_period_in_minutes
+    )
+
+    # message format for approve
+    # iambic approve\n
+    # <whatever nice message you like>\n
+    # <!--{encoded_jwt}-->
+    # remember last line cannot have any newline character, the signature metadata must be on the last line
+
+    message = f"""iambic approve
+```json
+{json.dumps(payload)}
+```
+<!--{encoded_jwt}-->"""
+    issue_comment_git_approve_context["event"]["comment"]["body"] = message
+
+    handle_issue_comment(mock_github_client, issue_comment_git_approve_context)
+    assert mock_pull_request.create_review.called is True
+
+
+def test_issue_comment_with_not_allowed_approver(
+    mock_github_client,
+    issue_comment_git_approve_context,
+    mock_repository,
+    mock_resolve_config_template_path,
+    mock_load_config,
+):
+    mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
+    assert mock_repository
+    assert mock_resolve_config_template_path
+    assert mock_load_config
+    mock_load_config.side_effect.return_value.github.allowed_bot_approvers = []
+    handle_issue_comment(mock_github_client, issue_comment_git_approve_context)
+    assert mock_pull_request.create_review.called is False
+
+
 # verify if there are changes during git_apply. those changes are push
 # back into the PR
 def test_issue_comment_with_clean_mergeable_state_with_additional_commits(
@@ -370,6 +517,9 @@ def test_run_handler():
             "event": {
                 "comment": {
                     "body": "iambic git-apply",
+                    "user": {
+                        "login": "fake-commenter",
+                    },
                 },
                 "issue": {"number": 4},
                 "repository": {
