@@ -27,33 +27,37 @@ def pretty_log(logger, method_name, event_dict):
     return return_dict
 
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-logging.basicConfig(level=LOG_LEVEL)
-structlog.configure(
-    processors=[
-        pretty_log,
-        structlog.processors.add_log_level,
-        structlog.processors.StackInfoRenderer(),
-        structlog.dev.set_exc_info,
-        structlog.processors.TimeStamper("%Y/%m/%d %H:%M:%S", utc=False),
-        structlog.dev.ConsoleRenderer(),
-    ],
-    wrapper_class=structlog.make_filtering_bound_logger(
-        logging.getLevelName(LOG_LEVEL)
-    ),
-    context_class=dict,
-    logger_factory=structlog.PrintLoggerFactory(),
-    cache_logger_on_first_use=False,
-)
-log = structlog.get_logger("NoqForm")
+def configure_logger(logger_name, log_level):
+    structlog.configure(
+        processors=[
+            pretty_log,
+            structlog.processors.add_log_level,
+            structlog.processors.StackInfoRenderer(),
+            structlog.dev.set_exc_info,
+            structlog.processors.TimeStamper("%Y/%m/%d %H:%M:%S", utc=False),
+            structlog.dev.ConsoleRenderer(),
+        ],
+        wrapper_class=structlog.make_filtering_bound_logger(
+            logging.getLevelName(log_level)
+        ),
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(),
+        cache_logger_on_first_use=False,
+    )
+    log = structlog.get_logger(logger_name)
 
-if LOG_LEVEL == "DEBUG":
-    boto3.set_stream_logger("", "DEBUG")
-else:
-    default_logging_levels = {
-        "boto3": "CRITICAL",
-        "boto": "CRITICAL",
-        "botocore": "CRITICAL",
-    }
-    for logger, level in default_logging_levels.items():
-        logging.getLogger(logger).setLevel(level)
+    if log_level == "DEBUG":
+        boto3.set_stream_logger("", "DEBUG")
+    else:
+        default_logging_levels = {
+            "boto3": "CRITICAL",
+            "boto": "CRITICAL",
+            "botocore": "CRITICAL",
+        }
+        for logger, level in default_logging_levels.items():
+            logging.getLogger(logger).setLevel(level)
+
+    return log
+
+
+log = configure_logger("iambic", os.getenv("LOG_LEVEL", "INFO"))
