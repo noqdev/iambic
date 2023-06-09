@@ -564,7 +564,7 @@ def handle_iambic_approve(
             and comment_user_login == allowed_bot_approver
         ):
             pull_request.create_review(
-                event="APPROVE", body="react to `approve` from `comment_user_login`"
+                event="APPROVE", body=f"react to `approve` from `{comment_user_login}`"
             )
             return HandleIssueCommentReturnCode.APPROVED
         else:
