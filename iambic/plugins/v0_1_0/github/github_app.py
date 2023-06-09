@@ -225,13 +225,16 @@ def handle_issue_comment(
     comment_user_login = webhook_payload["comment"]["user"]["login"]
     log_params = {"COMMENT_DISPATCH_MAP_KEYS": COMMENT_DISPATCH_MAP.keys()}
     log.info("COMMENT_DISPATCH_MAP keys", **log_params)
-    if comment_body not in COMMENT_DISPATCH_MAP:
+
+    command_lookup = " ".join(comment_body.split(" ")[0:2])
+
+    if command_lookup not in COMMENT_DISPATCH_MAP:
         log_params = {"comment_body": comment_body}
         log.error("handle_issue_comment: no op", **log_params)
         return HandleIssueCommentReturnCode.NO_MATCHING_BODY
 
     if comment_user_login.endswith("[bot]"):
-        if comment_body != "iambic approve":
+        if command_lookup != "iambic approve":
             # return early unless it's the approve attempt
             # the approve handler require to walk the full config
             # to determine.
@@ -253,7 +256,7 @@ def handle_issue_comment(
     log_params = {"pull_request_branch_name": pull_request_branch_name}
     log.info("PR remote branch name", **log_params)
 
-    comment_func: Callable = COMMENT_DISPATCH_MAP[comment_body]
+    comment_func: Callable = COMMENT_DISPATCH_MAP[command_lookup]
     return comment_func(
         None,
         github_client,
@@ -265,6 +268,7 @@ def handle_issue_comment(
         repo_url,
         proposed_changes_path=getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH,
         comment_user_login=comment_user_login,
+        comment=comment_body,
     )
 
 

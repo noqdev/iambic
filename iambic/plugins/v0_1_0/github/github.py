@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import asyncio
 import datetime
 import json
@@ -16,6 +17,7 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 import github
+from cryptography.hazmat.primitives.asymmetric import ed25519
 from github.PullRequest import PullRequest
 
 import iambic.output.markdown
@@ -298,7 +300,10 @@ def handle_issue_comment(
     comment_user_login = context["event"]["comment"]["user"]["login"]
     log_params = {"COMMENT_DISPATCH_MAP_KEYS": COMMENT_DISPATCH_MAP.keys()}
     log.info("COMMENT_DISPATCH_MAP keys", **log_params)
-    if comment_body not in COMMENT_DISPATCH_MAP:
+
+    command_lookup = " ".join(comment_body.split(" ")[0:2])
+
+    if command_lookup not in COMMENT_DISPATCH_MAP:
         log_params = {"comment_body": comment_body}
         log.error("handle_issue_comment: no op", **log_params)
         return HandleIssueCommentReturnCode.NO_MATCHING_BODY
@@ -316,7 +321,7 @@ def handle_issue_comment(
     log_params = {"pull_request_branch_name": pull_request_branch_name}
     log.info("PR remote branch name", **log_params)
 
-    comment_func: Callable = COMMENT_DISPATCH_MAP[comment_body]
+    comment_func: Callable = COMMENT_DISPATCH_MAP[command_lookup]
     return comment_func(
         context,
         github_client,
@@ -327,6 +332,7 @@ def handle_issue_comment(
         pull_request_branch_name,
         repo_url,
         comment_user_login=comment_user_login,
+        comment=comment_body,
     )
 
 
@@ -341,6 +347,7 @@ def handle_iambic_git_apply(
     repo_url: str,
     proposed_changes_path: str = None,
     comment_user_login: str = None,
+    comment: str = None,
 ):
     if pull_request.mergeable_state != MERGEABLE_STATE_CLEAN:
         # TODO log error and also make a comment to PR
@@ -494,6 +501,7 @@ def handle_iambic_git_plan(
     repo_url: str,
     proposed_changes_path: str = None,
     comment_user_login: str = None,
+    comment: str = None,
 ):
     session_name = get_session_name(repo_name, pull_number)
     os.environ["IAMBIC_SESSION_NAME"] = session_name
@@ -533,6 +541,11 @@ def handle_iambic_git_plan(
         raise e
 
 
+iambic_approve_parser = argparse.ArgumentParser(prog="approve")
+iambic_approve_parser.add_argument("--signee", action="append")
+iambic_approve_parser.add_argument("--signature")
+
+
 def handle_iambic_approve(
     context: dict[str, Any],
     github_client: github.Github,
@@ -544,6 +557,7 @@ def handle_iambic_approve(
     repo_url: str,
     proposed_changes_path: str = None,
     comment_user_login: str = None,
+    comment: str = None,
 ):
     session_name = get_session_name(repo_name, pull_number)
     os.environ["IAMBIC_SESSION_NAME"] = session_name
@@ -557,23 +571,42 @@ def handle_iambic_approve(
         # knowledge in the config of the iambic-template repository
         main_config = asyncio.run(load_config(config_path))
         github_main_config: GithubConfig = main_config.github
-        allowed_bot_approver = github_main_config.allowed_bot_approver
+        allowed_bot_approvers = github_main_config.allowed_bot_approvers
+        matching_approvers = [
+            approver
+            for approver in allowed_bot_approvers
+            if approver.login == comment_user_login
+        ]
 
-        if (
-            comment_user_login is not None
-            and comment_user_login == allowed_bot_approver
-        ):
-            pull_request.create_review(
-                event="APPROVE", body=f"react to `approve` from `{comment_user_login}`"
-            )
-            return HandleIssueCommentReturnCode.APPROVED
-        else:
+        if len(matching_approvers) != 1:
             pull_request.create_issue_comment(
                 f"`{comment_user_login}` is not configured to approve PR via iambic"
             )
             return HandleIssueCommentReturnCode.UNDEFINED
 
-    except Exception as e:
+        allowed_bot_approver = matching_approvers[0]
+        allowed_bot_approver_pub_key_string = allowed_bot_approver.ed25519_pub_key
+        loaded_public_key = ed25519.Ed25519PublicKey.from_public_bytes(
+            bytes.fromhex(allowed_bot_approver_pub_key_string)
+        )
+
+        # the approve parser does not handle the iambic prefix
+        args = iambic_approve_parser.parse_args(
+            comment.replace("iambic approve ", "", 1).split(" ")
+        )
+        message_body = " ".join(comment.split(" ")[0:-1])
+
+        loaded_public_key.verify(
+            bytes.fromhex(args.signature), message_body.encode("utf-8")
+        )
+
+        pull_request.create_review(
+            event="APPROVE",
+            body=f"react to `approve` from `{comment_user_login}` with payload: ```{comment}```",
+        )
+        return HandleIssueCommentReturnCode.APPROVED
+
+    except (Exception, SystemExit) as e:
         captured_traceback = traceback.format_exc()
         log.error("fault", exception=captured_traceback)
         pull_request.create_issue_comment(

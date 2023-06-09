@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock, call, patch
 
 import github
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from iambic.plugins.v0_1_0.github.github import (
     BODY_MAX_LENGTH,
@@ -21,6 +22,7 @@ from iambic.plugins.v0_1_0.github.github import (
     handle_pull_request,
     maybe_merge,
 )
+from iambic.plugins.v0_1_0.github.iambic_plugin import GithubBotApprover
 
 
 @pytest.fixture
@@ -146,7 +148,9 @@ def mock_load_config():
     with patch(
         "iambic.plugins.v0_1_0.github.github.load_config", side_effect=async_mock
     ) as _load_config:
-        async_mock.return_value.github.allowed_bot_approver = "fake-commenter"
+        async_mock.return_value.github.allowed_bot_approvers = [
+            GithubBotApprover(login="fake-commenter", ed25519_pub_key="")
+        ]
         yield _load_config
 
 
@@ -359,6 +363,19 @@ def test_issue_comment_with_allowed_approver(
     assert mock_repository
     assert mock_resolve_config_template_path
     assert mock_load_config
+
+    approver: GithubBotApprover = (
+        mock_load_config.side_effect.return_value.github.allowed_bot_approvers[0]
+    )
+    private_key = Ed25519PrivateKey.generate()
+    public_key = private_key.public_key().public_bytes_raw().hex()
+    approver.ed25519_pub_key = public_key
+    message = "iambic approve --signee=user1@iambic.org"
+    signature = private_key.sign(message.encode("utf-8")).hex()
+    issue_comment_git_approve_context["event"]["comment"][
+        "body"
+    ] = f"{message} --signature={signature}"
+
     handle_issue_comment(mock_github_client, issue_comment_git_approve_context)
     assert mock_pull_request.create_review.called is True
 
@@ -374,7 +391,7 @@ def test_issue_comment_with_not_allowed_approver(
     assert mock_repository
     assert mock_resolve_config_template_path
     assert mock_load_config
-    mock_load_config.side_effect.return_value.github.allowed_bot_approver = None
+    mock_load_config.side_effect.return_value.github.allowed_bot_approvers = []
     handle_issue_comment(mock_github_client, issue_comment_git_approve_context)
     assert mock_pull_request.create_review.called is False
 

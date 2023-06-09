@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 from iambic.core.iambic_plugin import ProviderPlugin
@@ -7,6 +9,17 @@ from iambic.plugins.v0_1_0 import PLUGIN_VERSION
 from iambic.plugins.v0_1_0.github.handlers import import_github_resources, load
 
 DEFAULT_ALLOWED_BOT_APPROVER = None
+
+
+class GithubBotApprover(BaseModel):
+    login: str = Field(
+        ...,
+        description="login for allowed bot approver",
+    )
+    ed25519_pub_key: str = Field(
+        ...,
+        description="Ed25519 Pub Key for allowed bot approver",
+    )
 
 
 class GithubConfig(BaseModel):
@@ -32,9 +45,9 @@ class GithubConfig(BaseModel):
         default="Replace relative time with absolute time",
         description="Commit message to use during changes through git-apply",
     )
-    allowed_bot_approver: str = Field(
-        default=DEFAULT_ALLOWED_BOT_APPROVER,
-        description="Default login for allowed bot approver",
+    allowed_bot_approvers: Optional[list[GithubBotApprover]] = Field(
+        default=[],
+        description="list of allowed bot approver",
     )
 
 
