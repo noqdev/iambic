@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 import tempfile
 from unittest import mock
@@ -7,8 +8,10 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock, call, patch
 
 import github
 import pytest
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 
+from iambic.core.utils import jws_encode_with_past_time
 from iambic.plugins.v0_1_0.github.github import (
     BODY_MAX_LENGTH,
     MERGEABLE_STATE_BLOCKED,
@@ -149,7 +152,7 @@ def mock_load_config():
         "iambic.plugins.v0_1_0.github.github.load_config", side_effect=async_mock
     ) as _load_config:
         async_mock.return_value.github.allowed_bot_approvers = [
-            GithubBotApprover(login="fake-commenter", ed25519_pub_key="")
+            GithubBotApprover(login="fake-commenter", es256_pub_key="")
         ]
         yield _load_config
 
@@ -367,14 +370,53 @@ def test_issue_comment_with_allowed_approver(
     approver: GithubBotApprover = (
         mock_load_config.side_effect.return_value.github.allowed_bot_approvers[0]
     )
-    private_key = Ed25519PrivateKey.generate()
-    public_key = private_key.public_key().public_bytes_raw().hex()
-    approver.ed25519_pub_key = public_key
-    message = "iambic approve --signee=user1@iambic.org"
-    signature = private_key.sign(message.encode("utf-8")).hex()
-    issue_comment_git_approve_context["event"]["comment"][
-        "body"
-    ] = f"{message} --signature={signature}"
+
+    # Generate a new ECDSA private key
+    private_key = ec.generate_private_key(
+        ec.SECP256R1()
+    )  # This is equivalent to the ES256 algorithm
+    public_key = private_key.public_key()
+
+    # Convert keys to PEM format
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    assert private_pem
+    public_pem = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    assert public_pem
+
+    approver.es256_pub_key = public_pem.decode("utf-8")
+    payload = {
+        "repo": "example.com/iambic-templates",
+        "pr": 1,
+        "signee": [
+            "user1@example.org",
+            "user2@example.org",
+        ],
+    }
+    algorithm = "ES256"
+    valid_period_in_minutes = 15
+    encoded_jwt = jws_encode_with_past_time(
+        payload, private_pem, algorithm, valid_period_in_minutes
+    )
+
+    # message format for approve
+    # iambic approve\n
+    # <whatever nice message you like>\n
+    # <!--{encoded_jwt}-->
+    # remember last line cannot have any newline character, the signature metadata must be on the last line
+
+    message = f"""iambic approve
+```json
+{json.dumps(payload)}
+```
+<!--{encoded_jwt}-->"""
+    issue_comment_git_approve_context["event"]["comment"]["body"] = message
 
     handle_issue_comment(mock_github_client, issue_comment_git_approve_context)
     assert mock_pull_request.create_review.called is True

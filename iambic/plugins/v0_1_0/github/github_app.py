@@ -226,10 +226,13 @@ def handle_issue_comment(
     log_params = {"COMMENT_DISPATCH_MAP_KEYS": COMMENT_DISPATCH_MAP.keys()}
     log.info("COMMENT_DISPATCH_MAP keys", **log_params)
 
-    command_lookup = " ".join(comment_body.split(" ")[0:2])
+    command_lookup = comment_body.split("\n")[0].strip()
 
     if command_lookup not in COMMENT_DISPATCH_MAP:
-        log_params = {"comment_body": comment_body}
+        log_params = {
+            "command_lookup": command_lookup,
+            "comment_body": comment_body,
+        }
         log.error("handle_issue_comment: no op", **log_params)
         return HandleIssueCommentReturnCode.NO_MATCHING_BODY
 

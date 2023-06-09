@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import asyncio
 import datetime
 import json
@@ -17,7 +16,7 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 import github
-from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives import serialization
 from github.PullRequest import PullRequest
 
 import iambic.output.markdown
@@ -28,7 +27,7 @@ from iambic.core.git import Repo, clone_git_repo, get_remote_default_branch
 from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage, TemplateChangeDetails
-from iambic.core.utils import yaml
+from iambic.core.utils import decode_with_reference_time, yaml
 from iambic.main import run_apply, run_detect, run_expire, run_git_apply, run_git_plan
 from iambic.plugins.v0_1_0.github.iambic_plugin import GithubConfig
 
@@ -301,7 +300,7 @@ def handle_issue_comment(
     log_params = {"COMMENT_DISPATCH_MAP_KEYS": COMMENT_DISPATCH_MAP.keys()}
     log.info("COMMENT_DISPATCH_MAP keys", **log_params)
 
-    command_lookup = " ".join(comment_body.split(" ")[0:2])
+    command_lookup = comment_body.split("\n")[0]
 
     if command_lookup not in COMMENT_DISPATCH_MAP:
         log_params = {"comment_body": comment_body}
@@ -541,11 +540,6 @@ def handle_iambic_git_plan(
         raise e
 
 
-iambic_approve_parser = argparse.ArgumentParser(prog="approve")
-iambic_approve_parser.add_argument("--signee", action="append")
-iambic_approve_parser.add_argument("--signature")
-
-
 def handle_iambic_approve(
     context: dict[str, Any],
     github_client: github.Github,
@@ -585,24 +579,29 @@ def handle_iambic_approve(
             return HandleIssueCommentReturnCode.UNDEFINED
 
         allowed_bot_approver = matching_approvers[0]
-        allowed_bot_approver_pub_key_string = allowed_bot_approver.ed25519_pub_key
-        loaded_public_key = ed25519.Ed25519PublicKey.from_public_bytes(
-            bytes.fromhex(allowed_bot_approver_pub_key_string)
+        allowed_bot_approver_pub_key_string = allowed_bot_approver.es256_pub_key
+        loaded_public_key = serialization.load_pem_public_key(
+            allowed_bot_approver_pub_key_string.encode("utf-8")
+        )
+        encoded_jwt = comment.split("\n")[-1]
+        encoded_jwt = encoded_jwt.replace("<!--", "", 1).replace("-->", "", 1)
+        decoded = decode_with_reference_time(
+            encoded_jwt, loaded_public_key, "ES256", datetime.datetime.now()
         )
 
-        # the approve parser does not handle the iambic prefix
-        args = iambic_approve_parser.parse_args(
-            comment.replace("iambic approve ", "", 1).split(" ")
-        )
-        message_body = " ".join(comment.split(" ")[0:-1])
-
-        loaded_public_key.verify(
-            bytes.fromhex(args.signature), message_body.encode("utf-8")
-        )
+        if not (
+            decoded["repo"] == repo_name
+            and decoded["pr"] == pull_number
+            and len(decoded["signee"]) > 0
+        ):
+            raise Exception(f"Claim does not match the pull-request: {decoded}")
 
         pull_request.create_review(
             event="APPROVE",
-            body=f"react to `approve` from `{comment_user_login}` with payload: ```{comment}```",
+            body=f"""react to `approve` from `{comment_user_login}` with payload:
+```json
+{json.dumps(decoded)}
+```""",
         )
         return HandleIssueCommentReturnCode.APPROVED
 

@@ -16,9 +16,9 @@ class GithubBotApprover(BaseModel):
         ...,
         description="login for allowed bot approver",
     )
-    ed25519_pub_key: str = Field(
+    es256_pub_key: str = Field(
         ...,
-        description="Ed25519 Pub Key for allowed bot approver",
+        description="ES256 Pub Key for allowed bot approver",
     )
 
 
