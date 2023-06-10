@@ -4,8 +4,8 @@
 ## 0.9.1 (Jun 9, 2023)
 
 BUG FIXES:
-* Fixed #419 Deleted file should not be removed again during Git workflow [#441](https://github.com/noqdev/iambic/pull/441)
-* Fix functional test [#451](https://github.com/noqdev/iambic/pull/451)
+* Fixed [#419](https://github.com/noqdev/iambic/issues/419): Deleted file should not be removed again during Git workflow [#441](https://github.com/noqdev/iambic/pull/441)
+* Fixed functional test [#451](https://github.com/noqdev/iambic/pull/451)
 * Skip a key from new_model if old_model already mark it as metadata [#453](https://github.com/noqdev/iambic/pull/453)
 * Do not override logging settings when used as library [#454](https://github.com/noqdev/iambic/pull/454)
 
@@ -15,10 +15,10 @@ ENHANCEMENTS:
 * Move module level templates symbol to config to allow ease of use of `iambic-core` as library [#440](https://github.com/noqdev/iambic/pull/440)
 * Dependency Cleanup [#448](https://github.com/noqdev/iambic/pull/448)
 * Included empty tags dict when decribing role without tags [#449](https://github.com/noqdev/iambic/pull/449)
-* Implement "iambic approve" for GitHub workflow [#452](https://github.com/noqdev/iambic/pull/452). It's now possible to have IAMbic GitHub integration to approve PR. The workflow allows another GitHub App to open PR and mark the PR as approve. See the pull request for the full discussion on security consideration. It's secured by default. Without actual configuration of the public/private key, IAMbic GitHub integration approve command will not work.
+* Implemented "iambic approve" for GitHub workflow [#452](https://github.com/noqdev/iambic/pull/452). It's now possible to have IAMbic GitHub integration to approve PR. The workflow allows another GitHub App to open a PR and mark the PR as `approved`. See the pull request for the full discussion on security considerations. It's secure by default, because without an actual configuration with a public/private key, the IAMbic GitHub integration's approve command will not work.
 
 DOCS:
-* Create 001-AWS-Managed-Resources-Attributes [#395](https://github.com/noqdev/iambic/pull/395). We recommend contributor to write up the design prior to large pull request, so community can give feedback prior to review a large pull request.
+* Create 001-AWS-Managed-Resources-Attributes [#395](https://github.com/noqdev/iambic/pull/395). We recommend contributor to write up the design prior to creating a large pull request, so the community can give feedback prior to a significant change.
 * Improve GitHub App creation docs to have most of the settings included in the query params [#402](https://github.com/noqdev/iambic/pull/402)
 
 
