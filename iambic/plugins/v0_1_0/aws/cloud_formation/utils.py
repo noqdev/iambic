@@ -5,8 +5,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Any, Optional, Union
 
-from aws_error_utils.aws_error_utils import get_aws_error_info
-from botocore.exceptions import ClientError
+from aws_error_utils.aws_error_utils import ClientError, get_aws_error_info
 
 from iambic.core.logger import log
 from iambic.plugins.v0_1_0.aws.models import (
