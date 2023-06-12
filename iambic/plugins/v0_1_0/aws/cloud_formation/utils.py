@@ -5,6 +5,9 @@ import os
 from datetime import datetime, timedelta
 from typing import Any, Optional, Union
 
+from aws_error_utils.aws_error_utils import get_aws_error_info
+from botocore.exceptions import ClientError
+
 from iambic.core.logger import log
 from iambic.plugins.v0_1_0.aws.models import (
     IAMBIC_CHANGE_DETECTION_SUFFIX,
@@ -149,16 +152,28 @@ async def create_stack_set(
     except client.exceptions.StackSetNotFoundException:
         pass
 
-    await boto_crud_call(
-        client.create_stack_set,
-        StackSetName=stack_set_name,
-        TemplateBody=template_body,
-        Parameters=parameters,
-        PermissionModel="SERVICE_MANAGED",
-        AutoDeployment={"Enabled": True, "RetainStacksOnAccountRemoval": True},
-        ManagedExecution={"Active": True},
-        **kwargs,
-    )
+    try:
+        await boto_crud_call(
+            client.create_stack_set,
+            StackSetName=stack_set_name,
+            TemplateBody=template_body,
+            Parameters=parameters,
+            PermissionModel="SERVICE_MANAGED",
+            AutoDeployment={"Enabled": True, "RetainStacksOnAccountRemoval": True},
+            ManagedExecution={"Active": True},
+            **kwargs,
+        )
+    except ClientError as err:
+        err_info = get_aws_error_info(err)
+        expected_message = "You must enable organizations access to operate a service managed stack set"
+
+        if err_info.message and expected_message in err_info.message:
+            log.error(
+                f"{expected_message}.\n"
+                + "Please refer to this site https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-activate-trusted-access.html and "
+                + "follow the instructions to activate trusted access with AWS Organizations."
+            )
+        raise err
 
     await boto_crud_call(
         client.create_stack_instances,
@@ -473,6 +488,7 @@ async def create_hub_account_stacks(
         Capabilities=["CAPABILITY_NAMED_IAM"],
         **additional_kwargs,
     )
+
     if stack_created:
         return await create_spoke_role_stack(
             cf_client,

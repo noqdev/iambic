@@ -360,12 +360,19 @@ class ConfigurationWizard:
 
     @property
     def has_cf_permissions(self):
-        if self._has_cf_permissions is None:
+        if self._has_cf_permissions is None or self._has_cf_permissions is False:
             try:
+                extend_message = (
+                    "Your current account has not enabled the required configuration. \n"
+                    if self._has_cf_permissions is False
+                    else ""
+                )
+
                 click.echo(
                     f"\nThis requires that you have the ability to "
                     f"create CloudFormation stacks, stack sets, and stack set instances.\n"
                     f"If you are using an AWS Organization, be sure that trusted access is enabled.\n"
+                    f"{extend_message}"
                     f"You can check this using the AWS Console:\n  "
                     f"https://{self.aws_default_region}.console.aws.amazon.com/organizations/v2/home/services/CloudFormation%20StackSets"
                 )
