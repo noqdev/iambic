@@ -404,6 +404,10 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
             if not set_identity_center_map:
                 return
 
+            self.identity_center_details.permission_set_map = {}
+            self.identity_center_details.user_map = {}
+            self.identity_center_details.group_map = {}
+
             permission_set_arns = await legacy_paginated_search(
                 identity_center_client.list_permission_sets,
                 response_key="PermissionSets",
