@@ -360,23 +360,35 @@ class ConfigurationWizard:
 
     @property
     def has_cf_permissions(self):
-        if self._has_cf_permissions is None or self._has_cf_permissions is False:
+        if self._has_cf_permissions is None:
             try:
-                extend_message = (
-                    "Your current account has not enabled the required configuration. \n"
-                    if self._has_cf_permissions is False
-                    else ""
-                )
+                with contextlib.suppress(
+                    ClientError, NoCredentialsError, FileNotFoundError
+                ):
+                    org_client = self.boto3_session.client("organizations")
+                    self.autodetected_org_settings = org_client.describe_organization()[
+                        "Organization"
+                    ]
+                    self._has_cf_permissions = "member.org.stacksets.cloudformation.amazonaws.com" in [
+                        p["ServicePrincipal"]
+                        for p in org_client.list_aws_service_access_for_organization()[
+                            "EnabledServicePrincipals"
+                        ]
+                    ]
+                    if self._has_cf_permissions:
+                        return self._has_cf_permissions
 
                 click.echo(
                     f"\nThis requires that you have the ability to "
                     f"create CloudFormation stacks, stack sets, and stack set instances.\n"
                     f"If you are using an AWS Organization, be sure that trusted access is enabled.\n"
-                    f"{extend_message}"
                     f"You can check this using the AWS Console:\n  "
                     f"https://{self.aws_default_region}.console.aws.amazon.com/organizations/v2/home/services/CloudFormation%20StackSets"
                 )
-                self._has_cf_permissions = questionary.confirm("Proceed?").unsafe_ask()
+                if self._has_cf_permissions is None:
+                    self._has_cf_permissions = questionary.confirm(
+                        "Proceed?"
+                    ).unsafe_ask()
             except KeyboardInterrupt:
                 log.info("Exiting...")
                 sys.exit(0)
@@ -568,7 +580,6 @@ class ConfigurationWizard:
         return profile_name if profile_name != "None" else None
 
     def set_boto3_session(self, allow_none=False):
-        self._has_cf_permissions = True
         while True:
             try:
                 profile_name = self.set_aws_profile_name(allow_none=allow_none)
@@ -620,25 +631,6 @@ class ConfigurationWizard:
                 continue
 
             self.profile_name = profile_name
-            with contextlib.suppress(
-                ClientError, NoCredentialsError, FileNotFoundError
-            ):
-                org_client = self.boto3_session.client(
-                    "organizations", region_name=self.aws_default_region
-                )
-                self.autodetected_org_settings = org_client.describe_organization()[
-                    "Organization"
-                ]
-                self._has_cf_permissions = (
-                    "member.org.stacksets.cloudformation.amazonaws.com"
-                    in [
-                        p["ServicePrincipal"]
-                        for p in org_client.list_aws_service_access_for_organization()[
-                            "EnabledServicePrincipals"
-                        ]
-                    ]
-                )
-
             break
 
     def get_boto3_session_for_account(self, account_id: str, region_name: str = None):
@@ -1097,22 +1089,9 @@ class ConfigurationWizard:
                 f"CloudFormation stacks, stack sets, and stack set instances."
             )
             if questionary.confirm("Would you like to use this identity?").ask():
-                self.caller_identity = default_caller_identity
                 # If we are going to use the default_caller_identity,
                 # we need to set teh autodetected_org_settings to
-                with contextlib.suppress(
-                    ClientError, NoCredentialsError, FileNotFoundError
-                ):
-                    org_client = self.boto3_session.client("organizations")
-                    self.autodetected_org_settings = org_client.describe_organization()[
-                        "Organization"
-                    ]
-                    self._has_cf_permissions = "member.org.stacksets.cloudformation.amazonaws.com" in [
-                        p["ServicePrincipal"]
-                        for p in org_client.list_aws_service_access_for_organization()[
-                            "EnabledServicePrincipals"
-                        ]
-                    ]
+                self.caller_identity = default_caller_identity
             else:
                 self.set_boto3_session()
         else:
@@ -1121,20 +1100,19 @@ class ConfigurationWizard:
         asyncio.run(self.sync_config_aws_org())
 
     def configuration_wizard_aws_accounts(self):
-        while True:
-            if self.config.aws and self.config.aws.accounts:
-                action = questionary.select(
-                    "What would you like to do?",
-                    choices=["Go back", "Add AWS Account", "Edit AWS Account"],
-                ).unsafe_ask()
-                if action == "Go back":
-                    return
-                elif action == "Add AWS Account":
-                    self.configuration_wizard_aws_account_add()
-                elif action == "Edit AWS Account":
-                    self.configuration_wizard_aws_account_edit()
-            else:
+        if self.config.aws and self.config.aws.accounts:
+            action = questionary.select(
+                "What would you like to do?",
+                choices=["Go back", "Add AWS Account", "Edit AWS Account"],
+            ).unsafe_ask()
+            if action == "Go back":
+                return
+            elif action == "Add AWS Account":
                 self.configuration_wizard_aws_account_add()
+            elif action == "Edit AWS Account":
+                self.configuration_wizard_aws_account_edit()
+        else:
+            self.configuration_wizard_aws_account_add()
 
     def configuration_wizard_aws_organizations_edit(self):
         org_ids = [org.org_id for org in self.config.aws.organizations]
