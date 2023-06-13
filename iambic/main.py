@@ -95,12 +95,12 @@ def expire(templates: list[str], repo_dir: str):
 def run_expire(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     # load_config is required to populate known templates
-    asyncio.run(load_config(config_path))
+    config = asyncio.run(load_config(config_path))
 
     if not templates:
         templates = asyncio.run(gather_templates(repo_dir))
 
-    asyncio.run(flag_expired_resources(templates))
+    asyncio.run(flag_expired_resources(templates, config.template_map))
 
 
 @cli.command()
@@ -363,7 +363,16 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
     exe_message = ExecutionMessage(
         execution_id=str(uuid.uuid4()), command=Command.APPLY
     )
-    asyncio.run(flag_expired_resources(templates))
+
+    try:
+        asyncio.run(flag_expired_resources(templates, config.template_map))
+    except IsADirectoryError:
+        log.error(
+            f"Invalid template path: {templates}. Templates must be files."
+            f"A directory cannot be passed in."
+        )
+        sys.exit(1)
+
     ctx.eval_only = True
     template_changes = asyncio.run(
         config.run_apply(exe_message, load_templates(templates, config.template_map))
