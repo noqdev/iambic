@@ -438,14 +438,14 @@ async def create_templated_role(  # noqa: C901
         )
     except Exception as e:
         log_params = {
-            "role_name": f"{role_name}",
-            "role_template_params": f"{role_template_params}",
+            "role_name": role_name,
+            "role_template_params": role_template_params,
         }
         log.error(
             "Not able to create_or_update_template",
             **log_params,
         )
-        raise e from None
+        raise e
 
 
 async def collect_aws_roles(
