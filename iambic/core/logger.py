@@ -28,22 +28,23 @@ def pretty_log(logger, method_name, event_dict):
 
 
 def configure_logger(logger_name, log_level):
-    structlog.configure(
-        processors=[
-            pretty_log,
-            structlog.processors.add_log_level,
-            structlog.processors.StackInfoRenderer(),
-            structlog.dev.set_exc_info,
-            structlog.processors.TimeStamper("%Y/%m/%d %H:%M:%S", utc=False),
-            structlog.dev.ConsoleRenderer(),
-        ],
-        wrapper_class=structlog.make_filtering_bound_logger(
-            logging.getLevelName(log_level)
-        ),
-        context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(),
-        cache_logger_on_first_use=False,
-    )
+    if not structlog.is_configured():
+        structlog.configure(
+            processors=[
+                pretty_log,
+                structlog.processors.add_log_level,
+                structlog.processors.StackInfoRenderer(),
+                structlog.dev.set_exc_info,
+                structlog.processors.TimeStamper("%Y/%m/%d %H:%M:%S", utc=False),
+                structlog.dev.ConsoleRenderer(),
+            ],
+            wrapper_class=structlog.make_filtering_bound_logger(
+                logging.getLevelName(log_level)
+            ),
+            context_class=dict,
+            logger_factory=structlog.PrintLoggerFactory(),
+            cache_logger_on_first_use=False,
+        )
     log = structlog.get_logger(logger_name)
 
     if log_level == "DEBUG":
