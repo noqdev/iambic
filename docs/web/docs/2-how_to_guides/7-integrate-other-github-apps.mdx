@@ -1,0 +1,66 @@
+---
+title: Integrate other GitHub apps with IAMbic GitHub Integration
+---
+
+IAMbic GitHub Integration typically apply a pull request when pull request
+is already approved. (This is configured by GitHub administrator when they
+require changes to only be made via pull request).
+
+Another GitHub App may create pull request against the IAMbic templates
+repository with external flow. If the external flow require to instruct
+IAMbic GitHub integration with `iambic apply`. The process will not succeed
+because no human operator has submitted a pull request review with approval
+using the GitHub interface. We need a mechanism to approve the pull request;
+however, GitHub pull requests forbid pull request author to approve its own
+requests. It makes sense for human operators; not as much for GitHub apps.
+
+IAMbic GitHub integrations support `iambic approve` comment if the comment
+author is authorized to approve pull requests.
+
+## Authorize comment author to issue approve
+
+Add the following to your IAMbic configuration file
+
+```yaml
+github:
+  allowed_bot_approvers:
+  - login: YOUR_GITHUB_LOGIN
+    es256_pub_key: "YOUR_ES256_PUBLIC_KEY_IN_PEM_FORMAT"
+```
+
+`YOUR_GITHUB_LOGIN` is typically name of the GitHub App integration with suffix `[bot]`
+
+`YOUR_ES256_PUBLIC_KEY_IN_PEM_FORMAT` is the public key distributed by the GitHub App developer.
+
+## How to generate ECDSA public and private key
+
+We need to generate a Generate a new ECDSA private key if we are the GitHub App developer.
+
+```bash
+python3 -m venv env
+. env/bin/activate
+pip install cryptography
+```
+
+```python
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+private_key = ec.generate_private_key(ec.SECP256R1())
+public_key = private_key.public_key()
+public_pem = public_key.public_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PublicFormat.SubjectPublicKeyInfo,
+)
+es256_pub_key = public_pem.decode("utf-8")
+print(es256_pub_key)
+
+private_pem = private_key.private_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PrivateFormat.PKCS8,
+    encryption_algorithm=serialization.NoEncryption(),
+)
+es256_private_key = private_pem.decode("utf-8")
+print(es256_private_key)
+```
+
+Guard your private key very carefully.
