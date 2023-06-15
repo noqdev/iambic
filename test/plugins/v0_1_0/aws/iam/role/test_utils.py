@@ -46,6 +46,7 @@ EXAMPLE_INLINE_POLICY_NAME = "example_inline_policy_name"
 EXAMPLE_INLINE_POLICY_DOCUMENT = """
 {
    "Version":"2012-10-17",
+   "Id": "cd3ad3d9-2776-4ef1-a904-4c229d1642ee",
    "Statement":[
       {
          "Effect":"Allow",
