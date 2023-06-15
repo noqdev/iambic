@@ -1,6 +1,25 @@
 
 # Change Log
 
+## 0.9.6 (Jun 15, 2023)
+
+BUG FIXES:
+
+* Fixed IAMbic import errors when AWS Organization that has no permission sets in IdentityCenter [#459](https://github.com/noqdev/iambic/pull/459)
+* Fixed broken links on README.md [#465](https://github.com/noqdev/iambic/pull/465)
+* Fixed import issue when AWS policy document uses `Id` element [#464](https://github.com/noqdev/iambic/pull/464)
+
+ENHANCEMENTS:
+
+* Improve IAMbic wizard prompting when AWS Organization has not yet enabled trusted access for CloudFormation StackSets. [#459](https://github.com/noqdev/iambic/pull/459)
+* Only configure structlog if it's not already configured. More friendly when `iambic-core` is used as a library [#462](https://github.com/noqdev/iambic/pull/462)
+
+THANKS:
+* `sidick` for reporting AWS Organization import issue when there is no permission sets in IdentityCenter [#460](https://github.com/noqdev/iambic/issues/460)
+* `sidick` for reporting lack of prompts when AWS Organization has not yet enabled trusted organization access for Cloudformation StackSets. [#458](https://github.com/noqdev/iambic/issues/458)
+* `sourcefrog` for contribution in fixing README [#461](https://github.com/noqdev/iambic/pull/461)
+* `sidick` for reporting AWS Role import issue when `Id` element is used [#463](https://github.com/noqdev/iambic/issues/463)
+
 ## 0.9.1 (Jun 9, 2023)
 
 BUG FIXES:
