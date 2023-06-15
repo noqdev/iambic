@@ -426,15 +426,26 @@ async def create_templated_role(  # noqa: C901
         role_template_params.get("included_accounts"),
         role_path=path,
     )
-    return create_or_update_template(
-        file_path,
-        existing_template_map,
-        role_name,
-        AwsIamRoleTemplate,
-        role_template_params,
-        RoleProperties(**role_template_properties),
-        list(aws_account_map.values()),
-    )
+    try:
+        return create_or_update_template(
+            file_path,
+            existing_template_map,
+            role_name,
+            AwsIamRoleTemplate,
+            role_template_params,
+            RoleProperties(**role_template_properties),
+            list(aws_account_map.values()),
+        )
+    except Exception as e:
+        log_params = {
+            "role_name": role_name,
+            "role_template_params": role_template_params,
+        }
+        log.error(
+            "Not able to create_or_update_template",
+            **log_params,
+        )
+        raise e
 
 
 async def collect_aws_roles(

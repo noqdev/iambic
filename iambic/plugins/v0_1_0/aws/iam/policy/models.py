@@ -201,6 +201,10 @@ class PolicyDocument(AccessModel, ExpiryModel):
         None,
         description="List of policy statements",
     )
+    id: Optional[str] = Field(
+        None,
+        description="The Id element specifies an optional identifier for the policy. The ID is used differently in different services.",
+    )
 
     @property
     def resource_type(self):

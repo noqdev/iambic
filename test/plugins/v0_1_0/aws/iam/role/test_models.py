@@ -796,3 +796,42 @@ def test_mixed_type_description_merges():
     new_properties = RoleProperties(role_name="foo", description=new_description)
     merged_model = merge_model(new_properties, existing_properties, [])
     assert merged_model.description[0].description == "foo"
+
+
+def test_role_policy_id():
+    role_properties_kwargs = {
+        "role_name": "bar",
+        "inline_policies": [
+            {
+                "policy_name": "hello",
+                "included_accounts": ["*"],
+                "id": "uuid-4",
+                "statement": {
+                    "effect": "Deny",
+                    "action": ["s3:GetObject"],
+                    "resource": "*",
+                },
+            },
+        ],
+    }
+    role_properties = RoleProperties(**role_properties_kwargs)
+    assert role_properties
+
+
+def test_role_no_policy_id():
+    role_properties_kwargs = {
+        "role_name": "bar",
+        "inline_policies": [
+            {
+                "policy_name": "hello",
+                "included_accounts": ["*"],
+                "statement": {
+                    "effect": "Deny",
+                    "action": ["s3:GetObject"],
+                    "resource": "*",
+                },
+            },
+        ],
+    }
+    role_properties = RoleProperties(**role_properties_kwargs)
+    assert role_properties
