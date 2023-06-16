@@ -1,27 +1,16 @@
 ---
-title: Integrate other GitHub apps with IAMbic GitHub Integration
+title: Integrating Other GitHub Applications with IAMbic's GitHub Integration
 ---
 
-IAMbic GitHub Integration typically apply a pull request when pull request
-is approved and a command is issued to instruct IAMbic to apply the request.
-Without the proper approval, the request will not be applied.
-(This is configured by the GitHub administrator when they
-require changes to only be made via pull request).
+IAMbic's GitHub Integration is designed to approve and apply pull requests in a secure and controlled manner. Typically, pull requests are applied only when they have been approved and an `iambic apply` command is issued. Without an appropriate approval, the request will not be applied, even if an `iambic apply` command is issued. This approval process is configured by the GitHub administrator and requires changes to be made only via pull requests.
 
-Another GitHub App may create pull request against the IAMbic templates
-repository with external flow. If the external flow require to instruct
-IAMbic GitHub integration with `iambic apply`. The process will not succeed
-because no human operator has submitted a pull request review with approval
-using the GitHub interface. We need a mechanism to approve the pull request;
-however, GitHub pull requests forbid pull request author to approve its own
-requests. It makes sense for human operators; not as much for GitHub apps.
+When a different GitHub Application creates a pull request against your IAMbic templates repository, this process might not succeed. That's because no human operator has submitted a pull request review with approval using the GitHub interface. The challenge here is that GitHub pull requests prevent the author of the pull request from approving their own requests. This makes perfect sense for human operators, but poses a challenge for GitHub apps.
 
-IAMbic GitHub integrations support `iambic approve` comment if the comment
-author is authorized to approve pull requests.
+To overcome this, the IAMbic GitHub Integration supports the `iambic approve` comment if the comment's author (user or Github app) is authorized to approve pull requests. The instructions below provide guidance on authorizing a GitHub App to approve pull requests.
 
-## Authorize comment author to issue approve
+## Authorizing a Comment Author to Approve Pull Requests
 
-Add the following to your IAMbic configuration file
+To authorize a GitHub App to approve pull requests, add the following to your IAMbic configuration file:
 
 ```yaml
 github:
@@ -30,19 +19,25 @@ github:
     es256_pub_key: "YOUR_ES256_PUBLIC_KEY_IN_PEM_FORMAT"
 ```
 
-`YOUR_GITHUB_LOGIN` is typically name of the GitHub App integration with suffix `[bot]`
+In this configuration:
 
-`YOUR_ES256_PUBLIC_KEY_IN_PEM_FORMAT` is the public key distributed by the GitHub App developer.
+- `YOUR_GITHUB_LOGIN` is typically the name of the GitHub App integration, suffixed with `[bot]`.
 
-## How to generate ECDSA public and private key
+- `YOUR_ES256_PUBLIC_KEY_IN_PEM_FORMAT` is the public key provided by the GitHub App developer.
 
-We need to generate a Generate a new ECDSA private key if we are the GitHub App developer.
+## Generating an ECDSA Public and Private Key
+
+If you are a GitHub App developer, you need to generate a new ECDSA private key. Here's how to do it:
+
+First, set up your environment:
 
 ```bash
 python3 -m venv env
 . env/bin/activate
 pip install cryptography
 ```
+
+Next, use the following Python script to generate your keys:
 
 ```python
 from cryptography.hazmat.primitives import serialization
@@ -65,4 +60,4 @@ es256_private_key = private_pem.decode("utf-8")
 print(es256_private_key)
 ```
 
-Guard your private key very carefully.
+Please handle your private key with extreme care. It is a sensitive piece of information and should be guarded diligently.
