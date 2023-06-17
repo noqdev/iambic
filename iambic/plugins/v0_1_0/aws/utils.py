@@ -32,10 +32,10 @@ async def process_import_rules(
         # Match by tag
         if rule.match_tags:
             for tag in rule.match_tags:
-                for role_tag in tags:
-                    if is_regex_match(tag.key, role_tag.get("key")) and (
+                for resource_tag in tags:
+                    if is_regex_match(tag.key, resource_tag.get("key")) and (
                         tag.value is None
-                        or is_regex_match(tag.value, role_tag.get("value"))
+                        or is_regex_match(tag.value, resource_tag.get("value"))
                     ):
                         tag_match = True
                         break
