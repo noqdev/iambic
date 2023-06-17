@@ -3,7 +3,7 @@ from __future__ import annotations
 import itertools
 import os
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import aiofiles
 
@@ -34,6 +34,7 @@ from iambic.plugins.v0_1_0.aws.template_generation import (
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
+    process_import_rules,
 )
 
 if TYPE_CHECKING:
@@ -203,11 +204,12 @@ async def create_templated_managed_policy(  # noqa: C901
     managed_policy_dir: str,
     existing_template_map: dict,
     config: AWSConfig,
-):
+) -> Optional[AwsIamManagedPolicyTemplate]:
     min_accounts_required_for_wildcard_included_accounts = (
         config.min_accounts_required_for_wildcard_included_accounts
     )
     account_id_to_mp_map = {}
+    import_actions = set()
     num_of_accounts = len(managed_policy_refs)
     for managed_policy_ref in managed_policy_refs:
         async with aiofiles.open(managed_policy_ref["file_path"], mode="r") as f:
@@ -232,6 +234,15 @@ async def create_templated_managed_policy(  # noqa: C901
     policy_document_resources = list()
     tag_resources = list()
     for account_id, managed_policy_dict in account_id_to_mp_map.items():
+        import_actions.update(
+            await process_import_rules(
+                config,
+                AWS_MANAGED_POLICY_TEMPLATE_TYPE,
+                managed_policy_name,
+                managed_policy_dict.get("tags", []),
+                managed_policy_dict,
+            )
+        )
         path_resources.append(
             {
                 "account_id": account_id,
@@ -258,6 +269,11 @@ async def create_templated_managed_policy(  # noqa: C901
                 {"account_id": account_id, "resources": [{"resource_val": description}]}
             )
 
+    for action in import_actions:
+        if action.value == "set_import_only":
+            template_params["iambic_managed"] = "import_only"
+        if action.value == "ignore":
+            return None
     if (
         len(managed_policy_refs) != len(aws_account_map)
         or len(aws_account_map) <= min_accounts_required_for_wildcard_included_accounts

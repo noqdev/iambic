@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -49,6 +50,19 @@ def mock_account_id_to_role_map(test_role):
         "iambic.plugins.v0_1_0.aws.iam.role.template_generation._account_id_to_role_map"
     ) as _mock_account_id_to_role_map:
         async_mock = AsyncMock(return_value={"dev": test_role.properties.dict()})
+        _mock_account_id_to_role_map.side_effect = async_mock
+        yield _mock_account_id_to_role_map
+
+
+@pytest.fixture
+def mock_account_id_to_role_map_import(test_role):
+    with patch(
+        "iambic.plugins.v0_1_0.aws.iam.role.template_generation._account_id_to_role_map"
+    ) as _mock_account_id_to_role_map:
+        role_dict = test_role.properties.dict()
+        role_dict["tags"] = [{"key": "terraform", "value": "true"}]
+
+        async_mock = AsyncMock(return_value={"dev": role_dict})
         _mock_account_id_to_role_map.side_effect = async_mock
         yield _mock_account_id_to_role_map
 
@@ -676,3 +690,116 @@ async def test_merge_template_role_with_removed_policy(
         updated_role, initial_role, [test_account, test_account_2]
     )
     assert not merged_model.properties.inline_policies
+
+
+@pytest.mark.asyncio
+async def test_merge_template_role_with_import_rule(
+    test_config,
+    test_role,
+    test_account,
+    test_account_2,
+    mock_account_id_to_role_map_import,
+    mock_write,
+):
+    """
+    The test_rules in this test validate that the `iambic_managed` setting
+    is set correctly based on the rules. In the event that the rules tell us
+    to ignore a resource (for example, because the resource is managed by other IaC),
+    the result of calling `create_templated_role` is None.
+    """
+    from iambic.plugins.v0_1_0.aws.iambic_plugin import (
+        ImportAction,
+        ImportRule,
+        ImportRuleTag,
+    )
+
+    test_rules = [
+        {
+            "rules": [
+                ImportRule(
+                    match_tags=[ImportRuleTag(key="terraform")],
+                    action=ImportAction.set_import_only,
+                ),
+            ],
+            "result": "import_only",
+        },
+        {
+            "rules": [
+                ImportRule(
+                    match_tags=[ImportRuleTag(key="tagkey", value="tagvalue")],
+                    action=ImportAction.set_import_only,
+                )
+            ],
+            "result": "undefined",
+        },
+        {
+            "rules": [ImportRule(match_names=["test*"], action=ImportAction.ignore)],
+            "result": None,
+        },
+        {
+            "rules": [
+                ImportRule(match_names=["AWSServiceRole*"], action=ImportAction.ignore)
+            ],
+            "result": "undefined",
+        },
+        {
+            "rules": [
+                ImportRule(
+                    match_paths=["/service-role/*", "/aws-service-role/*"],
+                    action=ImportAction.ignore,
+                )
+            ],
+            "result": "undefined",
+        },
+        {
+            "rules": [
+                ImportRule(
+                    match_paths=["/"],
+                    action=ImportAction.ignore,
+                )
+            ],
+            "result": None,
+        },
+        {
+            "rules": [
+                ImportRule(
+                    match_tags=[{"key": "ManagedBy", "value": "CDK"}],
+                    action=ImportAction.ignore,
+                )
+            ],
+            "result": "undefined",
+        },
+        {
+            "rules": [
+                ImportRule(
+                    match_template_types=["NOQ::AWS::IAM::Role"],
+                    match_tags=[ImportRuleTag(key="terraform", value="tagvalue")],
+                    action=ImportAction.set_import_only,
+                )
+            ],
+            "result": "undefined",
+        },
+    ]
+
+    for test_rule in test_rules:
+        test_config = copy.deepcopy(test_config)
+        test_config.aws.import_rules = test_rule["rules"]
+        test_aws_account_map = get_aws_account_map([test_account, test_account_2])
+        test_role_ref = copy.deepcopy(test_role.properties.dict())
+        test_role_ref["account_id"] = test_account.account_id
+        test_role_refs = [test_role_ref]
+        test_existing_template_map = {}
+
+        role_template = await create_templated_role(
+            test_aws_account_map,
+            "test_role",
+            test_role_refs,
+            "",
+            test_existing_template_map,
+            test_config.aws,
+        )
+
+        if not test_rule["result"]:
+            assert role_template is None
+        else:
+            assert role_template.iambic_managed.value == test_rule["result"]

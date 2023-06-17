@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, Field, validator
@@ -39,6 +40,35 @@ def get_aws_templates():
     ]
 
 
+class ImportAction(Enum):
+    ignore = "ignore"
+    set_import_only = "set_import_only"
+
+
+class ImportRuleTag(BaseModel):
+    key: str = Field(..., description="The key of the tag to match")
+    value: Optional[str] = Field(None, description="The value of the tag to match")
+
+
+class ImportRule(BaseModel):
+    match_tags: list[ImportRuleTag] = Field(
+        [], description="A list of tags to match for the rule"
+    )
+    match_names: list[str] = Field(
+        [], description="A list of resource names to match for the rule"
+    )
+    match_paths: list[str] = Field(
+        [], description="A list of resource paths to match for the rule"
+    )
+    match_template_types: list[str] = Field(
+        [], description="A list of resource template types to match for the rule"
+    )
+    action: ImportAction = Field(
+        ...,
+        description="The action to take when the rule matches (e.g., 'ignore', 'set_import_only')",
+    )
+
+
 class AWSConfig(ConfigMixin, BaseModel):
     organizations: list[AWSOrganization] = Field(
         [], description="A list of AWS Organizations to be managed by iambic"
@@ -60,6 +90,10 @@ class AWSConfig(ConfigMixin, BaseModel):
             "aws iambic spoke role is configured as read_only. "
             "If true, it will restrict IAMbic capability in AWS"
         ),
+    )
+    import_rules: list[ImportRule] = Field(
+        [],
+        description=("A list of rules to determine which resources to import from AWS"),
     )
 
     @validator("organizations", allow_reuse=True)

@@ -976,6 +976,10 @@ def merge_model(  # noqa: C901
         value_as_list = isinstance(new_value, list)
         existing_value = getattr(existing_model, key)
         if key in iambic_fields:
+            if key == "iambic_managed":
+                iambic_managed: IambicManaged = getattr(existing_model, key)
+                if iambic_managed.value == "undefined":
+                    setattr(merged_model, key, new_value)
             # not something we want to merge because
             # this is metadata only, not in the cloud-side
             continue

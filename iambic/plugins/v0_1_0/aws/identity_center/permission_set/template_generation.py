@@ -36,6 +36,7 @@ from iambic.plugins.v0_1_0.aws.template_generation import (
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
+    process_import_rules,
 )
 
 # TODO: Update all grouping functions to support org grouping once multiple orgs with IdentityCenter is functional
@@ -150,6 +151,7 @@ async def create_templated_permission_set(  # noqa: C901
     permission_set_refs: list[dict],
     permission_set_dir: str,
     existing_template_map: dict,
+    config: AWSConfig,
 ) -> Union[AwsIdentityCenterPermissionSetTemplate, None]:
     account_id_to_permissionn_set_map = {}
     num_of_accounts = len(permission_set_refs)
@@ -176,8 +178,18 @@ async def create_templated_permission_set(  # noqa: C901
     permissions_boundary_resources = list()
     tag_resources = list()
     session_duration_resources = list()
+    import_actions = set()
 
     for account_id, permission_set_dict in account_id_to_permissionn_set_map.items():
+        import_actions.update(
+            await process_import_rules(
+                config,
+                AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE,
+                permission_set_name,
+                permission_set_dict.get("tags", []),
+                permission_set_dict,
+            )
+        )
         if session_duration := permission_set_dict.get("session_duration"):
             session_duration_resources.append(
                 {
@@ -283,6 +295,11 @@ async def create_templated_permission_set(  # noqa: C901
         if account_rules:
             template_params["access_rules"].extend(list(account_rules.values()))
 
+    for action in import_actions:
+        if action.value == "set_import_only":
+            template_params["iambic_managed"] = "import_only"
+        if action.value == "ignore":
+            return None
     # access_rules has no semantic ordering, we sort it explicitly to ensure the template
     # generation is deterministic.
     template_params["access_rules"] = _sorted_and_clean_access_rules(
@@ -553,6 +570,7 @@ async def generate_aws_permission_set_templates(
             refs,
             resource_dir,
             existing_template_map,
+            config,
         )
         if not resource_template:
             # Template not updated. Most likely because it's an `enforced` template.
