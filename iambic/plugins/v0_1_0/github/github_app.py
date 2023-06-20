@@ -48,7 +48,7 @@ from iambic.plugins.v0_1_0.github.github import (
 # We typically ignore bot interactions; however, there are scenarios
 # in which we want other installed GitHub App to interact with the
 # integrations, we allow list such situations explicitly.
-ALLOWED_BOT_INTERACTIONS = ["iambic approve" "iambic apply"]
+ALLOWED_BOT_INTERACTIONS = ["iambic approve", "iambic apply"]
 
 
 def format_github_url(repository_url: str, github_token: str) -> str:
