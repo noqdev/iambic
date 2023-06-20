@@ -1,6 +1,12 @@
 
 # Change Log
 
+## 0.9.8 (Jun 20, 2023)
+
+ENHANCEMENTS:
+
+* Explicit allow list GitHub bots interactions (iambic approve, iambic apply)  [#470](https://github.com/noqdev/iambic/pull/470)
+
 ## 0.9.6 (Jun 15, 2023)
 
 BUG FIXES:
