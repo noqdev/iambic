@@ -45,6 +45,12 @@ from iambic.plugins.v0_1_0.github.github import (
 # This is due to lambda reusing the already running container
 
 
+# We typically ignore bot interactions; however, there are scenarios
+# in which we want other installed GitHub App to interact with the
+# integrations, we allow list such situations explicitly.
+ALLOWED_BOT_INTERACTIONS = ["iambic approve" "iambic apply"]
+
+
 def format_github_url(repository_url: str, github_token: str) -> str:
     parse_result = urlparse(repository_url)
     return parse_result._replace(
@@ -237,7 +243,7 @@ def handle_issue_comment(
         return HandleIssueCommentReturnCode.NO_MATCHING_BODY
 
     if comment_user_login.endswith("[bot]"):
-        if command_lookup != "iambic approve":
+        if command_lookup not in ALLOWED_BOT_INTERACTIONS:
             # return early unless it's the approve attempt
             # the approve handler require to walk the full config
             # to determine.
