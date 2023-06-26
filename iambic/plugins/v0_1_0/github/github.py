@@ -30,6 +30,7 @@ from iambic.core.models import ExecutionMessage, TemplateChangeDetails
 from iambic.core.utils import decode_with_reference_time, yaml
 from iambic.main import run_apply, run_detect, run_expire, run_git_apply, run_git_plan
 from iambic.plugins.v0_1_0.github.iambic_plugin import GithubConfig
+from iambic.plugins.v0_1_0.github.utils import IAMBIC_APPLY_ERROR_METADATA
 
 iambic_app = __import__("iambic.lambda.app", globals(), locals(), [], 0)
 lambda_run_handler = getattr(iambic_app, "lambda").app.run_handler
@@ -419,9 +420,7 @@ def handle_iambic_git_apply(
         captured_traceback = traceback.format_exc()
         log.error("fault", exception=captured_traceback)
         pull_request.create_issue_comment(
-            "exception during apply is {0} \n ```{1}```".format(
-                pull_request.mergeable_state, captured_traceback
-            )
+            f"exception during apply is {pull_request.mergeable_state} \n ```{captured_traceback}```\n{IAMBIC_APPLY_ERROR_METADATA}"
         )
         raise e
 
