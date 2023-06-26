@@ -420,9 +420,7 @@ def handle_iambic_git_apply(
         captured_traceback = traceback.format_exc()
         log.error("fault", exception=captured_traceback)
         pull_request.create_issue_comment(
-            f"exception during apply is {0} \n ```{1}```\n{IAMBIC_APPLY_ERROR_METADATA}".format(
-                pull_request.mergeable_state, captured_traceback
-            )
+            f"exception during apply is {pull_request.mergeable_state} \n ```{captured_traceback}```\n{IAMBIC_APPLY_ERROR_METADATA}"
         )
         raise e
 
