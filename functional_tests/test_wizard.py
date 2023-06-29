@@ -45,6 +45,10 @@ def temp_templates_directory():
     os.chdir(old_cwd)
 
 
+# TODO, we have to add test that targets a newly spin up account without any
+# CF stacksets enable in the organization, preferly even an organizationless account.
+
+
 def test_setup_single_account(iam_spoke_role, temp_templates_directory) -> None:
     log_file = f"{temp_templates_directory}/test_setup_single_aws_account.txt"
     print(f"ui test log file is in {log_file}")

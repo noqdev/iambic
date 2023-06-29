@@ -346,7 +346,8 @@ class ConfigurationWizard:
         self.existing_role_template_map = {}
         self.aws_account_map = {}
         self.repo_dir = repo_dir
-        self._has_cf_permissions = None
+        self._has_cf_stacksets_permissions = None
+        self._has_confirm_cf_permissions = None
         self._cf_role_arn = None
         self._assume_as_arn = None
         self.caller_identity = {}
@@ -359,8 +360,8 @@ class ConfigurationWizard:
         log.debug("Starting configuration wizard", config_path=self.config_path)
 
     @property
-    def has_cf_permissions(self):
-        if self._has_cf_permissions is None:
+    def has_cf_stacksets_permissions(self):
+        if self._has_cf_stacksets_permissions is None:
             try:
                 with contextlib.suppress(
                     ClientError, NoCredentialsError, FileNotFoundError
@@ -369,14 +370,14 @@ class ConfigurationWizard:
                     self.autodetected_org_settings = org_client.describe_organization()[
                         "Organization"
                     ]
-                    self._has_cf_permissions = "member.org.stacksets.cloudformation.amazonaws.com" in [
+                    self._has_cf_stacksets_permissions = "member.org.stacksets.cloudformation.amazonaws.com" in [
                         p["ServicePrincipal"]
                         for p in org_client.list_aws_service_access_for_organization()[
                             "EnabledServicePrincipals"
                         ]
                     ]
-                    if self._has_cf_permissions:
-                        return self._has_cf_permissions
+                    if self._has_cf_stacksets_permissions:
+                        return self._has_cf_stacksets_permissions
 
                 click.echo(
                     f"\nThis requires that you have the ability to "
@@ -385,15 +386,33 @@ class ConfigurationWizard:
                     f"You can check this using the AWS Console:\n  "
                     f"https://{self.aws_default_region}.console.aws.amazon.com/organizations/v2/home/services/CloudFormation%20StackSets"
                 )
-                if self._has_cf_permissions is None:
-                    self._has_cf_permissions = questionary.confirm(
+                if self._has_cf_stacksets_permissions is None:
+                    self._has_cf_stacksets_permissions = questionary.confirm(
                         "Proceed?"
                     ).unsafe_ask()
             except KeyboardInterrupt:
                 log.info("Exiting...")
                 sys.exit(0)
 
-        return self._has_cf_permissions
+        return self._has_cf_stacksets_permissions
+
+    @property
+    def has_confirm_cf_permissions(self):
+        if self._has_confirm_cf_permissions is None:
+            try:
+                click.echo(
+                    "\nThis requires that you have the ability to "
+                    "create CloudFormation stacks\n"
+                )
+                if self._has_confirm_cf_permissions is None:
+                    self._has_confirm_cf_permissions = questionary.confirm(
+                        "Proceed?"
+                    ).unsafe_ask()
+            except KeyboardInterrupt:
+                log.info("Exiting...")
+                sys.exit(0)
+
+        return self._has_confirm_cf_permissions
 
     @property
     def assume_as_arn(self):
@@ -806,9 +825,9 @@ class ConfigurationWizard:
         await role_template.apply(self.config.aws)
 
     def configuration_wizard_aws_account_add(self):  # noqa: C901
-        if not self.has_cf_permissions:
+        if not self.has_confirm_cf_permissions:
             log.info(
-                "Unable to edit this attribute without CloudFormation permissions."
+                "You have to confirm you have Cloudformation permission in previous question."
             )
             return
 
@@ -1164,7 +1183,7 @@ class ConfigurationWizard:
             self.config.write()
 
     def configuration_wizard_aws_organizations_add(self):
-        if not self.has_cf_permissions:
+        if not self.has_cf_stacksets_permissions:
             log.info(
                 "Unable to edit this attribute without CloudFormation permissions."
             )
@@ -1982,7 +2001,7 @@ class ConfigurationWizard:
                 elif action == "Generate Github Action Workflows":
                     self.configuration_wizard_github_workflow()
                 elif action == "Setup AWS change detection":
-                    if self.has_cf_permissions:
+                    if self.has_cf_stacksets_permissions:
                         log.info(
                             f"IAMbic change detection relies on CloudTrail being enabled all IAMbic aware accounts. "
                             f"You can check that you have CloudTrail setup by going to "
