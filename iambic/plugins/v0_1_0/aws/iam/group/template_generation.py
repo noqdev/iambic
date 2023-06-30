@@ -3,7 +3,7 @@ from __future__ import annotations
 import itertools
 import os
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import aiofiles
 
@@ -36,6 +36,7 @@ from iambic.plugins.v0_1_0.aws.template_generation import (
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
+    process_import_rules,
 )
 
 if TYPE_CHECKING:
@@ -229,7 +230,7 @@ async def create_templated_group(  # noqa: C901
     group_dir: str,
     existing_template_map: dict,
     config: AWSConfig,
-) -> AwsIamGroupTemplate:
+) -> Optional[AwsIamGroupTemplate]:
     account_id_to_group_map = await _account_id_to_group_map(group_refs)
     num_of_accounts = len(group_refs)
 
@@ -248,7 +249,17 @@ async def create_templated_group(  # noqa: C901
     path_resources = list()
     managed_policy_resources = list()
     inline_policy_document_resources = list()
+    import_actions = set()
     for account_id, group_dict in account_id_to_group_map.items():
+        import_actions.update(
+            await process_import_rules(
+                config,
+                AWS_IAM_GROUP_TEMPLATE_TYPE,
+                group_name,
+                group_dict.get("tags", []),
+                group_dict,
+            )
+        )
         path_resources.append(
             {
                 "account_id": account_id,
@@ -278,6 +289,12 @@ async def create_templated_group(  # noqa: C901
                     ],
                 }
             )
+
+    for action in import_actions:
+        if action.value == "set_import_only":
+            group_template_params["iambic_managed"] = "import_only"
+        if action.value == "ignore":
+            return None
 
     if (
         len(group_refs) != len(aws_account_map)

@@ -3,7 +3,7 @@ from __future__ import annotations
 import itertools
 import os
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import aiofiles
 
@@ -38,6 +38,7 @@ from iambic.plugins.v0_1_0.aws.template_generation import (
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
+    process_import_rules,
 )
 
 if TYPE_CHECKING:
@@ -246,7 +247,7 @@ async def create_templated_user(  # noqa: C901
     user_dir: str,
     existing_template_map: dict,
     config: AWSConfig,
-) -> AwsIamUserTemplate:
+) -> Optional[AwsIamUserTemplate]:
     account_id_to_user_map = await _account_id_to_user_map(user_refs)
     num_of_accounts = len(user_refs)
 
@@ -269,7 +270,18 @@ async def create_templated_user(  # noqa: C901
     permissions_boundary_resources = list()
     group_resources = list()
     tag_resources = list()
+    import_actions = set()
+
     for account_id, user_dict in account_id_to_user_map.items():
+        import_actions.update(
+            await process_import_rules(
+                config,
+                AWS_IAM_USER_TEMPLATE_TYPE,
+                user_name,
+                user_dict.get("tags", []),
+                user_dict,
+            )
+        )
         path_resources.append(
             {
                 "account_id": account_id,
@@ -328,7 +340,11 @@ async def create_templated_user(  # noqa: C901
             description_resources.append(
                 {"account_id": account_id, "resources": [{"resource_val": description}]}
             )
-
+    for action in import_actions:
+        if action.value == "set_import_only":
+            user_template_params["iambic_managed"] = "import_only"
+        if action.value == "ignore":
+            return None
     if (
         len(user_refs) != len(aws_account_map)
         or len(aws_account_map) <= min_accounts_required_for_wildcard_included_accounts

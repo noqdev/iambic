@@ -312,6 +312,7 @@ async def test_create_templated_permission_set(
         group_int_or_str_attribute = AsyncMock()
         group_dict_attribute = AsyncMock()
         MagicMock(return_value="test_file_path")
+        config = MagicMock()
 
         with patch(
             "iambic.plugins.v0_1_0.aws.utils.calculate_import_preference",
@@ -332,6 +333,7 @@ async def test_create_templated_permission_set(
                 permission_set_refs,
                 "permission_set_dir",
                 {},
+                config,
             )
 
             assert result is not None
@@ -427,3 +429,134 @@ async def test_generate_aws_permission_set_templates(
         get_template_dir.assert_called_once_with(base_output_dir)
         get_aws_account_map.assert_called_once_with(config)
         base_group_str_attribute.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_create_templated_permission_set_import_rules(
+    permission_set_refs, permission_set_content, aws_account_map
+):
+    """
+    The test_rules in this test validate that the `iambic_managed` setting
+    is set correctly based on the rules. In the event that the rules tell us
+    to ignore a resource (for example, because the resource is managed by other IaC),
+    the result of calling `create_templated_permission_set` is None.
+    """
+    from iambic.plugins.v0_1_0.aws.iambic_plugin import (
+        ImportAction,
+        ImportRule,
+        ImportRuleTag,
+    )
+
+    test_rules = [
+        {
+            "rules": [
+                ImportRule(
+                    match_tags=[ImportRuleTag(key="Environment")],
+                    action=ImportAction.set_import_only,
+                ),
+            ],
+            "result": "import_only",
+        },
+        {
+            "rules": [
+                ImportRule(
+                    match_tags=[ImportRuleTag(key="Environment", value="Test")],
+                    action=ImportAction.ignore,
+                ),
+            ],
+            "result": None,
+        },
+        {
+            "rules": [
+                ImportRule(
+                    match_tags=[ImportRuleTag(key="tagkey", value="tagvalue")],
+                    action=ImportAction.set_import_only,
+                )
+            ],
+            "result": "undefined",
+        },
+        {
+            "rules": [ImportRule(match_names=["Test*"], action=ImportAction.ignore)],
+            "result": None,
+        },
+        {
+            "rules": [
+                ImportRule(match_names=["AWSServiceRole*"], action=ImportAction.ignore)
+            ],
+            "result": "undefined",
+        },
+        {
+            "rules": [
+                ImportRule(
+                    match_paths=["/service-role/*", "/aws-service-role/*"],
+                    action=ImportAction.ignore,
+                )
+            ],
+            "result": "undefined",
+        },
+        {
+            "rules": [
+                ImportRule(
+                    match_tags=[{"key": "ManagedBy", "value": "CDK"}],
+                    action=ImportAction.ignore,
+                )
+            ],
+            "result": "undefined",
+        },
+        {
+            "rules": [
+                ImportRule(
+                    match_template_types=["NOQ::AWS::IdentityCenter::PermissionSet"],
+                    match_tags=[ImportRuleTag(key="Environment")],
+                    action=ImportAction.set_import_only,
+                )
+            ],
+            "result": "import_only",
+        },
+    ]
+    for test_rule in test_rules:
+
+        @asynccontextmanager
+        async def mock_aiofiles_open(file_path, mode):
+            content = permission_set_content  # Replace with your test data
+            yield MockAioFilesOpen(content)
+
+        with patch(
+            "iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generation.aiofiles.open",
+            new=mock_aiofiles_open,
+        ):
+            # Mock other methods used in the function
+            calculate_import_preference = MagicMock(return_value=True)
+            create_or_update_template = MagicMock()
+            group_int_or_str_attribute = AsyncMock()
+            group_dict_attribute = AsyncMock()
+            MagicMock(return_value="test_file_path")
+            config = MagicMock()
+            config.import_rules = test_rule["rules"]
+
+            with patch(
+                "iambic.plugins.v0_1_0.aws.utils.calculate_import_preference",
+                calculate_import_preference,
+            ), patch(
+                "iambic.core.template_generation.create_or_update_template",
+                create_or_update_template,
+            ), patch(
+                "iambic.core.template_generation.group_int_or_str_attribute",
+                group_int_or_str_attribute,
+            ), patch(
+                "iambic.core.template_generation.group_dict_attribute",
+                group_dict_attribute,
+            ):
+                # Call create_templated_permission_set
+                result = await create_templated_permission_set(
+                    aws_account_map,
+                    "TestPermissionSet",
+                    permission_set_refs,
+                    "permission_set_dir",
+                    {},
+                    config,
+                )
+                if not test_rule["result"]:
+                    assert result is None
+                else:
+                    assert result.iambic_managed.value == test_rule["result"]

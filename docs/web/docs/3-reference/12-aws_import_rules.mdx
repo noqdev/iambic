@@ -1,0 +1,130 @@
+---
+title: AWS Import Rules
+---
+
+## Introduction and Motivation
+
+IAMbic's import rules are a convenient way to control how IAMbic handles specific resources in your AWS environment.
+There could be situations where you would want to tell IAMbic to:
+
+- Completely IGNORE resources that are created and managed by certain systems or services such as AWS Identity Center (SSO).
+
+- Set role templates to import_only if they are managed by another infrastructure-as-code (IaC) tool, such as Terraform. This allows you to import and track
+these resources within IAMbic without allowing users to change them through an IAMbic GitOps flow.
+
+## Example configuration
+
+You can configure IAMbic's import rules in the `aws.import_rules` configuration in the IAMbic's YAML configuration file.
+Here is an example of how you might set up some import rules:
+
+```yaml
+aws:
+  import_rules:
+    - match_template_types:
+        - "NOQ::AWS::IAM::Role"
+      match_tags:
+        - key: "terraform"
+          value: "managed"
+      action: "set_import_only"
+    - match_template_types:
+        - "NOQ::AWS::IdentityCenter::PermissionSet"
+      action: "ignore"
+```
+
+In this example, the first rule tells IAMbic to set IAM Role templates (that are tagged with "terraform: managed") to import_only.
+The second rule tells IAMbic to ignore all Permission Sets.
+
+## Rule Processing Logic
+
+Import rules are processed using an `AND` logic within a rule and `OR` logic across different rules.
+
+This means that:
+
+- Within a single rule, all conditions (match_template_types, match_tags, etc.) must be met for the rule to apply.
+- Across different rules, if a resource matches any rule, the corresponding action will be taken, with ignore taking priority.
+
+For example, if a resource matches the conditions of two rules, one with an action of ignore and the other with set_import_only,
+the resource will be ignored by IAMbic.
+
+## Supported Resource Types
+
+The supported AWS resource types for the import rules in IAMbic are:
+
+- IAM Roles
+- IAM Users
+- IAM Groups
+- IAM Managed Policies
+- AWS Identity Center (SSO) Permission Sets
+
+## Examples of Rules
+
+Here are some specific examples of import rules you might set:
+
+1. Ignoring Specific Template Types:
+
+```yaml
+aws:
+  import_rules:
+    - match_template_types:
+        - "NOQ::AWS::IAM::Role"
+      action: "ignore"
+```
+
+2. Ignoring Specific Template Types if a Tag Matches:
+
+```yaml
+aws:
+  import_rules:
+    - match_template_types: ["NOQ::AWS::IAM::Role"]
+      match_tags:
+        - key: "Environment"
+          value: "Production"
+      action: "ignore"
+```
+
+3. Ignoring All Supported Templates with a Specific Tag Key, Regardless of Tag Value
+
+```yaml
+aws:
+  import_rules:
+    - match_tags:
+        - key: "terraform"
+      action: "ignore"
+```
+
+4. Ignoring All Supported Templates with a Specific Tag Key and Value:
+
+```yaml
+aws:
+  import_rules:
+    - match_tags:
+        - key: "ManagedBy"
+          value: "CDK"
+      action: "ignore"
+```
+
+5. Ignoring All Supported Templates with a Specific Identifier Starting with a String:
+
+```yaml
+aws:
+  import_rules:
+    - match_names:
+        - "AWSReservedSSO_*"
+      action: "ignore"
+```
+
+6. Ignoring IAM Role Templates with Certain Paths
+
+```yaml
+aws:
+  import_rules:
+    - match_paths:
+        - "/service-role/*"
+        - "/aws-service-role/*"
+      action: "ignore"
+```
+
+In these examples, the "ignore" action tells IAMbic not to manage these resources at all,
+while the "set_import_only" action tells IAMbic to import these resources for tracking but not manage them.
+
+The `match_template_types`, `match_tags`, `match_names`, and `match_paths` conditions allow you to specify the resources to which these actions apply.

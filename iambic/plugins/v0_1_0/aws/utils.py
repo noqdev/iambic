@@ -3,17 +3,73 @@ from __future__ import annotations
 import asyncio
 import re
 from enum import Enum
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
-from iambic.core.utils import aio_wrapper
+from iambic.core.utils import aio_wrapper, is_regex_match
 
 if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
+    from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig, ImportAction
+
+
+async def process_import_rules(
+    config: AWSConfig,
+    template_type: str,
+    identifier: str,
+    tags: list[dict[str, str]],
+    resource_dict: dict[str, Any],
+) -> list[ImportAction]:
+    actions = []
+
+    for rule in config.import_rules:
+        # Initialize match indicators
+        tag_match = name_match = path_match = template_type_match = False
+
+        # Match by tag
+        if rule.match_tags:
+            for tag in rule.match_tags:
+                for resource_tag in tags:
+                    if is_regex_match(tag.key, resource_tag.get("key")) and (
+                        tag.value is None
+                        or is_regex_match(tag.value, resource_tag.get("value"))
+                    ):
+                        tag_match = True
+                        break
+
+        # Match by name/identifier
+        if rule.match_names:
+            for pattern in rule.match_names:
+                if is_regex_match(pattern, identifier):
+                    name_match = True
+                    break
+
+        # Match by path
+        if rule.match_paths:
+            for pattern in rule.match_paths:
+                if is_regex_match(pattern, resource_dict.get("path", "")):
+                    path_match = True
+                    break
+
+        # Match by template type
+        if rule.match_template_types:
+            for pattern in rule.match_template_types:
+                if is_regex_match(pattern, template_type):
+                    template_type_match = True
+                    break
+
+        # Add action to the list if all conditions specified in the rule are satisfied
+        if (
+            (not rule.match_tags or tag_match)
+            and (not rule.match_names or name_match)
+            and (not rule.match_paths or path_match)
+            and (not rule.match_template_types or template_type_match)
+        ):
+            actions.append(rule.action)
+    return actions
 
 
 def calculate_import_preference(existing_template):

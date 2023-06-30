@@ -3,7 +3,7 @@ from __future__ import annotations
 import itertools
 import os
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import aiofiles
 
@@ -38,6 +38,7 @@ from iambic.plugins.v0_1_0.aws.template_generation import (
 from iambic.plugins.v0_1_0.aws.utils import (
     calculate_import_preference,
     get_aws_account_map,
+    process_import_rules,
 )
 
 if TYPE_CHECKING:
@@ -255,9 +256,10 @@ async def create_templated_role(  # noqa: C901
     role_dir: str,
     existing_template_map: dict,
     config: AWSConfig,
-) -> AwsIamRoleTemplate:
+) -> Optional[AwsIamRoleTemplate]:
     account_id_to_role_map = await _account_id_to_role_map(role_refs)
     num_of_accounts = len(role_refs)
+    import_actions = set()
 
     min_accounts_required_for_wildcard_included_accounts = (
         config.min_accounts_required_for_wildcard_included_accounts
@@ -280,6 +282,16 @@ async def create_templated_role(  # noqa: C901
     tag_resources = list()
     max_session_duration_resources = dict()
     for account_id, role_dict in account_id_to_role_map.items():
+        import_actions.update(
+            await process_import_rules(
+                config,
+                AWS_IAM_ROLE_TEMPLATE_TYPE,
+                role_name,
+                role_dict.get("tags", []),
+                role_dict,
+            )
+        )
+
         max_session_duration_resources[account_id] = role_dict["max_session_duration"]
         path_resources.append(
             {
@@ -339,7 +351,11 @@ async def create_templated_role(  # noqa: C901
             description_resources.append(
                 {"account_id": account_id, "resources": [{"resource_val": description}]}
             )
-
+    for action in import_actions:
+        if action.value == "set_import_only":
+            role_template_params["iambic_managed"] = "import_only"
+        if action.value == "ignore":
+            return None
     if (
         len(role_refs) != len(aws_account_map)
         or len(aws_account_map) <= min_accounts_required_for_wildcard_included_accounts

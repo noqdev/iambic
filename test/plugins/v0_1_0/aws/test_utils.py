@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import pytest
+from unittest.mock import Mock
 
-from iambic.plugins.v0_1_0.aws.utils import get_identity_arn
+import pytest
 
 
 @pytest.mark.parametrize(
@@ -38,5 +38,98 @@ from iambic.plugins.v0_1_0.aws.utils import get_identity_arn
     ],
 )
 def test_get_identity_arn(caller_identity, expected_arn):
+    from iambic.plugins.v0_1_0.aws.utils import get_identity_arn
+
     arn = get_identity_arn(caller_identity)
     assert arn == expected_arn
+
+
+@pytest.mark.asyncio
+async def test_process_import_rules():
+    from iambic.plugins.v0_1_0.aws.iambic_plugin import (
+        ImportAction,
+        ImportRule,
+        ImportRuleTag,
+    )
+    from iambic.plugins.v0_1_0.aws.utils import process_import_rules
+
+    # Setup
+    template_type = "NOQ::AWS::IAM::Role"
+    identifier = "AWSServiceRoleForCloudFormationStackSetsOrgMember"
+    tags = [{"key": "tagkey", "value": "tagvalue"}]
+    resource_dict = {
+        "path": "/aws-service-role/member.org.stacksets.cloudformation.amazonaws.com/",
+        "role_name": "AWSServiceRoleForCloudFormationStackSetsOrgMember",
+    }
+
+    test_rules = [
+        {
+            "rules": [
+                ImportRule(
+                    match_tags=[ImportRuleTag(key="terraform")],
+                    action=ImportAction.set_import_only,
+                ),
+            ],
+            "result": [],
+        },
+        {
+            "rules": [
+                ImportRule(
+                    match_tags=[ImportRuleTag(key="tagkey", value="tagvalue")],
+                    action=ImportAction.set_import_only,
+                )
+            ],
+            "result": [ImportAction.set_import_only],
+        },
+        {
+            "rules": [
+                ImportRule(match_names=["AWSReservedSSO*"], action=ImportAction.ignore)
+            ],
+            "result": [],
+        },
+        {
+            "rules": [
+                ImportRule(match_names=["AWSServiceRole*"], action=ImportAction.ignore)
+            ],
+            "result": [ImportAction.ignore],
+        },
+        {
+            "rules": [
+                ImportRule(
+                    match_paths=["/service-role/*", "/aws-service-role/*"],
+                    action=ImportAction.ignore,
+                )
+            ],
+            "result": [ImportAction.ignore],
+        },
+        {
+            "rules": [
+                ImportRule(
+                    match_tags=[{"key": "ManagedBy", "value": "CDK"}],
+                    action=ImportAction.ignore,
+                )
+            ],
+            "result": [],
+        },
+        {
+            "rules": [
+                ImportRule(
+                    match_template_types=["NOQ::AWS::IAM::Role"],
+                    match_tags=[ImportRuleTag(key="tagkey", value="tagvalue")],
+                    action=ImportAction.set_import_only,
+                )
+            ],
+            "result": [ImportAction.set_import_only],
+        },
+    ]
+    for test_rule in test_rules:
+        config_mock = Mock()
+        config_mock.import_rules = test_rule["rules"]
+
+        # Call function
+        result = await process_import_rules(
+            config_mock, template_type, identifier, tags, resource_dict
+        )
+
+        # Verify result
+        assert result == test_rule["result"]
