@@ -16,10 +16,10 @@ If you would like to set up IAMbic in a read-only capacity, please refer to the 
 Certainly not! You are free to continue using other tools like Terraform, ClickOps, etc., for managing your cloud identities,
 while employing IAMbic to handle only a portion of them. Ideal initial candidates for IAMbic management include:
 
-1) Service Control Policies
-2) Cookie-cutter AWS Roles/Permission sensitive (Such as your `engineering` role that is used by all engineers)
-3) AWS Managed Policies
-4) Sensitive Applications or groups in Okta, Azure AD, or Google Workspace
+1. Service Control Policies
+1. Cookie-cutter AWS Roles/Permission sensitive (Such as your `engineering` role that is used by all engineers)
+1. AWS Managed Policies
+1. Sensitive Applications or groups in Okta, Azure AD, or Google Workspace
 
 Regardless of whether you manage them via IAMbic or not, IAMbic will consistently track changes to all your identities.
 The fundamental principle here is storing all your IAM in one place, in a human-readable, bi-directional format. IAMbic gives you a
@@ -31,10 +31,10 @@ IAMbic provides all essential tools and Github Actions to facilitate quick setup
 
 These GitHub actions perform the following tasks:
 
-1) Regularly import IAM changes into Git, ensuring that Git remains "eventually consistent" with your permissions across AWS, Okta, Azure AD, and Google Workspace.
-2) Identify changes in near-real-time for AWS, utilizing AWS EventBridge rules monitoring IAM changes events through CloudTrail.
-3) Terminate access and permissions defined to expire within IAMbic templates.
-4) Enforce drift prevention - If a user designates IAMbic as the "source of truth" in a template, IAMbic will periodically revert any out-of-band changes to the source of truth as dictated by the IAMbic template.
+1. Regularly import IAM changes into Git, ensuring that Git remains "eventually consistent" with your permissions across AWS, Okta, Azure AD, and Google Workspace.
+1. Identify changes in near-real-time for AWS, utilizing AWS EventBridge rules monitoring IAM changes events through CloudTrail.
+1. Terminate access and permissions defined to expire within IAMbic templates.
+1. Enforce drift prevention - If a user designates IAMbic as the "source of truth" in a template, IAMbic will periodically revert any out-of-band changes to the source of truth as dictated by the IAMbic template.
 
 ### What is the recommended approach for multiple users making concurrent changes to their permission templates?
 
@@ -50,9 +50,9 @@ In cases where there are multiple pull requests proposing changes to the same te
 
 The Noq Platform provides additional features such as:
 
-1) An intuitive self-service wizard enabling end-users and cloud admins to request temporary or permanent access to applications, AWS credentials, or IAM permissions, without any requirement to understand IAMbic or IAM syntax.
-2) Removal of unused permissions via pull requests that can be crowdsourced to the owners of various identities and services within the company.
-3) Virtual guardrails - Detection rules that alert security and compliance teams when a violation occurs, for instance, new members added to a
+1. An intuitive self-service wizard enabling end-users and cloud admins to request temporary or permanent access to applications, AWS credentials, or IAM permissions, without any requirement to understand IAMbic or IAM syntax.
+1. Removal of unused permissions via pull requests that can be crowdsourced to the owners of various identities and services within the company.
+1. Virtual guardrails - Detection rules that alert security and compliance teams when a violation occurs, for instance, new members added to a
 cloud administrators group in Okta / Active Directory out-of-band, or access to sensitive permissions in AWS like an S3 bucket or confidential financial database.
 
 ### How does the expiration feature work?
