@@ -1,6 +1,24 @@
 
 # Change Log
 
+## 0.10.1 (July 3, 2023)
+
+DOCS:
+* Docs for setting up iambic approve in GitHub integration [#467](https://github.com/noqdev/iambic/pull/467)
+* Add FAQ to docs ; Add GHA readme [#479](https://github.com/noqdev/iambic/pull/479)
+
+BUG FIXES:
+* Fixed add single AWS account in setup flow. The bug was checking CloudFormation StackSets status when single AWS account setup does not use StackSets [#478](https://github.com/noqdev/iambic/pull/478)
+* Updated `semver` to `7.5.2+` [#474](https://github.com/noqdev/iambic/pull/474)
+
+ENHANCEMENTS:
+* Adds support for AWS Import Rules. IAMbic will obey import rules to either ignore resources with certain attributes, or to flag them as import_only. [#469](https://github.com/noqdev/iambic/pull/469)
+* Implement GitHub App interaction error protocol [#471](https://github.com/noqdev/iambic/pull/471)
+* Allow `iambic apply` to be triggered by GitHub Apps [#470](https://github.com/noqdev/iambic/pull/470)
+
+THANKS:
+* `datfinesoul` to champion the user story for AWS Import Rules
+
 ## 0.9.8 (Jun 20, 2023)
 
 ENHANCEMENTS:
