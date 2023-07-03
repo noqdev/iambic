@@ -122,7 +122,7 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} Noq Software, Inc. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear().toString()} Noq Software, Inc. Built with Docusaurus.`,
       },
       prism: {
         theme: lightCodeTheme,

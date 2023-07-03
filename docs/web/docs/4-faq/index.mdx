@@ -1,0 +1,260 @@
+---
+title: FAQ
+---
+
+### Can I use IAMbic to track changes in my cloud environment without managing permissions?
+
+Yes! IAMbic can be used to track changes to identities and permissions in your cloud environment,
+and import them in to Git. This provides a Git history into changes over time, and provides visibility into what is being changed,
+without needing to manually track changes in a spreadsheet or other tool.
+
+If you would like to set up IAMbic in a read-only capacity, please refer to the [Read-Only Spoke Role Permissions](/reference/aws_hub_and_spoke_roles#read-only-spoke-role-permissions) documentation.
+
+
+### If I use IAMbic to manage cloud identities, does IAMbic require control over ALL of them?
+
+Certainly not! You are free to continue using other tools like Terraform, ClickOps, etc., for managing your cloud identities,
+while employing IAMbic to handle only a portion of them. Ideal initial candidates for IAMbic management include:
+
+1. Service Control Policies
+1. Cookie-cutter AWS Roles/Permission sensitive (Such as your `engineering` role that is used by all engineers)
+1. AWS Managed Policies
+1. Sensitive Applications or groups in Okta, Azure AD, or Google Workspace
+
+Regardless of whether you manage them via IAMbic or not, IAMbic will consistently track changes to all your identities.
+The fundamental principle here is storing all your IAM in one place, in a human-readable, bi-directional format. IAMbic gives you a
+unified view in Git instead of logging into each cloud console or using a different tool for each cloud provider.
+
+### How does IAMbic work in a production environment?
+
+IAMbic provides all essential tools and GitHub Actions to facilitate quick setup in a production environment.
+
+These GitHub actions perform the following tasks:
+
+1. Regularly import IAM changes into Git, ensuring that Git remains "eventually consistent" with your permissions across AWS, Okta, Azure AD, and Google Workspace.
+1. Identify changes in near-real-time for AWS, utilizing AWS EventBridge rules monitoring IAM changes events through CloudTrail.
+1. Terminate access and permissions defined to expire within IAMbic templates.
+1. Enforce drift prevention - If a user designates IAMbic as the "source of truth" in a template, IAMbic will periodically revert any out-of-band changes to the source of truth as dictated by the IAMbic template.
+
+### What is the recommended approach for multiple users making concurrent changes to their permission templates?
+
+In a production setting, users should not directly run iambic apply. Instead, all interactions with IAMbic should be conducted through a Git flow, with IAMbic being operated by your CI/CD process.
+
+This means that users would make modifications to their templates in Git and then submit a pull request to apply these changes. This pull request would then undergo a review process by a peer or a cloud administrator before being merged.
+
+In cases where there are multiple pull requests proposing changes to the same template, these requests should be rebased on top of the most recent version of the template. For more detailed information and examples of pull requests, please refer to the
+[IAMOps Philosophy](/reference/iamops_philosophy) section.
+
+
+### What differentiates the free version of IAMbic from the paid Noq Platform?
+
+The Noq Platform provides additional features such as:
+
+1. An intuitive self-service wizard enabling end-users and cloud admins to request temporary or permanent access to applications, AWS credentials, or IAM permissions, without any requirement to understand IAMbic or IAM syntax.
+1. Removal of unused permissions via pull requests that can be crowdsourced to the owners of various identities and services within the company.
+1. Virtual guardrails - Detection rules that alert security and compliance teams when a violation occurs, for instance, new members added to a
+cloud administrators group in Okta / Active Directory out-of-band, or access to sensitive permissions in AWS like an S3 bucket or confidential financial database.
+
+### How does the expiration feature work?
+
+IAMbic allows declarative definition of the expiration of resources, access rules, and cloud permissions. During a pull-request workflow,
+expiration can be described in relative or absolute terms. For instance, one could specify `expires_at: in 20 hours` on any resource (such as an IAM role),
+access rule, or cloud policy.
+
+In a [production GitOps flow](https://docs.iambic.org/reference/iamops_philosophy#guide-to-the-iambic-apply-process),  relative expiration ("in 20 hours") is converted to a UTC timestamp
+after a PR is applied and just before the PR is merged.
+
+[GitHub Actions](https://github.com/noqdev/iambic/tree/main/iambic/github/templates) periodically verify whether a resource, access rule, or cloud permission has expired.
+If so, the entity will be removed in the cloud (or resource), and the template will be updated (or discarded) in Git.
+
+### How does drift prevention / auto reversion work?
+
+In a [production GitOps flow](https://docs.iambic.org/reference/iamops_philosophy#guide-to-the-iambic-apply-process), IAMbic imports all cloud resources into a read/write state by default.
+Meaning, if alterations are made to a cloud resource through the AWS/Okta console, Terraform, or other means, IAMbic will automatically import these changes into Git and update any associated resource template.
+
+We can instruct IAMbic to "prevent drift" on a resource by specifying `iambic_managed: enforced` in a template. Please refer to [Preventing Drift](/how_to_guides/prevent-drift) for specific guidance and examples. A periodic
+[GitHub Action](https://github.com/noqdev/iambic/blob/main/iambic/github/templates/iambic-enforce.yml) will load all templates with `iambic_managed: enforced` and compare them to cloud state.
+If there are any differences, the cloud resource will be reverted to the state defined in the IAMbic template.
+
+### Can I create cloud identities/policies? Or does IAMbic only support importing and modifying existing ones?
+
+You have the capability to create cloud identities and policies via IAMbic. If you create a resource through Cloud Console, Terraform, or CloudFormation, IAMbic will automatically import it into your `iambic-templates` Git repository.
+
+To create an identity through IAMbic, you can form a new user template or duplicate an existing user and apply it. Here's an example of creating an IAM User:
+
+1. In your `iambic-templates` repository, create a new template with the following content. Although you can put it anywhere,
+we recommend keeping things organized, for example: `resources/aws/iam/user/<account_name>/testuser123.yaml`
+
+```yaml
+template_type: NOQ::AWS::IAM::User
+included_accounts:
+    - account_name
+identifier: TestUser123
+properties:
+    inline_policies:
+      - policy_name: s3-access
+        statement:
+          - action:
+              - s3:GetObject
+            effect: Allow
+            resource: "arn:aws:s3:::awsexamplebucket1-{{var.account_name}}/*"
+    user_name: TestUser123
+```
+
+2. In a production Git workflow, the user would follow an IAMOps flow to request the creation of a user, get approval from a cloud administrator or peer, and instruct IAMbic to implement the change. The workflow would look like this:
+
+```bash
+git checkout testuser123
+git add resources/aws/iam/user/<account_name>/testuser123.yaml
+git commit -m “Creating TestUser123”
+git push -u origin testuser123
+# Create PR
+# Get Approval from cloud admin team and/or a peer
+Issue `iambic apply` as a comment to instruct Iambic to apply the change
+```
+
+For an example flow, please see [Pull Request #13 in the iambic-templates-examples repository](https://github.com/noqdev/iambic-templates-examples/pull/13).
+
+
+### How do the GitHub Actions function in IAMbic?
+
+The GitHub Actions are an integral part of IAMbic operations. They are defined within the IAMbic repository under [iambic/github/templates](https://github.com/noqdev/iambic/blob/main/iambic/github/templates/).
+These actions function based on a preset cron schedule, which initiates an event within GitHub. This event is then picked up by the Webhook
+defined in your [IAMbic GitHub App](/getting_started/github). The webhook then triggers a Lambda function (which runs IAMbic in a Docker container) to run the desired action.
+
+The GitHub actions themselves are short-lived, and are not used to manage cloud identities or policies in your cloud environment.
+
+You are welcome to modify the schedule of each action to suit your needs. For instance, you may want to run `iambic-import` or `iambic-import` more frequently.
+
+It's important to note that IAMbic's design is open and flexible, and we gladly welcome contributions for enhancing its functionality.
+This includes supporting alternative methods of running IAMbic.
+
+### Why do I create the hub & spoke role in IAMbic and what is interacting with this role?
+
+IAMbic utilizes these roles to manage and interact with your AWS resources across multiple accounts,
+establishing a centralized approach to resource management. The IambicHubRole assumes the IambicSpokeRole to
+perform actions in each AWS account, thereby enabling changes or data reads across all accounts from a single point - the Hub.
+
+The Hub Role is IAMbic's entrypoint role. This means that IAMbic should have direct access to this role,
+or it can assume this role from the IAM credentials provided by the user. IAMbic reads your AWS accounts from your IAMbic configuration
+(By default, this is stored in iambic_config.yaml, but it could be in a different file that specifies `template_type: NOQ::Core::Config`)
+and determines the accessible credentials by calling the boto3 equivalent of "aws sts get-caller-identity". If the identity doesn't
+match the Hub Role defined in the configuration, IAMbic will use the user-provided AWS credentials and attempt to assume the configured IAMbicHubRole.
+
+IAMbic is deployed to production as a Lambda function running a Docker container. The
+IAMbicHubRole is configured to allow Lambda to assume this role. The Lambda function executes
+IAMbic just as you would use it locally.
+
+### Why do we need a Hub and Spoke role in the IAMbic hub account during setup for AWS organizations?
+
+The Spoke role is present on all child accounts, including the account housing the HubRole.
+This design keeps the permissions on the HubRole minimal and standardizes how IAMbic interacts with each account,
+simplifying the code and facilitating the creation of standard detection rules to monitor the actions of `IAMbicHubRole` and `IAMbicSpokeRole` in a SIEM.
+Thus, whenever IAMbic interacts with an account (including the hub account), it will assume the Spoke role on the target account before executing
+most actions, with the exception of some actions associated with the AWS Organizaion management account.
+
+### What happens when I delete a file and run IAMbic plan or IAMbic apply?
+
+We've designed IAMbic to be very explicit about resource deletion. You can delete a resource by setting
+`deleted: true` at the top level of any IAMbic template, and then applying the template. IAMbic will then delete the
+file in your local IAMbic folder or in the iambic-templates repository in a GitOps flow. This design prevents accidental
+resource deletions.
+
+You can also delete resources by setting `expires_at: …` at the top level of an IAMbic template. If the date is
+in the past, or after the expected time has elapsed, IAMbic will delete the resource and the respective template.
+
+### How can I specify the expiration for a user or user permissions?
+
+To specify the expiration of a user or their permissions, you need to add `expires_at: …` at the top level of a template,
+at the same level as a policy, or at the same level as a policy statement within a policy. If you're using inline policies
+or permission boundaries, the syntax remains the same.
+
+To expire, you can either run `iambic apply` on the template. In the production flow, this would be handled by the
+[expire GitHub Action](https://github.com/noqdev/iambic/blob/main/iambic/github/templates/iambic-expire.yml).
+
+For example, if you want to expire the entire user `TestUser` at Dec 31, 2023, you can add
+`expires_at: 2023-12-31` at the top level of the template like this:
+
+```yaml
+template_type: NOQ::AWS::IAM::User
+included_accounts:
+  - TestAccount
+identifier: TestUser
+expires_at: 2023-12-31
+properties:
+  managed_policies:
+    - policy_arn: arn:aws:iam::aws:policy/IAMUserChangePassword
+    - policy_arn: arn:aws:iam::{{var.account_id}}:policy/ContractorAPIGLambdaDynamoPolicy
+```
+
+To expire the `ContractorAPIGLambdaDynamoPolicy` policy at Dec 31, 2023, you can add
+`expires_at: 2023-12-31` at the same level as the policy you'd like to expire, like this:
+
+```yaml
+template_type: NOQ::AWS::IAM::User
+included_accounts:
+  - TestAccount
+identifier: TestUser
+properties:
+  managed_policies:
+    - policy_arn: arn:aws:iam::aws:policy/IAMUserChangePassword
+    - policy_arn: arn:aws:iam::{{var.account_id}}:policy/ContractorAPIGLambdaDynamoPolicy
+      expires_at: 2023-12-31
+```
+
+### What is the difference between IAMbic and AWS CloudFormation?
+
+While both IAMbic and AWS CloudFormation allow you to manage your AWS resources, they focus on different areas.
+AWS CloudFormation is a comprehensive infrastructure as code (IaC) service that allows you to
+manage almost any type of AWS resource.
+
+On the other hand, IAMbic is specialized in managing AWS IAM resources such as roles, users, groups, policies, and permission boundaries;
+organization-wide resources such as AWS Identity Center (SSO) Permission Sets, and Service Control Policies. It runs with full
+awareness of youur AWS accounts and organization in a single invocation.
+
+It has features designed specifically for IAM resource management, such as support for policy versioning, expirations, and multi-account IAM setup.
+
+While IAMbic could be used alongside CloudFormation, it is particularly valuable in scenarios where advanced IAM management features are
+required or when managing IAM resources across multiple AWS accounts.
+
+### Can I automate the IAMbic apply command in a CI/CD pipeline?
+
+Yes, you can automate the iambic apply command in a Continuous Integration/Continuous Deployment (CI/CD) pipeline. To do this, you would
+typically use a [GitOps approach](/reference/iamops_philosophy) where any changes made to your IAMbic templates in a designated Git
+repository automatically trigger a pipeline that executes the `iambic apply` command. IAMbic ships with GitHub actions, a Lambda container,
+and a Setup Wizard that help you set these up.
+
+The `iambic apply` command can be run in a CI/CD tool like Jenkins, Travis, or GitHub Actions,
+which have access to your AWS environment via IAM roles. The tool would execute the command in a secure runner that has been
+configured with the necessary AWS permissions.
+
+Keep in mind that you need to handle invocation of IAMbic securely within your CI/CD pipeline. This typically involves setting a
+Webhook to the IAMbic docker container or lambda function with a secure key.
+
+### Is there a way to include multiple AWS accounts in a single IAMbic template?
+
+Yes, IAMbic allows you to include multiple AWS accounts in a single IAMbic template.
+You can define the `included_accounts` attribute at the top level of any IAMbic template.
+You can also define the `included_accounts` attribute at the top level of a policy or policy statement within a policy,
+which are used to define different permissions for different accounts.
+
+This attribute accepts a list of AWS account aliases or AWS account ids.
+
+For example:
+
+```yaml
+template_type: NOQ::AWS::IAM::User
+included_accounts:
+  - Prod
+  - Dev
+identifier: Adriano
+properties:
+  managed_policies:
+    - policy_arn: arn:aws:iam::aws:policy/IAMUserChangePassword
+      included_accounts:
+        - Prod
+        - Dev
+    - policy_arn: arn:aws:iam::{{var.account_id}}:policy/ContractorAPIGLambdaDynamoPolicy
+      included_accounts:
+        - Dev
+```
