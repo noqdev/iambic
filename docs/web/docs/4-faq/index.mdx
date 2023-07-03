@@ -8,8 +8,10 @@ Yes! IAMbic can be used to track changes to identities and permissions in your c
 and import them in to Git. This provides a Git history into changes over time, and provides visibility into what is being changed,
 without needing to manually track changes in a spreadsheet or other tool.
 
+If you would like to set up IAMbic in a read-only capacity, please refer to the [Read-Only Spoke Role Permissions](/reference/aws_hub_and_spoke_roles#read-only-spoke-role-permissions) documentation.
 
-### If I use IAMbic to manage cloud identities, does IAMbic requre control over ALL of them?
+
+### If I use IAMbic to manage cloud identities, does IAMbic require control over ALL of them?
 
 Certainly not! You are free to continue using other tools like Terraform, ClickOps, etc., for managing your cloud identities,
 while employing IAMbic to handle only a portion of them. Ideal initial candidates for IAMbic management include:
@@ -21,11 +23,11 @@ while employing IAMbic to handle only a portion of them. Ideal initial candidate
 
 Regardless of whether you manage them via IAMbic or not, IAMbic will consistently track changes to all your identities.
 The fundamental principle here is storing all your IAM in one place, in a human-readable, bi-directional format. IAMbic gives you a
-nified view in Git instead of logging into each cloud console or using a different tool for each cloud provider.
+unified view in Git instead of logging into each cloud console or using a different tool for each cloud provider.
 
 ### How does IAMbic work in a production environment?
 
-IAMbic provides all essential tools and Github Actions to facilitate quick setup in a production environment. These Github actions execute the following tasks:
+IAMbic provides all essential tools and Github Actions to facilitate quick setup in a production environment.
 
 These GitHub actions perform the following tasks:
 
@@ -48,7 +50,7 @@ In cases where there are multiple pull requests proposing changes to the same te
 
 The Noq Platform provides additional features such as:
 
-1) An intuitive self-service wizard enabling end-users to request temporary or permanent access to applications, AWS credentials, or IAM permissions, without any requirement to understand IAMbic or IAM syntax.
+1) An intuitive self-service wizard enabling end-users and cloud admins to request temporary or permanent access to applications, AWS credentials, or IAM permissions, without any requirement to understand IAMbic or IAM syntax.
 2) Removal of unused permissions via pull requests that can be crowdsourced to the owners of various identities and services within the company.
 3) Virtual guardrails - Detection rules that alert security and compliance teams when a violation occurs, for instance, new members added to a
 cloud administrators group in Okta / Active Directory out-of-band, or access to sensitive permissions in AWS like an S3 bucket or confidential financial database.
@@ -126,3 +128,133 @@ You are welcome to modify the schedule of each action to suit your needs. For in
 
 It's important to note that IAMbic's design is open and flexible, and we gladly welcome contributions for enhancing its functionality.
 This includes supporting alternative methods of running IAMbic.
+
+### Why do I create the hub & spoke role in IAMbic and what is interacting with this role?
+
+IAMbic utilizes these roles to manage and interact with your AWS resources across multiple accounts,
+establishing a centralized approach to resource management. The IambicHubRole assumes the IambicSpokeRole to
+perform actions in each AWS account, thereby enabling changes or data reads across all accounts from a single point - the Hub.
+
+The Hub Role is IAMbic's entrypoint role. This means that IAMbic should have direct access to this role,
+or it can assume this role from the IAM credentials provided by the user. IAMbic reads your AWS accounts from your IAMbic configuration
+(By default, this is stored in iambic_config.yaml, but it could be in a different file that specifies `template_type: NOQ::Core::Config`)
+and determines the accessible credentials by calling the boto3 equivalent of "aws sts get-caller-identity". If the identity doesn't
+match the Hub Role defined in the configuration, IAMbic will use the user-provided AWS credentials and attempt to assume the configured IAMbicHubRole.
+
+IAMbic is deployed to production as a Lambda function running a Docker container. The
+IAMbicHubRole is configured to allow Lambda to assume this role. The Lambda function executes
+IAMbic just as you would use it locally.
+
+### Why do we need a Hub and Spoke role in the IAMbic hub account during setup for AWS organizations?
+
+The Spoke role is present on all child accounts, including the account housing the HubRole.
+This design keeps the permissions on the HubRole minimal and standardizes how IAMbic interacts with each account,
+simplifying the code and facilitating the creation of standard detection rules to monitor the actions of `IAMbicHubRole` and `IAMbicSpokeRole` in a SIEM.
+Thus, whenever IAMbic interacts with an account (including the hub account), it will assume the Spoke role on the target account before executing
+most actions, with the exception of some actions associated with the AWS Organizaion management account.
+
+### What happens when I delete a file and run IAMbic plan or IAMbic apply?
+
+We've designed IAMbic to be very explicit about resource deletion. You can delete a resource by setting
+`deleted: true` at the top level of any IAMbic template, and then applying the template. IAMbic will then delete the
+file in your local IAMbic folder or in the iambic-templates repository in a GitOps flow. This design prevents accidental
+resource deletions.
+
+You can also delete resources by setting `expires_at: …` at the top level of an IAMbic template. If the date is
+in the past, or after the expected time has elapsed, IAMbic will delete the resource and the respective template.
+
+### How can I specify the expiration for a user or user permissions?
+
+To specify the expiration of a user or their permissions, you need to add `expires_at: …` at the top level of a template,
+at the same level as a policy, or at the same level as a policy statement within a policy. If you're using inline policies
+or permission boundaries, the syntax remains the same.
+
+To expire, you can either run `iambic apply` on the template. In the production flow, this would be handled by the
+[expire GitHub Action](https://github.com/noqdev/iambic/blob/main/iambic/github/templates/iambic-expire.yml).
+
+For example, if you want to expire the entire user `TestUser` at Dec 31, 2023, you can add
+`expires_at: 2023-12-31` at the top level of the template like this:
+
+```yaml
+template_type: NOQ::AWS::IAM::User
+included_accounts:
+  - TestAccount
+identifier: TestUser
+expires_at: 2023-12-31
+properties:
+  managed_policies:
+    - policy_arn: arn:aws:iam::aws:policy/IAMUserChangePassword
+    - policy_arn: arn:aws:iam::{{var.account_id}}:policy/ContractorAPIGLambdaDynamoPolicy
+```
+
+To expire the `ContractorAPIGLambdaDynamoPolicy` policy at Dec 31, 2023, you can add
+`expires_at: 2023-12-31` at the same level as the policy you'd like to expire, like this:
+
+```yaml
+template_type: NOQ::AWS::IAM::User
+included_accounts:
+  - TestAccount
+identifier: TestUser
+properties:
+  managed_policies:
+    - policy_arn: arn:aws:iam::aws:policy/IAMUserChangePassword
+    - policy_arn: arn:aws:iam::{{var.account_id}}:policy/ContractorAPIGLambdaDynamoPolicy
+      expires_at: 2023-12-31
+```
+
+### What is the difference between IAMbic and AWS CloudFormation?
+
+While both IAMbic and AWS CloudFormation allow you to manage your AWS resources, they focus on different areas.
+AWS CloudFormation is a comprehensive infrastructure as code (IaC) service that allows you to
+manage almost any type of AWS resource.
+
+On the other hand, IAMbic is specialized in managing AWS IAM resources such as roles, users, groups, policies, and permission boundaries;
+organization-wide resources such as AWS Identity Center (SSO) Permission Sets, and Service Control Policies. It runs with full
+awareness of youur AWS accounts and organization in a single invocation.
+
+It has features designed specifically for IAM resource management, such as support for policy versioning, expirations, and multi-account IAM setup.
+
+While IAMbic could be used alongside CloudFormation, it is particularly valuable in scenarios where advanced IAM management features are
+required or when managing IAM resources across multiple AWS accounts.
+
+### Can I automate the IAMbic apply command in a CI/CD pipeline?
+
+Yes, you can automate the iambic apply command in a Continuous Integration/Continuous Deployment (CI/CD) pipeline. To do this, you would
+typically use a [GitOps approach](/reference/iamops_philosophy) where any changes made to your IAMbic templates in a designated Git
+repository automatically trigger a pipeline that executes the `iambic apply` command. IAMbic ships with GitHub actions, a Lambda container,
+and a Setup Wizard that help you set these up.
+
+The `iambic apply` command can be run in a CI/CD tool like Jenkins, Travis, or GitHub Actions,
+which have access to your AWS environment via IAM roles. The tool would execute the command in a secure runner that has been
+configured with the necessary AWS permissions.
+
+Keep in mind that you need to handle invocation of IAMbic securely within your CI/CD pipeline. This typically involves setting a
+Webhook to the IAMbic docker container or lambda function with a secure key.
+
+### Is there a way to include multiple AWS accounts in a single IAMbic template?
+
+Yes, IAMbic allows you to include multiple AWS accounts in a single IAMbic template.
+You can define the `included_accounts` attribute at the top level of any IAMbic template.
+You can also define the `included_accounts` attribute at the top level of a policy or policy statement within a policy,
+which are used to define different permissions for different accounts.
+
+This attribute accepts a list of AWS account aliases or AWS account ids.
+
+For example:
+
+```yaml
+template_type: NOQ::AWS::IAM::User
+included_accounts:
+  - Prod
+  - Dev
+identifier: Adriano
+properties:
+  managed_policies:
+    - policy_arn: arn:aws:iam::aws:policy/IAMUserChangePassword
+      included_accounts:
+        - Prod
+        - Dev
+    - policy_arn: arn:aws:iam::{{var.account_id}}:policy/ContractorAPIGLambdaDynamoPolicy
+      included_accounts:
+        - Dev
+```
