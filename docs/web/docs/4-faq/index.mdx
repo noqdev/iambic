@@ -27,7 +27,7 @@ unified view in Git instead of logging into each cloud console or using a differ
 
 ### How does IAMbic work in a production environment?
 
-IAMbic provides all essential tools and Github Actions to facilitate quick setup in a production environment.
+IAMbic provides all essential tools and GitHub Actions to facilitate quick setup in a production environment.
 
 These GitHub actions perform the following tasks:
 
@@ -122,7 +122,7 @@ The GitHub Actions are an integral part of IAMbic operations. They are defined w
 These actions function based on a preset cron schedule, which initiates an event within GitHub. This event is then picked up by the Webhook
 defined in your [IAMbic GitHub App](/getting_started/github). The webhook then triggers a Lambda function (which runs IAMbic in a Docker container) to run the desired action.
 
-The Github actions themselves are short-lived, and are not used to manage cloud identities or policies in your cloud environment.
+The GitHub actions themselves are short-lived, and are not used to manage cloud identities or policies in your cloud environment.
 
 You are welcome to modify the schedule of each action to suit your needs. For instance, you may want to run `iambic-import` or `iambic-import` more frequently.
 
