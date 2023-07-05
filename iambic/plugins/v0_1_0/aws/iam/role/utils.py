@@ -354,6 +354,7 @@ async def apply_role_managed_policies(
                         resource_type="aws:policy_document",
                         resource_id=policy_arn,
                         attribute="managed_policies",
+                        new_value={"PolicyArn": policy_arn},
                     )
                 ]
                 apply_awaitable = boto_crud_call(
@@ -370,6 +371,7 @@ async def apply_role_managed_policies(
                         resource_type="aws:policy_document",
                         resource_id=policy_arn,
                         attribute="managed_policies",
+                        new_value={"PolicyArn": policy_arn},
                     )
                     for policy_arn in new_managed_policies
                 ]
