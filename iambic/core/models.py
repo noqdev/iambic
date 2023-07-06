@@ -37,6 +37,7 @@ from pydantic.fields import ModelField
 from iambic.core.iambic_enum import Command, ExecutionStatus, IambicManaged
 from iambic.core.logger import log
 from iambic.core.utils import (
+    LiteralScalarString,
     apply_to_provider,
     create_commented_map,
     get_writable_directory,
@@ -210,6 +211,7 @@ class BaseModel(IambicPydanticBaseModel):
             "included_orgs",
             "excluded_orgs",
             "owner",
+            "notes",
             "template_type",
             "file_path",
             "metadata_iambic_fields",
@@ -490,6 +492,7 @@ class BaseTemplate(
     template_type: str
     file_path: Union[str, Path] = Field(..., hidden_from_schema=True)
     owner: Optional[str]
+    notes: Optional[str]
     iambic_managed: Optional[IambicManaged] = Field(
         IambicManaged.UNDEFINED,
         description="Controls the directionality of Iambic changes",
@@ -538,6 +541,8 @@ class BaseTemplate(
         )
         sorted_input_dict = sort_dict(input_dict)
         sorted_input_dict = create_commented_map(sorted_input_dict)
+        if notes := sorted_input_dict.get("notes"):
+            sorted_input_dict["notes"] = LiteralScalarString(notes)
         as_yaml = yaml.dump(sorted_input_dict)
         # Force template_type to be at the top of the yaml
         template_type_str = f"template_type: {self.template_type}"
@@ -590,7 +595,7 @@ class BaseTemplate(
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
-        return {"iambic_managed", "file_path", "owner"}
+        return {"iambic_managed", "file_path", "owner", "notes"}
 
 
 class Variable(PydanticBaseModel):

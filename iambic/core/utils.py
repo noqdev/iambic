@@ -17,7 +17,7 @@ from urllib.parse import unquote_plus
 import aiofiles
 import jwt
 from asgiref.sync import sync_to_async
-from ruamel.yaml import YAML
+from ruamel.yaml import YAML, scalarstring
 
 from iambic.core import noq_json as json
 from iambic.core.aio_utils import gather_limit
@@ -38,6 +38,8 @@ IAMBIC_ERR_MSG = (
 )
 
 __WRITABLE_DIRECTORY__ = pathlib.Path.home()
+
+LiteralScalarString = scalarstring.LiteralScalarString
 
 
 def init_writable_directory() -> None:
