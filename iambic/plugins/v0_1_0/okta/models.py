@@ -9,10 +9,12 @@ from iambic.core.models import BaseModel, ExpiryModel
 
 # Reference: https://www.guidodiepen.nl/2019/02/implementing-a-simple-plugin-framework-in-python/
 
-
 class IdentityProvider(BaseModel):
     name: str
 
+class Status(Enum):
+    active = "ACTIVE"
+    inactive = "INACTIVE"
 
 class UserStatus(Enum):
     active = "active"
@@ -24,6 +26,13 @@ class UserStatus(Enum):
     locked_out = "locked_out"
     password_expired = "password_expired"
 
+# TODO which one to use
+# Why not reuse the one from okta? If so -- then change above UserStatus too
+# See also below Status
+from okta.models import GroupRuleStatus
+# class GroupRuleStatus(Enum):
+#     active = "active"
+#     inactive = "inactive"
 
 class User(BaseModel, ExpiryModel):
     idp_name: str
@@ -118,6 +127,24 @@ class Group(BaseModel):
     def resource_type(self) -> str:
         return "okta:group"
 
+class GroupRule(BaseModel):
+    name: str = Field(..., description="Name of the group rule")
+    idp_name: str = Field(
+        ...,
+        description="Name of the tenant's identity provider that's associated with the group rule",
+    )
+    rule_id: str = Field(
+        ..., description="Rule ID"
+    )
+    
+    status: GroupRuleStatus = Field(..., description="Status")
+    conditions: str = Field(None, description="Rule conditions")
+    actions: str = Field(None, description="Rule actions")
+    
+    @property
+    def resource_type(self) -> str:
+        return "okta:group_rule"
+
 
 class Assignment(BaseModel, ExpiryModel):
     user: Optional[str] = Field(None, description="User assigned to the app")
@@ -130,11 +157,6 @@ class Assignment(BaseModel, ExpiryModel):
     @property
     def resource_id(self) -> str:
         return f"{self.user or self.group}"
-
-
-class Status(Enum):
-    active = "ACTIVE"
-    inactive = "INACTIVE"
 
 
 class AppProfileMapping(BaseModel):

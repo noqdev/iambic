@@ -13,8 +13,14 @@ from iambic.plugins.v0_1_0.okta.app.template_generation import (
 )
 from iambic.plugins.v0_1_0.okta.group.template_generation import (
     collect_org_groups,
-    generate_group_templates,
+    generate_group_templates
 )
+
+from iambic.plugins.v0_1_0.okta.group_rule.template_generation import (
+    collect_org_group_rules,
+    generate_rule_templates,
+)
+
 from iambic.plugins.v0_1_0.okta.user.template_generation import (
     collect_org_users,
     generate_user_templates,
@@ -53,6 +59,7 @@ async def import_okta_resources(
             [
                 collect_org_apps(task_message, config),
                 collect_org_groups(task_message, config),
+                collect_org_group_rules(task_message, config),
                 collect_org_users(task_message, config),
             ]
         )
@@ -73,6 +80,7 @@ async def import_okta_resources(
         generator_tasks = [
             generate_app_templates(config, exe_message, base_output_dir),
             generate_group_templates(config, exe_message, base_output_dir),
+            generate_rule_templates(config, exe_message, base_output_dir),
             generate_user_templates(config, exe_message, base_output_dir),
         ]
         await asyncio.gather(*generator_tasks)
