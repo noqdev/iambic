@@ -310,10 +310,13 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
                 ]
             )
 
-            supported_update_keys = ["Description", "MaxSessionDuration"]
+            supported_update_key_values = {
+                "Description": "description",
+                "MaxSessionDuration": "max_session_duration",
+            }
             update_resource_log_params = {**log_params}
             update_role_params = {}
-            for k in supported_update_keys:
+            for k in supported_update_key_values.keys():
                 if account_role.get(k) is not None and account_role.get(
                     k
                 ) != current_role.get(k):
@@ -338,30 +341,41 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
                                 RoleName=role_name,
                                 **{
                                     k: account_role.get(k)
-                                    for k in supported_update_keys
+                                    for k in supported_update_key_values.keys()
                                 },
                             )
                         except Exception as e:
                             exceptions.append(str(e))
-                        return [
-                            ProposedChange(
-                                change_type=ProposedChangeType.UPDATE,
-                                resource_id=role_name,
-                                resource_type=self.resource_type,
-                                exceptions_seen=exceptions,
+
+                        proposed_role_changes = []
+                        for key in update_role_params.keys():
+                            proposed_role_changes.append(
+                                ProposedChange(
+                                    attribute=supported_update_key_values[key],
+                                    change_type=ProposedChangeType.UPDATE,
+                                    resource_id=role_name,
+                                    resource_type=self.resource_type,
+                                    exceptions_seen=exceptions,
+                                    current_value={key: current_role[key]},
+                                    new_value={key: account_role[key]},
+                                )
                             )
-                        ]
+                        return proposed_role_changes
 
                     tasks.append(update_role())
                 else:
                     log.debug(log_str, **update_resource_log_params)
-                    account_change_details.proposed_changes.append(
-                        ProposedChange(
-                            change_type=ProposedChangeType.UPDATE,
-                            resource_id=role_name,
-                            resource_type=self.resource_type,
+                    for key in update_role_params.keys():
+                        account_change_details.proposed_changes.append(
+                            ProposedChange(
+                                attribute=supported_update_key_values[key],
+                                change_type=ProposedChangeType.UPDATE,
+                                resource_id=role_name,
+                                resource_type=self.resource_type,
+                                current_value={key: current_role[key]},
+                                new_value={key: account_role[key]},
+                            )
                         )
-                    )
         else:
             proposed_changes = [
                 ProposedChange(

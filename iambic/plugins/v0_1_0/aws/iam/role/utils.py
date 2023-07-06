@@ -393,6 +393,7 @@ async def apply_role_managed_policies(
             for policy_arn in existing_managed_policies:
                 proposed_changes = [
                     ProposedChange(
+                        current_value={"PolicyArn": policy_arn},
                         change_type=ProposedChangeType.DETACH,
                         resource_type="aws:policy_document",
                         resource_id=policy_arn,
@@ -409,6 +410,7 @@ async def apply_role_managed_policies(
             response.extend(
                 [
                     ProposedChange(
+                        current_value={"PolicyArn": policy_arn},
                         change_type=ProposedChangeType.DETACH,
                         resource_type="aws:policy_document",
                         resource_id=policy_arn,
@@ -541,6 +543,7 @@ async def apply_role_inline_policies(
             log_str = "Stale inline policies discovered."
             proposed_changes = [
                 ProposedChange(
+                    current_value=existing_policy_map[policy_name],
                     change_type=ProposedChangeType.DELETE,
                     resource_type="aws:policy_document",
                     resource_id=policy_name,
