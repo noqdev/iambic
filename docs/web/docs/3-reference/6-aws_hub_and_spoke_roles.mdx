@@ -37,11 +37,17 @@ for more details.
         "sts:TagSession",
         "sts:SetSourceIdentity"
       ],
-      "Resource": "arn:aws:iam::*:role/IambicSpokeRole*"
+      "Resource": "arn:aws:iam::*:role/*"
     }
   ]
 }
 ```
+
+A note about why the resource value for `sts:AssumeRole` is `*`. IAMbicHubRole can be used to broker credentials. Since it does not know ahead of time what role to assume, the value is relaxed to `*`. However, this alone does not mean IAMbicHubRole can assume Role X without Role X granting it permission on RoleX's Trust Policy. Role assumption requires both subject (IambicHubRole) and object (Role X) to establish a mutual trust relationship.
+
+To learn more about credential brokering, see [AWS Docs](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_enable-console-custom-url.html)
+
+To learn more about Trust Policy, see [AWS Docs](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_terms-and-concepts.html)
 
 ## Spoke Role Permissions
 
