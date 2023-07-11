@@ -21,7 +21,10 @@ from iambic.core.template_generation import merge_model
 
 def test_merge_model():
     existing_template = BaseTemplate(
-        template_type="foo", file_path="bar", iambic_managed=IambicManaged.IMPORT_ONLY
+        template_type="foo",
+        notes="test_notes",
+        file_path="bar",
+        iambic_managed=IambicManaged.IMPORT_ONLY,
     )
     new_template = BaseTemplate(
         template_type="foo_new",
@@ -32,6 +35,7 @@ def test_merge_model():
     assert merged_template.template_type == new_template.template_type
     assert merged_template.iambic_managed == IambicManaged.IMPORT_ONLY
     assert merged_template.file_path == existing_template.file_path
+    assert merged_template.notes == existing_template.notes
 
 
 def test_merge_model_with_none():
@@ -114,6 +118,9 @@ def test_expiry_model_from_json_with_null():
 
 
 TEST_TEMPLATE_YAML = """template_type: NOQ::Example::LocalFile
+notes: |-
+  This is a test note
+  with a newline
 name: test_template
 expires_at: tomorrow
 properties:
