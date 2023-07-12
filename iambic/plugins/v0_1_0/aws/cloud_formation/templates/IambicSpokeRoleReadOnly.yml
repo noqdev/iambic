@@ -32,13 +32,14 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
+                  - iam:Get*
+                  - iam:List*
                   - identitystore:Describe*
                   - identitystore:Get*
+                  - identitystore:IsMemberInGroups
                   - identitystore:List*
                   - organizations:describe*
                   - organizations:list*
-                  - iam:Get*
-                  - iam:List*
                   - sso:Describe*
                   - sso:Get*
                   - sso:List*

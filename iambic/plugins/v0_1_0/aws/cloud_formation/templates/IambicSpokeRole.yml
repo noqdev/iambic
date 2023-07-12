@@ -33,10 +33,10 @@ Resources:
               - Effect: Allow
                 Action:
                   - ec2:Describe*
+                  - iam:*
                   - identitystore:*
                   - organizations:describe*
                   - organizations:list*
-                  - iam:*
                   - sso:*
                 Resource:
                   - '*'
@@ -60,19 +60,16 @@ Resources:
                   - sqs:GetQueueAttributes
                 Resource:
                   - 'arn:aws:sqs:*:*:IAMbicChangeDetectionQueue*'
-              - Sid: SCPsReadWrite
+              - Sid: SCPsWrite
                 Effect: Allow
                 Action:
                 - organizations:CreatePolicy
                 - organizations:DeletePolicy
-                - organizations:DescribePolicy
                 - organizations:UpdatePolicy
-                - organizations:ListPolicies
                 - organizations:AttachPolicy
                 - organizations:DetachPolicy
                 - organizations:TagResource
                 - organizations:UntagResource
-                - organizations:ListTagsForResource
                 Resource: '*'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/ReadOnlyAccess'
