@@ -29,7 +29,6 @@ import aiofiles
 import dateparser
 from deepdiff.model import PrettyOrderedSet
 from git import Repo
-from jinja2 import BaseLoader, Environment
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Extra, Field, root_validator, schema, validate_model, validator
 from pydantic.fields import ModelField
@@ -41,17 +40,15 @@ from iambic.core.utils import (
     apply_to_provider,
     create_commented_map,
     get_writable_directory,
-    sanitize_string,
     simplify_dt,
     snake_to_camelcap,
     sort_dict,
     transform_comments,
-    yaml,
+    yaml, get_rendered_template_str_value,
 )
 
 if TYPE_CHECKING:
     from iambic.config.dynamic_config import Config
-    from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
     MappingIntStrAny = typing.Mapping[int | str, Any]
     AbstractSetIntStr = typing.AbstractSet[int | str]
@@ -159,14 +156,14 @@ class BaseModel(IambicPydanticBaseModel):
 
     def get_attribute_val_for_account(
         self,
-        aws_account: AWSAccount,
+        provider_child: Type[ProviderChild],
         attr: str,
         as_boto_dict: bool = True,
     ):
         """
         Retrieve the value of an attribute for a specific AWS account.
 
-        :param aws_account: The AWSAccount object for which the attribute value should be retrieved.
+        :param provider_child: The ProviderChild object for which the attribute value should be retrieved.
         :param attr: The attribute name (supports nested attributes via dot notation, e.g., properties.tags).
         :param as_boto_dict: If True, the value will be transformed to a boto dictionary if applicable.
         :return: The attribute value for the specified AWS account.
@@ -177,12 +174,12 @@ class BaseModel(IambicPydanticBaseModel):
             attr_val = getattr(attr_val, attr_key)
 
         if as_boto_dict and hasattr(attr_val, "_apply_resource_dict"):
-            return attr_val._apply_resource_dict(aws_account)
+            return attr_val._apply_resource_dict(provider_child)
         elif not isinstance(attr_val, list):
             return attr_val
 
         matching_definitions = [
-            val for val in attr_val if apply_to_provider(val, aws_account)
+            val for val in attr_val if apply_to_provider(val, provider_child)
         ]
         if len(matching_definitions) == 0:
             # Fallback to the default definition
@@ -194,7 +191,7 @@ class BaseModel(IambicPydanticBaseModel):
             return field.__fields__[split_key[-1]].default
         elif as_boto_dict:
             return [
-                match._apply_resource_dict(aws_account)
+                match._apply_resource_dict(provider_child)
                 if hasattr(match, "_apply_resource_dict")
                 else match
                 for match in matching_definitions
@@ -202,7 +199,7 @@ class BaseModel(IambicPydanticBaseModel):
         else:
             return matching_definitions
 
-    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
+    def _apply_resource_dict(self, provider_child: Type[ProviderChild] = None) -> dict:
         exclude_keys = {
             "deleted",
             "expires_at",
@@ -220,10 +217,10 @@ class BaseModel(IambicPydanticBaseModel):
         exclude_keys.update(self.exclude_keys)
         has_properties = hasattr(self, "properties")
         properties = getattr(self, "properties", self)
-        if aws_account:
+        if provider_child:
             resource_dict = {
                 k: self.get_attribute_val_for_account(
-                    aws_account,
+                    provider_child,
                     f"properties.{k}" if has_properties else k,
                 )
                 for k in properties.__dict__.keys()
@@ -239,20 +236,9 @@ class BaseModel(IambicPydanticBaseModel):
 
         return {self.case_convention(k): v for k, v in resource_dict.items()}
 
-    def apply_resource_dict(self, aws_account: AWSAccount) -> dict:
-        response = self._apply_resource_dict(aws_account)
-        variables = {var.key: var.value for var in aws_account.variables}
-        variables["account_id"] = aws_account.account_id
-        variables["account_name"] = aws_account.account_name
-        if hasattr(self, "owner") and (owner := getattr(self, "owner", None)):
-            variables["owner"] = owner
-
-        rtemplate = Environment(loader=BaseLoader()).from_string(json.dumps(response))
-        valid_characters_re = r"[\w_+=,.@-]"
-        variables = {
-            k: sanitize_string(v, valid_characters_re) for k, v in variables.items()
-        }
-        data = rtemplate.render(var=variables)
+    def apply_resource_dict(self, provider_child: Type[ProviderChild]) -> dict:
+        response = self._apply_resource_dict(provider_child)
+        data = get_rendered_template_str_value(json.dumps(response), provider_child)
         return json.loads(data)
 
     async def remove_expired_resources(self):
