@@ -76,6 +76,10 @@
       "description": "Owner of the role",
       "type": "string"
     },
+    "notes": {
+      "title": "Notes",
+      "type": "string"
+    },
     "iambic_managed": {
       "description": "Controls the directionality of Iambic changes",
       "default": "undefined",
@@ -919,6 +923,11 @@
               "$ref": "#/definitions/PolicyStatement"
             }
           ]
+        },
+        "id": {
+          "title": "Id",
+          "description": "The Id element specifies an optional identifier for the policy. The ID is used differently in different services.",
+          "type": "string"
         }
       },
       "required": [

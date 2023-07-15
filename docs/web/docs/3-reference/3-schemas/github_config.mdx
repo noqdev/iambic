@@ -8,3 +8,13 @@
 - **`commit_message_for_import`** *(string)*: Commit message to use during changes through import operations. Default: `"Import changes from import operation"`.
 - **`commit_message_for_expire`** *(string)*: Commit message to use during changes through expire operations. Default: `"Periodic Expiration"`.
 - **`commit_message_for_git_apply`** *(string)*: Commit message to use during changes through git-apply. Default: `"Replace relative time with absolute time"`.
+- **`allowed_bot_approvers`** *(array)*: list of allowed bot approver. Default: `[]`.
+  - **Items**: Refer to *[#/definitions/GithubBotApprover](#definitions/GithubBotApprover)*.
+## Definitions
+
+
+<a id="definitions/GithubBotApprover"></a>
+
+- **`GithubBotApprover`** *(object)*
+  - **`login`** *(string)*: login for allowed bot approver.
+  - **`es256_pub_key`** *(string)*: ES256 Pub Key for allowed bot approver.

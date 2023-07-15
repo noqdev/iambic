@@ -36,6 +36,10 @@
       "description": "Owner of the permission set",
       "type": "string"
     },
+    "notes": {
+      "title": "Notes",
+      "type": "string"
+    },
     "iambic_managed": {
       "description": "Controls the directionality of Iambic changes",
       "default": "undefined",

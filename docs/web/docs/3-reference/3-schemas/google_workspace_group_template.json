@@ -36,6 +36,10 @@
       "description": "Owner of the group",
       "type": "string"
     },
+    "notes": {
+      "title": "Notes",
+      "type": "string"
+    },
     "iambic_managed": {
       "description": "Controls the directionality of Iambic changes",
       "default": "undefined",
@@ -80,7 +84,8 @@
       "enum": [
         "USER",
         "GROUP",
-        "EXTERNAL"
+        "EXTERNAL",
+        "CUSTOMER"
       ]
     },
     "GroupMemberStatus": {
@@ -90,7 +95,8 @@
         "ACTIVE",
         "INACTIVE",
         "PENDING",
-        "UNDEFINED"
+        "UNDEFINED",
+        "SUSPENDED"
       ]
     },
     "GroupMemberSubscription": {
@@ -133,6 +139,12 @@
         },
         "email": {
           "title": "Email",
+          "description": "Email address. However, when the type is CUSTOMER, it represents all users in a domain",
+          "type": "string"
+        },
+        "customer_id": {
+          "title": "Customerid",
+          "description": "When the type is CUSTOMER, it represents customer id of a domain",
           "type": "string"
         },
         "expand": {
@@ -174,9 +186,6 @@
           ]
         }
       },
-      "required": [
-        "email"
-      ],
       "additionalProperties": false
     },
     "WhoCanInvite": {
