@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Type
+from typing import Optional, Type
 
 from iambic.core.models import BaseTemplate, ProviderChild
 from iambic.core.utils import evaluate_on_provider
@@ -27,9 +27,11 @@ def group_detect_messages(group_by: str, messages: list) -> dict:
 def generate_template_output(
     excluded_provider_ids: list[str],
     provider_child_map: dict[str, ProviderChild],
-    template: Type[BaseTemplate],
+    template: Optional[Type[BaseTemplate]],
 ) -> dict[str, dict]:
     provider_children_value_map = dict()
+    if not template:
+        return provider_children_value_map
     for provider_child_id, provider_child in provider_child_map.items():
         if provider_child_id in excluded_provider_ids:
             continue
