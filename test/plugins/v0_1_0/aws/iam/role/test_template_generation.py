@@ -191,7 +191,11 @@ async def test_generate_role_resource_file_for_all_accounts(
 ):
     _, templates_base_dir = mock_fs
     files = await generate_role_resource_file_for_all_accounts(
-        mock_execution_message, [mock_aws_account], EXAMPLE_ROLE_NAME
+        mock_execution_message,
+        EXAMPLE_ROLE_NAME,
+        {mock_aws_account.account_id: mock_aws_account},
+        [mock_aws_account.account_id],
+        None,
     )
     assert len(files) == 1
     assert files[0]["name"] == EXAMPLE_ROLE_NAME

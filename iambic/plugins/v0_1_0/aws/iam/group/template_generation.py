@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import itertools
 import os
 from collections import defaultdict
@@ -8,13 +9,19 @@ from typing import TYPE_CHECKING, Optional
 import aiofiles
 
 from iambic.core import noq_json as json
+from iambic.core.detect import generate_template_output, group_detect_messages
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import (
     create_or_update_template,
     delete_orphaned_templates,
 )
-from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_upsert
+from iambic.core.utils import (
+    NoqSemaphore,
+    get_rendered_template_str_value,
+    normalize_dict_keys,
+    resource_file_upsert,
+)
 from iambic.plugins.v0_1_0.aws.event_bridge.models import GroupMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.group.models import (
     AWS_IAM_GROUP_TEMPLATE_TYPE,
@@ -22,7 +29,7 @@ from iambic.plugins.v0_1_0.aws.iam.group.models import (
     GroupProperties,
 )
 from iambic.plugins.v0_1_0.aws.iam.group.utils import (
-    get_group_across_accounts,
+    get_group,
     get_group_inline_policies,
     get_group_managed_policies,
     list_groups,
@@ -140,19 +147,36 @@ async def generate_account_group_resource_files(
 
 
 async def generate_group_resource_file_for_all_accounts(
-    exe_message: ExecutionMessage, aws_accounts: list[AWSAccount], group_name: str
+    exe_message: ExecutionMessage,
+    group_name: str,
+    aws_account_map: dict[str, AWSAccount],
+    updated_account_ids: list[str],
+    iambic_template: Optional[AwsIamGroupTemplate],
 ) -> list:
+    async def get_group_for_account(aws_account: AWSAccount):
+        iam_client = await aws_account.get_boto3_client("iam")
+        account_group_name = get_rendered_template_str_value(group_name, aws_account)
+        return {aws_account.account_id: await get_group(account_group_name, iam_client)}
+
     account_group_response_dir_map = {
         aws_account.account_id: get_response_dir(exe_message, aws_account)
-        for aws_account in aws_accounts
+        for aws_account in aws_account_map.values()
     }
     group_resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
     messages = []
     response = []
 
-    group_across_accounts = await get_group_across_accounts(
-        aws_accounts, group_name, False
+    group_across_accounts = generate_template_output(
+        updated_account_ids, aws_account_map, iambic_template
     )
+    updated_account_groups = await asyncio.gather(
+        *[
+            get_group_for_account(aws_account_map[account_id])
+            for account_id in updated_account_ids
+        ]
+    )
+    for updated_account_group in updated_account_groups:
+        group_across_accounts.update(updated_account_group)
     group_across_accounts = {k: v for k, v in group_across_accounts.items() if v}
 
     log.debug(
@@ -344,7 +368,7 @@ async def create_templated_group(  # noqa: C901
         AwsIamGroupTemplate,
         group_template_params,
         GroupProperties(**group_template_properties),
-        list(aws_account_map.values()),
+        [aws_account_map[group_ref["account_id"]] for group_ref in group_refs],
     )
 
 
@@ -381,14 +405,21 @@ async def collect_aws_groups(
     )
 
     if detect_messages:
-        aws_accounts = list(aws_account_map.values())
         generate_group_resource_file_for_all_accounts_semaphore = NoqSemaphore(
             generate_group_resource_file_for_all_accounts, 45
         )
+        grouped_detect_messages = group_detect_messages("group_name", detect_messages)
         tasks = [
-            {"aws_accounts": aws_accounts, "group_name": group.group_name}
-            for group in detect_messages
-            if not group.delete
+            {
+                "exe_message": exe_message,
+                "aws_account_map": aws_account_map,
+                "group_name": group_name,
+                "updated_account_ids": [
+                    message.account_id for message in group_messages
+                ],
+                "iambic_template": existing_template_map.get(group_name),
+            }
+            for group_name, group_messages in grouped_detect_messages.items()
         ]
 
         # Remove deleted or mark templates for update
@@ -405,15 +436,6 @@ async def collect_aws_groups(
                     ):
                         # It's the only account for the template so delete it
                         existing_template.delete()
-                    else:
-                        # There are other accounts for the template so re-eval the template
-                        tasks.append(
-                            {
-                                "exe_message": exe_message,
-                                "aws_accounts": aws_accounts,
-                                "group_name": existing_template.properties.group_name,
-                            }
-                        )
 
         account_group_list = (
             await generate_group_resource_file_for_all_accounts_semaphore.process(tasks)
@@ -461,17 +483,20 @@ async def collect_aws_groups(
                 }
             )
 
-    log.info(
-        "Setting inline policies in group templates",
-        accounts=list(aws_account_map.keys()),
-    )
-    await set_group_resource_inline_policies_semaphore.process(messages)
-    log.info(
-        "Setting managed policies in group templates",
-        accounts=list(aws_account_map.keys()),
-    )
-    await set_group_resource_managed_policies_semaphore.process(messages)
-    log.info("Finished retrieving group details", accounts=list(aws_account_map.keys()))
+    if not detect_messages:
+        log.info(
+            "Setting inline policies in group templates",
+            accounts=list(aws_account_map.keys()),
+        )
+        await set_group_resource_inline_policies_semaphore.process(messages)
+        log.info(
+            "Setting managed policies in group templates",
+            accounts=list(aws_account_map.keys()),
+        )
+        await set_group_resource_managed_policies_semaphore.process(messages)
+        log.info(
+            "Finished retrieving group details", accounts=list(aws_account_map.keys())
+        )
 
     account_group_output = json.dumps(account_groups)
     with open(
