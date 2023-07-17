@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import itertools
 import os
 from collections import defaultdict
@@ -8,13 +9,19 @@ from typing import TYPE_CHECKING, Optional
 import aiofiles
 
 from iambic.core import noq_json as json
+from iambic.core.detect import generate_template_output, group_detect_messages
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import (
     create_or_update_template,
     delete_orphaned_templates,
 )
-from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_upsert
+from iambic.core.utils import (
+    NoqSemaphore,
+    get_rendered_template_str_value,
+    normalize_dict_keys,
+    resource_file_upsert,
+)
 from iambic.plugins.v0_1_0.aws.event_bridge.models import ManagedPolicyMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.policy.models import (
     AWS_MANAGED_POLICY_TEMPLATE_TYPE,
@@ -22,7 +29,7 @@ from iambic.plugins.v0_1_0.aws.iam.policy.models import (
     ManagedPolicyProperties,
 )
 from iambic.plugins.v0_1_0.aws.iam.policy.utils import (
-    get_managed_policy_across_accounts,
+    get_managed_policy,
     list_managed_policies,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
@@ -142,39 +149,68 @@ async def generate_account_managed_policy_resource_files(
 
 async def generate_managed_policy_resource_file_for_all_accounts(
     exe_message: ExecutionMessage,
-    aws_accounts: list[AWSAccount],
-    policy_path: str,
     policy_name: str,
+    aws_account_map: dict[str, AWSAccount],
+    policy_messages: list[ManagedPolicyMessageDetails],
+    iambic_template: Optional[AwsIamManagedPolicyTemplate],
 ) -> list:
+    async def get_managed_policy_for_account(
+        aws_account: AWSAccount, managed_policy_path: str
+    ):
+        iam_client = await aws_account.get_boto3_client("iam")
+        arn = f"arn:aws:iam::{aws_account.account_id}:policy{managed_policy_path}{policy_name}"
+        account_arn = get_rendered_template_str_value(arn, aws_account)
+        return {
+            aws_account.account_id: await get_managed_policy(iam_client, account_arn)
+        }
+
     account_resource_dir_map = {
         aws_account.account_id: get_response_dir(exe_message, aws_account)
-        for aws_account in aws_accounts
+        for aws_account in aws_account_map.values()
     }
     mp_resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
     messages = []
     response = []
 
-    mp_across_accounts = await get_managed_policy_across_accounts(
-        aws_accounts, policy_path, policy_name
+    mp_across_accounts = generate_template_output(
+        [msg.account_id for msg in policy_messages], aws_account_map, iambic_template
     )
+    for account_id, account_mp in mp_across_accounts.items():
+        print(account_mp["PolicyDocument"])
+        mp_across_accounts[account_id]["PolicyDocument"] = json.loads(
+            account_mp["PolicyDocument"]
+        )
+
+    updated_account_mps = await asyncio.gather(
+        *[
+            get_managed_policy_for_account(
+                aws_account_map[msg.account_id], msg.policy_path
+            )
+            for msg in policy_messages
+        ]
+    )
+    for updated_account_mp in updated_account_mps:
+        mp_across_accounts.update(updated_account_mp)
     mp_across_accounts = {k: v for k, v in mp_across_accounts.items() if v}
+
+    with open("mp_across_accounts.json", "w") as f:
+        f.write(json.dumps(mp_across_accounts, indent=2))
 
     log.debug(
         "Retrieved AWS IAM Managed Policy for all accounts.",
         policy_name=policy_name,
-        policy_path=policy_path,
         total_accounts=len(mp_across_accounts),
     )
 
     for account_id, managed_policy in mp_across_accounts.items():
-        policy_path = os.path.join(
+        policy_file_path = os.path.join(
             account_resource_dir_map[account_id],
             f'{managed_policy["PolicyName"]}.json',
         )
 
         response.append(
             {
-                "file_path": policy_path,
+                "file_path": policy_file_path,
                 "policy_name": managed_policy["PolicyName"],
                 "arn": managed_policy["Arn"],
                 "account_id": account_id,
@@ -182,7 +218,9 @@ async def generate_managed_policy_resource_file_for_all_accounts(
         )
         messages.append(
             dict(
-                file_path=policy_path, content_as_dict=managed_policy, replace_file=True
+                file_path=policy_file_path,
+                content_as_dict=managed_policy,
+                replace_file=True,
             )
         )
 
@@ -190,7 +228,6 @@ async def generate_managed_policy_resource_file_for_all_accounts(
     log.debug(
         "Finished caching AWS IAM Managed Policy for all accounts.",
         policy_name=policy_name,
-        policy_path=policy_path,
         total_accounts=len(mp_across_accounts),
     )
 
@@ -330,7 +367,7 @@ async def create_templated_managed_policy(  # noqa: C901
         AwsIamManagedPolicyTemplate,
         template_params,
         ManagedPolicyProperties(**template_properties),
-        list(aws_account_map.values()),
+        [aws_account_map[mp_ref["account_id"]] for mp_ref in managed_policy_refs],
     )
 
 
@@ -363,20 +400,20 @@ async def collect_aws_managed_policies(
     )
 
     if detect_messages:
-        aws_accounts = list(aws_account_map.values())
         generate_mp_resource_file_for_all_accounts_semaphore = NoqSemaphore(
             generate_managed_policy_resource_file_for_all_accounts, 50
         )
+        grouped_detect_messages = group_detect_messages("policy_name", detect_messages)
 
         tasks = [
             {
                 "exe_message": exe_message,
-                "aws_accounts": aws_accounts,
-                "policy_path": managed_policy.policy_path,
-                "policy_name": managed_policy.policy_name,
+                "aws_account_map": aws_account_map,
+                "policy_name": policy_name,
+                "policy_messages": policy_messages,
+                "iambic_template": existing_template_map.get(policy_name),
             }
-            for managed_policy in detect_messages
-            if not managed_policy.delete
+            for policy_name, policy_messages in grouped_detect_messages.items()
         ]
 
         # Remove deleted or mark templates for update
@@ -399,16 +436,6 @@ async def collect_aws_managed_policies(
                     ):
                         # It's the only account for the template so delete it
                         existing_template.delete()
-                    else:
-                        # There are other accounts for the template so re-eval the template
-                        tasks.append(
-                            {
-                                "exe_message": exe_message,
-                                "aws_accounts": aws_accounts,
-                                "policy_path": existing_template.properties.path,
-                                "policy_name": existing_template.properties.policy_name,
-                            }
-                        )
 
         account_mp_list = (
             await generate_mp_resource_file_for_all_accounts_semaphore.process(tasks)
