@@ -326,8 +326,18 @@ async def get_group_members(service, group):
     )
 
     http = _auth.authorized_http(service._http.credentials)
-    member_req = service.members().list(groupKey=group["email"])
+    group_email_address = group["email"]
+    member_req = service.members().list(groupKey=group_email_address)
     member_res = member_req.execute(http=http) or {}
+    members = member_res.get("members", [])
+    required_keys = ["email", "role", "type"]
+    # validate response data because we have reports that member without email address
+    for member in members:
+        missing_required_keys = set(required_keys) - set(member.keys())
+        if len(missing_required_keys) > 0:
+            raise ValueError(
+                f"for google group: {group_email_address} missing keys: {missing_required_keys} for member: {member}"
+            )
     return [
         GroupMember(
             email=member["email"],
@@ -335,7 +345,7 @@ async def get_group_members(service, group):
             type=GroupMemberType(member["type"]),
             status=GroupMemberStatus(member.get("status", GroupMemberStatus.UNDEFINED)),
         )
-        for member in member_res.get("members", [])
+        for member in members
     ]
 
 
