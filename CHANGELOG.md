@@ -1,6 +1,19 @@
 
 # Change Log
 
+## 0.10.11 (July 17, 2023)
+
+BUG FIXES:
+* Fixed race condition on iambic detect not using templated resource id grouping resources  
+* Fixed issue where a resource could show as excluded on a resource it was never evaluated on
+
+ENHANCEMENTS:
+* Improved ordering of template attributes
+* `base_group_dict_attribute` is now more deterministic in its grouping
+* `iambic detect` performance optimizations. 
+  * Now only evaluates on the account a resource id change is detected on as opposed to all accounts.
+  * Example if `engineering` is on all accounts and detect is ran for account a, only `engineering` on account a is evaluated.
+
 ## 0.10.1 (July 3, 2023)
 
 DOCS:
