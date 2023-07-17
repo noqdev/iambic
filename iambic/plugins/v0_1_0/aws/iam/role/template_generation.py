@@ -153,15 +153,16 @@ async def generate_role_resource_file_for_all_accounts(
     role_name: str,
     aws_account_map: dict[str, AWSAccount],
     updated_account_ids: list[str],
-    iambic_template: AwsIamRoleTemplate,
+    iambic_template: Optional[AwsIamRoleTemplate],
 ) -> list:
     async def get_role_for_account(aws_account: AWSAccount):
         iam_client = await aws_account.get_boto3_client("iam")
         account_role_name = get_rendered_template_str_value(role_name, aws_account)
         role = await get_role(account_role_name, iam_client)
-        role["PermissionsBoundary"]["PolicyArn"] = role["PermissionsBoundary"].pop(
-            "PermissionsBoundaryArn"
-        )
+        if "PermissionsBoundary" in role:
+            role["PermissionsBoundary"]["PolicyArn"] = role["PermissionsBoundary"].pop(
+                "PermissionsBoundaryArn"
+            )
         return {aws_account.account_id: role}
 
     account_resource_dir_map = {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import itertools
 import os
 from collections import defaultdict
@@ -8,6 +9,7 @@ from typing import TYPE_CHECKING, Optional
 import aiofiles
 
 from iambic.core import noq_json as json
+from iambic.core.detect import generate_template_output, group_detect_messages
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import (
@@ -22,7 +24,7 @@ from iambic.plugins.v0_1_0.aws.iam.user.models import (
     UserProperties,
 )
 from iambic.plugins.v0_1_0.aws.iam.user.utils import (
-    get_user_across_accounts,
+    get_user,
     get_user_groups,
     get_user_inline_policies,
     get_user_managed_policies,
@@ -142,19 +144,35 @@ async def generate_account_user_resource_files(
 
 
 async def generate_user_resource_file_for_all_accounts(
-    exe_message: ExecutionMessage, aws_accounts: list[AWSAccount], user_name: str
+    exe_message: ExecutionMessage,
+    user_name: str,
+    aws_account_map: dict[str, AWSAccount],
+    updated_account_ids: list[str],
+    iambic_template: Optional[AwsIamUserTemplate],
 ) -> list:
+    async def get_user_for_account(aws_account: AWSAccount):
+        iam_client = await aws_account.get_boto3_client("iam")
+        return {aws_account.account_id: await get_user(user_name, iam_client)}
+
     account_resource_dir_map = {
         aws_account.account_id: get_response_dir(exe_message, aws_account)
-        for aws_account in aws_accounts
+        for aws_account in aws_account_map.values()
     }
     user_resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
     messages = []
     response = []
 
-    user_across_accounts = await get_user_across_accounts(
-        aws_accounts, user_name, False
+    user_across_accounts = generate_template_output(
+        updated_account_ids, aws_account_map, iambic_template
     )
+    updated_account_users = await asyncio.gather(
+        *[
+            get_user_for_account(aws_account_map[account_id])
+            for account_id in updated_account_ids
+        ]
+    )
+    for updated_account_user in updated_account_users:
+        user_across_accounts.update(updated_account_user)
     user_across_accounts = {k: v for k, v in user_across_accounts.items() if v}
 
     log.debug(
@@ -427,7 +445,7 @@ async def create_templated_user(  # noqa: C901
         AwsIamUserTemplate,
         user_template_params,
         UserProperties(**user_template_properties),
-        list(aws_account_map.values()),
+        [aws_account_map[user_ref["account_id"]] for user_ref in user_refs],
     )
 
 
@@ -460,18 +478,21 @@ async def collect_aws_users(
     )
 
     if detect_messages:
-        aws_accounts = list(aws_account_map.values())
         generate_user_resource_file_for_all_accounts_semaphore = NoqSemaphore(
             generate_user_resource_file_for_all_accounts, 50
         )
+        grouped_detect_messages = group_detect_messages("user_name", detect_messages)
         tasks = [
             {
                 "exe_message": exe_message,
-                "aws_accounts": aws_accounts,
-                "user_name": user.user_name,
+                "aws_account_map": aws_account_map,
+                "user_name": user_name,
+                "updated_account_ids": [
+                    message.account_id for message in user_messages
+                ],
+                "iambic_template": existing_template_map.get(user_name),
             }
-            for user in detect_messages
-            if not user.delete
+            for user_name, user_messages in grouped_detect_messages.items()
         ]
 
         # Remove deleted or mark templates for update
@@ -488,15 +509,6 @@ async def collect_aws_users(
                     ):
                         # It's the only account for the template so delete it
                         existing_template.delete()
-                    else:
-                        # There are other accounts for the template so re-eval the template
-                        tasks.append(
-                            {
-                                "exe_message": exe_message,
-                                "aws_accounts": aws_accounts,
-                                "user_name": existing_template.properties.user_name,
-                            }
-                        )
 
         account_user_list = (
             await generate_user_resource_file_for_all_accounts_semaphore.process(tasks)
@@ -537,21 +549,28 @@ async def collect_aws_users(
                 }
             )
 
-    log.info(
-        "Setting inline policies in user templates",
-        accounts=list(aws_account_map.keys()),
-    )
-    await set_user_resource_inline_policies_semaphore.process(messages)
-    log.info(
-        "Setting managed policies in user templates",
-        accounts=list(aws_account_map.keys()),
-    )
-    await set_user_resource_managed_policies_semaphore.process(messages)
-    log.info("Setting groups in user templates", accounts=list(aws_account_map.keys()))
-    await set_user_resource_groups_semaphore.process(messages)
-    log.info("Setting tags in user templates", accounts=list(aws_account_map.keys()))
-    await set_user_resource_tags_semaphore.process(messages)
-    log.info("Finished retrieving user details", accounts=list(aws_account_map.keys()))
+    if not detect_messages:
+        log.info(
+            "Setting inline policies in user templates",
+            accounts=list(aws_account_map.keys()),
+        )
+        await set_user_resource_inline_policies_semaphore.process(messages)
+        log.info(
+            "Setting managed policies in user templates",
+            accounts=list(aws_account_map.keys()),
+        )
+        await set_user_resource_managed_policies_semaphore.process(messages)
+        log.info(
+            "Setting groups in user templates", accounts=list(aws_account_map.keys())
+        )
+        await set_user_resource_groups_semaphore.process(messages)
+        log.info(
+            "Setting tags in user templates", accounts=list(aws_account_map.keys())
+        )
+        await set_user_resource_tags_semaphore.process(messages)
+        log.info(
+            "Finished retrieving user details", accounts=list(aws_account_map.keys())
+        )
 
     account_user_output = json.dumps(account_users)
     with open(

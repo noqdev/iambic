@@ -85,7 +85,7 @@ async def get_user_managed_policies(user_name: str, iam_client) -> list[dict[str
         else:
             break
 
-    return policies
+    return [{"PolicyArn": policy["PolicyArn"]} for policy in policies]
 
 
 async def get_user(user_name: str, iam_client, include_policies: bool = True) -> dict:
