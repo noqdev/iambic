@@ -37,11 +37,15 @@ async def list_groups(
         raise
 
     req = await aio_wrapper(service.groups().list, domain=domain)
-    res = req.execute(http=http)
-    if res and "groups" in res:
-        for group in res["groups"]:
-            group_template = await get_group_template(service, group, domain)
-            groups.append(group_template)
+    while req is not None:
+        res = req.execute(http=http)
+        if res and "groups" in res:
+            for group in res["groups"]:
+                group_template = await get_group_template(service, group, domain)
+                groups.append(group_template)
+
+        # handle pagination based on https://googleapis.github.io/google-api-python-client/docs/pagination.html
+        req = await aio_wrapper(service.groups().list_next, req, res)
     return groups
 
 
@@ -345,16 +349,22 @@ async def get_group_members(service, group):
     http = _auth.authorized_http(service._http.credentials)
     group_email_address = group["email"]
     member_req = service.members().list(groupKey=group_email_address)
-    member_res = member_req.execute(http=http) or {}
-    members = member_res.get("members", [])
-    required_keys = ["role", "type"]
-    # validate response data because we have reports that member without email address
-    for member in members:
-        missing_required_keys = set(required_keys) - set(member.keys())
-        if len(missing_required_keys) > 0:
-            raise ValueError(
-                f"for google group: {group_email_address} missing keys: {missing_required_keys} for member: {member}"
-            )
+    members = []
+    while member_req is not None:
+        member_res = member_req.execute(http=http) or {}
+        members_partial = member_res.get("members", [])
+        required_keys = ["role", "type"]
+        # validate response data because we have reports that member without email address
+        for member in members_partial:
+            missing_required_keys = set(required_keys) - set(member.keys())
+            if len(missing_required_keys) > 0:
+                raise ValueError(
+                    f"for google group: {group_email_address} missing keys: {missing_required_keys} for member: {member}"
+                )
+        members.extend(members_partial)
+
+        # handle pagination based on https://googleapis.github.io/google-api-python-client/docs/pagination.html
+        member_req = service.members().list_next(member_req, member_res)
     return [create_group_member_from_dict(member) for member in members]
 
 

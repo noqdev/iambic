@@ -45,6 +45,8 @@ def google_group_service():
     mock.members = MagicMock()
     mock.members().list = MagicMock()
     mock.members().list().execute = MagicMock(return_value=VALUE_UNDER_TEST)
+    # fake paginated response
+    mock.members().list_next = MagicMock(return_value=None)
     return mock
 
 

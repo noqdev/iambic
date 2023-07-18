@@ -42,6 +42,8 @@ class TestListGroups(IsolatedAsyncioTestCase):
         mock_service.groups.return_value.list.return_value.execute.return_value = {
             "groups": group_data,
         }
+        # fake paginated response
+        mock_service.groups.return_value.list_next.return_value = None
         google_project = MagicMock()
         google_project.get_service_connection = AsyncMock(return_value=mock_service)
 
