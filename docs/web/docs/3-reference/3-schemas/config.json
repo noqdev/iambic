@@ -12,6 +12,10 @@
       "title": "Owner",
       "type": "string"
     },
+    "notes": {
+      "title": "Notes",
+      "type": "string"
+    },
     "iambic_managed": {
       "description": "Controls the directionality of Iambic changes",
       "default": "undefined",
@@ -32,27 +36,27 @@
       "default": [
         {
           "type": "DIRECTORY_PATH",
-          "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/aws",
+          "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/aws",
           "version": "v0.1.0"
         },
         {
           "type": "DIRECTORY_PATH",
-          "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/google_workspace",
+          "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/google_workspace",
           "version": "v0.1.0"
         },
         {
           "type": "DIRECTORY_PATH",
-          "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/okta",
+          "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/okta",
           "version": "v0.1.0"
         },
         {
           "type": "DIRECTORY_PATH",
-          "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/github",
+          "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/github",
           "version": "v0.1.0"
         },
         {
           "type": "DIRECTORY_PATH",
-          "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/azure_ad",
+          "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/azure_ad",
           "version": "v0.1.0"
         }
       ],

@@ -76,6 +76,7 @@ class GroupMemberType(Enum):
     USER = "USER"
     GROUP = "GROUP"
     EXTERNAL = "EXTERNAL"
+    CUSTOMER = "CUSTOMER"
 
 
 class GroupMemberStatus(Enum):

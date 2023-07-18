@@ -87,7 +87,7 @@
     "preferred_spoke_role_name": {
       "title": "Preferred Spoke Role Name",
       "description": "SpokeRoleName use across organization",
-      "default": "IambicSpokeRoleCurtis",
+      "default": "IambicSpokeRole",
       "type": "string"
     }
   },

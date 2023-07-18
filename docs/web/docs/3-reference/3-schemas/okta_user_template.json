@@ -35,6 +35,10 @@
       "title": "Owner",
       "type": "string"
     },
+    "notes": {
+      "title": "Notes",
+      "type": "string"
+    },
     "iambic_managed": {
       "description": "Controls the directionality of Iambic changes",
       "default": "undefined",
@@ -103,6 +107,7 @@
         "user_id": {
           "title": "Userid",
           "description": "Unique User ID for the user. This value is imported by IAMbic, and doesn't need to be manually set.",
+          "default": "",
           "type": "string"
         },
         "status": {

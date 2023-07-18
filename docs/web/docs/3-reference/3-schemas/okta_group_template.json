@@ -36,6 +36,10 @@
       "description": "Owner of the group",
       "type": "string"
     },
+    "notes": {
+      "title": "Notes",
+      "type": "string"
+    },
     "iambic_managed": {
       "description": "Controls the directionality of Iambic changes",
       "default": "undefined",
@@ -225,6 +229,7 @@
         "group_id": {
           "title": "Groupid",
           "description": "Unique Group ID for the group. This value is imported by IAMbic, and doesn't need to be manually set.",
+          "default": "",
           "type": "string"
         },
         "description": {
