@@ -445,7 +445,7 @@ async def create_templated_user(  # noqa: C901
         AwsIamUserTemplate,
         user_template_params,
         UserProperties(**user_template_properties),
-        [aws_account_map[user_ref["account_id"]] for user_ref in user_refs],
+        list(aws_account_map.values()),
     )
 
 

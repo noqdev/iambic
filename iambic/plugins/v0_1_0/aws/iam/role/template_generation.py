@@ -477,7 +477,7 @@ async def create_templated_role(  # noqa: C901
             AwsIamRoleTemplate,
             role_template_params,
             RoleProperties(**role_template_properties),
-            [aws_account_map[role_ref["account_id"]] for role_ref in role_refs],
+            list(aws_account_map.values()),
         )
     except Exception as e:
         log_params = {

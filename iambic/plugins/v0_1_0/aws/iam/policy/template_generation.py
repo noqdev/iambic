@@ -367,7 +367,7 @@ async def create_templated_managed_policy(  # noqa: C901
         AwsIamManagedPolicyTemplate,
         template_params,
         ManagedPolicyProperties(**template_properties),
-        [aws_account_map[mp_ref["account_id"]] for mp_ref in managed_policy_refs],
+        list(aws_account_map.values()),
     )
 
 
