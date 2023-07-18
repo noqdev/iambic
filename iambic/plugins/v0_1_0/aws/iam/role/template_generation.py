@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import itertools
 import os
 from collections import defaultdict
@@ -8,13 +9,19 @@ from typing import TYPE_CHECKING, Optional
 import aiofiles
 
 from iambic.core import noq_json as json
+from iambic.core.detect import generate_template_output, group_detect_messages
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import (
     create_or_update_template,
     delete_orphaned_templates,
 )
-from iambic.core.utils import NoqSemaphore, normalize_dict_keys, resource_file_upsert
+from iambic.core.utils import (
+    NoqSemaphore,
+    get_rendered_template_str_value,
+    normalize_dict_keys,
+    resource_file_upsert,
+)
 from iambic.plugins.v0_1_0.aws.event_bridge.models import RoleMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.policy.models import AssumeRolePolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.role.models import (
@@ -23,7 +30,7 @@ from iambic.plugins.v0_1_0.aws.iam.role.models import (
     RoleProperties,
 )
 from iambic.plugins.v0_1_0.aws.iam.role.utils import (
-    get_role_across_accounts,
+    get_role,
     get_role_inline_policies,
     get_role_managed_policies,
     list_role_tags,
@@ -143,20 +150,40 @@ async def generate_account_role_resource_files(
 
 async def generate_role_resource_file_for_all_accounts(
     exe_message: ExecutionMessage,
-    aws_accounts: list[AWSAccount],
     role_name: str,
+    aws_account_map: dict[str, AWSAccount],
+    updated_account_ids: list[str],
+    iambic_template: Optional[AwsIamRoleTemplate],
 ) -> list:
+    async def get_role_for_account(aws_account: AWSAccount):
+        iam_client = await aws_account.get_boto3_client("iam")
+        account_role_name = get_rendered_template_str_value(role_name, aws_account)
+        role = await get_role(account_role_name, iam_client)
+        if "PermissionsBoundary" in role:
+            role["PermissionsBoundary"]["PolicyArn"] = role["PermissionsBoundary"].pop(
+                "PermissionsBoundaryArn"
+            )
+        return {aws_account.account_id: role}
+
     account_resource_dir_map = {
         aws_account.account_id: get_response_dir(exe_message, aws_account)
-        for aws_account in aws_accounts
+        for aws_account in aws_account_map.values()
     }
     role_resource_file_upsert_semaphore = NoqSemaphore(resource_file_upsert, 10)
     messages = []
     response = []
 
-    role_across_accounts = await get_role_across_accounts(
-        aws_accounts, role_name, False
+    role_across_accounts = generate_template_output(
+        updated_account_ids, aws_account_map, iambic_template
     )
+    updated_account_roles = await asyncio.gather(
+        *[
+            get_role_for_account(aws_account_map[account_id])
+            for account_id in updated_account_ids
+        ]
+    )
+    for updated_account_role in updated_account_roles:
+        role_across_accounts.update(updated_account_role)
     role_across_accounts = {k: v for k, v in role_across_accounts.items() if v}
 
     log.debug(
@@ -491,18 +518,21 @@ async def collect_aws_roles(
     )
 
     if detect_messages:
-        aws_accounts = list(aws_account_map.values())
         generate_role_resource_file_for_all_accounts_semaphore = NoqSemaphore(
             generate_role_resource_file_for_all_accounts, 45
         )
+        grouped_detect_messages = group_detect_messages("role_name", detect_messages)
         tasks = [
             {
                 "exe_message": exe_message,
-                "aws_accounts": aws_accounts,
-                "role_name": role.role_name,
+                "aws_account_map": aws_account_map,
+                "role_name": role_name,
+                "updated_account_ids": [
+                    message.account_id for message in role_messages
+                ],
+                "iambic_template": existing_template_map.get(role_name),
             }
-            for role in detect_messages
-            if not role.delete
+            for role_name, role_messages in grouped_detect_messages.items()
         ]
 
         # Remove deleted or mark templates for update
@@ -519,15 +549,6 @@ async def collect_aws_roles(
                     ):
                         # It's the only account for the template so delete it
                         existing_template.delete()
-                    else:
-                        # There are other accounts for the template so re-eval the template
-                        tasks.append(
-                            {
-                                "exe_message": exe_message,
-                                "aws_accounts": aws_accounts,
-                                "role_name": existing_template.properties.role_name,
-                            }
-                        )
 
         account_role_list = (
             await generate_role_resource_file_for_all_accounts_semaphore.process(tasks)
@@ -568,19 +589,24 @@ async def collect_aws_roles(
                 }
             )
 
-    log.info(
-        "Setting inline policies in role templates",
-        accounts=list(aws_account_map.keys()),
-    )
-    await set_role_resource_inline_policies_semaphore.process(messages)
-    log.info(
-        "Setting managed policies in role templates",
-        accounts=list(aws_account_map.keys()),
-    )
-    await set_role_resource_managed_policies_semaphore.process(messages)
-    log.info("Setting tags in role templates", accounts=list(aws_account_map.keys()))
-    await set_role_resource_tags_semaphore.process(messages)
-    log.info("Finished retrieving role details", accounts=list(aws_account_map.keys()))
+    if not detect_messages:
+        log.info(
+            "Setting inline policies in role templates",
+            accounts=list(aws_account_map.keys()),
+        )
+        await set_role_resource_inline_policies_semaphore.process(messages)
+        log.info(
+            "Setting managed policies in role templates",
+            accounts=list(aws_account_map.keys()),
+        )
+        await set_role_resource_managed_policies_semaphore.process(messages)
+        log.info(
+            "Setting tags in role templates", accounts=list(aws_account_map.keys())
+        )
+        await set_role_resource_tags_semaphore.process(messages)
+        log.info(
+            "Finished retrieving role details", accounts=list(aws_account_map.keys())
+        )
 
     account_role_output = json.dumps(account_roles)
     with open(

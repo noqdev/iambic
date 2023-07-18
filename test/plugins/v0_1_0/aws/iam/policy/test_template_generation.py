@@ -17,6 +17,7 @@ import iambic
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import get_existing_template_map
+from iambic.plugins.v0_1_0.aws.event_bridge.models import ManagedPolicyMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.policy.template_generation import (
     collect_aws_managed_policies,
     generate_account_managed_policy_resource_files,
@@ -115,9 +116,17 @@ async def test_generate_managed_policy_resource_file_for_all_accounts(
     policy_path = "/"
     files = await generate_managed_policy_resource_file_for_all_accounts(
         mock_execution_message,
-        [mock_aws_account],
-        policy_path,
         EXAMPLE_MANAGED_POLICY_NAME,
+        {mock_aws_account.account_id: mock_aws_account},
+        [
+            ManagedPolicyMessageDetails(
+                policy_path=policy_path,
+                account_id=mock_aws_account.account_id,
+                policy_name=EXAMPLE_MANAGED_POLICY_NAME,
+                delete=False,
+            )
+        ],
+        None,
     )
     assert len(files) == 1
     assert files[0]["policy_name"] == EXAMPLE_MANAGED_POLICY_NAME

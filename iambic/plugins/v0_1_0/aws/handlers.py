@@ -20,7 +20,10 @@ from iambic.core.models import (
     Variable,
 )
 from iambic.core.parser import load_templates
-from iambic.core.template_generation import get_existing_template_map
+from iambic.core.template_generation import (
+    get_existing_template_map,
+    templatize_resource,
+)
 from iambic.core.utils import async_batch_processor, gather_templates, yaml
 from iambic.plugins.v0_1_0.aws.event_bridge.models import (
     GroupMessageDetails,
@@ -69,6 +72,7 @@ from iambic.plugins.v0_1_0.aws.organizations.scp.template_generation import (
 from iambic.plugins.v0_1_0.aws.organizations.scp.utils import (
     service_control_policy_is_enabled,
 )
+from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -514,6 +518,7 @@ async def detect_changes(  # noqa: C901
         log.debug("No cloudtrail changes queue arn found. Returning")
         return
 
+    aws_account_map = await get_aws_account_map(config)
     role_messages = []
     user_messages = []
     group_messages = []
@@ -584,6 +589,7 @@ async def detect_changes(  # noqa: C901
                     )
                     if actor != identity_arn:
                         account_id = decoded_message.get("recipientAccountId")
+                        aws_account = aws_account_map[account_id]
                         request_params = decoded_message["requestParameters"]
                         response_elements = decoded_message["responseElements"]
                         event = decoded_message["eventName"]
@@ -595,7 +601,9 @@ async def detect_changes(  # noqa: C901
                             role_messages.append(
                                 RoleMessageDetails(
                                     account_id=account_id,
-                                    role_name=role_name,
+                                    role_name=templatize_resource(
+                                        aws_account, role_name
+                                    ),
                                     delete=bool(event == "DeleteRole"),
                                 )
                             )
@@ -605,7 +613,9 @@ async def detect_changes(  # noqa: C901
                             user_messages.append(
                                 UserMessageDetails(
                                     account_id=account_id,
-                                    role_name=user_name,
+                                    user_name=templatize_resource(
+                                        aws_account, user_name
+                                    ),
                                     delete=bool(event == "DeleteUser"),
                                 )
                             )
@@ -615,7 +625,9 @@ async def detect_changes(  # noqa: C901
                             group_messages.append(
                                 GroupMessageDetails(
                                     account_id=account_id,
-                                    group_name=group_name,
+                                    group_name=templatize_resource(
+                                        aws_account, group_name
+                                    ),
                                     delete=bool(event == "DeleteGroup"),
                                 )
                             )
@@ -632,8 +644,12 @@ async def detect_changes(  # noqa: C901
                             managed_policy_messages.append(
                                 ManagedPolicyMessageDetails(
                                     account_id=account_id,
-                                    policy_name=policy_name,
-                                    policy_path=policy_path,
+                                    policy_name=templatize_resource(
+                                        aws_account, policy_name
+                                    ),
+                                    policy_path=templatize_resource(
+                                        aws_account, policy_path
+                                    ),
                                     delete=bool(
                                         decoded_message["eventName"] == "DeletePolicy"
                                     ),
@@ -647,8 +663,12 @@ async def detect_changes(  # noqa: C901
                             permission_set_messages.append(
                                 PermissionSetMessageDetails(
                                     account_id=account_id,
-                                    instance_arn=request_params.get("instanceArn"),
-                                    permission_set_arn=permission_set_arn,
+                                    instance_arn=templatize_resource(
+                                        aws_account, request_params.get("instanceArn")
+                                    ),
+                                    permission_set_arn=templatize_resource(
+                                        aws_account, permission_set_arn
+                                    ),
                                 )
                             )
                         elif scp_policy_id := SCPMessageDetails.get_policy_id(

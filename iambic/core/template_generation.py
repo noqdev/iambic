@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from typing import Type, Union
 
 import xxhash
@@ -18,6 +18,22 @@ from iambic.core.utils import (
     is_regex_match,
     sanitize_string,
 )
+
+
+def deep_sort(obj: Union[dict, list]) -> Union[dict, list]:
+    """Recursively sorts a dict or list"""
+    if isinstance(obj, dict):
+        obj = OrderedDict(sorted(obj.items()))
+        for k, v in obj.items():
+            if isinstance(v, dict) or isinstance(v, list):
+                obj[k] = deep_sort(v)
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            if isinstance(v, dict) or isinstance(v, list):
+                obj[i] = deep_sort(v)
+        obj = sorted(obj, key=lambda x: json.dumps(x))
+
+    return obj
 
 
 async def get_existing_template_map(
@@ -275,7 +291,7 @@ async def base_group_dict_attribute(
             ] = provider_child_resource[provider_child_key_id]
             # Set raw dict
             resource_hash = xxhash.xxh32(
-                json.dumps(resource["resource_val"])
+                json.dumps(deep_sort(resource["resource_val"]))
             ).hexdigest()
             hash_map[resource_hash] = resource["resource_val"]
             # Set dict with attempted interpolation

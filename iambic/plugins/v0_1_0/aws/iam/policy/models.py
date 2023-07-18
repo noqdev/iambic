@@ -318,6 +318,12 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
     def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
         resource_dict = super()._apply_resource_dict(aws_account)
         resource_dict["Arn"] = self.get_arn_for_account(aws_account)
+
+        if policy_document := resource_dict.pop("PolicyDocument", []):
+            if isinstance(policy_document, list):
+                policy_document = policy_document[0]
+            resource_dict["PolicyDocument"] = policy_document
+
         return resource_dict
 
     async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
