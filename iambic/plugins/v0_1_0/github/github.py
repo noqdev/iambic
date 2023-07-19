@@ -708,7 +708,9 @@ def _process_template_changes(
     else:
         rendered_content = "no changes detected"
 
-    rendered_content = f"""Reacting to `{op_name}`\n\n{rendered_content}\n\n <a href="{html_url}">Run</a>"""
+    rendered_content = (
+        f"""Reacting to `{op_name}`\n\n{rendered_content}\n\n [Run]({html_url})"""
+    )
     if pull_request:
         _post_render_content_as_pr_comment(
             pull_request, rendered_content, blob_html_url=html_url
