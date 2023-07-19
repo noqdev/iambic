@@ -202,13 +202,13 @@ GIT_APPLY_COMMENT_TEMPLATE = """iambic {iambic_op} ran with:
 {plan}
 ```
 
-<a href="{run_url}">Run</a>
+[Run]({run_url})
 """
 
 
 def ensure_body_length_fits_github_spec(body: str, blob_html_url: str = None) -> str:
     if len(body) > BODY_MAX_LENGTH:
-        body = TRUNCATED_WARNING + f"""<a href="{blob_html_url}">Run</a>"""
+        body = TRUNCATED_WARNING + f"""[Run]({blob_html_url})"""
     return body
 
 
