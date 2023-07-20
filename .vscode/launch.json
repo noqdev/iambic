@@ -120,7 +120,8 @@
             "module": "iambic.main",
             "console": "integratedTerminal",
             "args": [
-                "git-plan",
+                "plan",
+                "--git-aware",
             ],
             "envFile": "${workspaceFolder}/.env",
             "justMyCode": true
