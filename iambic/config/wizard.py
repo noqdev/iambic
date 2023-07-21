@@ -1874,7 +1874,6 @@ class ConfigurationWizard:
         return hub_role_name, spoke_role_name, tags
 
     def configuration_wizard_change_detection_setup(self, aws_org: AWSOrganization):
-        self.setup_aws_configuration()
         click.echo(
             "\nTo setup change detection for iambic it requires creating CloudFormation stacks "
             "and a CloudFormation stack set.\n"
@@ -2001,6 +2000,7 @@ class ConfigurationWizard:
                 elif action == "Generate Github Action Workflows":
                     self.configuration_wizard_github_workflow()
                 elif action == "Setup AWS change detection":
+                    self.setup_aws_configuration()
                     if self.has_cf_stacksets_permissions:
                         log.info(
                             f"IAMbic change detection relies on CloudTrail being enabled all IAMbic aware accounts. "

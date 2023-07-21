@@ -1,6 +1,11 @@
 
 # Change Log
 
+## 0.10.15 (July 21, 2023)
+
+BUG FIXES:
+* Fixed error encountered when configuring change detection in the setup wizard.
+
 ## 0.10.11 (July 17, 2023)
 
 BUG FIXES:
