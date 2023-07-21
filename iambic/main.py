@@ -65,7 +65,7 @@ def output_proposed_changes(
             raise SystemExit(1)
 
 
-@click.group()
+@click.group(context_settings=dict(max_content_width=12))
 @click.version_option(package_name="iambic-core")
 def cli():
     ...
@@ -89,6 +89,9 @@ def cli():
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
 def expire(templates: list[str], repo_dir: str):
+    """
+    Remove expired templates
+    """
     run_expire(templates, repo_dir=repo_dir)
 
 
@@ -114,6 +117,9 @@ def run_expire(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
 def detect(repo_dir: str):
+    """
+    Report changes on provider-side configurations
+    """
     run_detect(repo_dir)
 
 
@@ -134,6 +140,9 @@ def run_detect(repo_dir: str):
     help="The repo base directory that should contain the templates. Example: ~/iambic/templates",
 )
 def clone_repos(repo_dir: str):
+    """
+    Clone configured git repositories into local repository directory 
+    """
     run_clone_repos(repo_dir=repo_dir)
 
 
@@ -212,6 +221,9 @@ def apply(
     to_sha: str,
     plan_output: str,
 ):
+    """
+    Apply local IAM policy configuration for specified template(s).
+    """
     if from_sha:
         if not to_sha:
             log.error("to_sha is required when from_sha is provided")
@@ -331,6 +343,9 @@ def run_git_apply(
     hidden=True,
 )
 def plan(templates: list, plan_output: str, repo_dir: str, git_aware: bool):
+    """
+    Report IAM policy changes configured locally for specified template(s).
+    """
     if git_aware:
         run_git_plan(plan_output, repo_dir=repo_dir)
     else:
@@ -392,6 +407,9 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
 def config_discovery(repo_dir: str):
+    """
+    Pull upstream changes to provider-side configurations
+    """
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
     exe_message = ExecutionMessage(
