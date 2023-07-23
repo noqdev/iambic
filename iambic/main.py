@@ -65,13 +65,13 @@ def output_proposed_changes(
             raise SystemExit(1)
 
 
-@click.group(context_settings=dict(max_content_width=12))
+@click.group()#context_settings=dict(max_content_width=120))
 @click.version_option(package_name="iambic-core")
 def cli():
     ...
 
 
-@cli.command()
+@cli.command(short_help="Remove local expired resources")
 @click.argument(
     "templates",
     required=False,
@@ -90,7 +90,7 @@ def cli():
 )
 def expire(templates: list[str], repo_dir: str):
     """
-    Remove expired templates
+    Scan local templates for expired resources and remove them.
     """
     run_expire(templates, repo_dir=repo_dir)
 
@@ -106,7 +106,7 @@ def run_expire(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
     asyncio.run(flag_expired_resources(templates, config.template_map))
 
 
-@cli.command()
+@cli.command(short_help="Preview provider-side resource changes")
 @click.option(
     "--repo-dir",
     "-d",
@@ -118,7 +118,8 @@ def run_expire(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
 )
 def detect(repo_dir: str):
     """
-    Report changes on provider-side configurations
+    Print a report of provider-side IAM resource changes that
+    have not yet been pulled to the local resource templates.
     """
     run_detect(repo_dir)
 
@@ -129,7 +130,7 @@ def run_detect(repo_dir: str):
     asyncio.run(config.run_detect_changes(repo_dir))
 
 
-@cli.command()
+@cli.command(short_help="Clone configured git repositories")
 @click.option(
     "--repo_dir",
     "-d",
@@ -141,7 +142,7 @@ def run_detect(repo_dir: str):
 )
 def clone_repos(repo_dir: str):
     """
-    Clone configured git repositories into local repository directory 
+    Clone configured git repositories into local repository directory.
     """
     run_clone_repos(repo_dir=repo_dir)
 
@@ -152,7 +153,7 @@ def run_clone_repos(repo_dir: str = str(pathlib.Path.cwd())):
     asyncio.run(clone_git_repos(config, repo_dir))
 
 
-@cli.command()
+@cli.command(short_help="Apply local changes to providers")
 @click.option(
     "--repo-dir",
     "-d",
@@ -222,7 +223,9 @@ def apply(
     plan_output: str,
 ):
     """
-    Apply local IAM policy configuration for specified template(s).
+    Apply local resource changes for specified template(s) to the remote providers
+    configured in this repository. To preview local changes without applying them,
+    run `iambic apply`.
     """
     if from_sha:
         if not to_sha:
@@ -312,7 +315,7 @@ def run_git_apply(
     return template_changes
 
 
-@cli.command()
+@cli.command(short_help="Preview local changes")
 @click.argument(
     "templates",
     required=False,
@@ -344,7 +347,9 @@ def run_git_apply(
 )
 def plan(templates: list, plan_output: str, repo_dir: str, git_aware: bool):
     """
-    Report IAM policy changes configured locally for specified template(s).
+    Print a report of the changes in the local repository to specified template(s),
+    that have yet to be applied remotely to configured providers. To apply changes after
+    previewing, run `iambic apply`.
     """
     if git_aware:
         run_git_plan(plan_output, repo_dir=repo_dir)
@@ -396,7 +401,7 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
     screen_render_resource_changes(template_changes)
 
 
-@cli.command()
+@cli.command(short_help="Pull upstream AWS org changes")
 @click.option(
     "--repo-dir",
     "-d",
@@ -408,7 +413,7 @@ def run_plan(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
 )
 def config_discovery(repo_dir: str):
     """
-    Pull upstream changes to provider-side configurations
+    Pull upstream changes to AWS organization configurations, such as new accounts.
     """
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
@@ -418,7 +423,7 @@ def config_discovery(repo_dir: str):
     asyncio.run(config.run_discover_upstream_config_changes(exe_message, repo_dir))
 
 
-@cli.command(name="import")
+@cli.command(name="import", short_help="Pull provider-side resource changes")
 @click.option(
     "--repo-dir",
     "-d",
@@ -429,6 +434,10 @@ def config_discovery(repo_dir: str):
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
 def import_(repo_dir: str):
+    """
+    Pull upstream changes from provider-side IAM resources.
+    Add, update, and remove templates as needed.
+    """
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config: Config = asyncio.run(load_config(config_path))
     check_and_update_resource_limit(config)
@@ -438,7 +447,7 @@ def import_(repo_dir: str):
     asyncio.run(config.run_import(exe_message, repo_dir))
 
 
-@cli.command()
+@cli.command(short_help="Lint and format local resource templates")
 @click.argument(
     "templates",
     required=False,
@@ -456,6 +465,9 @@ def import_(repo_dir: str):
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
 def lint(templates: list[str], repo_dir: str):
+    """
+    Lint and format local resources templates.
+    """
     ctx.eval_only = True
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path, configure_plugins=False))
@@ -469,7 +481,7 @@ def lint(templates: list[str], repo_dir: str):
         template.write()
 
 
-@cli.command(name="init")
+@cli.command(name="init", short_help="Install provider plugin dependencies")
 @click.option(
     "--repo-dir",
     "-d",
@@ -480,11 +492,14 @@ def lint(templates: list[str], repo_dir: str):
     help="The repo directory. Example: ~/iambic-templates",
 )
 def init_plugins_cmd(repo_dir: str):
+    """
+    Download and install dependencies for configured providers.
+    """
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     asyncio.run(init_plugins(config_path))
 
 
-@cli.command()
+@cli.command(short_help="Run the setup wizard")
 @click.option(
     "--repo-dir",
     "-d",
@@ -503,11 +518,14 @@ def init_plugins_cmd(repo_dir: str):
     help="If enabled, wizard will ask more questions",
 )
 def setup(repo_dir: str, is_more_options: bool):
+    """
+    Run the setup wizard.
+    """
     ctx.command = Command.APPLY
     ConfigurationWizard(repo_dir, is_more_options=is_more_options).run()
 
 
-@cli.command()
+@cli.command(short_help="Convert between AWS JSON and IAMbic YAML")
 def convert():
     """
     Convert a string from AWS PascalCase JSON to IAMbic compatible YAML, or visa-versa.
