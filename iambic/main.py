@@ -65,7 +65,7 @@ def output_proposed_changes(
             raise SystemExit(1)
 
 
-@click.group()#context_settings=dict(max_content_width=120))
+@click.group()
 @click.version_option(package_name="iambic-core")
 def cli():
     ...
@@ -446,7 +446,7 @@ def import_(repo_dir: str):
     )
     asyncio.run(config.run_import(exe_message, repo_dir))
 
- 
+
 @cli.command(short_help="Lint and format local resource templates")
 @click.argument(
     "templates",
