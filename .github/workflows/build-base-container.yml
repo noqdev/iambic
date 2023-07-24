@@ -1,0 +1,41 @@
+name: Build base container
+# This builds the base container upon a push event in noqdev/iambic repository
+on:
+  # Testing this is burdensome
+  # One way to test is to enable event type pull_request; however, our setup
+  # is restrictive on who can assume the container building role. You can consider
+  # temporarily opening the role to allow the pull_request or via specific branch to
+  # do the image building in the aws assume role side.
+  # pull_request:
+  workflow_dispatch
+
+jobs:
+  build_base_container:
+    if: ${{ github.repository == 'noqdev/iambic' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    name: Build Base Container
+    permissions:
+      id-token: write
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          # - linux/arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::242345320040:role/iambic_image_builder
+          aws-region: us-east-1
+      - name: build container
+        id: build-container
+        run: |
+          docker logout ghcr.io
+          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/iambic
+          make build_docker_base_image upload_docker_base_image
+          docker logout public.ecr.aws/iambic
+          docker buildx prune --filter=until=96h -f
