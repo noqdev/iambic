@@ -139,10 +139,14 @@ async def resource_file_upsert(
 async def file_regex_search(
     file_path: Union[str, Path], re_pattern: str
 ) -> Union[str, None]:
-    async with aiofiles.open(file_path, mode="r") as f:
-        file_content = await f.read()
-        if re.search(re_pattern, file_content):
-            return file_path
+    try:
+        async with aiofiles.open(file_path, mode="r") as f:
+            file_content = await f.read()
+            if re.search(re_pattern, file_content):
+                return file_path
+    except FileNotFoundError:
+        # race condition with different providers
+        return None
 
 
 async def gather_templates(repo_dir: str, template_type: str = None) -> list[str]:
