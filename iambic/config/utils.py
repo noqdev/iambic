@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pathlib
-import resource
 from typing import TYPE_CHECKING
 
 from iambic.core.logger import log
@@ -33,6 +32,10 @@ async def resolve_config_template_path(repo_dir: str) -> pathlib.Path:
 
 
 def check_and_update_resource_limit(config: Config):
+    try:
+        import resource
+    except ImportError:
+        return
     soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
     minimum_ulimit = 64000
     if config.core:
