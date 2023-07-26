@@ -32,8 +32,24 @@ from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, azure_ad, google_workspac
 CURRENT_IAMBIC_VERSION = "1"
 
 
+class ExceptionReporting(BaseModel):
+    enabled: bool = Field(..., description="Enable or disable exception reporting.")
+    detailed: bool = Field(
+        ...,
+        description="Include detailed information in the report, such as local variables.",
+    )
+    automatically_send_reports: bool = Field(
+        ..., description="Automatically send reports without asking for user consent."
+    )
+    email_address: Optional[str] = Field(
+        ...,
+        description="Email address for correspondence about the exception, if you would like us to communicate with you.",
+    )
+
+
 class CoreConfig(BaseModel):
     minimum_ulimit: int = 64000
+    exception_reporting: Optional[ExceptionReporting] = None
 
 
 class PluginType(Enum):

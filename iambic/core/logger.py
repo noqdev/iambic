@@ -7,6 +7,8 @@ import os
 import boto3
 import structlog
 
+from iambic.core.exceptions import *  # noqa: F401, F403
+
 
 def pretty_log(logger, method_name, event_dict):
     return_dict = {}
