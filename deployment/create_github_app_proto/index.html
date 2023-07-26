@@ -1,0 +1,29 @@
+<form action="https://github.com/organizations/noqdev/settings/apps/new?state=abc123" method="post">
+    register a GitHub App Manifest: <input type="text" name="manifest" id="manifest"><br>
+    <input type="submit" value="Submit">
+   </form>
+
+   <script>
+    input = document.getElementById("manifest")
+    input.value = JSON.stringify({
+      "name": "test-iambic-bot-for-org",
+      "url": "https://docs.iambic.org/",
+      "hook_attributes": {
+        "url": "https://docs.iambic.org/",
+        "active": false,
+      },
+      "redirect_url": "http://localhost:8080/redirect",
+      "public": false,
+      "default_permissions": {
+        "contents": "write",
+        "pull_requests": "write",
+        "issues": "write"
+      },
+      "default_events": [
+        "meta",
+        "issue_comment",
+        "pull_request",
+        "workflow_run"
+      ]
+    })
+   </script>
