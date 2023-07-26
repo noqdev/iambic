@@ -26,7 +26,7 @@ async def redirect(request):
     result = f"code: {code}, state: {state}"
     print(result)
     await exchange_token(code)
-    return web.Response(text="ok")
+    return web.FileResponse("./success.html")
 
 
 async def exchange_token(code):
