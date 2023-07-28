@@ -2036,6 +2036,10 @@ class ConfigurationWizard:
 
         github_app_jwt = generate_jwt(github_app_secrets)
         update_webhook_url(webhook_url, github_app_jwt)
+        github_app_url = github_app_secrets.get("html_url", "")
+        log.info(
+            f"GitHub App IAMbic integration setup successfully\n Please now visit site to install the app to your repository. \n{github_app_url}"
+        )
 
         # FIXME amend the IambicHub trust policy to allow lambda execution role
         # FIXME update GH App to have the correct output url
