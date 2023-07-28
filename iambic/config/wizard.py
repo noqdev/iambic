@@ -1880,6 +1880,16 @@ class ConfigurationWizard:
         return hub_role_name, spoke_role_name, tags
 
     def configuration_github_app_aws_lambda_setup(self):
+        from iambic.plugins.v0_1_0.github.create_github_app import (
+            get_github_app_secrets,
+        )
+
+        github_app_secrets = get_github_app_secrets()
+
+        assert github_app_secrets
+
+        # safe secret for pem and webhook_url
+
         click.echo(
             "\nTo setup GitHub App for iambic it requires creating CloudFormation stacks. \n"
             "To review the templates used or deploy them manually, the IdentityRule templates used can be found here:\n"
@@ -1907,6 +1917,20 @@ class ConfigurationWizard:
         # target_account = account_id_map[target_account_id]
 
         session, _ = self.get_boto3_session_for_account(target_account_id)
+
+        # FIXME migration notes since we are using a new secrets format
+        secretsmanager_client = session.client(
+            service_name="secretsmanager", region_name=self.aws_default_region
+        )
+        try:
+            response = secretsmanager_client.create_secret(
+                Name="iambic/github-app-secrets",
+                Description="iambic github app private key",
+                SecretString=yaml.dump(github_app_secrets),
+            )
+        except Exception as e:
+            log.error(e)
+
         cf_client = session.client(
             "cloudformation", region_name=self.aws_default_region
         )

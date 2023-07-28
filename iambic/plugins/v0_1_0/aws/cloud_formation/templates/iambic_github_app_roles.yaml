@@ -45,6 +45,7 @@ Resources:
                 Resource:
                   - "arn:aws:secretsmanager:*:*:secret:iambic/github-app-private-key-*"
                   - "arn:aws:secretsmanager:*:*:secret:iambic/github-app-webhook-secret-*"
+                  - "arn:aws:secretsmanager:*:*:secret:iambic/github-app-secrets-*"
               - Sid: "AssumeRole"
                 Effect: Allow
                 Action:
