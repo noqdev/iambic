@@ -1,0 +1,12 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  EcrRepositoryPrefix:
+    Type: String
+    Default: "ecr-public"
+Resources:
+  PullThroughCacheRule:
+    Type: 'AWS::ECR::PullThroughCacheRule'
+    Properties:
+      EcrRepositoryPrefix:
+        Ref: EcrRepositoryPrefix
+      UpstreamRegistryUrl: "public.ecr.aws"

@@ -8,6 +8,7 @@ import os
 import re
 import select
 import sys
+import time
 import uuid
 from enum import Enum
 from pathlib import Path
@@ -44,6 +45,11 @@ from iambic.core.template_generation import get_existing_template_map
 from iambic.core.utils import gather_templates, yaml
 from iambic.github.utils import create_workflow_files
 from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
+    create_github_app_code_build_stack,
+    create_github_app_ecr_pull_through_cache_stack,
+    create_github_app_ecr_repo_stack,
+    create_github_app_lambda_stack,
+    create_github_app_roles_stack,
     create_iambic_eventbridge_stacks,
     create_iambic_role_stacks,
     create_spoke_role_stack,
@@ -1873,6 +1879,105 @@ class ConfigurationWizard:
         tags = aws_cf_parse_key_value_string(unparse_tags)
         return hub_role_name, spoke_role_name, tags
 
+    def configuration_github_app_aws_lambda_setup(self):
+        click.echo(
+            "\nTo setup GitHub App for iambic it requires creating CloudFormation stacks. \n"
+            "To review the templates used or deploy them manually, the IdentityRule templates used can be found here:\n"
+            "https://github.com/noqdev/iambic/tree/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates\n"
+            "If you have already manually deployed the templates, answer yes to proceed.\n"
+            "IAMbic will validate that your stacks have been deployed successfully and will not attempt to replace them."
+        )
+        unparse_tags = questionary.text(
+            "Add Tags (leave blank or `team=ops_team, cost_center=engineering`): ",
+            default="",
+            validate=validate_aws_cf_input_tags,
+        ).ask()
+        tags = aws_cf_parse_key_value_string(unparse_tags)
+        if not questionary.confirm("Proceed?").unsafe_ask():
+            return
+
+        # account_id_map = {
+        #     account.account_id: account for account in self.config.aws.accounts
+        # }
+        target_account_id = questionary.text(
+            "Target account id",
+            default="",  # FIXME valid account id
+        ).ask()
+
+        # target_account = account_id_map[target_account_id]
+
+        session, _ = self.get_boto3_session_for_account(target_account_id)
+        cf_client = session.client(
+            "cloudformation", region_name=self.aws_default_region
+        )
+
+        successfully_created = asyncio.run(
+            create_github_app_roles_stack(
+                cf_client,
+                self.hub_account_id,
+                IAMBIC_HUB_ROLE_NAME,
+                self.cf_role_arn,
+                tags=tags,
+            )
+        )
+
+        successfully_created = asyncio.run(
+            create_github_app_ecr_pull_through_cache_stack(
+                cf_client,
+                self.cf_role_arn,
+                tags=tags,
+            )
+        )
+
+        successfully_created = asyncio.run(
+            create_github_app_ecr_repo_stack(
+                cf_client,
+                self.cf_role_arn,
+                tags=tags,
+            )
+        )
+
+        successfully_created = asyncio.run(
+            create_github_app_code_build_stack(
+                cf_client,
+                target_account_id,
+                self.cf_role_arn,
+                tags=tags,
+            )
+        )
+
+        code_build_client = session.client(
+            "codebuild", region_name=self.aws_default_region
+        )
+
+        response = code_build_client.start_build(
+            projectName="iambic_code_build",
+        )
+
+        build_id = response["build"]["id"]
+        for _ in range(6):
+            resp = code_build_client.batch_get_builds(ids=[build_id])
+            build_status = resp["builds"][0]["buildStatus"]
+            if build_status == "IN_PROGRESS":
+                time.sleep(30)
+                continue
+            elif build_status == "SUCCEEDED":
+                break
+            else:
+                raise ValueError(f"build status is {build_status}")
+
+        successfully_created = asyncio.run(
+            create_github_app_lambda_stack(
+                cf_client,
+                self.cf_role_arn,
+                tags=tags,
+            )
+        )
+        assert successfully_created
+
+        # FIXME amend the IambicHub trust policy to allow lambda execution role
+        # FIXME update GH App to have the correct output url
+
     def configuration_wizard_change_detection_setup(self, aws_org: AWSOrganization):
         click.echo(
             "\nTo setup change detection for iambic it requires creating CloudFormation stacks "
@@ -1957,6 +2062,7 @@ class ConfigurationWizard:
                 choices.append("Okta")
 
             if self.has_aws_account_or_organizations:
+                choices.append("Setup GitHub App Integration using AWS Lambda")
                 choices.append("Generate Github Action Workflows")
                 if (
                     self.config.aws.organizations
@@ -1997,6 +2103,14 @@ class ConfigurationWizard:
                         f"{secret_question_text} Proceed?"
                     ).unsafe_ask():
                         self.configuration_wizard_azure_ad()
+                elif action == "Setup GitHub App Integration using AWS Lambda":
+                    self.setup_aws_configuration()
+                    if self.has_confirm_cf_permissions:
+                        self.configuration_github_app_aws_lambda_setup()
+                    else:
+                        log.info(
+                            "Unable to edit this attribute without CloudFormation permissions."
+                        )
                 elif action == "Generate Github Action Workflows":
                     self.configuration_wizard_github_workflow()
                 elif action == "Setup AWS change detection":
