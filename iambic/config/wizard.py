@@ -1922,11 +1922,15 @@ class ConfigurationWizard:
         secretsmanager_client = session.client(
             service_name="secretsmanager", region_name=self.aws_default_region
         )
+        secrets_kwargs = {}
+        if tags:
+            secrets_kwargs["Tags"] = tags
         try:
             response = secretsmanager_client.create_secret(
                 Name="iambic/github-app-secrets",
                 Description="iambic github app private key",
                 SecretString=yaml.dump(github_app_secrets),
+                **secrets_kwargs,
             )
         except Exception as e:
             log.error(e)
@@ -1935,12 +1939,14 @@ class ConfigurationWizard:
             "cloudformation", region_name=self.aws_default_region
         )
 
+        cf_role_arn = self.cf_role_arn
+
         successfully_created = asyncio.run(
             create_github_app_roles_stack(
                 cf_client,
                 self.hub_account_id,
                 IAMBIC_HUB_ROLE_NAME,
-                self.cf_role_arn,
+                cf_role_arn,
                 tags=tags,
             )
         )
@@ -1948,7 +1954,7 @@ class ConfigurationWizard:
         successfully_created = asyncio.run(
             create_github_app_ecr_pull_through_cache_stack(
                 cf_client,
-                self.cf_role_arn,
+                cf_role_arn,
                 tags=tags,
             )
         )
@@ -1956,7 +1962,7 @@ class ConfigurationWizard:
         successfully_created = asyncio.run(
             create_github_app_ecr_repo_stack(
                 cf_client,
-                self.cf_role_arn,
+                cf_role_arn,
                 tags=tags,
             )
         )
@@ -1965,11 +1971,13 @@ class ConfigurationWizard:
             create_github_app_code_build_stack(
                 cf_client,
                 target_account_id,
-                self.cf_role_arn,
+                cf_role_arn,
                 tags=tags,
             )
         )
 
+        # FIXME shortcircuit if build image is already present
+        # FIXME but then how to deal with version upgrade
         code_build_client = session.client(
             "codebuild", region_name=self.aws_default_region
         )
@@ -1979,6 +1987,7 @@ class ConfigurationWizard:
         )
 
         build_id = response["build"]["id"]
+        # FIXME explain why this is stalling for builds
         for _ in range(6):
             resp = code_build_client.batch_get_builds(ids=[build_id])
             build_status = resp["builds"][0]["buildStatus"]
@@ -1993,7 +2002,7 @@ class ConfigurationWizard:
         successfully_created = asyncio.run(
             create_github_app_lambda_stack(
                 cf_client,
-                self.cf_role_arn,
+                cf_role_arn,
                 tags=tags,
             )
         )
