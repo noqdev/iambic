@@ -8,6 +8,7 @@ import json
 import os
 import tempfile
 import time
+from functools import cache
 from typing import Any, Callable
 from urllib.parse import urlparse
 
@@ -15,6 +16,7 @@ import aiohttp
 import boto3
 import github
 import jwt
+import yaml
 from botocore.exceptions import ClientError
 
 import iambic.core.utils
@@ -72,7 +74,27 @@ def get_app_bearer_token(private_key, app_id) -> str:
     return jwt.encode(payload, private_key, algorithm="RS256")
 
 
-def get_app_private_key_as_lambda_context():
+@cache
+def _get_app_secrets_as_lambda_context_current() -> dict:
+    # Create a Secrets Manager client
+    session = boto3.session.Session()
+    client = session.client(service_name="secretsmanager")
+
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId="iambic/github-app-secrets"
+        )
+    except ClientError as e:
+        # For a list of exceptions thrown, see
+        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+        raise e
+
+    # Decrypts secret using the associated KMS key.
+    return yaml.safe_load(get_secret_value_response["SecretString"])
+
+
+@cache
+def _get_app_private_key_as_lambda_context_old():
     # assuming we are already in an lambda execution context
     secret_name = os.environ["GITHUB_APP_SECRET_KEY_SECRET_ID"]
     region_name = os.environ["AWS_REGION"]
@@ -92,7 +114,20 @@ def get_app_private_key_as_lambda_context():
     return get_secret_value_response["SecretString"]
 
 
-def get_app_webhook_secret_as_lambda_context():
+def get_app_private_key_as_lambda_context():
+    try:
+        secrets = _get_app_secrets_as_lambda_context_current()
+        return secrets["pem"]
+    except ClientError:
+        # try to fall back to use the old secrets
+        pass
+    return _get_app_private_key_as_lambda_context_old()
+
+
+cache
+
+
+def _get_app_webhook_secret_as_lambda_context_old():
     # assuming we are already in an lambda execution context
     secret_name = os.environ["GITHUB_APP_WEBHOOK_SECRET_SECRET_ID"]
     region_name = os.environ["AWS_REGION"]
@@ -110,6 +145,16 @@ def get_app_webhook_secret_as_lambda_context():
 
     # Decrypts secret using the associated KMS key.
     return get_secret_value_response["SecretString"]
+
+
+def get_app_webhook_secret_as_lambda_context():
+    try:
+        secrets = _get_app_secrets_as_lambda_context_current()
+        return secrets["webhook_secret"]
+    except ClientError:
+        # try to fall back to use the old secrets
+        pass
+    return _get_app_webhook_secret_as_lambda_context_old()
 
 
 async def _get_installation_token(app_id, installation_id):
