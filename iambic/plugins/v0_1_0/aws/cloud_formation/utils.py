@@ -398,7 +398,7 @@ async def create_github_app_lambda_stack(
 ) -> bool:
     region = cf_client.meta.region_name
     additional_kwargs: dict[str, Any] = {"RoleARN": role_arn} if role_arn else {}
-
+    assert target_account_id
     if tags:
         additional_kwargs["Tags"] = tags
     stack_created = await create_stack(
@@ -408,7 +408,7 @@ async def create_github_app_lambda_stack(
         parameters=[
             {
                 "ParameterKey": "ImageUri",
-                "ParameterValue": f"{target_account_id}.dkr.ecr.{region}.amazonaws.com/ecr-public/iambic/iambic",
+                "ParameterValue": f"{target_account_id}.dkr.ecr.{region}.amazonaws.com/ecr-public/iambic/iambic:latest",
             },
             {
                 "ParameterKey": "LambdaExecutionRoleArn",

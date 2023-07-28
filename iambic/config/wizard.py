@@ -1950,6 +1950,7 @@ class ConfigurationWizard:
                 tags=tags,
             )
         )
+        assert successfully_created
 
         successfully_created = asyncio.run(
             create_github_app_ecr_pull_through_cache_stack(
@@ -1958,6 +1959,7 @@ class ConfigurationWizard:
                 tags=tags,
             )
         )
+        assert successfully_created
 
         successfully_created = asyncio.run(
             create_github_app_ecr_repo_stack(
@@ -1966,6 +1968,7 @@ class ConfigurationWizard:
                 tags=tags,
             )
         )
+        assert successfully_created
 
         successfully_created = asyncio.run(
             create_github_app_code_build_stack(
@@ -1975,6 +1978,7 @@ class ConfigurationWizard:
                 tags=tags,
             )
         )
+        assert successfully_created
 
         # FIXME shortcircuit if build image is already present
         # FIXME but then how to deal with version upgrade
@@ -1988,6 +1992,7 @@ class ConfigurationWizard:
 
         build_id = response["build"]["id"]
         # FIXME explain why this is stalling for builds
+        log.info("Preparing container image. Takes about 2 min...")
         for _ in range(6):
             resp = code_build_client.batch_get_builds(ids=[build_id])
             build_status = resp["builds"][0]["buildStatus"]
@@ -2002,11 +2007,35 @@ class ConfigurationWizard:
         successfully_created = asyncio.run(
             create_github_app_lambda_stack(
                 cf_client,
+                target_account_id,
                 cf_role_arn,
                 tags=tags,
             )
         )
         assert successfully_created
+
+        webhook_url = None
+        from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
+            IAMBIC_GITHUB_APP_SUFFIX,
+        )
+
+        lambda_stack_name = f"IAMbicGitHubAppLambda{IAMBIC_GITHUB_APP_SUFFIX}"
+        response = cf_client.describe_stacks(StackName=lambda_stack_name)
+        outputs = response["Stacks"][0]["Outputs"]
+        for output in outputs:
+            keyName = output["OutputKey"]
+            if keyName == "FunctionUrl":
+                webhook_url = output["OutputValue"]
+
+        assert webhook_url
+
+        from iambic.plugins.v0_1_0.github.manage_github_app import (
+            generate_jwt,
+            update_webhook_url,
+        )
+
+        github_app_jwt = generate_jwt(github_app_secrets)
+        update_webhook_url(webhook_url, github_app_jwt)
 
         # FIXME amend the IambicHub trust policy to allow lambda execution role
         # FIXME update GH App to have the correct output url
