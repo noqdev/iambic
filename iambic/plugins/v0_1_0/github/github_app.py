@@ -128,6 +128,10 @@ async def _get_installation_token(app_id, installation_id):
             return installation_token
 
 
+def lower_case_all_header_keys(d):
+    return {key.lower(): value for key, value in d.items()}
+
+
 def run_handler(event=None, context=None):
     """
     Default handler for AWS Lambda. It is split out from the actual
@@ -137,17 +141,33 @@ def run_handler(event=None, context=None):
     # debug
     print(event)
 
-    github_event = event["headers"]["x-github-event"]
-    app_id = event["headers"]["x-github-hook-installation-target-id"]
-    request_signature = event["headers"]["x-hub-signature-256"].split("=")[
+    # Http spec considers keys to be insensitive but different
+    # proxy will pass along different case sensitive header key
+    # for example: API Gateway lambda integration pass header case transparent from request
+    # whereas lambda functional url proactive lower case the incoming header keys
+    # this is the reason we proactively lower_case the header keys
+    github_event_headers = lower_case_all_header_keys(event["headers"])
+
+    github_event = github_event_headers["x-github-event"]
+    app_id = github_event_headers["x-github-hook-installation-target-id"]
+    request_signature = github_event_headers["x-hub-signature-256"].split("=")[
         1
     ]  # the format is in sha256=<sig>
 
+    payload = {}
+    # the payload is switch between lambda event's body vs rawBody
+    # due to difference of how various proxy temper with the http post body
+    # For API Gateway, it's lambda integration always decode the payload and pass to lambda
+    # however, to verify message signature, we must use non-tempered body.
+    if "rawBody" in event:
+        payload = event["rawBody"]
+    else:
+        payload = event["body"]
+
     # verify webhooks security secrets
-    payload = event["body"]
     verify_signature(request_signature, payload)
 
-    webhook_payload = json.loads(event["body"])
+    webhook_payload = json.loads(payload)
     installation_id = webhook_payload["installation"]["id"]
     github_override_token = asyncio.run(
         _get_installation_token(app_id, installation_id)
