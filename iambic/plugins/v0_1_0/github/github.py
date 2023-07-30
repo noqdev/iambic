@@ -166,6 +166,9 @@ def prepare_local_repo(
     default_branch = get_remote_default_branch(cloned_repo)
     cloned_repo.git.checkout("-b", "attempt/git-apply", default_branch)
 
+    # Pull the latest changes from the main branch
+    cloned_repo.git.pull("origin", default_branch)
+
     # Note, this is for local usage, we don't actually
     # forward this commit upstream
     repo_config_writer = cloned_repo.config_writer()
