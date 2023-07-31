@@ -1958,34 +1958,7 @@ class ConfigurationWizard:
         # modify the trust policy of IambicHubRole to allow iambic lambda execution role
         lambda_role_arn = f"arn:aws:iam::{target_account_id}:role/iambic_github_app_lambda_execution{IAMBIC_GITHUB_APP_SUFFIX}"
 
-        hub_session, _ = self.get_boto3_session_for_account(self.hub_account_id)
-        hub_iam_client = hub_session.client("iam", region_name=self.aws_default_region)
-        hub_role_arn = self.config.aws.hub_role_arn
-        hub_role_name = hub_role_arn.split("/")[-1]
-        resp = hub_iam_client.get_role(RoleName=hub_role_name)
-        existing_trust_policy = resp["Role"]["AssumeRolePolicyDocument"]
-        trust_lambda_execution_role = False
-        statements: list = existing_trust_policy.get("Statement", [])
-        for statement in statements:  # FIXME: watch out other cases
-            if statement.get("Sid", "") == "AllowIAMbicLambdaIntegration":
-                trust_lambda_execution_role = True
-        if not trust_lambda_execution_role:
-            statements.append(
-                {
-                    "Sid": "AllowIAMbicLambdaIntegration",
-                    "Effect": "Allow",
-                    "Principal": {"AWS": lambda_role_arn},
-                    "Action": ["sts:AssumeRole", "sts:TagSession"],
-                }
-            )
-            try:
-                resp = hub_iam_client.update_assume_role_policy(
-                    RoleName=hub_role_name,
-                    PolicyDocument=json.dumps(existing_trust_policy),
-                )
-                log.info(f"Added trust policy on {hub_role_arn} for {lambda_role_arn}")
-            except Exception as e:
-                log.error(e)
+        self.github_app_amend_trust_policy_for_iambic_integration(lambda_role_arn)
 
         successfully_created = asyncio.run(
             create_github_app_ecr_pull_through_cache_stack(
@@ -2015,41 +1988,9 @@ class ConfigurationWizard:
         )
         assert successfully_created
 
-        # FIXME shortcircuit if build image is already present
-        # FIXME but then how to deal with version upgrade
-        code_build_client = session.client(
-            "codebuild", region_name=self.aws_default_region
-        )
+        self.github_app_pull_latest_iambic_image(session)
 
-        response = code_build_client.start_build(
-            projectName="iambic_code_build",
-        )
-
-        build_id = response["build"]["id"]
-        # FIXME explain why this is stalling for builds
-        log.info("Preparing container image. Takes about 2 min...")
-        for _ in range(6):
-            resp = code_build_client.batch_get_builds(ids=[build_id])
-            build_status = resp["builds"][0]["buildStatus"]
-            if build_status == "IN_PROGRESS":
-                time.sleep(30)
-                continue
-            elif build_status == "SUCCEEDED":
-                break
-            else:
-                raise ValueError(f"build status is {build_status}")
-
-        repository_name = "iambic-ecr-public/iambic/iambic"
-        ecr_client = session.client("ecr", region_name=self.aws_default_region)
-        for _ in range(6):
-            resp = ecr_client.describe_images(
-                repositoryName=repository_name, imageIds=[{"imageTag": "latest"}]
-            )
-            if len(resp["imageDetails"]) == 0:
-                time.sleep(30)
-                continue
-            else:
-                break
+        self.github_app_wait_until_image_is_ready(session)
 
         successfully_created = asyncio.run(
             create_github_app_lambda_stack(
@@ -2085,8 +2026,83 @@ class ConfigurationWizard:
             f"GitHub App IAMbic integration setup successfully\n Please now visit site to install the app to your repository. \n{github_app_url}"
         )
 
-        # FIXME amend the IambicHub trust policy to allow lambda execution role
-        # FIXME update GH App to have the correct output url
+    def github_app_amend_trust_policy_for_iambic_integration(self, lambda_role_arn):
+        hub_session, _ = self.get_boto3_session_for_account(self.hub_account_id)
+        hub_iam_client = hub_session.client("iam", region_name=self.aws_default_region)
+        hub_role_arn = self.config.aws.hub_role_arn
+        hub_role_name = hub_role_arn.split("/")[-1]
+        resp = hub_iam_client.get_role(RoleName=hub_role_name)
+        existing_trust_policy = resp["Role"]["AssumeRolePolicyDocument"]
+        trust_lambda_execution_role = False
+        needs_to_add_statement = True
+        statements: list = existing_trust_policy.get("Statement", [])
+        new_statement = {
+            "Sid": "AllowIAMbicLambdaIntegration",
+            "Effect": "Allow",
+            "Principal": {"AWS": lambda_role_arn},
+            "Action": ["sts:AssumeRole", "sts:TagSession"],
+        }
+        for statement in statements:  # FIXME: watch out other cases
+            if statement.get("Sid", "") == "AllowIAMbicLambdaIntegration":
+                needs_to_add_statement = False
+                if statement["Principal"]["AWS"] != lambda_role_arn:
+                    # Update the statement
+                    statement["Principal"]["AWS"] = lambda_role_arn
+                else:
+                    trust_lambda_execution_role = True
+        if needs_to_add_statement:
+            statements.append(new_statement)
+        if not trust_lambda_execution_role:
+            try:
+                resp = hub_iam_client.update_assume_role_policy(
+                    RoleName=hub_role_name,
+                    PolicyDocument=json.dumps(existing_trust_policy),
+                )
+                log.info(f"Added trust policy on {hub_role_arn} for {lambda_role_arn}")
+            except Exception as e:
+                log.error(e)
+
+    def github_app_pull_latest_iambic_image(self, session):
+        # FIXME shortcircuit if build image is already present
+        # FIXME but then how to deal with version upgrade
+        code_build_client = session.client(
+            "codebuild", region_name=self.aws_default_region
+        )
+
+        response = code_build_client.start_build(
+            projectName="iambic_code_build",
+        )
+
+        build_id = response["build"]["id"]
+        # FIXME explain why this is stalling for builds
+        log.info("Preparing container image. Takes about 2 min...")
+        for _ in range(6):
+            resp = code_build_client.batch_get_builds(ids=[build_id])
+            build_status = resp["builds"][0]["buildStatus"]
+            if build_status == "IN_PROGRESS":
+                time.sleep(30)
+                continue
+            elif build_status == "SUCCEEDED":
+                break
+            else:
+                raise ValueError(f"build status is {build_status}")
+
+    def github_app_wait_until_image_is_ready(self, session):
+        repository_name = "iambic-ecr-public/iambic/iambic"
+        ecr_client = session.client("ecr", region_name=self.aws_default_region)
+        for _ in range(6):
+            try:
+                resp = ecr_client.describe_images(
+                    repositoryName=repository_name, imageIds=[{"imageTag": "latest"}]
+                )
+                if len(resp["imageDetails"]) == 0:
+                    time.sleep(30)
+                    continue
+                else:
+                    break
+            except ecr_client.exceptions.ImageNotFoundException:
+                time.sleep(30)
+                continue
 
     def configuration_wizard_change_detection_setup(self, aws_org: AWSOrganization):
         click.echo(
