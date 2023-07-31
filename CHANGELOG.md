@@ -1,6 +1,14 @@
 
 # Change Log
 
+## 0.11.03 (July 31, 2023)
+
+BUG FIXES:
+* Git commit message not reflecting the linting changes [#521](https://github.com/noqdev/iambic/pull/521)
+
+THANKS:
+`datfinesoul` for reporting git commit message not reflecting the actual changes. [#520](https://github.com/noqdev/iambic/issues/520)
+
 ## 0.11.01 (July 31, 2023)
 
 DOCS:
