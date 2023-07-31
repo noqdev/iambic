@@ -1880,6 +1880,9 @@ class ConfigurationWizard:
         return hub_role_name, spoke_role_name, tags
 
     def configuration_github_app_aws_lambda_setup(self):
+        from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
+            IAMBIC_GITHUB_APP_SUFFIX,
+        )
         from iambic.plugins.v0_1_0.github.create_github_app import (
             get_github_app_secrets,
         )
@@ -1951,6 +1954,38 @@ class ConfigurationWizard:
             )
         )
         assert successfully_created
+
+        # modify the trust policy of IambicHubRole to allow iambic lambda execution role
+        lambda_role_arn = f"arn:aws:iam::{target_account_id}:role/iambic_github_app_lambda_execution{IAMBIC_GITHUB_APP_SUFFIX}"
+
+        hub_session, _ = self.get_boto3_session_for_account(self.hub_account_id)
+        hub_iam_client = hub_session.client("iam", region_name=self.aws_default_region)
+        hub_role_arn = self.config.aws.hub_role_arn
+        hub_role_name = hub_role_arn.split("/")[-1]
+        resp = hub_iam_client.get_role(RoleName=hub_role_name)
+        existing_trust_policy = resp["Role"]["AssumeRolePolicyDocument"]
+        trust_lambda_execution_role = False
+        statements: list = existing_trust_policy.get("Statement", [])
+        for statement in statements:  # FIXME: watch out other cases
+            if statement.get("Sid", "") == "AllowIAMbicLambdaIntegration":
+                trust_lambda_execution_role = True
+        if not trust_lambda_execution_role:
+            statements.append(
+                {
+                    "Sid": "AllowIAMbicLambdaIntegration",
+                    "Effect": "Allow",
+                    "Principal": {"AWS": lambda_role_arn},
+                    "Action": ["sts:AssumeRole", "sts:TagSession"],
+                }
+            )
+            try:
+                resp = hub_iam_client.update_assume_role_policy(
+                    RoleName=hub_role_name,
+                    PolicyDocument=json.dumps(existing_trust_policy),
+                )
+                log.info(f"Added trust policy on {hub_role_arn} for {lambda_role_arn}")
+            except Exception as e:
+                log.error(e)
 
         successfully_created = asyncio.run(
             create_github_app_ecr_pull_through_cache_stack(
@@ -2027,9 +2062,6 @@ class ConfigurationWizard:
         assert successfully_created
 
         webhook_url = None
-        from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
-            IAMBIC_GITHUB_APP_SUFFIX,
-        )
 
         lambda_stack_name = f"IAMbicGitHubAppLambda{IAMBIC_GITHUB_APP_SUFFIX}"
         response = cf_client.describe_stacks(StackName=lambda_stack_name)
