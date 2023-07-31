@@ -786,13 +786,21 @@ def _handle_detect_changes_from_eventbridge(
         if len(diff_list) > 0:
             repo.git.commit("-m", COMMIT_MESSAGE_FOR_DETECT)
 
+            note_content = None
             if os.path.getsize(temp_file_path) > 0:
                 with open(temp_file_path, "r") as file:
                     note_content = file.read()
-                # Add contents of `temp_file_path`` as git notes to the last commit
-                repo.git.notes.add("-m", note_content, "HEAD")
-
+                # Add contents of `temp_file_path` as git notes to the last commit
+                repo.git.execute(["git", "notes", "add", "-m", note_content, "HEAD"])
             repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()
+            # If notes were added, push them too
+            if note_content:
+                repo.git.push("origin", "refs/notes/*")
+                log.info(
+                    "Wrote Git Notes to file",
+                    note_content=note_content,
+                    path=temp_file_path,
+                )
         else:
             log.info("handle_detect no changes")
     except Exception as e:
