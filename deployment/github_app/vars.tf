@@ -76,7 +76,7 @@ variable "github_webhook_secret_secret_id" {
 variable "iambic_image_repo_name" {
   type = string
   description = "ECR image uri holding the iambic image"
-  default =  "ecr-public/iambic/iambic"
+  default =  "iambic-ecr-public/iambic/iambic"
 }
 
 variable "iambic_image_tag" {

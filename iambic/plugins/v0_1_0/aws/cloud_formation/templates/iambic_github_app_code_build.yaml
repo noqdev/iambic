@@ -7,7 +7,7 @@ Parameters:
     Default: "iambic_code_build"
   IambicECRName:
     Type: String
-    Default: "ecr-public/iambic/iambic"
+    Default: "iambic-ecr-public/iambic/iambic"
   IambicImageTag:
     Type: String
     Default: "latest"

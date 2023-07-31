@@ -2039,7 +2039,7 @@ class ConfigurationWizard:
             else:
                 raise ValueError(f"build status is {build_status}")
 
-        repository_name = "ecr-public/iambic/iambic"
+        repository_name = "iambic-ecr-public/iambic/iambic"
         ecr_client = session.client("ecr", region_name=self.aws_default_region)
         for _ in range(6):
             resp = ecr_client.describe_images(

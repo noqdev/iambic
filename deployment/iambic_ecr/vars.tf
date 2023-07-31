@@ -19,7 +19,7 @@ variable "ecr_repository_prefix" {
   type        = string
   description = "Prefix to reach public ecr"
 
-  default = "ecr-public"
+  default = "iambic-ecr-public"
 }
 
 variable "ecr_public_alias" {

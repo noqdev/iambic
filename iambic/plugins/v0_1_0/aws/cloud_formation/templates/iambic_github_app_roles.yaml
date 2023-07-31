@@ -10,7 +10,7 @@ Parameters:
     Default: "iambic_code_build"
   IambicECRRepoName:
     Type: String
-    Default: "ecr-public/iambic/iambic"
+    Default: "iambic-ecr-public/iambic/iambic"
 Resources:
   IambicWebhookLambdaExecutionRole:
     Type: AWS::IAM::Role

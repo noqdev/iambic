@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: 2010-09-09
 Parameters:
   UpstreamRepoName:
     Type: String
-    Default: "ecr-public/iambic/iambic"
+    Default: "iambic-ecr-public/iambic/iambic"
 Resources:
   Repo:
     Type: AWS::ECR::Repository

@@ -408,7 +408,7 @@ async def create_github_app_lambda_stack(
         parameters=[
             {
                 "ParameterKey": "ImageUri",
-                "ParameterValue": f"{target_account_id}.dkr.ecr.{region}.amazonaws.com/ecr-public/iambic/iambic:latest",
+                "ParameterValue": f"{target_account_id}.dkr.ecr.{region}.amazonaws.com/iambic-ecr-public/iambic/iambic:latest",
             },
             {
                 "ParameterKey": "LambdaExecutionRoleArn",
