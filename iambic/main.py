@@ -116,18 +116,25 @@ def run_expire(templates: list[str], repo_dir: str = str(pathlib.Path.cwd())):
     default=os.getenv("IAMBIC_REPO_DIR"),
     help="The repo directory containing the templates. Example: ~/iambic-templates",
 )
-def detect(repo_dir: str):
+@click.option(
+    "--message-details-file",
+    "-m",
+    required=False,
+    type=click.Path(exists=False),
+    help="The file path to save detect message details to. This is used to provide context about changes within a Git Commit.",
+)
+def detect(repo_dir: str, message_details_file: Optional[str] = None):
     """
     Print a report of provider-side IAM resource changes that
     have not yet been pulled to the local resource templates.
     """
-    run_detect(repo_dir)
+    run_detect(repo_dir, message_details_file)
 
 
-def run_detect(repo_dir: str):
+def run_detect(repo_dir: str, message_details_file: Optional[str] = None):
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
     config = asyncio.run(load_config(config_path))
-    asyncio.run(config.run_detect_changes(repo_dir))
+    asyncio.run(config.run_detect_changes(repo_dir, message_details_file))
 
 
 @cli.command(short_help="Clone configured git repositories")

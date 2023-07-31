@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import atexit
 import datetime
 import json
 import os
@@ -776,11 +777,21 @@ def _handle_detect_changes_from_eventbridge(
             repo_url, get_lambda_repo_path(), "detect"
         )
 
-        run_detect(get_lambda_repo_path())
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            temp_file_path = tmp.name
+            atexit.register(os.unlink, temp_file_path)
+        run_detect(get_lambda_repo_path(), message_details_file=temp_file_path)
         repo.git.add(".")
         diff_list = repo.head.commit.diff()
         if len(diff_list) > 0:
             repo.git.commit("-m", COMMIT_MESSAGE_FOR_DETECT)
+
+            if os.path.getsize(temp_file_path) > 0:
+                with open(temp_file_path, "r") as file:
+                    note_content = file.read()
+                # Add contents of `temp_file_path`` as git notes to the last commit
+                repo.git.notes.add("-m", note_content, "HEAD")
+
             repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()
         else:
             log.info("handle_detect no changes")
