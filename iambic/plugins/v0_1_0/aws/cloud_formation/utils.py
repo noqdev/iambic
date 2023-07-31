@@ -381,7 +381,7 @@ async def create_github_app_code_build_stack(
         parameters=[
             {
                 "ParameterKey": "CodeBuildServiceRoleArn",
-                "ParameterValue": f"arn:aws:iam::{target_account_id}:role/iambic_code_build",
+                "ParameterValue": f"arn:aws:iam::{target_account_id}:role/iambic_code_build{IAMBIC_GITHUB_APP_SUFFIX}",
             },
         ],
         **additional_kwargs,
@@ -412,7 +412,7 @@ async def create_github_app_lambda_stack(
             },
             {
                 "ParameterKey": "LambdaExecutionRoleArn",
-                "ParameterValue": f"arn:aws:iam::{target_account_id}:role/iambic_github_app_lambda_execution",
+                "ParameterValue": f"arn:aws:iam::{target_account_id}:role/iambic_github_app_lambda_execution{IAMBIC_GITHUB_APP_SUFFIX}",
             },
         ],
         **additional_kwargs,
