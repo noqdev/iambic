@@ -2004,6 +2004,18 @@ class ConfigurationWizard:
             else:
                 raise ValueError(f"build status is {build_status}")
 
+        repository_name = "ecr-public/iambic/iambic"
+        ecr_client = session.client("ecr", region_name=self.aws_default_region)
+        for _ in range(6):
+            resp = ecr_client.describe_images(
+                repositoryName=repository_name, imageIds=[{"imageTag": "latest"}]
+            )
+            if len(resp["imageDetails"]) == 0:
+                time.sleep(30)
+                continue
+            else:
+                break
+
         successfully_created = asyncio.run(
             create_github_app_lambda_stack(
                 cf_client,
