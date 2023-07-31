@@ -31,6 +31,7 @@ from iambic.core.utils import decode_with_reference_time, yaml
 from iambic.main import run_apply, run_detect, run_expire, run_git_apply, run_git_plan
 from iambic.plugins.v0_1_0.github.iambic_plugin import GithubConfig
 from iambic.plugins.v0_1_0.github.utils import IAMBIC_APPLY_ERROR_METADATA
+from iambic.request_handler.git_apply import lint_git_changes
 
 iambic_app = __import__("iambic.lambda.app", globals(), locals(), [], 0)
 lambda_run_handler = getattr(iambic_app, "lambda").app.run_handler
@@ -46,6 +47,7 @@ COMMIT_MESSAGE_FOR_DETECT = "Import changes from detect operation"
 COMMIT_MESSAGE_FOR_IMPORT = "Import changes from import operation"
 COMMIT_MESSAGE_FOR_EXPIRE = "Periodic Expiration"
 COMMIT_MESSAGE_FOR_GIT_APPLY_ABSOLUTE_TIME = "Replace relative time with absolute time"
+COMMIT_MESSAGE_FOR_LINTING = "Format template using internal linting rules"
 SHARED_CONTAINER_GITHUB_DIRECTORY = "/root/data"
 
 
@@ -378,6 +380,16 @@ def handle_iambic_git_apply(
             # because lambda interface was created to dynamic populate template config
             # but templates config is now already stored in the templates repo itself.
             getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH = proposed_changes_path
+
+        # run lint before apply to separate out formatting change from the relative time change
+        config_path = asyncio.run(resolve_config_template_path(repo_dir))
+        asyncio.run(lint_git_changes(config_path, repo_dir, False, None, None))
+        repo.git.add(".")
+        diff_list = repo.head.commit.diff()
+        if len(diff_list) > 0:
+            repo.git.commit("-m", COMMIT_MESSAGE_FOR_LINTING)
+        else:
+            log.debug("git_apply did not introduce linting changes")
 
         template_changes = run_git_apply(
             False, None, None, repo_dir, proposed_changes_path
