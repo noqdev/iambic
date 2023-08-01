@@ -445,7 +445,7 @@ class Config(ConfigMixin, BaseTemplate):
 
 
 async def load_config(
-    config_path: str,
+    config_path: str | Path,
     configure_plugins: bool = True,
     approved_plugins_only: bool = False,
 ) -> Config:
