@@ -228,8 +228,8 @@ def _ask_user_activity(is_tty, automatically_send_reports):
 def _ask_final_consent(is_tty, automatically_send_reports, tf):
     final_consent = None
     if automatically_send_reports:
-        final_consent = True
-        return final_consent
+        return True
+
     if is_tty and not final_consent:
         final_consent = questionary.confirm(
             "Do you want to send this report? If not, the report will be cancelled. "
