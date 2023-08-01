@@ -1957,9 +1957,29 @@ class ConfigurationWizard:
             log.info(
                 f"iambic/github-app-secrets already exists in account: {target_account_id} in region: {self.aws_default_region}"
             )
-            if not questionary.confirm(
-                "Continue with value in existing Secret?"
-            ).unsafe_ask():
+
+            needs_to_prompt_user_to_update_secret = True
+            # verify the existing secrets actually match our known values
+            response = secretsmanager_client.get_secret_value(
+                SecretId="iambic/github-app-secrets",
+            )
+            if "SecretString" in response:
+                cloud_secrets = yaml.load(response["SecretString"])
+                if (
+                    cloud_secrets.get("pem", None)
+                    == github_app_secrets.get("pem", None)
+                ) and (
+                    cloud_secrets.get("webhook_secret", None)
+                    == github_app_secrets.get("webhook_secret", None)
+                ):
+                    needs_to_prompt_user_to_update_secret = False
+
+            if (
+                needs_to_prompt_user_to_update_secret
+                and not questionary.confirm(
+                    "Continue with value in existing Secret?"
+                ).unsafe_ask()
+            ):
                 log.error(
                     "Please remove the iambic/github-app-secrets secret or update the secret before re-running this wizard"
                 )
