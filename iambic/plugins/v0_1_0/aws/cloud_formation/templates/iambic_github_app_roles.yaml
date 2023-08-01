@@ -1,4 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
+Description: This creates AWS Roles required by the IAMbic GitHub integration
 Parameters:
   IambicHubRoleArn:
     Type: String
