@@ -1,0 +1,54 @@
+---
+title: Unhandled Exception Reporting
+---
+
+## Introduction
+IAMbic's Exception Reporting is an invaluable feature that allows us to continually improve our platform.
+When an error or an issue occurs in the application, this functionality automatically gathers relevant information about the situation.
+This information can include which exception was raised, part of the application you were using, what action you were trying to perform, and other technical details that will help us understand and resolve the problem.
+
+You don't have to worry about the safety of your personal data, as the report only collects information strictly related to the error, not personal or sensitive data.
+
+The submission process is very straightforward: when an error occurs, you will be asked to send the report.
+You can review the details of what will be sent before doing so, and if you wish, you can provide an additional description of the problem.
+This report will then be sent to our development team for analysis and correction.
+
+Therefore, we encourage you to use it whenever you encounter a problem, as it allows us to improve and optimize IAMbic to provide you with the best possible experience.
+
+The configuration should be placed at your `iambic_config.yml` file:
+```yaml
+core:
+  exception_reporting:
+    enabled: true|false
+    detailed: true|false
+    automatically_send_reports: true|false
+    email_address: your_email@example.com
+```
+
+## Example Configurations
+
+- Disabled
+```yaml
+core:
+  exception_reporting:
+    enabled: false
+```
+
+- Automatically send reports
+
+```yaml
+core:
+  exception_reporting:
+    enabled: true
+    automatically_send_reports: true
+    email_address: your_email@example.com
+```
+- Detailed Report
+
+```yaml
+core:
+  exception_reporting:
+    enabled: true
+    detailed: true
+    email_address: your_email@example.com
+```
