@@ -105,6 +105,5 @@ async def generate_user_templates(
 
     # Delete templates that no longer exist
     delete_orphaned_templates(list(existing_template_map.values()), all_resource_ids)
-    raise Exception("oh no")
 
     log.info("Finish updating and creating Okta user templates.")
