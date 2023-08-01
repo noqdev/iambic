@@ -8,6 +8,7 @@ import signal
 import sys
 import tempfile
 import traceback
+from types import TracebackType
 from typing import TYPE_CHECKING, Optional
 
 import click
@@ -18,7 +19,7 @@ from pydantic import SecretStr
 from iambic.core.logger import log
 
 if TYPE_CHECKING:
-    from iambic.config.dynamic_config import CoreConfig, ExceptionReporting
+    from iambic.config.dynamic_config import Config, CoreConfig, ExceptionReporting
 
 original_excepthook = sys.excepthook
 
@@ -28,7 +29,8 @@ TIMEOUT = int(5 * 60)  # 5 minutes
 class BaseException(Exception):
     def __init__(self, msg: str = "") -> None:
         self.msg = msg
-        log.error("An error occurred", error=msg, exception=self.__class__.__name__)
+        if not isinstance(self, ExceptionReportingDisabledException):
+            log.error("An error occurred", error=msg, exception=self.__class__.__name__)
         super().__init__(msg)
 
     def __str__(self):
@@ -43,6 +45,11 @@ class RateLimitException(BaseException):
 class MultipleSecretsNotAcceptedException(BaseException):
     def __init__(self):
         super().__init__("extends tag does not accept multiples secrets")
+
+
+class ExceptionReportingDisabledException(BaseException):
+    def __init__(self):
+        super().__init__("Exception reporting is disabled")
 
 
 def sanitize_locals(locals_dict):
@@ -66,9 +73,9 @@ def alarm_handler(signum, frame):
     raise TimeoutError("Timed out waiting for user input")
 
 
-def exception_reporter(exc_type, exc_value, exc_traceback):  # noqa: C901
+def exception_reporter(exc_type, exc_value, exc_traceback: TracebackType | None):
     """Custom exception reporter function that handles reporting exceptions."""
-    from iambic.config.dynamic_config import CURRENT_IAMBIC_VERSION, load_config
+    from iambic.config.dynamic_config import load_config
     from iambic.config.utils import resolve_config_template_path
 
     try:
@@ -95,93 +102,53 @@ def exception_reporter(exc_type, exc_value, exc_traceback):  # noqa: C901
             if not is_tty:
                 return
 
-        # extract settings from config
-        exception_reporting_settings: Optional[ExceptionReporting] = None
-        automatically_send_reports = None
-        include_variables = None
-        email_address = ""
-
-        if config:
-            core_config: CoreConfig = getattr(config, "core")
-
-            if core_config:
-                exception_reporting_settings = getattr(
-                    core_config, "exception_reporting"
-                )
-
-        # parse settings
-        if exception_reporting_settings:
-            if not exception_reporting_settings.enabled:
-                return
-
-            automatically_send_reports = (
-                exception_reporting_settings.automatically_send_reports
-            )
-            include_variables = exception_reporting_settings.include_variables
-            email_address = exception_reporting_settings.email_address or ""
-        elif is_tty:
-            # show message if exception reporting is not configured
-            questionary.print(
-                "You can configure exception reporting in your config file. "
-                "Please see the docs at "
-                "https://docs.iambic.org/reference/iambic-exception-reporting "
-                "for more information."
-            )
+        (
+            _,
+            automatically_send_reports,
+            include_variables,
+            email_address,
+        ) = _extract_settings(
+            config, is_tty
+        )  # type: ignore
 
         consent = _ask_for_consent(is_tty, automatically_send_reports)
 
         if not consent:
             return
 
-        report = "Please review, edit, and save the report before sending it to us.\n"
-        report += "\nEmail (Optional): " + email_address
-        report += "\nIAMbic Version: " + CURRENT_IAMBIC_VERSION
-
-        # Include user_activity
-        user_activity = _ask_user_activity(is_tty, automatically_send_reports)
-        report += "\nUser activity: " + user_activity
-        report += "\nException: " + str(exc_value)
-
-        # Format the traceback
-        formatted_traceback = "".join(traceback.format_tb(exc_traceback))
-        log.error("The error occurred:\n" + formatted_traceback)
-        report += "\nTraceback:\n" + formatted_traceback
+        report = _generate_report(
+            exc_value,
+            exc_traceback,
+            is_tty,
+            automatically_send_reports,
+            email_address,
+        )
 
         # Include Local Variables
         include_locals = _ask_include_locals(is_tty, include_variables)
-
-        if include_locals:
-            # Include the local variables at each level of the traceback
-            current_traceback = exc_traceback
-            while current_traceback is not None:
-                report += "\nLocal variables in frame:\n"
-                sanitized_locals = sanitize_locals(current_traceback.tb_frame.f_locals)
-                for key, value in sanitized_locals.items():
-                    report += f"\t{key} = {value}\n"
-                current_traceback = current_traceback.tb_next
+        report = _add_locals(exc_traceback, report, include_locals)
 
         # Open the report in the user's favorite text editor
-        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tf:
-            tf.write(report.encode())
-            tf.close()
+        tf = _generate_temp_file(is_tty, automatically_send_reports, report)
+        final_consent = _ask_final_consent(is_tty, automatically_send_reports, tf)
 
-            if is_tty and not automatically_send_reports:
-                click.edit(filename=tf.name)
+        if not final_consent:
+            return
 
-            final_consent = _ask_final_consent(is_tty, automatically_send_reports, tf)
-            if final_consent:
-                _send_report(tf)
+        _send_report(tf)
 
-                # Delete the temporary file after sending the report
-                os.unlink(tf.name)
+        # Delete the temporary file after sending the report
+        os.unlink(tf.name)
 
-                if is_tty:
-                    print(
-                        "Thank you for reporting this error. If you would like to save these "
-                        "settings, please reference the documentation on Exception Reporting. "
-                        "Please also join us in Slack to discuss this issue further. "
-                        "https://communityinviter.com/apps/noqcommunity/noq"
-                    )
+        if is_tty:
+            print(
+                "Thank you for reporting this error. If you would like to save these "
+                "settings, please reference the documentation on Exception Reporting. "
+                "Please also join us in Slack to discuss this issue further. "
+                "https://communityinviter.com/apps/noqcommunity/noq"
+            )
+    except ExceptionReportingDisabledException:
+        return
     except TimeoutError:
         return
     except Exception as e:
@@ -191,56 +158,152 @@ def exception_reporter(exc_type, exc_value, exc_traceback):  # noqa: C901
         return
 
 
-def _ask_for_consent(is_tty, automatically_send_reports):
-    consent = None
+def _extract_settings(
+    config: Optional[Config], is_tty: bool
+) -> tuple[Optional[ExceptionReporting], Optional[bool], Optional[bool], str]:
+    # extract settings from config
+    exception_reporting_settings: Optional[ExceptionReporting] = None
+    automatically_send_reports = None
+    include_variables = False
+    email_address = ""
+
+    if config:
+        core_config: CoreConfig = getattr(config, "core")
+
+        if core_config:
+            exception_reporting_settings = getattr(core_config, "exception_reporting")
+
+    # parse settings
+    if exception_reporting_settings:
+        if not exception_reporting_settings.enabled:
+            raise ExceptionReportingDisabledException()
+
+        automatically_send_reports = (
+            exception_reporting_settings.automatically_send_reports
+        )
+        include_variables = exception_reporting_settings.include_variables
+        email_address = exception_reporting_settings.email_address or ""
+    elif is_tty:
+        # show message if exception reporting is not configured
+        questionary.print(
+            "You can configure exception reporting in your config file. "
+            "Please see the docs at "
+            "https://docs.iambic.org/reference/iambic-exception-reporting "
+            "for more information."
+        )
+
+    return (
+        exception_reporting_settings,
+        automatically_send_reports,
+        include_variables,
+        email_address,
+    )
+
+
+def _generate_temp_file(
+    is_tty: bool, automatically_send_reports: Optional[bool], report: str
+):
+    tf = tempfile.NamedTemporaryFile(suffix=".txt", delete=False)
+    tf.write(report.encode())
+    tf.close()
+
+    if is_tty and not automatically_send_reports:
+        click.edit(filename=tf.name)
+
+    return tf
+
+
+def _add_locals(
+    exc_traceback: TracebackType | None,
+    report: str,
+    include_locals: bool,
+) -> str:
+    if include_locals:
+        # Include the local variables at each level of the traceback
+        current_traceback = exc_traceback
+        while current_traceback is not None:
+            report += "\nLocal variables in frame:\n"
+            sanitized_locals = sanitize_locals(current_traceback.tb_frame.f_locals)
+            for key, value in sanitized_locals.items():
+                report += f"\t{key} = {value}\n"
+            current_traceback = current_traceback.tb_next
+    return report
+
+
+def _generate_report(
+    exc_value,
+    exc_traceback: TracebackType | None,
+    is_tty: bool,
+    automatically_send_reports: Optional[bool],
+    email_address: str,
+) -> str:
+    from iambic.config.dynamic_config import CURRENT_IAMBIC_VERSION
+
+    report = "Please review, edit, and save the report before sending it to us.\n"
+    report += "\nEmail (Optional): " + email_address
+    report += "\nIAMbic Version: " + CURRENT_IAMBIC_VERSION
+
+    # Include user_activity
+    user_activity = _ask_user_activity(is_tty, automatically_send_reports)
+    report += "\nUser activity: " + user_activity
+    report += "\nException: " + str(exc_value)
+
+    # Format the traceback
+    formatted_traceback = "".join(traceback.format_tb(exc_traceback))
+    log.error("The error occurred:\n" + formatted_traceback)
+    report += "\nTraceback:\n" + formatted_traceback
+    return report
+
+
+def _ask_for_consent(is_tty: bool, automatically_send_reports: Optional[bool]) -> bool:
     if automatically_send_reports:
-        consent = True
-    elif is_tty and automatically_send_reports is None:
-        consent = questionary.confirm(
+        return True
+
+    if is_tty and automatically_send_reports is None:
+        return questionary.confirm(
             "An error occurred. Would you like to report this error to us?"
             " You will have a chance to review "
             "and edit the report before sending it."
         ).ask()
-    else:
-        consent = False
 
-    return consent
+    return False
 
 
-def _ask_include_locals(is_tty, include_variables):
-    if include_variables:
-        include_locals = True
-    elif is_tty and include_variables is None:
-        include_locals = questionary.confirm(
+def _ask_include_locals(is_tty: bool, include_variables: Optional[bool]) -> bool:
+    """Ask the user if they want to include local variables in the report.
+    If the user is not in a TTY, then we will not ask them and
+    will instead use the value directly.
+    """
+    if is_tty and include_variables is True:
+        return questionary.confirm(
             "Would you like to include local variables in the report? "
         ).ask()
-    else:
-        include_locals = False
-    return include_locals
+
+    return not is_tty and include_variables is True
 
 
-def _ask_user_activity(is_tty, automatically_send_reports):
-    user_activity = ""
+def _ask_user_activity(is_tty: bool, automatically_send_reports: Optional[bool]) -> str:
     if is_tty and not automatically_send_reports:
-        user_activity = questionary.text(
+        return questionary.text(
             "What were you doing at the time of the exception?"
         ).ask()
 
-    return user_activity
+    return ""
 
 
-def _ask_final_consent(is_tty, automatically_send_reports, tf):
-    final_consent = None
+def _ask_final_consent(
+    is_tty: bool, automatically_send_reports: Optional[bool], tf
+) -> Optional[bool]:
     if automatically_send_reports:
         return True
 
-    if is_tty and not final_consent:
-        final_consent = questionary.confirm(
+    if is_tty:
+        return questionary.confirm(
             "Do you want to send this report? If not, the report will be cancelled. "
             f"You may also make last-minute edits to {tf.name} before proceeding"
         ).ask()
 
-    return final_consent
+    return None
 
 
 def _send_report(tf):
