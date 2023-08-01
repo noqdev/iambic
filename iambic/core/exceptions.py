@@ -8,17 +8,21 @@ import signal
 import sys
 import tempfile
 import traceback
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import click
 import questionary
 import requests
 from pydantic import SecretStr
 
-from iambic.config.dynamic_config import CoreConfig, ExceptionReporting
 from iambic.core.logger import log
 
+if TYPE_CHECKING:
+    from iambic.config.dynamic_config import CoreConfig, ExceptionReporting
+
 original_excepthook = sys.excepthook
+
+TIMEOUT = int(5 * 60)  # 5 minutes
 
 
 class BaseException(Exception):
@@ -60,7 +64,11 @@ def sanitize_locals(locals_dict):
 
 def alarm_handler(signum, frame):
     """Raise a TimeoutError when the alarm signal is received."""
-    raise TimeoutError()
+    print()  # Print a blank line to separate the error message from the prompt
+    log.error(
+        "Timed out waiting for user input. Please report this error to the IAMbic team."
+    )
+    raise TimeoutError("Timed out waiting for user input")
 
 
 def exception_reporter(exc_type, exc_value, exc_traceback):  # noqa: C901
@@ -75,7 +83,7 @@ def exception_reporter(exc_type, exc_value, exc_traceback):  # noqa: C901
             # Set the alarm signal handler
             signal.signal(signal.SIGALRM, alarm_handler)
             # Set the alarm to go off after 5 minutes
-            signal.alarm(5 * 60)
+            signal.alarm(TIMEOUT)
 
         repo_directory = os.environ.get("IAMBIC_REPO_DIR", str(pathlib.Path.cwd()))
         config = None
@@ -117,10 +125,8 @@ def exception_reporter(exc_type, exc_value, exc_traceback):  # noqa: C901
             detailed_reports = exception_reporting_settings.detailed
             email_address = exception_reporting_settings.email_address or ""
 
-        try:
-            consent = _ask_for_consent(is_tty, automatically_send_reports)
-        except TimeoutError:
-            consent = False
+        consent = _ask_for_consent(is_tty, automatically_send_reports)
+
         if not consent:
             return
 
@@ -172,6 +178,8 @@ def exception_reporter(exc_type, exc_value, exc_traceback):  # noqa: C901
                     "Please also join us in Slack to discuss this issue further. "
                     "https://communityinviter.com/apps/noqcommunity/noq"
                 )
+    except TimeoutError:
+        return
     except Exception as e:
         log.error(
             "Unable to run exception reporting logic", error=str(e), exc_info=True
