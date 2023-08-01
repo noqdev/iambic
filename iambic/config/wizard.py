@@ -10,6 +10,7 @@ import select
 import sys
 import time
 import uuid
+import webbrowser
 from enum import Enum
 from pathlib import Path
 from typing import Optional, Union
@@ -1909,13 +1910,30 @@ class ConfigurationWizard:
         if not questionary.confirm("Proceed?").unsafe_ask():
             return
 
+        account_name_to_account_id = {
+            account.account_name: account.account_id
+            for account in self.config.aws.accounts
+        }
+        available_account_names = sorted(list(account_name_to_account_id.keys()))
+        questionary_params = {}
+        question_text = "We recommend you deploy Lambda integration on a non-management account.\nTarget AWS Account name: "
+        if len(available_account_names) < 10:
+            target_account_name = questionary.select(
+                question_text, choices=available_account_names, **questionary_params
+            ).unsafe_ask()
+        else:
+            target_account_name = questionary.autocomplete(
+                question_text,
+                choices=available_account_names,
+                style=CUSTOM_AUTO_COMPLETE_STYLE,
+                **questionary_params,
+            ).unsafe_ask()
+
         # account_id_map = {
         #     account.account_id: account for account in self.config.aws.accounts
         # }
-        target_account_id = questionary.text(
-            "We recommend you deploy Lambda integration on a non-management account.\nTarget AWS Account Id: ",
-            default="",  # FIXME valid account id
-        ).ask()
+        target_account_id = account_name_to_account_id[target_account_name]
+        log.info(f"Target AWS Account ID is {target_account_id}")
 
         # target_account = account_id_map[target_account_id]
 
@@ -2026,8 +2044,9 @@ class ConfigurationWizard:
         update_webhook_url(webhook_url, github_app_jwt)
         github_app_url = github_app_secrets.get("html_url", "")
         log.info(
-            f"GitHub App IAMbic integration setup successfully\n Please now visit site to install the app to your repository. \n{github_app_url}"
+            f"GitHub App IAMbic integration setup successfully\n Please now visit site to install the app to your repository. \n{github_app_url}\n"
         )
+        webbrowser.open(github_app_url, new=0, autoraise=True)
 
     def github_app_amend_trust_policy_for_iambic_integration(self, lambda_role_arn):
         hub_session, _ = self.get_boto3_session_for_account(self.hub_account_id)
