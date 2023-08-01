@@ -4,21 +4,20 @@ from __future__ import annotations
 
 import os
 import time
+import webbrowser
 from multiprocessing import Process
 
 import aiohttp
 import yaml
 from aiohttp import web
 
+from iambic.core.logger import log
+
 routes = web.RouteTableDef()
 
 LOCAL_ASSETS_DIR = f"{str(os.path.dirname(__file__))}/local_web_server_assets"
 SAVE_DIR = "~/.iambic"
 SECRETS_FULL_PATH = None
-
-# @routes.get('/')
-# async def hello(request):
-#     return web.Response(text="Hello, world")
 
 
 @routes.get("/")
@@ -30,9 +29,8 @@ async def index(request):
 async def redirect(request):
     ## here how to get query parameters
     code = request.rel_url.query["code"]
-    state = request.rel_url.query["state"]
-    result = f"code: {code}, state: {state}"
-    print(result)
+    # state = request.rel_url.query["state"]
+    # result = f"code: {code}, state: {state}"
     await exchange_token(code)
     return web.FileResponse(f"{LOCAL_ASSETS_DIR}/success.html")
 
@@ -40,12 +38,7 @@ async def redirect(request):
 async def exchange_token(code):
     async with aiohttp.ClientSession("https://api.github.com/") as session:
         async with session.post(f"/app-manifests/{code}/conversions") as resp:
-            print(resp.status)
             payload = await resp.json()
-    # github_app = {
-    #     "webhook_secret": payload["webhook_secret"],
-    #     "pem": payload["pem"],
-    # }
 
     full_path = os.path.expanduser(SAVE_DIR)
     os.makedirs(full_path, exist_ok=True)
@@ -61,7 +54,7 @@ async def exchange_token(code):
 def run_local_webserver():
     app = web.Application()
     app.add_routes(routes)
-    web.run_app(app)
+    web.run_app(app, host="localhost", port=8080, print=False)
 
 
 def get_github_app_secrets():
@@ -76,10 +69,14 @@ def get_github_app_secrets():
         process.start()
 
         # wait for the process to finish
-        print("Waiting for the process...")
+        localhost_url = "http://localhost:8080/"
+        # hack to wait for the http process to be ready.
+        time.sleep(5)
+        webbrowser.open(localhost_url, new=0, autoraise=True)
+        log.info(f"Open a browser to {localhost_url} and follow instructions there")
 
         start_time = time.time()
-        while time.time() - start_time < 300:
+        while time.time() - start_time < 3000:
             if os.path.exists(full_path):
                 process.kill()
                 break
