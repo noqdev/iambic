@@ -42,7 +42,7 @@ class ExceptionReporting(BaseModel):
         None, description="Automatically send reports without asking for user consent."
     )
     email_address: Optional[str] = Field(
-        ...,
+        None,
         description="Email address for correspondence about the exception, if you would like us to communicate with you.",
     )
 
