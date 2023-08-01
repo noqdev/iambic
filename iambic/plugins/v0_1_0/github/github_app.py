@@ -124,9 +124,7 @@ def get_app_private_key_as_lambda_context():
     return _get_app_private_key_as_lambda_context_old()
 
 
-cache
-
-
+@cache
 def _get_app_webhook_secret_as_lambda_context_old():
     # assuming we are already in an lambda execution context
     secret_name = os.environ["GITHUB_APP_WEBHOOK_SECRET_SECRET_ID"]
