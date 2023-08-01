@@ -47,12 +47,7 @@ class MultipleSecretsNotAcceptedException(BaseException):
 
 def sanitize_locals(locals_dict):
     """Replace sensitive information in a dictionary with '********'."""
-    sensitive_keys = [
-        "password",
-        "secret",
-        "token",
-        "key",
-    ]
+    sensitive_keys = ["password", "secret", "token", "key", "private"]
 
     for key, value in locals_dict.items():
         if isinstance(value, SecretStr) or any(
