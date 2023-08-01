@@ -20,7 +20,7 @@ packages = [
 ]
 version = "0.11.3"
 license = "Apache-2.0"
-description = "The python package used to generate, parse, and execute noqform yaml templates."
+description = "IAMbic is a multi-cloud IAM control plane that unifies cloud identity management for AWS, Okta, Azure Active Directory, Google Workspace and more into Git."
 authors = ["Noq Software <hello@noq.dev>"]
 readme = "README.md"
 exclude = ["build_util/*"]
