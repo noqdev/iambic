@@ -1939,7 +1939,7 @@ class ConfigurationWizard:
 
         session, _ = self.get_boto3_session_for_account(target_account_id)
 
-        # FIXME migration notes since we are using a new secrets format
+        # TODO migration notes since we are using a new secrets format
         secretsmanager_client = session.client(
             service_name="secretsmanager", region_name=self.aws_default_region
         )
@@ -1953,8 +1953,17 @@ class ConfigurationWizard:
                 SecretString=yaml.dump(github_app_secrets),
                 **secrets_kwargs,
             )
-        except Exception as e:
-            log.error(e)
+        except secretsmanager_client.exceptions.ResourceExistsException:
+            log.info(
+                f"iambic/github-app-secrets already exists in account: {target_account_id} in region: {self.aws_default_region}"
+            )
+            if not questionary.confirm(
+                "Continue with value in existing Secret?"
+            ).unsafe_ask():
+                log.error(
+                    "Please remove the iambic/github-app-secrets secret or update the secret before re-running this wizard"
+                )
+                return
 
         cf_client = session.client(
             "cloudformation", region_name=self.aws_default_region
