@@ -1913,7 +1913,7 @@ class ConfigurationWizard:
         #     account.account_id: account for account in self.config.aws.accounts
         # }
         target_account_id = questionary.text(
-            "Target account id",
+            "We recommend you deploy Lambda integration on a non-management account.\nTarget AWS Account Id: ",
             default="",  # FIXME valid account id
         ).ask()
 
@@ -1942,7 +1942,10 @@ class ConfigurationWizard:
             "cloudformation", region_name=self.aws_default_region
         )
 
-        cf_role_arn = self.cf_role_arn
+        # Note: We are not going to prompt user to give us an optional CloudFormation Role ARN
+        # to use because it seems like additional friction. If we get feedback to restore it,
+        # we will simply called cf_role_arn = self.cf_role_arn
+        cf_role_arn = None
 
         successfully_created = asyncio.run(
             create_github_app_roles_stack(
