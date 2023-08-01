@@ -172,12 +172,13 @@ def exception_reporter(exc_type, exc_value, exc_traceback):  # noqa: C901
                 # Delete the temporary file after sending the report
                 os.unlink(tf.name)
 
-                print(
-                    "Thank you for reporting this error. If you would like to save these "
-                    "settings, please reference the documentation on Exception Reporting. "
-                    "Please also join us in Slack to discuss this issue further. "
-                    "https://communityinviter.com/apps/noqcommunity/noq"
-                )
+                if is_tty:
+                    print(
+                        "Thank you for reporting this error. If you would like to save these "
+                        "settings, please reference the documentation on Exception Reporting. "
+                        "Please also join us in Slack to discuss this issue further. "
+                        "https://communityinviter.com/apps/noqcommunity/noq"
+                    )
     except TimeoutError:
         return
     except Exception as e:
