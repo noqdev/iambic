@@ -34,9 +34,9 @@ CURRENT_IAMBIC_VERSION = "1"
 
 class ExceptionReporting(BaseModel):
     enabled: bool = Field(..., description="Enable or disable exception reporting.")
-    detailed: Optional[bool] = Field(
+    include_variables: Optional[bool] = Field(
         None,
-        description="Include detailed information in the report, such as local variables.",
+        description="Include local variables in the report.",
     )
     automatically_send_reports: Optional[bool] = Field(
         None, description="Automatically send reports without asking for user consent."
