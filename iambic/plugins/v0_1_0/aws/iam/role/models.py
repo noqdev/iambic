@@ -339,10 +339,7 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
                             await boto_crud_call(
                                 client.update_role,
                                 RoleName=role_name,
-                                **{
-                                    k: account_role.get(k)
-                                    for k in supported_update_key_values.keys()
-                                },
+                                **update_role_params,
                             )
                         except Exception as e:
                             exceptions.append(str(e))
@@ -351,12 +348,12 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
                         for key in update_role_params.keys():
                             proposed_role_changes.append(
                                 ProposedChange(
-                                    attribute=supported_update_key_values[key],
+                                    attribute=key,
                                     change_type=ProposedChangeType.UPDATE,
                                     resource_id=role_name,
                                     resource_type=self.resource_type,
                                     exceptions_seen=exceptions,
-                                    current_value={key: current_role[key]},
+                                    current_value={key: current_role.get(key)},
                                     new_value={key: account_role[key]},
                                 )
                             )
@@ -368,11 +365,11 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
                     for key in update_role_params.keys():
                         account_change_details.proposed_changes.append(
                             ProposedChange(
-                                attribute=supported_update_key_values[key],
+                                attribute=key,
                                 change_type=ProposedChangeType.UPDATE,
                                 resource_id=role_name,
                                 resource_type=self.resource_type,
-                                current_value={key: current_role[key]},
+                                current_value={key: current_role.get(key)},
                                 new_value={key: account_role[key]},
                             )
                         )
