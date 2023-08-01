@@ -1,7 +1,7 @@
 
 # Change Log
 
-## 0.11.7 (Aug 1, 2023)
+## 0.11.8 (Aug 1, 2023)
 
 DOCS:
 * Change project description on PyPI [#527](https://github.com/noqdev/iambic/pull/527)
@@ -10,7 +10,8 @@ DOCS:
 BUG FIXES:
 * Fix #491 Support "merge", "squash", and "rebase" merge method  [#525](https://github.com/noqdev/iambic/pull/525)
 * Fix security/dependabot/26 Bump certifi [#524](https://github.com/noqdev/iambic/pull/524)
-
+* Fixed bug where none type description was causing an exception on role [#528](https://github.com/noqdev/iambic/pull/528)
+* Attaching and detaching role tags now 2 distinct operations. Fixes to role attribute value resolver on Role._apply_to_account. [#528](https://github.com/noqdev/iambic/pull/528)
 
 THANKS:
 `datfinesoul` for reporting GitHub linear history use case. [#491](https://github.com/noqdev/iambic/issues/491)
