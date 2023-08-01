@@ -107,9 +107,7 @@ def exception_reporter(exc_type, exc_value, exc_traceback: TracebackType | None)
             automatically_send_reports,
             include_variables,
             email_address,
-        ) = _extract_settings(
-            config, is_tty
-        )  # type: ignore
+        ) = _extract_settings(config, is_tty)
 
         consent = _ask_for_consent(is_tty, automatically_send_reports)
 
