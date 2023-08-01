@@ -447,13 +447,24 @@ def maybe_merge(
 ):
     """Attempts to merge the PR at specific sha, this function will retry a few times because
     desired sha maybe not available yet"""
+
+    merge_method = None
+    if templates_repo.allow_merge_commit:
+        merge_method = "merge"
+    elif templates_repo.allow_squash_merge:
+        merge_method = "squash"
+    elif templates_repo.allow_rebase_merge:
+        merge_method = "rebase"
+    else:
+        merge_method = "NOT_SUPPORTED"
+
     attempts = 0
     merge_status = None
     last_known_traceback = None
     while attempts < max_attempts:
         pull_request = templates_repo.get_pull(pull_number)
         try:
-            merge_status = pull_request.merge(sha=merge_sha)
+            merge_status = pull_request.merge(sha=merge_sha, merge_method=merge_method)
             break
         except github.GithubException:
             last_known_traceback = traceback.format_exc()
