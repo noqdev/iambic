@@ -315,7 +315,7 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
                 "MaxSessionDuration": "max_session_duration",
             }
             update_resource_log_params = {**log_params}
-            update_role_params = {}
+            update_role_keys = set()
             for k in supported_update_key_values.keys():
                 if account_role.get(k) is not None and account_role.get(
                     k
@@ -323,9 +323,9 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
                     update_resource_log_params[k] = dict(
                         old_value=current_role.get(k), new_value=account_role.get(k)
                     )
-                    update_role_params[k] = current_role.get(k)
+                    update_role_keys.add(k)
 
-            if update_role_params:
+            if update_role_keys:
                 log_str = "Out of date resource found."
                 if ctx.execute:
                     log.debug(
@@ -339,13 +339,13 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
                             await boto_crud_call(
                                 client.update_role,
                                 RoleName=role_name,
-                                **update_role_params,
+                                **{key: account_role[key] for key in update_role_keys},
                             )
                         except Exception as e:
                             exceptions.append(str(e))
 
                         proposed_role_changes = []
-                        for key in update_role_params.keys():
+                        for key in update_role_keys:
                             proposed_role_changes.append(
                                 ProposedChange(
                                     attribute=key,
@@ -362,7 +362,7 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
                     tasks.append(update_role())
                 else:
                     log.debug(log_str, **update_resource_log_params)
-                    for key in update_role_params.keys():
+                    for key in update_role_keys:
                         account_change_details.proposed_changes.append(
                             ProposedChange(
                                 attribute=key,
