@@ -40,6 +40,19 @@ Resources:
         Ref: LambdaMemorySize
       Timeout:
         Ref: LambdaTimeout
+  IambicWebHookLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${IambicWebHookLambda}"
+      RetentionInDays: 3
+  IambicWebHookLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref IambicWebHookLambda
+      # IambicWebHook is secured using shared webhook secret between GitHub App and Lambda
+      FunctionUrlAuthType: 'NONE'
+      Action: lambda:InvokeFunctionUrl
+      Principal: '*'
   IambicWebHookUrl:
     Type: 'AWS::Lambda::Url'
     Properties:
