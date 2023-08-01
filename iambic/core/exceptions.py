@@ -124,6 +124,14 @@ def exception_reporter(exc_type, exc_value, exc_traceback):  # noqa: C901
             )
             detailed_reports = exception_reporting_settings.detailed
             email_address = exception_reporting_settings.email_address or ""
+        elif is_tty:
+            # show message if exception reporting is not configured
+            questionary.print(
+                "You can configure exception reporting in your config file. "
+                "Please see the docs at "
+                "https://docs.iambic.org/reference/iambic-exception-reporting "
+                "for more information."
+            )
 
         consent = _ask_for_consent(is_tty, automatically_send_reports)
 
