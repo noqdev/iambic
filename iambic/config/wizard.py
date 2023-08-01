@@ -1111,7 +1111,7 @@ class ConfigurationWizard:
             identity_arn = get_identity_arn(default_caller_identity)
             click.echo(
                 f"\nIAMbic detected you are using {identity_arn} for AWS access.\n"
-                f"This identity will require the ability to create"
+                f"This identity will require the ability to create "
                 f"CloudFormation stacks, stack sets, and stack set instances."
             )
             if questionary.confirm("Would you like to use this identity?").ask():
