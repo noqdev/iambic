@@ -103,7 +103,7 @@ def exception_reporter(exc_type, exc_value, exc_traceback):  # noqa: C901
         # extract settings from config
         exception_reporting_settings: Optional[ExceptionReporting] = None
         automatically_send_reports = None
-        detailed_reports = None
+        include_variables = None
         email_address = ""
 
         if config:
@@ -122,7 +122,7 @@ def exception_reporter(exc_type, exc_value, exc_traceback):  # noqa: C901
             automatically_send_reports = (
                 exception_reporting_settings.automatically_send_reports
             )
-            detailed_reports = exception_reporting_settings.detailed
+            include_variables = exception_reporting_settings.include_variables
             email_address = exception_reporting_settings.email_address or ""
         elif is_tty:
             # show message if exception reporting is not configured
@@ -153,7 +153,7 @@ def exception_reporter(exc_type, exc_value, exc_traceback):  # noqa: C901
         report += "\nTraceback:\n" + formatted_traceback
 
         # Include Local Variables
-        include_locals = _ask_include_locals(is_tty, detailed_reports)
+        include_locals = _ask_include_locals(is_tty, include_variables)
 
         if include_locals:
             # Include the local variables at each level of the traceback
@@ -212,10 +212,10 @@ def _ask_for_consent(is_tty, automatically_send_reports):
     return consent
 
 
-def _ask_include_locals(is_tty, detailed_reports):
-    if detailed_reports:
+def _ask_include_locals(is_tty, include_variables):
+    if include_variables:
         include_locals = True
-    elif is_tty and detailed_reports is None:
+    elif is_tty and include_variables is None:
         include_locals = questionary.confirm(
             "Would you like to include local variables in the report? "
         ).ask()
