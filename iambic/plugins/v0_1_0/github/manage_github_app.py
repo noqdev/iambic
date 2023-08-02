@@ -43,11 +43,10 @@ def update_webhook_url(webhook_url, encoded_jwt):
         log.info("GitHub app webhook url is already up-to-date")
         return
 
-    log.info(f"GitHub App existing webhook url is {current_webhook_url}")
     assert webhook_url.startswith("https://")
     payload = {
         "url": webhook_url,
     }
-    log.info(f"Update GitHub App url to {webhook_url}")
+    log.info(f"We are updating your GitHub app's webhook URL to: {webhook_url}")
     r = requests.patch(control_plane_url, data=json.dumps(payload), headers=head)
     r.raise_for_status()
