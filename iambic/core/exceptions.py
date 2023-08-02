@@ -78,6 +78,13 @@ def exception_reporter(exc_type, exc_value, exc_traceback: TracebackType | None)
     from iambic.config.dynamic_config import load_config
     from iambic.config.utils import resolve_config_template_path
 
+    if not isinstance(exc_value, BaseException):
+        log.error(
+            "Not manage exception occurs",
+            error=exc_value,
+            exception=exc_type.__name__,
+        )
+
     try:
         # Check if the input is coming from a terminal (TTY)
         is_tty = os.isatty(sys.stdin.fileno())
