@@ -16,6 +16,10 @@ DEV_EMAIL_DOMAIN_SUFFIX = os.environ.get("DEV_EMAIL_DOMAIN_SUFFIX", "@example.co
 DEV_ACCOUNT_ID = os.environ.get("DEV_ACCOUNT_ID", "")
 DEV_WEBHOOK_SNS_ARN = os.environ.get("DEV_WEBHOOK_SNS_ARN", "")
 
+# You cannot proceed without these value. Check your environment setup.
+assert DEV_ACCOUNT_ID
+assert DEV_WEBHOOK_SNS_ARN
+
 
 def get_developer_queue_name() -> str:
     sts_client = boto3.client("sts", region_name=DEV_REGION)
