@@ -766,11 +766,20 @@ def handle_detect_changes_from_eventbridge(
     repo_name = context["repository"]
     templates_repo = github_client.get_repo(repo_name)
     default_branch = get_remote_default_branch(templates_repo)
-    _handle_detect_changes_from_eventbridge(repo_url, default_branch)
+
+    _handle_detect_changes_from_eventbridge(
+        repo_url,
+        default_branch,
+        # github_client=github_client,
+        # github_repo=templates_repo
+    )
 
 
 def _handle_detect_changes_from_eventbridge(
-    repo_url: str, default_branch: str
+    repo_url: str,
+    default_branch: str,
+    # github_client: github.Github,
+    # github_repo: github.Repository, # type: ignore
 ) -> list[TemplateChangeDetails]:
     try:
         repo = prepare_local_repo_for_new_commits(
@@ -792,7 +801,9 @@ def _handle_detect_changes_from_eventbridge(
                     note_content = file.read()
                 # Add contents of `temp_file_path` as git notes to the last commit
                 repo.git.execute(["git", "notes", "add", "-m", note_content, "HEAD"])
+
             repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()
+
             # If notes were added, push them too
             if note_content:
                 repo.git.push("origin", "refs/notes/*")
@@ -801,6 +812,17 @@ def _handle_detect_changes_from_eventbridge(
                     note_content=note_content,
                     path=temp_file_path,
                 )
+                # TODO: github_client and templates_repo are not defined in this scope
+                # Indeed, any method that starts with an underscore, has these definitions
+                # BTW, How to execute this part of the code locally?
+                # _post_artifact_to_companion_repository(
+                #     github_client=github_client,
+                #     templates_repo=github_repo,
+                #     pull_number="",
+                #     op_name="detect",
+                #     proposed_changes_path=temp_file_path,
+                #     markdown_summary=note_content,
+                # )
         else:
             log.info("handle_detect no changes")
     except Exception as e:
