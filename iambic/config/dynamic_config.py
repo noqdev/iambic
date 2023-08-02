@@ -7,6 +7,7 @@ import os
 import subprocess
 from collections import defaultdict
 from enum import Enum
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import List, Optional, Union
 from uuid import uuid4
@@ -29,7 +30,10 @@ from iambic.core.models import (
 from iambic.core.utils import sort_dict, yaml
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, azure_ad, google_workspace, okta
 
-CURRENT_IAMBIC_VERSION = "1"
+try:
+    CURRENT_IAMBIC_VERSION = version("iambic-core")
+except PackageNotFoundError:
+    CURRENT_IAMBIC_VERSION = "unknown"
 
 
 class ExceptionReporting(BaseModel):

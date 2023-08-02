@@ -90,7 +90,7 @@ def exception_reporter(exc_type, exc_value, exc_traceback: TracebackType | None)
 
     if not isinstance(exc_value, BaseException):
         log.error(
-            "Not manage exception occurs",
+            "Unhandled Exception",
             error=exc_value,
             exception=exc_type.__name__,
             stacktrace="".join(
@@ -161,7 +161,8 @@ def exception_reporter(exc_type, exc_value, exc_traceback: TracebackType | None)
         if is_tty:
             print(
                 "Thank you for reporting this error. If you would like to save these "
-                "settings, please reference the documentation on Exception Reporting. "
+                "settings to automatically send reports, please reference the documentation "
+                "on Exception Reporting. "
                 "Please also join us in Slack to discuss this issue further. "
                 "https://communityinviter.com/apps/noqcommunity/noq"
             )
@@ -201,7 +202,7 @@ def _extract_settings(
         )
         include_variables = exception_reporting_settings.include_variables
         email_address = exception_reporting_settings.email_address or ""
-    elif is_tty:
+    elif is_tty and not os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
         # show message if exception reporting is not configured
         questionary.print(
             "You can configure exception reporting in your config file. "
