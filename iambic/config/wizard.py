@@ -1895,12 +1895,12 @@ class ConfigurationWizard:
         # safe secret for pem and webhook_url
 
         click.echo(
-            "\nTo setup GitHub App for iambic it requires creating CloudFormation stacks. \n"
-            "To review the templates used or deploy them manually, the IdentityRule templates used can be found here:\n"
+            "\nSetting up a GitHub App for IAMbic involves creating CloudFormation stacks. \n"
+            "If you wish to inspect the templates used or handle their deployment manually, use the `iambic_github_app` templates at the following location:\n"
             "https://github.com/noqdev/iambic/tree/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates\n"
-            "If you have already manually deployed the templates, answer yes to proceed.\n"
-            "IAMbic will validate that your stacks have been deployed successfully and will not attempt to replace them."
+            "Note that IAMbic will verify the successful deployment of your stacks, and it will not attempt to overwrite or recreate them if they already exist.\n"
         )
+
         unparse_tags = questionary.text(
             "Add Tags (leave blank or `team=ops_team, cost_center=engineering`): ",
             default="",
@@ -2120,13 +2120,19 @@ class ConfigurationWizard:
             "codebuild", region_name=self.aws_default_region
         )
 
-        response = code_build_client.start_build(
-            projectName="iambic_code_build",
-        )
+        try:
+            response = code_build_client.start_build(
+                projectName="iambic_code_build",
+            )
+        except errors.ResourceNotFoundException:
+            log.exception(
+                "CodeBuild project not found. Please inspect the CloudFormation stacks in your AWS account to determine the cause of the failure"
+            )
+            raise
 
         build_id = response["build"]["id"]
         # FIXME explain why this is stalling for builds
-        log.info("Preparing container image. Takes about 2 min...")
+        log.info("Preparing container image. This process should take around 2 minutes")
         for _ in range(6):
             resp = code_build_client.batch_get_builds(ids=[build_id])
             build_status = resp["builds"][0]["buildStatus"]
