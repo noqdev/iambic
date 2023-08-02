@@ -30,7 +30,14 @@ class BaseException(Exception):
     def __init__(self, msg: str = "") -> None:
         self.msg = msg
         if not isinstance(self, ExceptionReportingDisabledException):
-            log.error("An error occurred", error=msg, exception=self.__class__.__name__)
+            log.error(
+                "An error occurred",
+                error=msg,
+                exception=self.__class__.__name__,
+                stacktrace="".join(
+                    traceback.format_list(traceback.extract_stack())[:-1]
+                ),
+            )
         super().__init__(msg)
 
     def __str__(self):
@@ -40,6 +47,9 @@ class BaseException(Exception):
 
 class RateLimitException(BaseException):
     """Rate Limit Exception"""
+
+    def __init__(self):
+        super().__init__("Rate limit exceeded")
 
 
 class MultipleSecretsNotAcceptedException(BaseException):
@@ -83,7 +93,7 @@ def exception_reporter(exc_type, exc_value, exc_traceback: TracebackType | None)
             "Not manage exception occurs",
             error=exc_value,
             exception=exc_type.__name__,
-            traceback="".join(
+            stacktrace="".join(
                 traceback.format_list(traceback.extract_tb(exc_traceback))
             ),
         )
