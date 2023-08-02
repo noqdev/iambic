@@ -8,6 +8,7 @@ import json
 import os
 import tempfile
 import time
+from functools import cache
 from typing import Any, Callable
 from urllib.parse import urlparse
 
@@ -15,6 +16,7 @@ import aiohttp
 import boto3
 import github
 import jwt
+import yaml
 from botocore.exceptions import ClientError
 
 import iambic.core.utils
@@ -72,7 +74,27 @@ def get_app_bearer_token(private_key, app_id) -> str:
     return jwt.encode(payload, private_key, algorithm="RS256")
 
 
-def get_app_private_key_as_lambda_context():
+@cache
+def _get_app_secrets_as_lambda_context_current() -> dict:
+    # Create a Secrets Manager client
+    session = boto3.session.Session()
+    client = session.client(service_name="secretsmanager")
+
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId="iambic/github-app-secrets"
+        )
+    except ClientError as e:
+        # For a list of exceptions thrown, see
+        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+        raise e
+
+    # Decrypts secret using the associated KMS key.
+    return yaml.safe_load(get_secret_value_response["SecretString"])
+
+
+@cache
+def _get_app_private_key_as_lambda_context_old():
     # assuming we are already in an lambda execution context
     secret_name = os.environ["GITHUB_APP_SECRET_KEY_SECRET_ID"]
     region_name = os.environ["AWS_REGION"]
@@ -92,7 +114,18 @@ def get_app_private_key_as_lambda_context():
     return get_secret_value_response["SecretString"]
 
 
-def get_app_webhook_secret_as_lambda_context():
+def get_app_private_key_as_lambda_context():
+    try:
+        secrets = _get_app_secrets_as_lambda_context_current()
+        return secrets["pem"]
+    except ClientError:
+        # try to fall back to use the old secrets
+        pass
+    return _get_app_private_key_as_lambda_context_old()
+
+
+@cache
+def _get_app_webhook_secret_as_lambda_context_old():
     # assuming we are already in an lambda execution context
     secret_name = os.environ["GITHUB_APP_WEBHOOK_SECRET_SECRET_ID"]
     region_name = os.environ["AWS_REGION"]
@@ -112,6 +145,16 @@ def get_app_webhook_secret_as_lambda_context():
     return get_secret_value_response["SecretString"]
 
 
+def get_app_webhook_secret_as_lambda_context():
+    try:
+        secrets = _get_app_secrets_as_lambda_context_current()
+        return secrets["webhook_secret"]
+    except ClientError:
+        # try to fall back to use the old secrets
+        pass
+    return _get_app_webhook_secret_as_lambda_context_old()
+
+
 async def _get_installation_token(app_id, installation_id):
     encoded_jwt = get_app_bearer_token(get_app_private_key_as_lambda_context(), app_id)
     access_tokens_url = (
@@ -128,6 +171,10 @@ async def _get_installation_token(app_id, installation_id):
             return installation_token
 
 
+def lower_case_all_header_keys(d):
+    return {key.lower(): value for key, value in d.items()}
+
+
 def run_handler(event=None, context=None):
     """
     Default handler for AWS Lambda. It is split out from the actual
@@ -137,17 +184,33 @@ def run_handler(event=None, context=None):
     # debug
     print(event)
 
-    github_event = event["headers"]["x-github-event"]
-    app_id = event["headers"]["x-github-hook-installation-target-id"]
-    request_signature = event["headers"]["x-hub-signature-256"].split("=")[
+    # Http spec considers keys to be insensitive but different
+    # proxy will pass along different case sensitive header key
+    # for example: API Gateway lambda integration pass header case transparent from request
+    # whereas lambda functional url proactive lower case the incoming header keys
+    # this is the reason we proactively lower_case the header keys
+    github_event_headers = lower_case_all_header_keys(event["headers"])
+
+    github_event = github_event_headers["x-github-event"]
+    app_id = github_event_headers["x-github-hook-installation-target-id"]
+    request_signature = github_event_headers["x-hub-signature-256"].split("=")[
         1
     ]  # the format is in sha256=<sig>
 
+    payload = {}
+    # the payload is switch between lambda event's body vs rawBody
+    # due to difference of how various proxy temper with the http post body
+    # For API Gateway, it's lambda integration always decode the payload and pass to lambda
+    # however, to verify message signature, we must use non-tempered body.
+    if "rawBody" in event:
+        payload = event["rawBody"]
+    else:
+        payload = event["body"]
+
     # verify webhooks security secrets
-    payload = event["body"]
     verify_signature(request_signature, payload)
 
-    webhook_payload = json.loads(event["body"])
+    webhook_payload = json.loads(payload)
     installation_id = webhook_payload["installation"]["id"]
     github_override_token = asyncio.run(
         _get_installation_token(app_id, installation_id)
