@@ -1,8 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
+Description: This creates a ECR pull-through-cache to enable pull from AWS public ecr
 Parameters:
   EcrRepositoryPrefix:
     Type: String
-    Default: "ecr-public"
+    Default: "iambic-ecr-public"
 Resources:
   PullThroughCacheRule:
     Type: 'AWS::ECR::PullThroughCacheRule'

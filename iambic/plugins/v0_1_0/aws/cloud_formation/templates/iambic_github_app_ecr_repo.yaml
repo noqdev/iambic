@@ -1,8 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
+Description: This creates a ECR repo storing its private copy of iambic image.
 Parameters:
   UpstreamRepoName:
     Type: String
-    Default: "ecr-public/iambic/iambic"
+    Default: "iambic-ecr-public/iambic/iambic"
 Resources:
   Repo:
     Type: AWS::ECR::Repository

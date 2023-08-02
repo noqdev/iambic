@@ -1,4 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
+Description: This creates AWS Roles required by the IAMbic GitHub integration
 Parameters:
   IambicHubRoleArn:
     Type: String
@@ -10,7 +11,7 @@ Parameters:
     Default: "iambic_code_build"
   IambicECRRepoName:
     Type: String
-    Default: "ecr-public/iambic/iambic"
+    Default: "iambic-ecr-public/iambic/iambic"
 Resources:
   IambicWebhookLambdaExecutionRole:
     Type: AWS::IAM::Role
