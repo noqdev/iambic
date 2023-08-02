@@ -17,11 +17,9 @@ from botocore.exceptions import ClientError
 
 # Load from os.environ because this is executed by lambda
 # Lambda environment is configured in terraform
-GITHUB_APP_IAMBIC_DEV_WEBHOOK_SNS_TOPIC_ARN = os.environ[
-    "GITHUB_APP_IAMBIC_DEV_WEBHOOK_SNS_TOPIC_ARN"
-]
+DEV_WEBHOOK_SNS_ARN = os.environ["DEV_WEBHOOK_SNS_ARN"]
 # Example format: "arn:aws:sns:us-east-2:444455556666:MyTopic"
-topic_region = GITHUB_APP_IAMBIC_DEV_WEBHOOK_SNS_TOPIC_ARN.split(":")[3]
+topic_region = DEV_WEBHOOK_SNS_ARN.split(":")[3]
 sns = boto3.client("sns", region_name=topic_region)
 
 # Load from os.environ because this is executed by lambda
@@ -97,7 +95,7 @@ def lambda_handler(event, context):
     # policy
 
     _ = sns.publish(
-        TopicArn=GITHUB_APP_IAMBIC_DEV_WEBHOOK_SNS_TOPIC_ARN,
+        TopicArn=DEV_WEBHOOK_SNS_ARN,
         Message=json.dumps(event),
         Subject="github",
         MessageStructure="string",
