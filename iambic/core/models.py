@@ -205,6 +205,7 @@ class BaseModel(IambicPydanticBaseModel):
         exclude_keys = {
             "deleted",
             "expires_at",
+            "expires_at_default",
             "included_accounts",
             "excluded_accounts",
             "included_orgs",
