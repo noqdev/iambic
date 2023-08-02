@@ -17,6 +17,8 @@ from urllib.parse import unquote_plus
 import aiofiles
 import jwt
 from asgiref.sync import sync_to_async
+from jinja2 import BaseLoader
+from jinja2.sandbox import ImmutableSandboxedEnvironment
 from ruamel.yaml import YAML, scalarstring
 
 from iambic.core import noq_json as json
@@ -26,7 +28,7 @@ from iambic.core.iambic_enum import IambicManaged
 from iambic.core.logger import log
 
 if TYPE_CHECKING:
-    from iambic.core.models import ProposedChange
+    from iambic.core.models import ProposedChange, ProviderChild
 
 
 NOQ_TEMPLATE_REGEX = r".*template_type:\n?.*NOQ::"
@@ -137,10 +139,14 @@ async def resource_file_upsert(
 async def file_regex_search(
     file_path: Union[str, Path], re_pattern: str
 ) -> Union[str, None]:
-    async with aiofiles.open(file_path, mode="r") as f:
-        file_content = await f.read()
-        if re.search(re_pattern, file_content):
-            return file_path
+    try:
+        async with aiofiles.open(file_path, mode="r") as f:
+            file_content = await f.read()
+            if re.search(re_pattern, file_content):
+                return file_path
+    except FileNotFoundError:
+        # race condition with different providers
+        return None
 
 
 async def gather_templates(repo_dir: str, template_type: str = None) -> list[str]:
@@ -892,3 +898,27 @@ def decode_with_reference_time(encoded_jwt, public_key, algorithms, reference_ti
             )
 
     return payload
+
+
+def get_rendered_template_str_value(
+    template_value: str, provider_child: typing.Type[ProviderChild]
+) -> str:
+    """
+    Render a template string with the variables from the provider child.
+    """
+    valid_characters_re = r"[\w_+=,.@-]"
+    variables = {var.key: var.value for var in getattr(provider_child, "variables", [])}
+    for extra_attr in {"account_id", "account_name", "owner"}:
+        if attr_val := getattr(provider_child, extra_attr, None):
+            variables[extra_attr] = attr_val
+
+    if not variables:
+        return template_value
+
+    variables = {
+        k: sanitize_string(v, valid_characters_re) for k, v in variables.items()
+    }
+    rtemplate = ImmutableSandboxedEnvironment(loader=BaseLoader()).from_string(
+        template_value
+    )
+    return rtemplate.render(var=variables)

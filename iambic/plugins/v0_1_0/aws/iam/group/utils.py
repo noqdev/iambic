@@ -10,7 +10,11 @@ from deepdiff import DeepDiff
 from iambic.core.context import ctx
 from iambic.core.logger import log
 from iambic.core.models import ProposedChange, ProposedChangeType
-from iambic.core.utils import aio_wrapper, plugin_apply_wrapper
+from iambic.core.utils import (
+    aio_wrapper,
+    get_rendered_template_str_value,
+    plugin_apply_wrapper,
+)
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, paginated_search
 
 if TYPE_CHECKING:
@@ -73,7 +77,7 @@ async def get_group_managed_policies(
         else:
             break
 
-    return policies
+    return [{"PolicyArn": policy["PolicyArn"]} for policy in policies]
 
 
 async def get_group(group_name: str, iam_client, include_policies: bool = True) -> dict:
@@ -99,9 +103,10 @@ async def get_group_across_accounts(
 ) -> dict:
     async def get_group_for_account(aws_account: AWSAccount):
         iam_client = await aws_account.get_boto3_client("iam")
+        account_group_name = get_rendered_template_str_value(group_name, aws_account)
         return {
             aws_account.account_id: await get_group(
-                group_name, iam_client, include_policies
+                account_group_name, iam_client, include_policies
             )
         }
 

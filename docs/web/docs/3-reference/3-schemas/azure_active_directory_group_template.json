@@ -13,6 +13,10 @@
       "description": "Owner of the group",
       "type": "string"
     },
+    "notes": {
+      "title": "Notes",
+      "type": "string"
+    },
     "iambic_managed": {
       "description": "Controls the directionality of Iambic changes",
       "default": "undefined",
@@ -320,8 +324,7 @@
       },
       "required": [
         "name"
-      ],
-      "additionalProperties": false
+      ]
     }
   }
 }

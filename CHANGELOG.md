@@ -1,6 +1,129 @@
 
 # Change Log
 
+## 0.11.11 (Aug 2, 2023)
+
+ENHANCEMENTS:
+* GitHub App creation flow in iambic wizard [#515](https://github.com/noqdev/iambic/pull/515)
+
+## 0.11.8 (Aug 1, 2023)
+
+DOCS:
+* Change project description on PyPI [#527](https://github.com/noqdev/iambic/pull/527)
+** There were some reference to the old project name. Those were cleaned up.
+
+BUG FIXES:
+* Fix #491 Support "merge", "squash", and "rebase" merge method  [#525](https://github.com/noqdev/iambic/pull/525)
+* Fix security/dependabot/26 Bump certifi [#524](https://github.com/noqdev/iambic/pull/524)
+* Fixed bug where none type description was causing an exception on role [#528](https://github.com/noqdev/iambic/pull/528)
+* Attaching and detaching role tags now 2 distinct operations. Fixes to role attribute value resolver on Role._apply_to_account. [#528](https://github.com/noqdev/iambic/pull/528)
+
+THANKS:
+`datfinesoul` for reporting GitHub linear history use case. [#491](https://github.com/noqdev/iambic/issues/491)
+`Simon D.` in community slack for reporting the old project name references. [#527](https://github.com/noqdev/iambic/pull/527)
+
+## 0.11.03 (July 31, 2023)
+
+BUG FIXES:
+* Git commit message not reflecting the linting changes [#521](https://github.com/noqdev/iambic/pull/521)
+
+THANKS:
+`datfinesoul` for reporting git commit message not reflecting the actual changes. [#520](https://github.com/noqdev/iambic/issues/520)
+
+## 0.11.01 (July 31, 2023)
+
+DOCS:
+* Add Youtube Video reference to README [#517](https://github.com/noqdev/iambic/pull/517)
+
+BUG FIXES:
+* Add help text to CLI commands [#510](https://github.com/noqdev/iambic/pull/510)
+* Update App Manifest to subscribe to Workflow run [#509](https://github.com/noqdev/iambic/pull/509)
+* Update iambic_base_container to 2.0.0 [#511](https://github.com/noqdev/iambic/pull/511)
+** Amazon Linux 2023 as the base linux distribution for the Lambda Container Image
+** Python 3.10.12 as the python runtime for the Lambda Container Image
+* Opportunistically import resource module [#506](https://github.com/noqdev/iambic/pull/506)
+** Windows user does not have the resource module available
+* Fix #512 Handle FileNotFoundException [#513](https://github.com/noqdev/iambic/pull/513)
+* Bump aiohttp from 3.8.4 to 3.8.5 [#514](https://github.com/noqdev/iambic/pull/514)
+
+THANKS:
+* `Wilhite-r` contributing [#510](https://github.com/noqdev/iambic/pull/510)
+
+## 0.10.15 (July 21, 2023)
+
+BUG FIXES:
+* Fixed error encountered when configuring change detection in the setup wizard. [#508](https://github.com/noqdev/iambic/pull/508)
+* Use markdown syntax for links [#501](https://github.com/noqdev/iambic/pull/501)
+
+## 0.10.13 (July 18, 2023)
+
+BUG FIXES:
+* Fixed Google Groups paginated response [#500](https://github.com/noqdev/iambic/pull/500)
+
+THANKS:
+* `jonathan.silva` in community slack reporting the pagination issue on Google Workspace
+
+## 0.10.12 (July 18, 2023)
+
+BUG FIXES:
+* Handle CUSTOMER type as Google Group member  [#499](https://github.com/noqdev/iambic/pull/499)
+
+THANKS:
+* `jonathan.silva` in community slack reporting the CUSTOMER type issue on Google Workspace
+
+## 0.10.11 (July 17, 2023)
+
+BUG FIXES:
+* [#498](https://github.com/noqdev/iambic/pull/498)
+* Fixed race condition on iambic detect not using templated resource id grouping resources.
+* Fixed issue where a resource could show as excluded on a resource it was never evaluated on.
+
+ENHANCEMENTS:
+* Improved ordering of template attributes.
+* `base_group_dict_attribute` is now more deterministic in its grouping.
+* `iambic detect` performance optimizations.
+  * Now only evaluates on the account a resource id change is detected on as opposed to all accounts.
+  * Example if `engineering` is on all accounts and detect is ran for account a, only `engineering` on account a is evaluated.
+* Removed remaining AWS provider references from core.
+
+## 0.10.10 (July 14, 2023)
+
+DOCS:
+* Fix GoogleWorkspace docs [#496](https://github.com/noqdev/iambic/pull/496)
+* Instruction to deploy GitHub integration on non-mgmt account [#494](https://github.com/noqdev/iambic/pull/494)
+
+BUG FIXES:
+* Validate google response data [#497](https://github.com/noqdev/iambic/pull/497)
+
+ENHANCEMENTS:
+* Add 'notes' core template attribute [#485](https://github.com/noqdev/iambic/pull/485)
+
+THANKS:
+* `jonathan.silva` in community slack reporting the Google Workspace setup issue.
+
+## 0.10.7 (July 12, 2023)
+
+BUG FIXES:
+* Update Structlog and other dependencies [#495](https://github.com/noqdev/iambic/pull/495)
+
+## 0.10.4 (July 6, 2023)
+
+BUG FIXES:
+* AWS - Fixing missing change details [#487](https://github.com/noqdev/iambic/pull/487)
+
+THANKS:
+* `mikegrima` for contributing AWS fix [#487](https://github.com/noqdev/iambic/pull/487)
+
+## 0.10.3 (July 5, 2023)
+
+BUG FIXES:
+* Google Workspace - Fix SUSPENDED support in Google Workspace Groups [#483](https://github.com/noqdev/iambic/pull/483)
+* AWS - Added Managed Policy ARN to ProposedChange [#484](https://github.com/noqdev/iambic/pull/484)
+
+THANKS:
+* `victorSouza-DevOPS` for contributing Google Workspace fix [#483](https://github.com/noqdev/iambic/pull/483)
+* `mikegrima` for contributing AWS fix [#484](https://github.com/noqdev/iambic/pull/484)
+
 ## 0.10.1 (July 3, 2023)
 
 DOCS:

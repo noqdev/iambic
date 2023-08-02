@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register a GitHub App Manifest</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        form {
+            background-color: #fff;
+            padding: 2em;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        textarea {
+            min-height: 200px;
+            resize: vertical;
+        }
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 20px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <form id="githubForm" method="post">
+        <h2>Register a GitHub App Manifest</h2>
+        Github Organization name: <input type="text" name="organization" id="organization" placeholder="Enter your Github Organization's name" required><br>
+        GitHub App Manifest:
+        <textarea name="manifest" id="manifest" placeholder="Paste your manifest JSON here"></textarea><br>
+        <input type="submit" value="Submit">
+    </form>
+
+    <script>
+      const form = document.getElementById('githubForm');
+      const input = document.getElementById('manifest');
+      const organization = document.getElementById('organization');
+
+      const manifest = {
+          "name": "iambic-<org-name>",
+          "description": "This is a self-hosted IAMbic GitHub Integration. For details, see https://docs.iambic.org/getting_started/github",
+          "url": "https://docs.iambic.org/",
+          "hook_attributes": {
+              "url": "https://docs.iambic.org/",
+              "active": true,
+          },
+          "redirect_url": "http://localhost:8080/redirect",
+          "public": false,
+          "default_permissions": {
+              "contents": "write",
+              "pull_requests": "write",
+              "issues": "write"
+          },
+          "default_events": [
+              "meta",
+              "issue_comment",
+              "pull_request",
+              "workflow_run"
+          ]
+      };
+
+      // Default manifest value
+      input.value = JSON.stringify(manifest, null, 2);
+
+      // Update manifest name when the organization input changes
+      organization.addEventListener('input', (e) => {
+          const orgName = e.target.value;
+          manifest.name = `iambic-${orgName}`;
+          input.value = JSON.stringify(manifest, null, 2);
+      });
+
+      // When the form is submitted
+      form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const orgName = organization.value;
+          const url = `https://github.com/organizations/${orgName}/settings/apps/new?state=${Math.random().toString(36).substring(7)}`;
+          form.action = url;
+          form.submit();
+      });
+  </script>
+</body>
+</html>

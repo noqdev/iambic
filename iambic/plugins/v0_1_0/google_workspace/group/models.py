@@ -47,7 +47,14 @@ GOOGLE_GROUP_TEMPLATE_TYPE = "NOQ::GoogleWorkspace::Group"
 
 
 class GroupMember(BaseModel, ExpiryModel):
-    email: str
+    email: Optional[str] = Field(
+        None,
+        description="Email address. However, when the type is CUSTOMER, it represents all users in a domain",
+    )
+    customer_id: Optional[str] = Field(
+        None,
+        description="When the type is CUSTOMER, it represents customer id of a domain",
+    )
     expand: bool = Field(
         False,
         description="Expand the group into the members of the group. This is useful for nested groups.",
@@ -63,7 +70,10 @@ class GroupMember(BaseModel, ExpiryModel):
 
     @property
     def resource_id(self):
-        return self.email
+        if self.type == GroupMemberType.CUSTOMER:
+            return self.customer_id
+        else:
+            return self.email
 
 
 class GroupProperties(BaseModel):
@@ -95,7 +105,7 @@ class GroupProperties(BaseModel):
 
     @validator("members")
     def sort_groups(cls, v: list[GroupMember]):
-        sorted_v = sorted(v, key=lambda member: member.email)
+        sorted_v = sorted(v, key=lambda member: member.email or member.customer_id)
         return sorted_v
 
 

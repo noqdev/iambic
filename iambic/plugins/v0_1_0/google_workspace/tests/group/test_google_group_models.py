@@ -90,6 +90,8 @@ class TestGroupTemplateApply(unittest.IsolatedAsyncioTestCase):
         )
         mock_service = MagicMock()
         mock_service.groups.return_value.get.return_value = mock_req
+        # fake paginated value
+        mock_service.members.return_value.list_next.return_value = None
         object.__setattr__(
             self.google_project1,
             "get_service_connection",

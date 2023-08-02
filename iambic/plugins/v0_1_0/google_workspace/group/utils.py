@@ -37,11 +37,15 @@ async def list_groups(
         raise
 
     req = await aio_wrapper(service.groups().list, domain=domain)
-    res = req.execute(http=http)
-    if res and "groups" in res:
-        for group in res["groups"]:
-            group_template = await get_group_template(service, group, domain)
-            groups.append(group_template)
+    while req is not None:
+        res = req.execute(http=http)
+        if res and "groups" in res:
+            for group in res["groups"]:
+                group_template = await get_group_template(service, group, domain)
+                groups.append(group_template)
+
+        # handle pagination based on https://googleapis.github.io/google-api-python-client/docs/pagination.html
+        req = await aio_wrapper(service.groups().list_next, req, res)
     return groups
 
 
@@ -317,7 +321,7 @@ async def maybe_delete_group(
     return response
 
 
-async def get_group_members(service, group):
+def create_group_member_from_dict(d):
     from iambic.plugins.v0_1_0.google_workspace.group.models import (
         GroupMember,
         GroupMemberRole,
@@ -325,28 +329,43 @@ async def get_group_members(service, group):
         GroupMemberType,
     )
 
+    if d["type"] == "CUSTOMER":
+        return GroupMember(
+            customer_id=d["id"],
+            role=GroupMemberRole(d["role"]),
+            type=GroupMemberType(d["type"]),
+            status=GroupMemberStatus(d.get("status", GroupMemberStatus.UNDEFINED)),
+        )
+    else:
+        return GroupMember(
+            email=d["email"],
+            role=GroupMemberRole(d["role"]),
+            type=GroupMemberType(d["type"]),
+            status=GroupMemberStatus(d.get("status", GroupMemberStatus.UNDEFINED)),
+        )
+
+
+async def get_group_members(service, group):
     http = _auth.authorized_http(service._http.credentials)
     group_email_address = group["email"]
     member_req = service.members().list(groupKey=group_email_address)
-    member_res = member_req.execute(http=http) or {}
-    members = member_res.get("members", [])
-    required_keys = ["email", "role", "type"]
-    # validate response data because we have reports that member without email address
-    for member in members:
-        missing_required_keys = set(required_keys) - set(member.keys())
-        if len(missing_required_keys) > 0:
-            raise ValueError(
-                f"for google group: {group_email_address} missing keys: {missing_required_keys} for member: {member}"
-            )
-    return [
-        GroupMember(
-            email=member["email"],
-            role=GroupMemberRole(member["role"]),
-            type=GroupMemberType(member["type"]),
-            status=GroupMemberStatus(member.get("status", GroupMemberStatus.UNDEFINED)),
-        )
-        for member in members
-    ]
+    members = []
+    while member_req is not None:
+        member_res = member_req.execute(http=http) or {}
+        members_partial = member_res.get("members", [])
+        required_keys = ["role", "type"]
+        # validate response data because we have reports that member without email address
+        for member in members_partial:
+            missing_required_keys = set(required_keys) - set(member.keys())
+            if len(missing_required_keys) > 0:
+                raise ValueError(
+                    f"for google group: {group_email_address} missing keys: {missing_required_keys} for member: {member}"
+                )
+        members.extend(members_partial)
+
+        # handle pagination based on https://googleapis.github.io/google-api-python-client/docs/pagination.html
+        member_req = service.members().list_next(member_req, member_res)
+    return [create_group_member_from_dict(member) for member in members]
 
 
 async def update_group_members(
@@ -371,11 +390,13 @@ async def update_group_members(
         log.exception("Unable to process google groups.", error=err)
         return
 
-    if users_to_remove := [
-        member
-        for member in current_members
-        if member.email not in [m.email for m in proposed_members]
-    ]:
+    current_members_keys_to_members = {m.resource_id: m for m in current_members}
+    proposed_members_keys_to_members = {m.resource_id: m for m in proposed_members}
+    keys_to_remove = set(current_members_keys_to_members.keys()) - set(
+        proposed_members_keys_to_members.keys()
+    )
+    users_to_remove = [current_members_keys_to_members[k] for k in keys_to_remove]
+    if users_to_remove:
         log_str = "Detected users to remove from group"
         response.append(
             ProposedChange(
@@ -384,31 +405,34 @@ async def update_group_members(
                 resource_type="google:group:template",
                 attribute="users",
                 change_summary={
-                    "UsersToRemove": [user.email for user in users_to_remove]
+                    "UsersToRemove": [user.resource_id for user in users_to_remove]
                 },
-                current_value=[user.email for user in current_members],
-                new_value=[user.email for user in proposed_members],
+                current_value=[user.resource_id for user in current_members],
+                new_value=[user.resource_id for user in proposed_members],
             )
         )
         if ctx.execute:
             log_str = "Removing users from group"
             for user in users_to_remove:
                 http = _auth.authorized_http(service._http.credentials)
+                member_key = user.email if user.email else user.customer_id
                 tasks.append(
                     aio_wrapper(
                         service.members()
-                        .delete(groupKey=group_email, memberKey=user.email)
+                        .delete(groupKey=group_email, memberKey=member_key)
                         .execute,
                         http=http,
                     )
                 )
-        log.info(log_str, users=[user.email for user in users_to_remove], **log_params)
+        log.info(
+            log_str, users=[user.resource_id for user in users_to_remove], **log_params
+        )
 
-    if users_to_add := [
-        member
-        for member in proposed_members
-        if member.email not in [m.email for m in current_members]
-    ]:
+    keys_to_add = set(proposed_members_keys_to_members.keys()) - set(
+        current_members_keys_to_members.keys()
+    )
+    users_to_add = [proposed_members_keys_to_members[k] for k in keys_to_add]
+    if users_to_add:
         log_str = "Detected new users to add to group"
         response.append(
             ProposedChange(
@@ -417,32 +441,39 @@ async def update_group_members(
                 resource_type="google:group:template",
                 attribute="users",
                 change_summary={"UsersToAdd": [user.email for user in users_to_add]},
-                current_value=[user.email for user in current_members],
-                new_value=[user.email for user in proposed_members],
+                current_value=[user.resource_id for user in current_members],
+                new_value=[user.resource_id for user in proposed_members],
             )
         )
         if ctx.execute:
             log_str = "Adding users to group"
             for user in users_to_add:
                 http = _auth.authorized_http(service._http.credentials)
+                body = {
+                    "email": user.email,
+                    "role": user.role.value,
+                    "type": user.type.value,
+                }
+                if body["type"] == "CUSTOMER":
+                    del body[
+                        "email"
+                    ]  # email is not an supported attribute customer type
+                    body["id"] = user.customer_id
                 tasks.append(
                     aio_wrapper(
                         service.members()
                         .insert(
                             groupKey=group_email,
-                            body={
-                                "email": user.email,
-                                "role": user.role.value,
-                                "type": user.type.value,
-                                "status": user.status.value,
-                            },
+                            body=body,
                         )
                         .execute,
                         http=http,
                     )
                 )
 
-        log.info(log_str, users=[user.email for user in users_to_add], **log_params)
+        log.info(
+            log_str, users=[user.resource_id for user in users_to_add], **log_params
+        )
     if tasks:
         res = await asyncio.gather(*tasks, return_exceptions=True)
         for r in res:

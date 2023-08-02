@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This creates a ECR repo storing its private copy of iambic image.
+Parameters:
+  UpstreamRepoName:
+    Type: String
+    Default: "iambic-ecr-public/iambic/iambic"
+Resources:
+  Repo:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName:
+        Ref: UpstreamRepoName
+Outputs:
+  RepoUri:
+    Description: Repo URI
+    Value: !GetAtt Repo.RepositoryUri

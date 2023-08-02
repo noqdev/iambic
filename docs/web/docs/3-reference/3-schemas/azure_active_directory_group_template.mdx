@@ -7,6 +7,7 @@ configurations for other models used in IAMbic.*
 
 - **`template_type`** *(string)*: Default: `"NOQ::AzureAD::Group"`.
 - **`owner`** *(string)*: Owner of the group.
+- **`notes`** *(string)*
 - **`iambic_managed`**: Controls the directionality of Iambic changes. Default: `"undefined"`.
   - **All of**
     - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
@@ -48,7 +49,7 @@ configurations for other models used in IAMbic. Cannot contain additional proper
 <a id="definitions/GroupTemplateProperties"></a>
 
 - **`GroupTemplateProperties`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic. Cannot contain additional properties.
+configurations for other models used in IAMbic.
   - **`expires_at`**: The date and time the resource will be/was set to deleted.
     - **Any of**
       - *string*

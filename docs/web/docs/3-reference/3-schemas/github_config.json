@@ -37,6 +37,37 @@
       "description": "Commit message to use during changes through git-apply",
       "default": "Replace relative time with absolute time",
       "type": "string"
+    },
+    "allowed_bot_approvers": {
+      "title": "Allowed Bot Approvers",
+      "description": "list of allowed bot approver",
+      "default": [],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/GithubBotApprover"
+      }
+    }
+  },
+  "definitions": {
+    "GithubBotApprover": {
+      "title": "GithubBotApprover",
+      "type": "object",
+      "properties": {
+        "login": {
+          "title": "Login",
+          "description": "login for allowed bot approver",
+          "type": "string"
+        },
+        "es256_pub_key": {
+          "title": "Es256 Pub Key",
+          "description": "ES256 Pub Key for allowed bot approver",
+          "type": "string"
+        }
+      },
+      "required": [
+        "login",
+        "es256_pub_key"
+      ]
     }
   }
 }

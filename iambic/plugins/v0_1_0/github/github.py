@@ -31,6 +31,7 @@ from iambic.core.utils import decode_with_reference_time, yaml
 from iambic.main import run_apply, run_detect, run_expire, run_git_apply, run_git_plan
 from iambic.plugins.v0_1_0.github.iambic_plugin import GithubConfig
 from iambic.plugins.v0_1_0.github.utils import IAMBIC_APPLY_ERROR_METADATA
+from iambic.request_handler.git_apply import lint_git_changes
 
 iambic_app = __import__("iambic.lambda.app", globals(), locals(), [], 0)
 lambda_run_handler = getattr(iambic_app, "lambda").app.run_handler
@@ -46,6 +47,7 @@ COMMIT_MESSAGE_FOR_DETECT = "Import changes from detect operation"
 COMMIT_MESSAGE_FOR_IMPORT = "Import changes from import operation"
 COMMIT_MESSAGE_FOR_EXPIRE = "Periodic Expiration"
 COMMIT_MESSAGE_FOR_GIT_APPLY_ABSOLUTE_TIME = "Replace relative time with absolute time"
+COMMIT_MESSAGE_FOR_LINTING = "Format template using internal linting rules"
 SHARED_CONTAINER_GITHUB_DIRECTORY = "/root/data"
 
 
@@ -202,13 +204,13 @@ GIT_APPLY_COMMENT_TEMPLATE = """iambic {iambic_op} ran with:
 {plan}
 ```
 
-<a href="{run_url}">Run</a>
+[Run]({run_url})
 """
 
 
 def ensure_body_length_fits_github_spec(body: str, blob_html_url: str = None) -> str:
     if len(body) > BODY_MAX_LENGTH:
-        body = TRUNCATED_WARNING + f"""<a href="{blob_html_url}">Run</a>"""
+        body = TRUNCATED_WARNING + f"""[Run]({blob_html_url})"""
     return body
 
 
@@ -379,6 +381,16 @@ def handle_iambic_git_apply(
             # but templates config is now already stored in the templates repo itself.
             getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH = proposed_changes_path
 
+        # run lint before apply to separate out formatting change from the relative time change
+        config_path = asyncio.run(resolve_config_template_path(repo_dir))
+        asyncio.run(lint_git_changes(config_path, repo_dir, False, None, None))
+        repo.git.add(".")
+        diff_list = repo.head.commit.diff()
+        if len(diff_list) > 0:
+            repo.git.commit("-m", COMMIT_MESSAGE_FOR_LINTING)
+        else:
+            log.debug("git_apply did not introduce linting changes")
+
         template_changes = run_git_apply(
             False, None, None, repo_dir, proposed_changes_path
         )
@@ -435,13 +447,24 @@ def maybe_merge(
 ):
     """Attempts to merge the PR at specific sha, this function will retry a few times because
     desired sha maybe not available yet"""
+
+    merge_method = None
+    if templates_repo.allow_merge_commit:
+        merge_method = "merge"
+    elif templates_repo.allow_squash_merge:
+        merge_method = "squash"
+    elif templates_repo.allow_rebase_merge:
+        merge_method = "rebase"
+    else:
+        merge_method = "NOT_SUPPORTED"
+
     attempts = 0
     merge_status = None
     last_known_traceback = None
     while attempts < max_attempts:
         pull_request = templates_repo.get_pull(pull_number)
         try:
-            merge_status = pull_request.merge(sha=merge_sha)
+            merge_status = pull_request.merge(sha=merge_sha, merge_method=merge_method)
             break
         except github.GithubException:
             last_known_traceback = traceback.format_exc()
@@ -708,7 +731,9 @@ def _process_template_changes(
     else:
         rendered_content = "no changes detected"
 
-    rendered_content = f"""Reacting to `{op_name}`\n\n{rendered_content}\n\n <a href="{html_url}">Run</a>"""
+    rendered_content = (
+        f"""Reacting to `{op_name}`\n\n{rendered_content}\n\n [Run]({html_url})"""
+    )
     if pull_request:
         _post_render_content_as_pr_comment(
             pull_request, rendered_content, blob_html_url=html_url

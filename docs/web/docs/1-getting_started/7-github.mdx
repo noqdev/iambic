@@ -180,7 +180,24 @@ permissions from your cloud provider(s).
 
 By installing IAMbic GitHub App, the app can integrate the pull-request and merge flow in your iambic templates repository.
 
-### Create a GitHub App in your organization
+:::tip
+
+We are re-working the IAMbic GitHub App process. Docs update soon.
+
+:::
+
+### Create a GitHub App in your organization (New)
+
+* You need GitHub org admin right to create GitHub app for your org
+* You need AWS admin right that can assume IambicHubRole in the management account and AWS admin right to deploy the IAMbic GitHub integration.
+
+```bash
+iambic setup
+```
+
+* Select `Setup GitHub App Integration using AWS Lambda` option
+
+### Create a GitHub App in your organization (Old)
 
 :::tip
 
@@ -193,7 +210,7 @@ Permission explanation
 
 1. Modify `your_org_name` to your Github organization name and paste it into your browser.
 ```
-https://github.com/organizations/your_org_name/settings/apps/new?name=iambic-integration-for-your_org_name&description=iambic-github-integration&url=https%3A%2F%2Fnoq.dev%2F&webhook_active=false&events[]=meta&events[]=issue_comment&&events[]=pull_request&contents=write&pull_requests=write&issues=write
+https://github.com/organizations/your_org_name/settings/apps/new?name=iambic-integration-for-your_org_name&description=iambic-github-integration&url=https%3A%2F%2Fnoq.dev%2F&webhook_active=false&events[]=meta&events[]=issue_comment&&events[]=pull_request&events[]=workflow_run&contents=write&pull_requests=write&issues=write
 ```
 2. Click "Create GitHub App".
 3. Scroll down to "Private Keys".
