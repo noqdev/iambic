@@ -68,6 +68,7 @@ class UserProperties(BaseModel):
 
 class OktaUserTemplate(BaseTemplate, ExpiryModel):
     template_type: str = "NOQ::Okta::User"
+    template_schema_url = "docs.iambic.org/reference/schemas/okta_user_template"
     properties: UserProperties
     force_delete: bool = Field(
         False,

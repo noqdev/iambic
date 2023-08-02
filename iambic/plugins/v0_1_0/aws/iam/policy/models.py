@@ -306,6 +306,9 @@ class ManagedPolicyProperties(BaseModel):
 
 class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
     template_type = AWS_MANAGED_POLICY_TEMPLATE_TYPE
+    template_schema_url = (
+        "docs.iambic.org/reference/schemas/aws_iam_managed_policy_template"
+    )
     properties: ManagedPolicyProperties = Field(
         description="The properties of the managed policy",
     )

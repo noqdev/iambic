@@ -67,6 +67,7 @@ class AppProperties(ExpiryModel, BaseModel):
 
 class OktaAppTemplate(BaseTemplate, ExpiryModel):
     template_type = OKTA_APP_TEMPLATE_TYPE
+    template_schema_url = "docs.iambic.org/reference/schemas/okta_app_template"
     properties: AppProperties = Field(..., description="Properties for the Okta App")
     owner: Optional[str] = Field(None, description="Owner of the app")
     idp_name: str = Field(

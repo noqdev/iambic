@@ -79,6 +79,7 @@ class GroupProperties(BaseModel):
 
 class AwsIamGroupTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_GROUP_TEMPLATE_TYPE
+    template_schema_url = "docs.iambic.org/reference/schemas/aws_iam_group_template"
     owner: Optional[str] = Field(None, description="Owner of the group")
     properties: GroupProperties = Field(
         description="Properties of the group",
