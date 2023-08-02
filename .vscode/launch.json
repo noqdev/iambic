@@ -186,6 +186,17 @@
             "justMyCode": true
         },
         {
+            "name": "Iambic: Simulate Lambda GitHub Webhook",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/dev_tools/simulate_github_lambda/simulate-github-lambda.py",
+            "args": [
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "envFile": "${workspaceFolder}/.env",
+        },
+        {
             "name": "Iambic: Lambda App Import",
             "type": "python",
             "request": "launch",
