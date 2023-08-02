@@ -58,7 +58,7 @@ def run_local_webserver():
 
 
 def get_github_app_secrets():
-    full_path = os.path.expanduser("~/.iambic")
+    full_path = os.path.expanduser(SAVE_DIR)
     os.makedirs(full_path, exist_ok=True)
     full_path = f"{full_path}/.github_secrets.yaml"
 

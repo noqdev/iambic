@@ -1929,13 +1929,8 @@ class ConfigurationWizard:
                 **questionary_params,
             ).unsafe_ask()
 
-        # account_id_map = {
-        #     account.account_id: account for account in self.config.aws.accounts
-        # }
         target_account_id = account_name_to_account_id[target_account_name]
         log.info(f"Target AWS Account ID is {target_account_id}")
-
-        # target_account = account_id_map[target_account_id]
 
         session, _ = self.get_boto3_session_for_account(target_account_id)
 
