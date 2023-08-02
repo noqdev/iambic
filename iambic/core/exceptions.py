@@ -83,6 +83,9 @@ def exception_reporter(exc_type, exc_value, exc_traceback: TracebackType | None)
             "Not manage exception occurs",
             error=exc_value,
             exception=exc_type.__name__,
+            traceback="".join(
+                traceback.format_list(traceback.extract_tb(exc_traceback))
+            ),
         )
 
     try:
