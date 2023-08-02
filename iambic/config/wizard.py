@@ -2073,7 +2073,9 @@ class ConfigurationWizard:
         update_webhook_url(webhook_url, github_app_jwt)
         github_app_url = github_app_secrets.get("html_url", "")
         log.info(
-            f"GitHub App IAMbic integration setup successfully\n Please now visit site to install the app to your repository. \n{github_app_url}\n"
+            "Please visit the following URL to install the GitHub application.\n"
+            "Ensure that you grant the GitHub Application access to your `iambic-templates` and `iambic-templates-gist` repositories.\n"
+            "{github_app_url}\n"
         )
         webbrowser.open(github_app_url, new=0, autoraise=True)
 
