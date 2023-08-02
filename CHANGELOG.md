@@ -1,6 +1,11 @@
 
 # Change Log
 
+## 0.11.11 (Aug 2, 2023)
+
+ENHANCEMENTS:
+* GitHub App creation flow in iambic wizard [#515](https://github.com/noqdev/iambic/pull/515)
+
 ## 0.11.8 (Aug 1, 2023)
 
 DOCS:

@@ -180,7 +180,24 @@ permissions from your cloud provider(s).
 
 By installing IAMbic GitHub App, the app can integrate the pull-request and merge flow in your iambic templates repository.
 
-### Create a GitHub App in your organization
+:::tip
+
+We are re-working the IAMbic GitHub App process. Docs update soon.
+
+:::
+
+### Create a GitHub App in your organization (New)
+
+* You need GitHub org admin right to create GitHub app for your org
+* You need AWS admin right that can assume IambicHubRole in the management account and AWS admin right to deploy the IAMbic GitHub integration.
+
+```bash
+iambic wizard
+```
+
+* Select `Setup GitHub App Integration using AWS Lambda` option
+
+### Create a GitHub App in your organization (Old)
 
 :::tip
 
