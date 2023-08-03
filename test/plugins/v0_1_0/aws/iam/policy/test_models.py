@@ -146,8 +146,8 @@ def test_merge_policy_document_without_sid(aws_accounts):
 
 def test_policy_path_validation():
     path = [
-        {"included_accounts": ["account_1", "account_2"], "file_path": "/engineering"},
-        {"included_accounts": ["account_3"], "file_path": "/finance"},
+        {"included_accounts": ["account_1", "account_2"], "path": "/engineering"},
+        {"included_accounts": ["account_3"], "path": "/finance"},
     ]
     properties_1 = ManagedPolicyProperties(
         policy_name="foo", path=path, policy_document={}
