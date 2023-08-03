@@ -86,6 +86,8 @@ def get_templated_group_file_path(
         .lower()
     )
 
+    # stitch desired location together
+    os_paths = [group_dir, separator]
     # using path components from path attribute
     if group_path:
         group_path_components = group_path.split("/")
@@ -93,10 +95,7 @@ def get_templated_group_file_path(
         group_path_components = [
             component for component in group_path_components if component
         ]
-
-    # stitch desired location together
-    os_paths = [group_dir, separator]
-    os_paths.extend(group_path_components)
+        os_paths.extend(group_path_components)
     os_paths.append(f"{file_name}.yaml")
 
     return str(os.path.join(*os_paths))
@@ -359,7 +358,7 @@ async def create_templated_group(  # noqa: C901
         group_dir,
         group_name,
         group_template_params.get("included_accounts"),
-        group_path=path,
+        group_path=path if isinstance(path, str) else None,
     )
     return create_or_update_template(
         file_path,
