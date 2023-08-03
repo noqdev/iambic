@@ -19,7 +19,7 @@ class SetEncoder(json.JSONEncoder):
         if isinstance(obj, datetime):
             return obj.strftime("%Y-%m-%d %H:%M:%S %Z")
         if isinstance(obj, date):
-            return obj.strftime("%Y-%m-%d %H:%M:%S %Z")
+            return obj.strftime("%Y-%m-%d %H:%M:%S")
         if isinstance(obj, Exception):
             return str(obj)
         if isinstance(obj, UUID):
