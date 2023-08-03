@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This creates a lambda function and function url to enable IAMbic GitHub Integration
+Parameters:
+  LambdaFunctionName:
+    Type: String
+    Default: "iambic_github_app_webhook"
+  ImageUri:
+    Type: String
+  LambdaExecutionRoleArn:
+    Type: String
+  LambdaMemorySize:
+    Type: Number
+    Default: 2048
+  LambdaTimeout:
+    Type: Number
+    Default: 900
+Resources:
+  IambicWebHookLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName:
+        Ref: LambdaFunctionName
+      PackageType: Image
+      ImageConfig:
+          Command:
+            - "iambic.plugins.v0_1_0.github.github_app.run_handler"
+          EntryPoint:
+            - "python"
+            - "-m"
+            - "awslambdaric"
+      Role:
+        Ref: LambdaExecutionRoleArn
+      Code:
+        ImageUri:
+          Ref: ImageUri
+      Description: IAMbic Webhook Lambda
+      TracingConfig:
+        Mode: Active
+      MemorySize:
+        Ref: LambdaMemorySize
+      Timeout:
+        Ref: LambdaTimeout
+  IambicWebHookLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${IambicWebHookLambda}"
+      RetentionInDays: 3
+  IambicWebHookLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref IambicWebHookLambda
+      # IambicWebHook is secured using shared webhook secret between GitHub App and Lambda
+      FunctionUrlAuthType: 'NONE'
+      Action: lambda:InvokeFunctionUrl
+      Principal: '*'
+  IambicWebHookUrl:
+    Type: 'AWS::Lambda::Url'
+    Properties:
+      AuthType: "NONE"
+      TargetFunctionArn: !GetAtt IambicWebHookLambda.Arn
+    DependsOn:
+      - IambicWebHookLambda
+Outputs:
+  FunctionUrl:
+    Description: URL of the Lambda Function
+    Value: !GetAtt IambicWebHookUrl.FunctionUrl
