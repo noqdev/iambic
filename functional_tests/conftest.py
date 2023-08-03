@@ -74,6 +74,11 @@ aws:
       iambic_managed: read_and_write
       org_id: o-8t0mt0ybdd
       spoke_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
+    - account_id: '804624193200'
+      account_name: iambic_test_org_dev
+      iambic_managed: read_and_write
+      org_id: o-8t0mt0ybdd
+      spoke_role_arn: arn:aws:iam::804624193200:role/IambicSpokeRole
 """
 
 

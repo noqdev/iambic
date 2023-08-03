@@ -88,6 +88,8 @@ def get_templated_role_file_path(
         .lower()
     )
 
+    # stitch desired location together
+    os_paths = [role_dir, separator]
     # using path components from path attribute
     if role_path:
         role_path_components = role_path.split("/")
@@ -95,10 +97,7 @@ def get_templated_role_file_path(
         role_path_components = [
             component for component in role_path_components if component
         ]
-
-    # stitch desired location together
-    os_paths = [role_dir, separator]
-    os_paths.extend(role_path_components)
+        os_paths.extend(role_path_components)
     os_paths.append(f"{file_name}.yaml")
 
     return str(os.path.join(*os_paths))
@@ -467,7 +466,7 @@ async def create_templated_role(  # noqa: C901
         role_dir,
         role_name,
         role_template_params.get("included_accounts"),
-        role_path=path,
+        role_path=path if isinstance(path, str) else None,
     )
     try:
         return create_or_update_template(

@@ -732,8 +732,8 @@ def test_role_permissions_boundary_validation():
 
 def test_role_path_validation():
     path = [
-        {"included_accounts": ["account_1", "account_2"], "file_path": "/engineering"},
-        {"included_accounts": ["account_3"], "file_path": "/finance"},
+        {"included_accounts": ["account_1", "account_2"], "path": "/engineering"},
+        {"included_accounts": ["account_3"], "path": "/finance"},
     ]
     properties_1 = RoleProperties(role_name="foo", path=path)
     path_1 = properties_1.path

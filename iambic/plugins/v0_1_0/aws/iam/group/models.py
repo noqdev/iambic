@@ -84,6 +84,17 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
         description="Properties of the group",
     )
 
+    def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
+        response = super(AwsIamGroupTemplate, self)._apply_resource_dict(aws_account)
+        # Ensure only 1 of the following objects
+        # TODO: Have this handled in a cleaner way. Maybe via an attribute on a pydantic field
+        for flat_key in {"Path"}:
+            if isinstance(response.get(flat_key), list):
+                response[flat_key] = response[flat_key][0]
+                if nested_val := response[flat_key].get(flat_key):
+                    response[flat_key] = nested_val
+        return response
+
     def _is_iambic_import_only(self):
         return "aws-service-group" in self.properties.path
 
