@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import re
-import sys
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional, Union
 
@@ -220,7 +219,7 @@ def get_current_role_arn(sts_client) -> str:
             "Unable to detect AWS Credentials. Please follow the guide here "
             "to set up AWS credentials: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html"
         )
-        sys.exit(1)
+        raise
 
 
 async def legacy_paginated_search(

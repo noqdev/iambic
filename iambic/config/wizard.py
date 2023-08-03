@@ -446,8 +446,10 @@ class ConfigurationWizard:
 
     @property
     def has_aws_account_or_organizations(self) -> bool:
-        return self.config.aws and (
-            self.config.aws.accounts or self.config.aws.organizations
+        return (
+            hasattr(self, "config")
+            and self.config.aws
+            and (self.config.aws.accounts or self.config.aws.organizations)
         )
 
     @property
@@ -510,15 +512,21 @@ class ConfigurationWizard:
         return f"{Path(self.config_path).parent.joinpath(secrets_file)}"
 
     async def set_config_details(self):
-        try:
-            self.config_path = str((await resolve_config_template_path(self.repo_dir)))
-        except RuntimeError:
-            self.config_path = f"{self.repo_dir}/iambic_config.yaml"
+        self.config_path = await self._get_config_path()
 
         if os.path.exists(self.config_path) and os.path.getsize(self.config_path) != 0:
             log.info("Found existing configuration file", config_path=self.config_path)
             try:
                 self.config = await load_config(self.config_path)
+            except NoCredentialsError:
+                question_text = (
+                    "We couldn't find your AWS credentials. "
+                    "Please estart the wizard with valid AWS credentials "
+                    "and provide an AWS profile to use for this operation "
+                )
+
+                log.info(question_text)
+                sys.exit(1)
             except Exception as err:
                 log.error(
                     "Unable to load existing configuration file",
@@ -536,6 +544,13 @@ class ConfigurationWizard:
             self.config = await process_config(
                 base_config, self.config_path, base_config.dict()
             )
+
+    async def _get_config_path(self):
+        try:
+            config_path = str((await resolve_config_template_path(self.repo_dir)))
+        except RuntimeError:
+            config_path = f"{self.repo_dir}/iambic_config.yaml"
+        return config_path
 
     def resolve_aws_profile_defaults_from_env(self) -> str:
         if "AWS_ACCESS_KEY_ID" in os.environ:
