@@ -185,28 +185,21 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
     def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
         response = super(AwsIamRoleTemplate, self)._apply_resource_dict(aws_account)
         response.pop("RoleAccess", None)
-        if "Tags" not in response:
-            response["Tags"] = []
+        response.setdefault("Tags", [])
 
         # Ensure only 1 of the following objects
         # TODO: Have this handled in a cleaner way. Maybe via an attribute on a pydantic field
-        if assume_role_policy := response.pop("AssumeRolePolicyDocument", []):
-            if isinstance(assume_role_policy, list):
-                assume_role_policy = assume_role_policy[0]
-            response["AssumeRolePolicyDocument"] = assume_role_policy
-
-        if permissions_boundary := response.pop("PermissionsBoundary", []):
-            if isinstance(permissions_boundary, list):
-                permissions_boundary = permissions_boundary[0]
-            response["PermissionsBoundary"] = permissions_boundary
-
-        if isinstance(response.get("Description"), list):
-            response["Description"] = response["Description"][0]["Description"]
-
-        if isinstance(response.get("MaxSessionDuration"), list):
-            response["MaxSessionDuration"] = response["MaxSessionDuration"][0][
-                "MaxSessionDuration"
-            ]
+        for flat_key in {
+            "AssumeRolePolicyDocument",
+            "Description",
+            "MaxSessionDuration",
+            "PermissionsBoundary",
+            "Path",
+        }:
+            if isinstance(response.get(flat_key), list):
+                response[flat_key] = response[flat_key][0]
+                if nested_val := response[flat_key].get(flat_key):
+                    response[flat_key] = nested_val
 
         return response
 
