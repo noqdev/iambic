@@ -57,6 +57,13 @@ def run_local_webserver():
     web.run_app(app, host="localhost", port=8080, print=False)
 
 
+def has_github_app_secrets_locally():
+    full_path = os.path.expanduser(SAVE_DIR)
+    os.makedirs(full_path, exist_ok=True)
+    full_path = f"{full_path}/.github_secrets.yaml"
+    return os.path.exists(full_path)
+
+
 def get_github_app_secrets():
     full_path = os.path.expanduser(SAVE_DIR)
     os.makedirs(full_path, exist_ok=True)
