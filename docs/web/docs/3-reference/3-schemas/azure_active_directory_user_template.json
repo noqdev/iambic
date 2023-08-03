@@ -8,6 +8,11 @@
       "default": "NOQ::AzureAD::User",
       "type": "string"
     },
+    "template_schema_url": {
+      "title": "Templateschemaurl",
+      "default": "https://docs.iambic.org/reference/schemas/azure_active_directory_user_template",
+      "type": "string"
+    },
     "owner": {
       "title": "Owner",
       "type": "string"
@@ -52,6 +57,23 @@
       "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
       "default": false,
       "type": "boolean"
+    },
+    "expires_at_default": {
+      "title": "Expiresatdefault",
+      "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "string",
+          "format": "date"
+        }
+      ]
     },
     "properties": {
       "title": "Properties",
@@ -116,6 +138,23 @@
           "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
+        },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
         },
         "user_id": {
           "title": "Userid",

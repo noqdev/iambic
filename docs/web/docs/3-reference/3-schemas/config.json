@@ -8,6 +8,11 @@
       "default": "NOQ::Core::Config",
       "type": "string"
     },
+    "template_schema_url": {
+      "title": "Templateschemaurl",
+      "default": "https://docs.iambic.org/reference/schemas/config",
+      "type": "string"
+    },
     "owner": {
       "title": "Owner",
       "type": "string"
@@ -91,7 +96,8 @@
       "title": "Core",
       "description": "Core configuration options for iambic.",
       "default": {
-        "minimum_ulimit": 64000
+        "minimum_ulimit": 64000,
+        "exception_reporting": null
       },
       "allOf": [
         {
@@ -215,6 +221,36 @@
         "templates"
       ]
     },
+    "ExceptionReporting": {
+      "title": "ExceptionReporting",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "description": "Enable or disable exception reporting.",
+          "type": "boolean"
+        },
+        "include_variables": {
+          "title": "Include Variables",
+          "description": "Include local variables in the report.",
+          "default": false,
+          "type": "boolean"
+        },
+        "automatically_send_reports": {
+          "title": "Automatically Send Reports",
+          "description": "Automatically send reports without asking for user consent.",
+          "type": "boolean"
+        },
+        "email_address": {
+          "title": "Email Address",
+          "description": "Email address for correspondence about the exception, if you would like us to communicate with you.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "enabled"
+      ]
+    },
     "CoreConfig": {
       "title": "CoreConfig",
       "type": "object",
@@ -223,6 +259,9 @@
           "title": "Minimum Ulimit",
           "default": 64000,
           "type": "integer"
+        },
+        "exception_reporting": {
+          "$ref": "#/definitions/ExceptionReporting"
         }
       }
     }

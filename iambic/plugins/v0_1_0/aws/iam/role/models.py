@@ -168,7 +168,9 @@ class RoleProperties(BaseModel):
 
 class AwsIamRoleTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_ROLE_TEMPLATE_TYPE
-    template_schema_url = "docs.iambic.org/reference/schemas/aws_iam_role_template"
+    template_schema_url = (
+        "https://docs.iambic.org/reference/schemas/aws_iam_role_template"
+    )
     owner: Optional[str] = Field(None, description="Owner of the role")
     properties: RoleProperties = Field(
         description="Properties of the role",

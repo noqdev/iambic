@@ -112,7 +112,7 @@ class GroupProperties(BaseModel):
 class GoogleWorkspaceGroupTemplate(GoogleTemplate, ExpiryModel):
     template_type = GOOGLE_GROUP_TEMPLATE_TYPE
     template_schema_url = (
-        "docs.iambic.org/reference/schemas/google_workspace_group_template"
+        "https://docs.iambic.org/reference/schemas/google_workspace_group_template"
     )
     owner: Optional[str] = Field(None, description="Owner of the group")
     properties: GroupProperties

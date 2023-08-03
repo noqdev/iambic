@@ -241,7 +241,9 @@ class PolicyProperties(BaseModel):
 
 class AwsScpPolicyTemplate(AWSTemplate, AccessModel):
     template_type = AWS_SCP_POLICY_TEMPLATE
-    template_schema_url = "docs.iambic.org/reference/schemas/aws_scp_policy_template"
+    template_schema_url = (
+        "https://docs.iambic.org/reference/schemas/aws_scp_policy_template"
+    )
     organization_account_needed: bool = Field(
         True,
         description="This template needs an organization account to be applied",

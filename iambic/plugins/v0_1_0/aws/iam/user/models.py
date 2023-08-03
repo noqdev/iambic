@@ -134,7 +134,9 @@ class UserProperties(BaseModel):
 
 class AwsIamUserTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_USER_TEMPLATE_TYPE
-    template_schema_url = "docs.iambic.org/reference/schemas/aws_iam_user_template"
+    template_schema_url = (
+        "https://docs.iambic.org/reference/schemas/aws_iam_user_template"
+    )
     properties: UserProperties = Field(
         description="Properties of the user",
     )
