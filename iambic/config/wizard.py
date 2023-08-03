@@ -2065,12 +2065,22 @@ class ConfigurationWizard:
         )
 
         github_app_jwt = generate_jwt(github_app_secrets)
-        update_webhook_url(webhook_url, github_app_jwt)
+        try:
+            update_webhook_url(webhook_url, github_app_jwt)
+        except Exception:
+            log.exception(
+                "Failed to update webhook URL with GitHub App. Please manually update the webhook URL in the GitHub App settings page",
+                webhook_url=webhook_url,
+            )
+            if not questionary.confirm("Proceed?").unsafe_ask():
+                return
+
         github_app_url = github_app_secrets.get("html_url", "")
         log.info(
-            "Please visit the following URL to install the GitHub application.\n"
-            "Ensure that you grant the GitHub Application access to your `iambic-templates` and `iambic-templates-gist` repositories.\n"
-            "{github_app_url}\n"
+            "We are attempting to open a browser window to the GitHub App installation page.\n"
+            "Please install the app and grant it access to your `iambic-templates` and `iambic-templates-gist` repositories.\n"
+            "If your browser doesn't open, please visit the following URL manually to install the GitHub app and grant access.\n"
+            f"{github_app_url}\n"
         )
         webbrowser.open(github_app_url, new=0, autoraise=True)
 
@@ -2244,6 +2254,7 @@ class ConfigurationWizard:
             if self.has_aws_account_or_organizations:
                 choices.append("Setup GitHub App Integration using AWS Lambda")
                 choices.append("Generate Github Action Workflows")
+                choices.append("Setup AWS change detection")
                 if (
                     self.config.aws.organizations
                     and not self.config.aws.sqs_cloudtrail_changes_queues

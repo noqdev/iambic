@@ -1,0 +1,53 @@
+---
+title: Handling and Reporting Unhandled Exceptions
+---
+
+## Overview
+IAMbic's Exception Reporting is a built-in feature designed to report unexpected errors within the application. When an exception is raised,
+this feature will automatically generate a report with a stacktrace and other technical details that will help us troubleshoot the issue.
+
+By default, IAMbic is configured to prompt you to send an exception report whenever an error occurs during a tty (terminal) session.
+
+Prior to the report submission, you will be given an opportunity to review and modify the report to be sent. You can optionally provide an email address
+for us to reach out to you with updates, or you can modify the report according to your preferences.
+
+You have the option to include variables in the report, which is disabled by default. We strongly recommend that you keep this feature disabled, unless you are operating in
+a test environment and are certain that no sensitive information will be included in a report. If you choose to enable this configuration, we filter out variables that
+could potentially contain sensitive attributes (such as key, password, token, secret, private, etc), but it is your responsibility to review the report before
+submitting.
+
+This feature can be customized to suit your needs. You can set IAMbic to automatically send reports following an error, or you can
+disable the feature entirely.
+
+To adjust these settings, update the `iambic_config.yml` configuration file as follows:
+
+```yaml
+core:
+  exception_reporting:
+    enabled: true|false
+    include_variables: false # Do not enable this feature unless you are certain that no sensitive information will be included in the report
+    automatically_send_reports: true|false
+    email_address: your_email@example.com
+```
+
+## Configuration Examples
+
+### Disabling Exception Reporting
+```yaml
+core:
+  exception_reporting:
+    enabled: false
+```
+
+### Configuring Auto-reporting without Variables
+
+```yaml
+core:
+  exception_reporting:
+    enabled: true
+    automatically_send_reports: true
+    include_variables: false
+    email_address: your_email@example.com
+```
+
+These examples demonstrate a variety of ways to customize the Exception Reporting feature, thereby facilitating smooth and personalized application use.
