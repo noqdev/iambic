@@ -63,12 +63,12 @@ def verify_access(encoded_jwt):
     r = requests.get(control_plane_url, headers=head)
     if r.status_code == 401:
         log.error(
-            "Error code 401. Please verify your system time. If time is correct, you may need to remove ~/.iambic/.github_secrets.yaml"
+            "Error code 401. Please verify your system time. If time is correct, you may need to remove ~/.iambic/.github_secrets.yaml and restart the process"
         )
         return False
     elif r.status_code == 404:
         log.error(
-            "Error code 404. Your existing secrets is out-of-date. Please remove ~/.iambic/.github_secrets.yaml"
+            "Error code 404. Your existing secrets are out-of-date. Please remove ~/.iambic/.github_secrets.yaml"
         )
         return False
     try:
