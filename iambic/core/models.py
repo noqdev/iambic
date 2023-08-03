@@ -5,7 +5,6 @@ import datetime
 import glob
 import inspect
 import itertools
-import json
 import os
 import typing
 from enum import Enum
@@ -33,6 +32,7 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Extra, Field, root_validator, schema, validate_model, validator
 from pydantic.fields import ModelField
 
+from iambic.core import noq_json as json
 from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command, ExecutionStatus, IambicManaged
 from iambic.core.logger import log

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -17,6 +17,8 @@ class SetEncoder(json.JSONEncoder):
         if isinstance(obj, Decimal):
             return float(obj)
         if isinstance(obj, datetime):
+            return obj.strftime("%Y-%m-%d %H:%M:%S %Z")
+        if isinstance(obj, date):
             return obj.strftime("%Y-%m-%d %H:%M:%S %Z")
         if isinstance(obj, Exception):
             return str(obj)
