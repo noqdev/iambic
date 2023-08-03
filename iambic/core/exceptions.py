@@ -48,8 +48,8 @@ class BaseException(Exception):
 class RateLimitException(BaseException):
     """Rate Limit Exception"""
 
-    def __init__(self):
-        super().__init__("Rate limit exceeded")
+    def __init__(self, msg="Rate limit exceeded"):
+        super().__init__(msg)
 
 
 class MultipleSecretsNotAcceptedException(BaseException):
