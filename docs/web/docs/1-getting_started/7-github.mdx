@@ -165,7 +165,7 @@ permissions from your cloud provider(s).
 1. Visit this [link](https://github.com/noqdev/github-iambic-templates/generate) to create a `iambic-templates` repository in your GitHub organization.
 Remember to set the visibility setting to `Private`. This repository will store IAMbic templates for your organization. <!-- #TODO include a picture or video -->
 
-If you prefer to use `gh` (GitHub command line [interface](https://cli.github.com/manual/), here is the command)
+If you prefer to use `gh` (the [GitHub command line interface](https://cli.github.com/manual/)), here is the command:
 
 ```bash
 export ORG_NAME=YOUR_GITHUB_ORG_NAME
@@ -179,7 +179,7 @@ gh repo create "${ORG_NAME}/iambic-templates" \
 1. Visit this [link](https://github.com/noqdev/github-iambic-templates-gist/generate) to create a `iambic-templates-gist` repository in your GitHub organization.
 Remember to set the visibility setting to `Private`. This repository will store IAMbic integration summaries for your organization. <!-- #TODO include a picture or video -->
 
-If you prefer to use `gh` (GitHub command line [interface](https://cli.github.com/manual/), here is the command)
+If you prefer to use `gh` (the [GitHub command line interface](https://cli.github.com/manual/)), here is the command:
 
 ```bash
 export ORG_NAME=YOUR_GITHUB_ORG_NAME
@@ -201,8 +201,8 @@ By installing IAMbic GitHub App, the app can integrate the pull-request and merg
 
 ### Create a GitHub App in your organization
 
-* You need GitHub org admin right to create GitHub app for your org
-* You need AWS admin right that can assume IambicHubRole in the management account and AWS admin right to deploy the IAMbic GitHub integration.
+* You need GitHub org admin permissions to create a GitHub app in your organization
+* You need AWS administrator permissions with the ability to assume IambicHubRole in the management account, and AWS administrator permissions to deploy the IAMbic GitHub integration.
 
 ```bash
 iambic setup
@@ -216,11 +216,11 @@ What the above command is doing is the following:
 
 1. Using GitHub App manifest creation flow to create a GitHub App in your GitHub organization.
 1. Download the private key and webhook secret to your host. `~/.iambic/.github_secrets.yaml`
-1. Create the needed IAM roles in the targeted AWS account.
-1. Create the needed ECR Pull Through Cache rule
-1. Create the needed ECR Repo to store your own copy of the `iambic` container image
-1. Create the needed CodeBuild project to pull initial iambic image from Public ECR Gallery to your own ECR repo
-1. Create the needed Lambda function and function url to receive webhook events for your GitHub app
+1. Create the required IAM roles in the target AWS account.
+1. Create the required ECR Pull Through Cache rule
+1. Create the required ECR Repo to store your own copy of the `iambic` container image
+1. Create the required CodeBuild project to pull the initial iambic image from the Public ECR Gallery to your own ECR repo
+1. Create the required Lambda function and function url to receive webhook events for your GitHub app
 1. Update your GitHub app webhook url to point at the lambda function url.
 
 :::
@@ -237,7 +237,7 @@ If you like to follow a video walk through, click on the below video.
 1. Select both `iambic-templates` and `iambic-templates-gist` for repository access.
 
 
-#### Open a pull request on your iambic-template repo
+#### Open a pull request on your **iambic-templates** repo
 
 1. `default_branch=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')`
 2. `git checkout -b task/change_description "$default_branch"`
@@ -249,10 +249,10 @@ If you like to follow a video walk through, click on the below video.
 	git push origin HEAD
 	```
 5. Create a pull request.
-6. The installed GitHub App will comment with plan the changes. Any time you want iambic github action to re-plan the changes, you can comment `iambic plan`.
-7. The plan will be a comment in line, as long as it is less than 65kb. Larger plans are uploaded to a gist and linked as a comment in the PR
-8. Add reviewers to review your PR and plan that is in the PR comments.
-9. Once your reviewer approves your changes, add comment `iambic apply` to have iambic apply the changes. If the changes can be successfully applied, the PR will be automatically merged into main as well.
+6. The installed GitHub App will comment with a plan for the changes. If you would like IAMbic to re-plan the changes, you can comment `iambic plan`.
+7. The plan will be provided as an inline comment if it is less than 65kb. Larger plans are uploaded to the `iambic-templates-gist` repository and linked as a comment in the PR
+8. Add reviewers to review your PR and IAMbic's plan in the PR comments.
+9. Once your reviewer approves your changes, add `iambic apply` as a comment to instruct IAMbic to apply the changes. After the Cloud changes are successfully applied, IAMbic will merge the PR into your default branch (Typically main or master).
 
 
 #### Configure your GitHub Repository to require approvals before merging
