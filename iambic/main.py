@@ -11,9 +11,10 @@ from typing import Optional
 
 import click
 
-from iambic.config.dynamic_config import Config, init_plugins, load_config
+from iambic.config.dynamic_config import Config, init_plugins
 from iambic.config.utils import (
     check_and_update_resource_limit,
+    load_config,
     resolve_config_template_path,
 )
 from iambic.config.wizard import ConfigurationWizard

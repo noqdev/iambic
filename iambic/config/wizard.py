@@ -28,12 +28,12 @@ from iambic.config.dynamic_config import (
     Config,
     ExtendsConfig,
     ExtendsConfigKey,
-    load_config,
     process_config,
 )
 from iambic.config.utils import (
     aws_cf_parse_key_value_string,
     check_and_update_resource_limit,
+    load_config,
     resolve_config_template_path,
     validate_aws_cf_input_tags,
 )
@@ -516,24 +516,7 @@ class ConfigurationWizard:
 
         if os.path.exists(self.config_path) and os.path.getsize(self.config_path) != 0:
             log.info("Found existing configuration file", config_path=self.config_path)
-            try:
-                self.config = await load_config(self.config_path)
-            except NoCredentialsError:
-                question_text = (
-                    "We couldn't find your AWS credentials. "
-                    "Please estart the wizard with valid AWS credentials "
-                    "and provide an AWS profile to use for this operation "
-                )
-
-                log.info(question_text)
-                sys.exit(1)
-            except Exception as err:
-                log.error(
-                    "Unable to load existing configuration file",
-                    config_path=self.config_path,
-                    error=repr(err),
-                )
-                sys.exit(1)
+            self.config = await load_config(self.config_path)
         else:
             # Create a stubbed out config file to use for the wizard
             self.config_path = f"{self.repo_dir}/iambic_config.yaml"
