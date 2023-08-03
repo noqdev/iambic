@@ -1,6 +1,25 @@
 
 # Change Log
 
+## 0.11.17 (Aug 3, 2023)
+
+DOCS:
+* Fix typo [#533](https://github.com/noqdev/iambic/pull/533)
+
+ENHANCEMENTS:
+* Report unhandled exceptions [#516](https://github.com/noqdev/iambic/pull/516)
+
+BUG FIXES:
+* Handle multiple iam paths [#536](https://github.com/noqdev/iambic/pull/536)
+* Verify GitHub access before proceeding [#537](https://github.com/noqdev/iambic/pull/537)
+
+DEV TOOLS:
+* EN-2355 Implement dev workflow to test IAMbic GitHub webhook [#535](https://github.com/noqdev/iambic/pull/535)
+
+THANKS:
+* `Rodrigo C.` from community slack on reporting AWS multiple iam paths issue.
+* `Shatoria` from community slack on testing out the new IAMbic GitHub integration setup process.
+
 ## 0.11.11 (Aug 2, 2023)
 
 ENHANCEMENTS:
