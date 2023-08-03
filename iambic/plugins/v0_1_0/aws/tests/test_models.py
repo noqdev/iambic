@@ -73,7 +73,7 @@ class TestBaseModel(unittest.TestCase):
                     included_accounts=["not_test_account"], max_session_duration=600
                 ),
             ],
-            path=[Path(file_path="/")],
+            path=[Path(path="/")],
         )
         self.role_template = AwsIamRoleTemplate(
             identifier="test_role",
