@@ -14,6 +14,7 @@ from iambic.config.dynamic_config import load_config
 from iambic.core.parser import load_template, load_templates
 
 MISSING_REQUIRED_FIELDS_TEMPLATE_YAML = """template_type: NOQ::Example::LocalDatabase
+template_schema_url: template_url
 expires_at: tomorrow
 name:
   - foo
@@ -26,6 +27,7 @@ MALFORMED_YAML = """template_type: NOQ::Example::LocalDatabase
 """
 
 TEST_TEMPLATE_YAML = """template_type: NOQ::Example::LocalDatabase
+template_schema_url: template_url
 name: test_template
 expires_at: tomorrow
 properties:

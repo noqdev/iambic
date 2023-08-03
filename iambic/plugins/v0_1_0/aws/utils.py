@@ -111,11 +111,13 @@ async def boto_crud_call(
                 retryable_err in err.response["Error"]["Code"]
                 for retryable_err in retryable_errors
             ):
-                if retry_count >= 10:
+                if retry_count >= 20:
                     raise
                 retry_count += 1
-                log.warning(f"Throttling error on {str(boto_fnc)}")
-                await asyncio.sleep(retry_count / 4)
+                log.warning(
+                    "Throttling error", provider="aws", api_call=boto_fnc.__name__
+                )
+                await asyncio.sleep(min(retry_count / 4, 3))
                 continue
             elif "AccessDenied" in err.response["Error"]["Code"]:
                 raise

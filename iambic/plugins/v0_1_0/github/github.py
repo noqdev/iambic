@@ -395,7 +395,10 @@ def handle_iambic_git_apply(
         template_changes = run_git_apply(
             False, None, None, repo_dir, proposed_changes_path
         )
-        if bool(template_changes.exceptions_seen):
+        if any(
+            bool(template_change.exceptions_seen)
+            for template_change in template_changes
+        ):
             _process_template_changes(
                 github_client,
                 templates_repo,

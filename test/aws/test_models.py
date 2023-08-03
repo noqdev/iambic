@@ -6,11 +6,18 @@ from iambic.plugins.v0_1_0.aws.models import AccessModel, AWSTemplate
 
 def test_aws_template_merge(aws_accounts):
     existing_template = AWSTemplate(
-        template_type="foo", file_path="bar", identifier="baz", expires_at="2023-01-27"
+        template_type="foo",
+        template_schema_url="template_url",
+        file_path="bar",
+        identifier="baz",
+        expires_at="2023-01-27",
     )
     existing_template_expires_at = existing_template.expires_at
     new_template = AWSTemplate(
-        template_type="foo_new", file_path="bar_new", identifier="baz_new"
+        template_type="foo_new",
+        template_schema_url="template_url",
+        file_path="bar_new",
+        identifier="baz_new",
     )
     merged_template = merge_model(new_template, existing_template, aws_accounts)
     assert merged_template.template_type == new_template.template_type
