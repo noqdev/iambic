@@ -86,7 +86,7 @@ def get_templated_user_file_path(
     # stitch desired location together
     os_paths = [user_dir, separator]
     # using path components from path attribute
-    if user_path:
+    if user_path and "{{" not in user_path:
         user_path_components = user_path.split("/")
         # get rid of empty component
         user_path_components = [

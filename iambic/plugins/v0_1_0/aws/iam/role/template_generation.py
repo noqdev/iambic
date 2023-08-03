@@ -91,7 +91,7 @@ def get_templated_role_file_path(
     # stitch desired location together
     os_paths = [role_dir, separator]
     # using path components from path attribute
-    if role_path:
+    if role_path and "{{" not in role_path:
         role_path_components = role_path.split("/")
         # get rid of empty component
         role_path_components = [
