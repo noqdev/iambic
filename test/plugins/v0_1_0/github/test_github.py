@@ -492,7 +492,7 @@ def test_issue_comment_with_clean_mergeable_state_with_additional_commits(
     )
 
     # verify we are merging with the latest local repo sha
-    mock_pull_request.merge.assert_called_with(sha=post_sha)
+    mock_pull_request.merge.assert_called_with(sha=post_sha, merge_method="merge")
 
 
 def test_run_handler():

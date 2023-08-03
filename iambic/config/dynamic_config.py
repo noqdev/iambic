@@ -7,6 +7,7 @@ import os
 import subprocess
 from collections import defaultdict
 from enum import Enum
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import List, Optional, Union
 from uuid import uuid4
@@ -29,11 +30,30 @@ from iambic.core.models import (
 from iambic.core.utils import sort_dict, yaml
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, azure_ad, google_workspace, okta
 
-CURRENT_IAMBIC_VERSION = "1"
+try:
+    CURRENT_IAMBIC_VERSION = version("iambic-core")
+except PackageNotFoundError:
+    CURRENT_IAMBIC_VERSION = "unknown"
+
+
+class ExceptionReporting(BaseModel):
+    enabled: bool = Field(..., description="Enable or disable exception reporting.")
+    include_variables: Optional[bool] = Field(
+        False,
+        description="Include local variables in the report.",
+    )
+    automatically_send_reports: Optional[bool] = Field(
+        None, description="Automatically send reports without asking for user consent."
+    )
+    email_address: Optional[str] = Field(
+        None,
+        description="Email address for correspondence about the exception, if you would like us to communicate with you.",
+    )
 
 
 class CoreConfig(BaseModel):
     minimum_ulimit: int = 64000
+    exception_reporting: Optional[ExceptionReporting] = None
 
 
 class PluginType(Enum):
@@ -430,7 +450,7 @@ class Config(ConfigMixin, BaseTemplate):
 
 
 async def load_config(
-    config_path: str,
+    config_path: str | Path,
     configure_plugins: bool = True,
     approved_plugins_only: bool = False,
 ) -> Config:
