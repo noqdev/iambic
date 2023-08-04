@@ -98,25 +98,30 @@ async def boto_crud_call(
     :param kwargs: The params to pass to the boto fnc
     :return:
     """
+    max_attempts = 20
     retry_count = 0
-    if not retryable_errors:
-        retryable_errors = []
-
-    retryable_errors.append("Throttling")
+    always_retryable_errors = ["Throttling", "TooManyRequestsException"]
+    if retryable_errors:
+        retryable_errors.extend(always_retryable_errors)
+    else:
+        retryable_errors = always_retryable_errors
 
     while True:
         try:
             return await aio_wrapper(boto_fnc, **kwargs)
         except ClientError as err:
-            if any(
-                retryable_err in err.response["Error"]["Code"]
-                for retryable_err in retryable_errors
-            ):
-                if retry_count >= 10:
+            error_code = err.response["Error"]["Code"]
+            if any(retryable_err in error_code for retryable_err in retryable_errors):
+                if retry_count >= max_attempts:
                     raise
                 retry_count += 1
-                log.warning(f"Throttling error on {str(boto_fnc)}")
-                await asyncio.sleep(retry_count / 4)
+                log.info(
+                    f"{error_code} error",
+                    provider="aws",
+                    api_call=boto_fnc.__name__,
+                    remaining_retries=max_attempts - retry_count,
+                )
+                await asyncio.sleep(min(retry_count / 4, 3))
                 continue
             elif "AccessDenied" in err.response["Error"]["Code"]:
                 raise
