@@ -588,7 +588,7 @@ def handle_iambic_approve(
 
     try:
         repo_dir = get_lambda_repo_path()
-        _ = prepare_local_repo_for_new_commits(repo_url, repo_dir, "detect")
+        _ = prepare_local_repo_for_new_commits(repo_url, repo_dir, "approve")
         config_path = asyncio.run(resolve_config_template_path(repo_dir))
         # it's important to load the config from main branch
         # we want to guard against a requester directly changing the approver
