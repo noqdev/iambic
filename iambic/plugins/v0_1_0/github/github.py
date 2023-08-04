@@ -540,9 +540,6 @@ def handle_iambic_git_plan(
             repo.remotes.origin.push(
                 refspec=f"HEAD:{pull_request_branch_name}"
             ).raise_if_error()
-            pull_request.create_issue_comment(
-                "Due to automatic lint, the pull request commits has been updated."
-            )
             return HandleIssueCommentReturnCode.LINTED
         else:
             log.debug("git_plan did not introduce linting changes")
