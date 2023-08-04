@@ -115,6 +115,57 @@ class IambicPydanticBaseModel(PydanticBaseModel):
             ) from e
         object.__setattr__(self, "__fields_set__", fields_set)
 
+    @root_validator(pre=True)
+    def set_expires_at_default_value(cls, values: dict) -> dict:
+        if expires_at := values.get("expires_at"):
+            if not values.get("expires_at_default"):
+                values["expires_at_default"] = expires_at
+        return values
+
+    def json(
+        self,
+        *,
+        include: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
+        exclude: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
+        by_alias: bool = False,
+        skip_defaults: Optional[bool] = None,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = True,
+    ) -> str:  # noqa
+        if not hasattr(self, "expires_at"):
+            return super().json(
+                include=include,
+                exclude=exclude,
+                by_alias=by_alias,
+                skip_defaults=skip_defaults,
+                exclude_unset=exclude_unset,
+                exclude_defaults=exclude_defaults,
+                exclude_none=exclude_none,
+            )
+
+        if exclude:
+            exclude.add("expires_at_default")
+        else:
+            exclude = {"expires_at_default"}
+        response = super().json(
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            skip_defaults=skip_defaults,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+        )
+        if ctx.command != Command.LINT or (
+            exclude_none and not self.expires_at_default
+        ):
+            return response
+
+        response = json.loads(response)
+        response["expires_at"] = self.expires_at_default
+        return json.dumps(response)
+
 
 class BaseModel(IambicPydanticBaseModel):
     """
@@ -618,12 +669,6 @@ class ExpiryModel(IambicPydanticBaseModel):
         }
         extra = Extra.forbid
 
-    @root_validator(pre=True)
-    def set_expires_at_default_value(cls, values: dict) -> dict:
-        if expires_at := values.get("expires_at"):
-            values["expires_at_default"] = expires_at
-        return values
-
     @validator("expires_at", pre=True)
     def parse_expires_at(cls, value):
         if not value:
@@ -647,39 +692,6 @@ class ExpiryModel(IambicPydanticBaseModel):
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
         return {"expires_at", "deleted"}
-
-    def json(
-        self,
-        *,
-        include: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
-        exclude: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
-        by_alias: bool = False,
-        skip_defaults: Optional[bool] = None,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = True,
-    ) -> str:  # noqa
-        if exclude:
-            exclude.add("expires_at_default")
-        else:
-            exclude = {"expires_at_default"}
-        response = super().json(
-            include=include,
-            exclude=exclude,
-            by_alias=by_alias,
-            skip_defaults=skip_defaults,
-            exclude_unset=exclude_unset,
-            exclude_defaults=exclude_defaults,
-            exclude_none=exclude_none,
-        )
-        if ctx.command != Command.LINT or (
-            exclude_none and not self.expires_at_default
-        ):
-            return response
-
-        response = json.loads(response)
-        response["expires_at"] = self.expires_at_default
-        return json.dumps(response)
 
     def dict(
         self,
