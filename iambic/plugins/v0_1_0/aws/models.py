@@ -680,10 +680,6 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
         description="SpokeRoleName use across organization",
     )
 
-    # @validator("identity_center")
-    # def _validate_identity_center(c):
-    #     pass
-
     async def _create_org_account_instance(
         self, account: dict, session: boto3.Session
     ) -> Optional[AWSAccount]:
