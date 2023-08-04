@@ -1,14 +1,8 @@
 from __future__ import annotations
 
-import functools
 import pathlib
-import sys
-import traceback
 from typing import TYPE_CHECKING
 
-from botocore.exceptions import ClientError, NoCredentialsError
-
-from iambic.config.dynamic_config import load_config as original_load_config
 from iambic.core.logger import log
 from iambic.core.utils import gather_templates
 
@@ -94,38 +88,3 @@ def validate_aws_cf_input_tags(s):
         return True
     except Exception:
         return CF_INVALID_TAGS_MSG
-
-
-@functools.wraps(original_load_config)
-async def load_config(
-    config_path: str | pathlib.Path,
-    configure_plugins: bool = True,
-    approved_plugins_only: bool = False,
-) -> Config:  # type: ignore
-    """Load the configuration file from the given path. Wrapper around the original."""
-    try:
-        return await original_load_config(
-            config_path, configure_plugins, approved_plugins_only
-        )
-    except NoCredentialsError:
-        log.error(
-            (
-                "Unable to detect AWS Credentials. Please follow the guide here "
-                "to set up AWS credentials: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html"
-            )
-        )
-        sys.exit(1)
-    except ClientError:
-        log.error(
-            "Unable to load existing configuration file",
-            config_path=config_path,
-            stacktrace="".join(traceback.format_list(traceback.extract_stack())[:-1]),
-        )
-        sys.exit(1)
-    except Exception as err:
-        log.error(
-            "Unable to load existing configuration file",
-            config_path=config_path,
-            error=repr(err),
-        )
-        sys.exit(1)

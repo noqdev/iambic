@@ -5,6 +5,7 @@ import importlib
 import itertools
 import os
 import subprocess
+import traceback
 from collections import defaultdict
 from enum import Enum
 from importlib.metadata import PackageNotFoundError, version
@@ -13,6 +14,7 @@ from typing import List, Optional, Union
 from uuid import uuid4
 
 import ujson as json
+from botocore.exceptions import ClientError, NoCredentialsError
 from pydantic import BaseModel, Field
 from pydantic import create_model as create_pydantic_model
 
@@ -473,15 +475,42 @@ async def load_config(
     Returns:
     - Config: The configuration object created from the specified file.
     """
-    log.info("Loading config...")
-    config_path = str(
-        config_path
-    )  # Ensure it's a string in case it's a Path for pydantic
-    config_dict = yaml.load(open(config_path))
-    base_config = Config(file_path=config_path, **config_dict)
-    return await process_config(
-        base_config, config_path, config_dict, configure_plugins, approved_plugins_only
-    )
+    try:
+        log.info("Loading config...")
+        config_path = str(
+            config_path
+        )  # Ensure it's a string in case it's a Path for pydantic
+        config_dict = yaml.load(open(config_path))
+        base_config = Config(file_path=config_path, **config_dict)
+        return await process_config(
+            base_config,
+            config_path,
+            config_dict,
+            configure_plugins,
+            approved_plugins_only,
+        )
+    except NoCredentialsError:
+        log.error(
+            (
+                "Unable to detect AWS Credentials. Please follow the guide here "
+                "to set up AWS credentials: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html"
+            )
+        )
+        raise
+    except ClientError:
+        log.error(
+            "Unable to load existing configuration file",
+            config_path=config_path,
+            stacktrace="".join(traceback.format_list(traceback.extract_stack())[:-1]),
+        )
+        raise
+    except Exception as err:
+        log.error(
+            "Unable to load existing configuration file",
+            config_path=config_path,
+            error=repr(err),
+        )
+        raise
 
 
 async def process_config(

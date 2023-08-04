@@ -28,12 +28,12 @@ from iambic.config.dynamic_config import (
     Config,
     ExtendsConfig,
     ExtendsConfigKey,
+    load_config,
     process_config,
 )
 from iambic.config.utils import (
     aws_cf_parse_key_value_string,
     check_and_update_resource_limit,
-    load_config,
     resolve_config_template_path,
     validate_aws_cf_input_tags,
 )
