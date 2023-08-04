@@ -8,7 +8,7 @@
 
 # IAMbic: Cloud IAM as Code
 
-"IAMbic: the Terraform of Cloud IAM"
+"IAMbic: Version Control for IAM"
 
 Easily manage and streamline cloud Identity and Access Management (IAM) with IAMbic, a multi-cloud IAM control plane. Discover more at [https://docs.iambic.org](https://docs.iambic.org), and check out [BeABetterDev's IAMbic Overview and Deep Dive video](https://www.youtube.com/watch?v=ryEseI_-12o) on YouTube.
 
