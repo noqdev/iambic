@@ -20,7 +20,7 @@ from cryptography.hazmat.primitives import serialization
 from github.PullRequest import PullRequest
 
 import iambic.output.markdown
-from iambic.config.dynamic_config import load_config
+from iambic.config.dynamic_config import CURRENT_IAMBIC_VERSION, load_config
 from iambic.config.utils import resolve_config_template_path
 from iambic.core.context import ctx
 from iambic.core.git import Repo, clone_git_repo, get_remote_default_branch
@@ -636,6 +636,24 @@ def handle_iambic_approve(
             )
         )
         raise e
+
+
+def handle_iambic_version(
+    context: dict[str, Any],
+    github_client: github.Github,
+    templates_repo: github.Repo,
+    pull_request: PullRequest,
+    repo_name: str,
+    pull_number: str,
+    pull_request_branch_name: str,
+    repo_url: str,
+    proposed_changes_path: str = None,
+    comment_user_login: str = None,
+    comment: str = None,
+):
+    pull_request.create_issue_comment(
+        f"`iambic-core` is at version `{CURRENT_IAMBIC_VERSION}`"
+    )
 
 
 def github_app_workflow_wrapper(workflow_func: Callable, ux_op_name: str) -> Callable:
