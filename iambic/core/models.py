@@ -5,7 +5,6 @@ import datetime
 import glob
 import inspect
 import itertools
-import json
 import os
 import typing
 from enum import Enum
@@ -33,6 +32,8 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Extra, Field, root_validator, schema, validate_model, validator
 from pydantic.fields import ModelField
 
+from iambic.core import noq_json as json
+from iambic.core.context import ctx
 from iambic.core.iambic_enum import Command, ExecutionStatus, IambicManaged
 from iambic.core.logger import log
 from iambic.core.utils import (
@@ -113,6 +114,57 @@ class IambicPydanticBaseModel(PydanticBaseModel):
                 + "a dictionary from a root validator"
             ) from e
         object.__setattr__(self, "__fields_set__", fields_set)
+
+    @root_validator(pre=True)
+    def set_expires_at_default_value(cls, values: dict) -> dict:
+        if expires_at := values.get("expires_at"):
+            if not values.get("expires_at_default"):
+                values["expires_at_default"] = expires_at
+        return values
+
+    def json(
+        self,
+        *,
+        include: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
+        exclude: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
+        by_alias: bool = False,
+        skip_defaults: Optional[bool] = None,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = True,
+    ) -> str:  # noqa
+        if not hasattr(self, "expires_at"):
+            return super().json(
+                include=include,
+                exclude=exclude,
+                by_alias=by_alias,
+                skip_defaults=skip_defaults,
+                exclude_unset=exclude_unset,
+                exclude_defaults=exclude_defaults,
+                exclude_none=exclude_none,
+            )
+
+        if exclude:
+            exclude.add("expires_at_default")
+        else:
+            exclude = {"expires_at_default"}
+        response = super().json(
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            skip_defaults=skip_defaults,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+        )
+        if ctx.command != Command.LINT or (
+            exclude_none and not self.expires_at_default
+        ):
+            return response
+
+        response = json.loads(response)
+        response["expires_at"] = self.expires_at_default
+        return json.dumps(response)
 
 
 class BaseModel(IambicPydanticBaseModel):
@@ -204,6 +256,7 @@ class BaseModel(IambicPydanticBaseModel):
         exclude_keys = {
             "deleted",
             "expires_at",
+            "expires_at_default",
             "included_accounts",
             "excluded_accounts",
             "included_orgs",
@@ -604,6 +657,10 @@ class ExpiryModel(IambicPydanticBaseModel):
             "Upon being set to true, the resource will be deleted the next time iambic is ran."
         ),
     )
+    expires_at_default: Optional[Union[str, datetime.datetime, datetime.date]] = Field(
+        None,
+        description="A value that is set by IAMbic at run time and should not be set by the user.",
+    )
 
     class Config:
         json_encoders = {
@@ -635,6 +692,28 @@ class ExpiryModel(IambicPydanticBaseModel):
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
         return {"expires_at", "deleted"}
+
+    def dict(
+        self,
+        *,
+        include: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
+        exclude: Optional[Union[AbstractSetIntStr, MappingIntStrAny]] = None,
+        by_alias: bool = False,
+        skip_defaults: Optional[bool] = None,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = True,
+    ) -> Dict[str, Any]:  # noqa
+        response = self.json(
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            skip_defaults=skip_defaults,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+        )
+        return json.loads(response)
 
 
 class ExecutionMessage(PydanticBaseModel):

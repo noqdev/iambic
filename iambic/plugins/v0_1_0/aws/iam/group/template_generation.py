@@ -89,7 +89,7 @@ def get_templated_group_file_path(
     # stitch desired location together
     os_paths = [group_dir, separator]
     # using path components from path attribute
-    if group_path:
+    if group_path and "{{" not in group_path:
         group_path_components = group_path.split("/")
         # get rid of empty component
         group_path_components = [

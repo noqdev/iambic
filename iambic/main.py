@@ -468,9 +468,10 @@ def lint(templates: list[str], repo_dir: str):
     """
     Lint and format local resources templates.
     """
+    ctx.command = Command.LINT
     ctx.eval_only = True
     config_path = asyncio.run(resolve_config_template_path(repo_dir))
-    config = asyncio.run(load_config(config_path, configure_plugins=False))
+    config = asyncio.run(load_config(config_path, configure_plugins=True))
 
     if not templates:
         templates = asyncio.run(gather_templates(repo_dir))

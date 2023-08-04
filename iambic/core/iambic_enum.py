@@ -27,6 +27,7 @@ class IambicManaged(Enum):
 class Command(Enum):
     IMPORT = "import"
     APPLY = "apply"
+    LINT = "lint"
     CONFIG_DISCOVERY = "config_discovery"
 
 
