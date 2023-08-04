@@ -1,6 +1,24 @@
 
 # Change Log
 
+## 0.11.23 (Aug 4, 2023)
+
+DOCS:
+* Update IAMbic GitHub Integration docs [#540](https://github.com/noqdev/iambic/pull/540)
+
+ENHANCEMENTS:
+* Support both iambic and /iambic syntax [#542](https://github.com/noqdev/iambic/pull/542)
+* Support iambic version in GitHub comments [#542](https://github.com/noqdev/iambic/pull/542)
+
+BUG FIXES:
+* iambic lint no longer converts expires_at relative time to an absolute [#530](https://github.com/noqdev/iambic/pull/530)
+* Fix issue when identity center details is lost during 2nd setup [#541](https://github.com/noqdev/iambic/pull/541)
+* Handling TooManyRequestsException in boto_crud_call [#544](https://github.com/noqdev/iambic/pull/544)
+* Improved logging in boto_crud_call [#544](https://github.com/noqdev/iambic/pull/544)
+
+THANKS:
+* `Rodrigo C.` from community slack on reporting the TooManyRequestsException issue on large orgs.
+
 ## 0.11.17 (Aug 3, 2023)
 
 DOCS:
