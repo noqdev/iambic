@@ -7,6 +7,7 @@ import uuid
 from git import Repo
 
 from iambic.config.dynamic_config import load_config
+from iambic.core.context import ctx
 from iambic.core.git import (
     create_templates_for_deleted_files,
     create_templates_for_modified_files,
@@ -155,9 +156,17 @@ async def lint_git_changes(
         file_changes["modified_files"],
     )
 
+    old_command = ctx.command
+    old_eval_only = ctx.eval_only
+    ctx.command = Command.LINT
+    ctx.eval_only = True
+
     for template in itertools.chain(new_templates, modified_templates_doubles):
         # write always write in linted format
         template.write()
+
+    ctx.command = old_command
+    ctx.eval_only = old_eval_only
 
 
 def commit_deleted_templates(

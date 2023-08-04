@@ -236,8 +236,9 @@ def run_handler(event=None, context=None):
     if f:
         f(github_override_token, github_client, webhook_payload)
     else:
-        log.error("no supported handler")
-        raise Exception("no supported handler")
+        # warning. what it means is we are getting events send to the lambda
+        # that we don't know how to handle.
+        log.warning(f"no supported handler for {github_client}")
 
 
 def handle_pull_request(
