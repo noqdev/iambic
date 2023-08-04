@@ -78,6 +78,7 @@ class HandleIssueCommentReturnCode(Enum):
     MERGED = 4
     PLANNED = 5
     APPROVED = 6
+    LINTED = 7
 
 
 # context is a dictionary structure published by Github Action
@@ -381,16 +382,6 @@ def handle_iambic_git_apply(
             # but templates config is now already stored in the templates repo itself.
             getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH = proposed_changes_path
 
-        # run lint before apply to separate out formatting change from the relative time change
-        config_path = asyncio.run(resolve_config_template_path(repo_dir))
-        asyncio.run(lint_git_changes(config_path, repo_dir, False, None, None))
-        repo.git.add(".")
-        diff_list = repo.head.commit.diff()
-        if len(diff_list) > 0:
-            repo.git.commit("-m", COMMIT_MESSAGE_FOR_LINTING)
-        else:
-            log.debug("git_apply did not introduce linting changes")
-
         template_changes = run_git_apply(
             False, None, None, repo_dir, proposed_changes_path
         )
@@ -529,7 +520,7 @@ def handle_iambic_git_plan(
 
     try:
         repo_dir = get_lambda_repo_path()
-        prepare_local_repo(repo_url, repo_dir, pull_request_branch_name)
+        repo = prepare_local_repo(repo_url, repo_dir, pull_request_branch_name)
 
         if proposed_changes_path:
             # code smell to have to change a module variable
@@ -538,6 +529,23 @@ def handle_iambic_git_plan(
             # because lambda interface was created to dynamic populate template config
             # but templates config is now already stored in the templates repo itself.
             getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH = proposed_changes_path
+
+        # run lint
+        config_path = asyncio.run(resolve_config_template_path(repo_dir))
+        asyncio.run(lint_git_changes(config_path, repo_dir, False, None, None))
+        repo.git.add(".")
+        diff_list = repo.head.commit.diff()
+        if len(diff_list) > 0:
+            repo.git.commit("-m", COMMIT_MESSAGE_FOR_LINTING)
+            repo.remotes.origin.push(
+                refspec=f"HEAD:{pull_request_branch_name}"
+            ).raise_if_error()
+            pull_request.create_issue_comment(
+                "Due to automatic lint, the pull request commits has been updated."
+            )
+            return HandleIssueCommentReturnCode.LINTED
+        else:
+            log.debug("git_plan did not introduce linting changes")
 
         template_changes = run_git_plan(proposed_changes_path, repo_dir)
         _process_template_changes(
