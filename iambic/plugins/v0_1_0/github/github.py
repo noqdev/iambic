@@ -205,13 +205,13 @@ GIT_APPLY_COMMENT_TEMPLATE = """iambic {iambic_op} ran with:
 {plan}
 ```
 
-[Run]({run_url})
+[Extended Plan Details]({run_url})
 """
 
 
 def ensure_body_length_fits_github_spec(body: str, blob_html_url: str = None) -> str:
     if len(body) > BODY_MAX_LENGTH:
-        body = TRUNCATED_WARNING + f"""[Run]({blob_html_url})"""
+        body = TRUNCATED_WARNING + f"""[Extended Plan Details]({blob_html_url})"""
     return body
 
 
@@ -754,8 +754,12 @@ def _process_template_changes(
     else:
         rendered_content = "no changes detected"
 
+    run_link_fragment = ""
+    if html_url:
+        run_link_fragment = f"[Extended Plan Details]({html_url})"
+
     rendered_content = (
-        f"""Reacting to `{op_name}`\n\n{rendered_content}\n\n [Run]({html_url})"""
+        f"""Reacting to `{op_name}`\n\n{rendered_content}\n\n {run_link_fragment}"""
     )
     if pull_request:
         _post_render_content_as_pr_comment(
