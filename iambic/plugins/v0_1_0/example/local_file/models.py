@@ -34,6 +34,7 @@ class ExampleLocalFileTemplateProperties(BaseModel):
 
 class ExampleLocalFileTemplate(BaseTemplate, ExpiryModel):
     template_type = EXAMPLE_LOCAL_FILE_TEMPLATE_TYPE
+    template_schema_url = "test_url"
     properties: ExampleLocalFileTemplateProperties = Field(
         ..., description="Properties for Example Local File Template"
     )
@@ -76,6 +77,7 @@ class ExampleLocalFileMultiAccountTemplateProperties(BaseTemplate, ExpiryModel):
 
 class ExampleLocalFileMultiAccountTemplate(BaseTemplate, ExpiryModel):
     template_type = EXAMPLE_LOCAL_FILE_MULTI_ACCOUNT_TEMPLATE_TYPE
+    template_schema_url = "test_url"
     properties: ExampleLocalFileTemplateProperties = Field(
         ..., description="Properties for Example Local File Template"
     )

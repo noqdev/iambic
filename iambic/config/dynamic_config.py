@@ -123,6 +123,7 @@ class ExtendsConfig(BaseModel):
 
 class Config(ConfigMixin, BaseTemplate):
     template_type: str = "NOQ::Core::Config"
+    template_schema_url = "https://docs.iambic.org/reference/schemas/config"
     version: str = Field(
         description="Do not change! The version of iambic this repo is compatible with.",
     )

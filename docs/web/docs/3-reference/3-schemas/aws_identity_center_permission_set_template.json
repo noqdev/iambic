@@ -26,9 +26,31 @@
       "default": false,
       "type": "boolean"
     },
+    "expires_at_default": {
+      "title": "Expiresatdefault",
+      "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "string",
+          "format": "date"
+        }
+      ]
+    },
     "template_type": {
       "title": "Templatetype",
       "default": "NOQ::AWS::IdentityCenter::PermissionSet",
+      "type": "string"
+    },
+    "template_schema_url": {
+      "title": "Templateschemaurl",
+      "default": "https://docs.iambic.org/reference/schemas/aws_identity_center_permission_set_template",
       "type": "string"
     },
     "owner": {
@@ -196,6 +218,23 @@
           "default": false,
           "type": "boolean"
         },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
         "path": {
           "title": "Path",
           "description": "The path to the IAM policy that you have configured in each account where you want to deploy your permission set. The default is /. For more information, see Friendly names and paths in the IAM User Guide.",
@@ -239,6 +278,23 @@
           "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
+        },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
         },
         "customer_managed_policy_reference": {
           "$ref": "#/definitions/CustomerManagedPolicyReference"
@@ -340,6 +396,23 @@
           "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
+        },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
         },
         "included_accounts": {
           "title": "Includedaccounts",
@@ -513,6 +586,23 @@
           "default": false,
           "type": "boolean"
         },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
         "version": {
           "title": "Version",
           "type": "string"
@@ -555,6 +645,23 @@
           "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
+        },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
         },
         "arn": {
           "title": "Arn",
@@ -633,6 +740,23 @@
           "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
+        },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
         },
         "key": {
           "title": "Key",
@@ -753,6 +877,23 @@
           "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
+        },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
         },
         "included_accounts": {
           "title": "Includedaccounts",

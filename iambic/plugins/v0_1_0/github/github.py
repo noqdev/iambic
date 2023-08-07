@@ -78,7 +78,8 @@ class HandleIssueCommentReturnCode(Enum):
     MERGED = 4
     PLANNED = 5
     APPROVED = 6
-    LINTED = 7
+    ERROR = 7
+    LINTED = 8
 
 
 # context is a dictionary structure published by Github Action
@@ -385,6 +386,21 @@ def handle_iambic_git_apply(
         template_changes = run_git_apply(
             False, None, None, repo_dir, proposed_changes_path
         )
+        if any(
+            bool(template_change.exceptions_seen)
+            for template_change in template_changes
+        ):
+            _process_template_changes(
+                github_client,
+                templates_repo,
+                pull_request,
+                pull_number,
+                proposed_changes_path,
+                template_changes,
+                "apply",
+            )
+            copy_data_to_data_directory()
+            return HandleIssueCommentReturnCode.ERROR
 
         # In the event git_apply changes relative time to absolute time
         repo.git.add(".")

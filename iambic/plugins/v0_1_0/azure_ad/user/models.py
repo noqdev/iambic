@@ -111,6 +111,9 @@ class UserTemplateProperties(BaseModel, ExpiryModel):
 
 class AzureActiveDirectoryUserTemplate(ExpiryModel, AzureADTemplate):
     template_type = AZURE_AD_USER_TEMPLATE_TYPE
+    template_schema_url = (
+        "https://docs.iambic.org/reference/schemas/azure_active_directory_user_template"
+    )
     properties: UserTemplateProperties = Field(
         ..., description="Properties for the Azure AD User"
     )

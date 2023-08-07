@@ -264,6 +264,7 @@ class BaseModel(IambicPydanticBaseModel):
             "owner",
             "notes",
             "template_type",
+            "template_schema_url",
             "file_path",
             "metadata_iambic_fields",
             "metadata_commented_dict",
@@ -530,6 +531,7 @@ class BaseTemplate(
     BaseModel,
 ):
     template_type: str
+    template_schema_url: str
     file_path: Union[str, Path] = Field(..., hidden_from_schema=True)
     owner: Optional[str]
     notes: Optional[str]
@@ -569,7 +571,10 @@ class BaseTemplate(
             exclude_none=exclude_none,
         )
         template_dict = json.loads(template_dict)
-        template_dict["template_type"] = self.template_type
+        for forced_default_attr in {"template_type", "template_schema_url"}:
+            template_dict[forced_default_attr] = self.__fields__[
+                forced_default_attr
+            ].default
         return template_dict
 
     def get_body(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
@@ -584,11 +589,15 @@ class BaseTemplate(
         if notes := sorted_input_dict.get("notes"):
             sorted_input_dict["notes"] = LiteralScalarString(notes)
         as_yaml = yaml.dump(sorted_input_dict)
-        # Force template_type to be at the top of the yaml
-        template_type_str = f"template_type: {self.template_type}"
-        as_yaml = as_yaml.replace(f"{template_type_str}\n", "")
-        as_yaml = as_yaml.replace(f"\n{template_type_str}", "")
-        as_yaml = f"{template_type_str}\n{as_yaml}"
+        # Force template_type and template_schema_url to be at the top of the yaml
+        #   with the default value
+        for boosted_attr in {"template_type", "template_schema_url"}:
+            boosted_attr_str = (
+                f"{boosted_attr}: {self.__fields__[boosted_attr].default}"
+            )
+            as_yaml = as_yaml.replace(f"{boosted_attr_str}\n", "")
+            as_yaml = as_yaml.replace(f"\n{boosted_attr_str}", "")
+            as_yaml = f"{boosted_attr_str}\n{as_yaml}"
         return as_yaml
 
     def write(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
