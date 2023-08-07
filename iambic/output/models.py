@@ -50,7 +50,11 @@ class ProposedChangeDiff(ProposedChange):
             self.current_value = {}
         if self.new_value is None:
             self.new_value = {}
-        if isinstance(self.current_value, dict):
+        if self.change_summary:
+            # oh well... deep diff result is too difficult to mix in with other
+            # easy diff. So, gonna special case here.
+            self.diff = self.change_summary
+        elif isinstance(self.current_value, dict):
             self.diff = list(
                 diff(self.current_value.get(object_attribute, {}), self.new_value)
             )
@@ -60,6 +64,13 @@ class ProposedChangeDiff(ProposedChange):
     @property
     def diff_plus_minus(self) -> List[str]:
         diff_plus_minus = ""
+        # oh well... deep diff result is too difficult to mix in with other
+        # easy diff. So, gonna special case here.
+        if isinstance(self.diff, dict):
+            output_lines = []
+            for key, value in self.diff.items():
+                output_lines.append(f"{self.attribute}:\n-{key}\n{value}")
+            return "\n".join(output_lines)
         for x in self.diff:
             label = self.attribute
             if x[0] == "change":

@@ -20,7 +20,7 @@ from cryptography.hazmat.primitives import serialization
 from github.PullRequest import PullRequest
 
 import iambic.output.markdown
-from iambic.config.dynamic_config import load_config
+from iambic.config.dynamic_config import CURRENT_IAMBIC_VERSION, load_config
 from iambic.config.utils import resolve_config_template_path
 from iambic.core.context import ctx
 from iambic.core.git import Repo, clone_git_repo, get_remote_default_branch
@@ -79,6 +79,7 @@ class HandleIssueCommentReturnCode(Enum):
     PLANNED = 5
     APPROVED = 6
     ERROR = 7
+    LINTED = 8
 
 
 # context is a dictionary structure published by Github Action
@@ -205,13 +206,13 @@ GIT_APPLY_COMMENT_TEMPLATE = """iambic {iambic_op} ran with:
 {plan}
 ```
 
-[Run]({run_url})
+[Extended Plan Details]({run_url})
 """
 
 
 def ensure_body_length_fits_github_spec(body: str, blob_html_url: str = None) -> str:
     if len(body) > BODY_MAX_LENGTH:
-        body = TRUNCATED_WARNING + f"""[Run]({blob_html_url})"""
+        body = TRUNCATED_WARNING + f"""[Extended Plan Details]({blob_html_url})"""
     return body
 
 
@@ -382,16 +383,6 @@ def handle_iambic_git_apply(
             # but templates config is now already stored in the templates repo itself.
             getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH = proposed_changes_path
 
-        # run lint before apply to separate out formatting change from the relative time change
-        config_path = asyncio.run(resolve_config_template_path(repo_dir))
-        asyncio.run(lint_git_changes(config_path, repo_dir, False, None, None))
-        repo.git.add(".")
-        diff_list = repo.head.commit.diff()
-        if len(diff_list) > 0:
-            repo.git.commit("-m", COMMIT_MESSAGE_FOR_LINTING)
-        else:
-            log.debug("git_apply did not introduce linting changes")
-
         template_changes = run_git_apply(
             False, None, None, repo_dir, proposed_changes_path
         )
@@ -545,7 +536,7 @@ def handle_iambic_git_plan(
 
     try:
         repo_dir = get_lambda_repo_path()
-        prepare_local_repo(repo_url, repo_dir, pull_request_branch_name)
+        repo = prepare_local_repo(repo_url, repo_dir, pull_request_branch_name)
 
         if proposed_changes_path:
             # code smell to have to change a module variable
@@ -554,6 +545,20 @@ def handle_iambic_git_plan(
             # because lambda interface was created to dynamic populate template config
             # but templates config is now already stored in the templates repo itself.
             getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH = proposed_changes_path
+
+        # run lint
+        config_path = asyncio.run(resolve_config_template_path(repo_dir))
+        asyncio.run(lint_git_changes(config_path, repo_dir, False, None, None))
+        repo.git.add(".")
+        diff_list = repo.head.commit.diff()
+        if len(diff_list) > 0:
+            repo.git.commit("-m", COMMIT_MESSAGE_FOR_LINTING)
+            repo.remotes.origin.push(
+                refspec=f"HEAD:{pull_request_branch_name}"
+            ).raise_if_error()
+            return HandleIssueCommentReturnCode.LINTED
+        else:
+            log.debug("git_plan did not introduce linting changes")
 
         template_changes = run_git_plan(proposed_changes_path, repo_dir)
         _process_template_changes(
@@ -596,7 +601,7 @@ def handle_iambic_approve(
 
     try:
         repo_dir = get_lambda_repo_path()
-        _ = prepare_local_repo_for_new_commits(repo_url, repo_dir, "detect")
+        _ = prepare_local_repo_for_new_commits(repo_url, repo_dir, "approve")
         config_path = asyncio.run(resolve_config_template_path(repo_dir))
         # it's important to load the config from main branch
         # we want to guard against a requester directly changing the approver
@@ -652,6 +657,24 @@ def handle_iambic_approve(
             )
         )
         raise e
+
+
+def handle_iambic_version(
+    context: dict[str, Any],
+    github_client: github.Github,
+    templates_repo: github.Repo,
+    pull_request: PullRequest,
+    repo_name: str,
+    pull_number: str,
+    pull_request_branch_name: str,
+    repo_url: str,
+    proposed_changes_path: str = None,
+    comment_user_login: str = None,
+    comment: str = None,
+):
+    pull_request.create_issue_comment(
+        f"`iambic-core` is at version `{CURRENT_IAMBIC_VERSION}`"
+    )
 
 
 def github_app_workflow_wrapper(workflow_func: Callable, ux_op_name: str) -> Callable:
@@ -747,8 +770,12 @@ def _process_template_changes(
     else:
         rendered_content = "no changes detected"
 
+    run_link_fragment = ""
+    if html_url:
+        run_link_fragment = f"[Extended Plan Details]({html_url})"
+
     rendered_content = (
-        f"""Reacting to `{op_name}`\n\n{rendered_content}\n\n [Run]({html_url})"""
+        f"""Reacting to `{op_name}`\n\n{rendered_content}\n\n {run_link_fragment}"""
     )
     if pull_request:
         _post_render_content_as_pr_comment(

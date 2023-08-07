@@ -87,7 +87,7 @@ def get_templated_managed_policy_file_path(
     # stitch desired location together
     os_paths = [managed_policy_dir, separator]
     # using path components from path attribute
-    if managed_policy_path:
+    if managed_policy_path and "{{" not in managed_policy_path:
         managed_policy_path_components = managed_policy_path.split("/")
         # get rid of empty component
         managed_policy_path_components = [

@@ -195,6 +195,9 @@ if __name__ == "__main__":
     ]
     queue = sqs.Queue(queue_url)
 
+    # to simulate lambda, we are pretending to be a lambda function
+    os.environ["AWS_LAMBDA_FUNCTION_NAME"] = "simulate-github-lambda.py"
+
     with patch(
         "iambic.plugins.v0_1_0.github.github_app._get_app_secrets_as_lambda_context_current",
         new=_get_app_secrets_as_lambda_context_current,

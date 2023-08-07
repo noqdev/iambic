@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import re
-import sys
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional, Union
 
@@ -98,25 +97,28 @@ async def boto_crud_call(
     :param kwargs: The params to pass to the boto fnc
     :return:
     """
+    max_attempts = 20
     retry_count = 0
-    if not retryable_errors:
-        retryable_errors = []
-
-    retryable_errors.append("Throttling")
+    always_retryable_errors = ["Throttling", "TooManyRequestsException"]
+    if retryable_errors:
+        retryable_errors.extend(always_retryable_errors)
+    else:
+        retryable_errors = always_retryable_errors
 
     while True:
         try:
             return await aio_wrapper(boto_fnc, **kwargs)
         except ClientError as err:
-            if any(
-                retryable_err in err.response["Error"]["Code"]
-                for retryable_err in retryable_errors
-            ):
-                if retry_count >= 20:
+            error_code = err.response["Error"]["Code"]
+            if any(retryable_err in error_code for retryable_err in retryable_errors):
+                if retry_count >= max_attempts:
                     raise
                 retry_count += 1
-                log.warning(
-                    "Throttling error", provider="aws", api_call=boto_fnc.__name__
+                log.info(
+                    f"{error_code} error",
+                    provider="aws",
+                    api_call=boto_fnc.__name__,
+                    remaining_retries=max_attempts - retry_count,
                 )
                 await asyncio.sleep(min(retry_count / 4, 3))
                 continue
@@ -215,14 +217,7 @@ def get_identity_arn(caller_identity: dict) -> str:
 
 
 def get_current_role_arn(sts_client) -> str:
-    try:
-        return get_identity_arn(sts_client.get_caller_identity())
-    except NoCredentialsError:
-        log.error(
-            "Unable to detect AWS Credentials. Please follow the guide here "
-            "to set up AWS credentials: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html"
-        )
-        sys.exit(1)
+    return get_identity_arn(sts_client.get_caller_identity())
 
 
 async def legacy_paginated_search(

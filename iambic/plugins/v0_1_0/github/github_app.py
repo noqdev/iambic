@@ -34,6 +34,7 @@ from iambic.plugins.v0_1_0.github.github import (
     handle_iambic_approve,
     handle_iambic_git_apply,
     handle_iambic_git_plan,
+    handle_iambic_version,
     iambic_app,
 )
 
@@ -235,8 +236,9 @@ def run_handler(event=None, context=None):
     if f:
         f(github_override_token, github_client, webhook_payload)
     else:
-        log.error("no supported handler")
-        raise Exception("no supported handler")
+        # warning. what it means is we are getting events send to the lambda
+        # that we don't know how to handle.
+        log.warning(f"no supported handler for {github_client}")
 
 
 def handle_pull_request(
@@ -383,12 +385,21 @@ EVENT_DISPATCH_MAP: dict[str, Callable] = {
 }
 
 
+# We are supporting both "iambic" and "/iambic"
+# for now during transition.
 COMMENT_DISPATCH_MAP: dict[str, Callable] = {
     "iambic git-apply": handle_iambic_git_apply,
+    "/iambic git-apply": handle_iambic_git_apply,
     "iambic git-plan": handle_iambic_git_plan,
+    "/iambic git-plan": handle_iambic_git_plan,
     "iambic apply": handle_iambic_git_apply,
+    "/iambic apply": handle_iambic_git_apply,
     "iambic plan": handle_iambic_git_plan,
+    "/iambic plan": handle_iambic_git_plan,
     "iambic approve": handle_iambic_approve,
+    "/iambic approve": handle_iambic_approve,
+    "iambic version": handle_iambic_version,
+    "/iambic version": handle_iambic_version,
 }
 
 WORKFLOW_DISPATCH_MAP: dict[str, Callable] = {
