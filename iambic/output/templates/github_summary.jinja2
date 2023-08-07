@@ -3,8 +3,11 @@
 * {{ iambic.num_actions }} distinct actions.
 * {{ iambic.num_templates }} templates with changes.
 * {{ iambic.num_accounts }} accounts affected.
+
+{% if iambic.num_exceptions > 0 -%}
 ## Exceptions
 * {{ iambic.num_exceptions }} exceptions were recorded.
+{% endif -%}
 
 {% if iambic.num_templates > 0 -%}
 
