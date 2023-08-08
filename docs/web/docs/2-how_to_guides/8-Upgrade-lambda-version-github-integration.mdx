@@ -1,0 +1,32 @@
+---
+title: Upgrade AWS Lambda IAMbic GitHub Integration
+---
+
+# ClickOps way
+
+1. Identify the version you want to upgrade to at [IAMbic repo](https://gallery.ecr.aws/iambic/iambic). (You may need to click on "Image Tags")
+<img src={"/img/git/upgrade-lambda-version/step-01-identify-version-to-upgrade.jpg"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Log into your AWS Account with the deployed IAMbic GitHub integration
+1. Visit AWS [CodeBuild](https://us-east-1.console.aws.amazon.com/codesuite/codebuild/projects?region=us-east-1)
+1. Click on the project named `iambic_code_build`
+1. Click on "Start build with overrides"
+<img src={"/img/git/upgrade-lambda-version/step-02-use-code-build-to-mirror-new-version-to-ecr.jpg"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Expand "Environment variables overrides" and modify "IMAGE_TAG" to the version you want, and then hit the "Start build" button.
+<img src={"/img/git/upgrade-lambda-version/step-03-use-start-build-with-overrides-to-select-specific-version.jpg"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Wait for the build to be successful
+<img src={"/img/git/upgrade-lambda-version/step-04-wait-til-build-is-successful.jpg"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Visit Amazon [Elastic Container Registry](https://us-east-1.console.aws.amazon.com/ecr/repositories?region=us-east-1)
+1. Click on the repo named "iambic-ecr-public/iambic/iambic"
+1. Verify the version now exist in your repository
+<img src={"/img/git/upgrade-lambda-version/step-05-verify-image-version-on-ecr.jpg"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Visit AWS Lambda to examine the deployed [function](https://us-east-1.console.aws.amazon.com/lambda/home?region=us-east-1#/functions/iambic_github_app_webhook?tab=code) version.
+1. Scroll down and select "Deploy new image"
+<img src={"/img/git/upgrade-lambda-version/step-07-deploy-new-image-for-lambda.jpg"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Select "Browse Images" button
+<img src={"/img/git/upgrade-lambda-version/step-08-browse-for-new-version-of-image.jpg"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Select ECR Repo named "iambic-ecr-public/iambic/iambic"
+<img src={"/img/git/upgrade-lambda-version/step-09-select-ecr-repo.jpg"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Select the ECR Image version you wish to deploy and then hit "Select Image" button
+<img src={"/img/git/upgrade-lambda-version/step-10-select-version-to-deploy.jpg"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Hit the "Save" button
+<img src={"/img/git/upgrade-lambda-version/step-11-deploy-version-to-lambda.jpg"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
