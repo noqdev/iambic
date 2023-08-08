@@ -1,21 +1,31 @@
 from __future__ import annotations
 
+import os
 import time
 
 import boto3
 
-REGION_NAME = "us-east-1"
-CODE_BUILD_PROJECT_NAME = "iambic_code_build"
-IAMBIC_FUNCTION_NAME = "iambic_github_app_webhook"
-IAMBIC_REPOSITORY_NAME = "iambic-ecr-public/iambic/iambic"
-IAMBIC_CF_LAMBDA_STACK_NAME = "IAMbicGitHubAppLambda"
+REGION_NAME = os.environ.get("AWS_REGION", "us-east-1")
+IAMBIC_CODE_BUILD_PROJECT_NAME = os.environ.get(
+    "IAMBIC_CODE_BUILD_PROJECT_NAME", "iambic_code_build"
+)
+IAMBIC_FUNCTION_NAME = os.environ.get(
+    "IAMBIC_FUNCTION_NAME", "iambic_github_app_webhook"
+)
+IAMBIC_REPOSITORY_NAME = os.environ.get(
+    "IAMBIC_REPOSITORY_NAME", "iambic-ecr-public/iambic/iambic"
+)
+IAMBIC_CF_LAMBDA_STACK_NAME = os.environ.get(
+    "IAMBIC_CF_LAMBDA_STACK_NAME", "IAMbicGitHubAppLambda"
+)
+IAMBIC_TARGET_VERSION = os.environ.get("IAMBIC_TARGET_VERSION", "latest")
 
 
 def start_code_build_with_pin_version(ver):
     code_build_client = boto3.client("codebuild", region_name=REGION_NAME)
 
     response = code_build_client.start_build(
-        projectName=CODE_BUILD_PROJECT_NAME,
+        projectName=IAMBIC_CODE_BUILD_PROJECT_NAME,
         environmentVariablesOverride=[
             {
                 "name": "IMAGE_TAG",
@@ -40,20 +50,30 @@ def start_code_build_with_pin_version(ver):
             raise ValueError(f"build status is {build_status}")
 
 
-def wait_until_image_is_ready(ver):
+def is_image_label_ready(ecr_client, ver):
+    if ver == "latest":
+        raise ValueError(
+            "We do not support `latest` as image label because ECR cache maybe out of date. Please point to a specific version"
+        )
     repository_name = IAMBIC_REPOSITORY_NAME
-    ecr_client = boto3.client("ecr", region_name=REGION_NAME)
+    try:
+        resp = ecr_client.describe_images(
+            repositoryName=repository_name, imageIds=[{"imageTag": ver}]
+        )
+        if len(resp["imageDetails"]) == 0:
+            return False
+        else:
+            return True
+    except ecr_client.exceptions.ImageNotFoundException:
+        return False
+
+
+def wait_until_image_is_ready(ecr_client, ver):
+    print("Waiting for image label to be ready")
     for _ in range(6):
-        try:
-            resp = ecr_client.describe_images(
-                repositoryName=repository_name, imageIds=[{"imageTag": ver}]
-            )
-            if len(resp["imageDetails"]) == 0:
-                time.sleep(30)
-                continue
-            else:
-                break
-        except ecr_client.exceptions.ImageNotFoundException:
+        if is_image_label_ready(ecr_client, ver):
+            break
+        else:
             time.sleep(30)
             continue
 
@@ -117,10 +137,15 @@ def update_cf_lambda_ver(ver):
 
 
 def upgrade_lambda(ver):
-    start_code_build_with_pin_version(ver)
-    wait_until_image_is_ready(ver)
+    ecr_client = boto3.client("ecr", region_name=REGION_NAME)
+    if not is_image_label_ready(ecr_client, ver):
+        # only trigger the pull if the version is not already in ECR
+        # this helps speed up rollback
+        start_code_build_with_pin_version(ver)
+    # the wait is required due to eventual consistency
+    wait_until_image_is_ready(ecr_client, ver)
     update_cf_lambda_ver(ver)
 
 
 if __name__ == "__main__":
-    upgrade_lambda("0.11.30")
+    upgrade_lambda(IAMBIC_TARGET_VERSION)
