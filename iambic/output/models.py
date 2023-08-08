@@ -212,7 +212,7 @@ def get_applicable_changes(
         for proposed_change in getattr(template_change, attribute, []):
             if isinstance(proposed_change, AccountChangeDetails):
                 # If proposed change is a list of AccountChangeDetails, we need to iterate through those
-                for account_change in proposed_change.proposed_changes:
+                for account_change in getattr(proposed_change, attribute, []):
                     if account_change.change_type.value == proposed_change_type:
                         applicable_changes.add(
                             _get_annotated_change(

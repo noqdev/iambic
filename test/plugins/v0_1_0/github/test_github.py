@@ -609,7 +609,7 @@ def mock_proposed_changes_filesystem():
 
     try:
         contents = """hello world"""
-        contents_path = f"{temp_templates_directory}/proposed_chagnes.yaml"
+        contents_path = f"{temp_templates_directory}/proposed_changes.yaml"
 
         with open(contents_path, "w") as f:
             f.write(contents)
