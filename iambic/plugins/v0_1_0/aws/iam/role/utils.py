@@ -281,7 +281,7 @@ async def update_assume_role_policy(
     existing_policy_document: str,
     log_params: dict,
 ) -> list[ProposedChange]:
-    response = []
+    response: list[ProposedChange] = []
     policy_drift = None
 
     if existing_policy_document:
@@ -327,14 +327,21 @@ async def update_assume_role_policy(
                 )
             )
 
+        exceptions = []
         if ctx.execute:
             boto_action = "Creating" if existing_policy_document else "Updating"
             log_str = f"{log_str} {boto_action} AssumeRolePolicyDocument..."
-            await boto_crud_call(
-                iam_client.update_assume_role_policy,
-                RoleName=role_name,
-                PolicyDocument=json.dumps(template_policy_document),
-            )
+            try:
+                await boto_crud_call(
+                    iam_client.update_assume_role_policy,
+                    RoleName=role_name,
+                    PolicyDocument=json.dumps(template_policy_document),
+                )
+            except Exception as e:
+                exceptions.append(str(e))
+
+        for change in response:
+            change.exceptions_seen = exceptions
         log.debug(log_str, **log_params)
 
     return response
