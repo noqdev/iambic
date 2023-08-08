@@ -4,6 +4,7 @@ import asyncio
 import datetime
 import json
 import os
+import pathlib
 import re
 import shutil
 import sys
@@ -494,21 +495,26 @@ def _post_artifact_to_companion_repository(
 ):
     url = None
     try:
-        lines = []
-        if os.path.exists(proposed_changes_path):
-            with open(proposed_changes_path) as f:
-                lines = f.readlines()
-            gist_repo_name = f"{templates_repo.full_name}-gist"
-            gist_repo = github_client.get_repo(gist_repo_name)
-            now_timestamp = datetime.datetime.now()
-            pr_prefix = f"pr-{pull_number}" if pull_number else "no-pr"
-            yaml_repo_path = (
-                f"{pr_prefix}/{op_name}/{now_timestamp}/{default_base_name}"
-            )
-            md_repo_path = f"{pr_prefix}/{op_name}/{now_timestamp}/summary.md"
-            gist_repo.create_file(yaml_repo_path, op_name, "".join(lines))
-            result = gist_repo.create_file(md_repo_path, op_name, markdown_summary)
-            url = result["content"].html_url
+        initial_path = pathlib.Path(proposed_changes_path)
+        gist_repo_name = f"{templates_repo.full_name}-gist"
+        gist_repo = github_client.get_repo(gist_repo_name)
+        now_timestamp = datetime.datetime.now()
+        pr_prefix = f"pr-{pull_number}" if pull_number else "no-pr"
+        # the intentional expansion is due to the machine logs (json version)
+        # is implicitly written to proposed_changes_path with a json suffix.
+        for artifact_path in [initial_path, initial_path.with_suffix(".json")]:
+            lines = []
+            if artifact_path.exists():
+                with open(artifact_path) as f:
+                    lines = f.readlines()
+                remote_repo_path = (
+                    f"{pr_prefix}/{op_name}/{now_timestamp}/{artifact_path.name}"
+                )
+                gist_repo.create_file(remote_repo_path, op_name, "".join(lines))
+        # always write the summary
+        md_repo_path = f"{pr_prefix}/{op_name}/{now_timestamp}/summary.md"
+        result = gist_repo.create_file(md_repo_path, op_name, markdown_summary)
+        url = result["content"].html_url
     except Exception:
         # Decision to keep going is we do not want a failure of posting to companion
         # repository (for full machine and human readable contents) to stop the rest of
