@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import json
+from collections import defaultdict
+from datetime import datetime, timedelta
+from io import StringIO
 from itertools import chain
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
+import pytz
 from deepdiff import DeepDiff
 
 from iambic.core.context import ctx
@@ -13,6 +18,120 @@ from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper, plugin_apply_wrapper
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, paginated_search
+
+if TYPE_CHECKING:
+    from iambic.plugins.v0_1_0.aws.handlers import AWSConfig
+
+
+def parse_report_date_str(report_date: str) -> str:
+    if report_date in ["N/A", "no_information"]:
+        return "Never"
+    else:
+        report_date = datetime.strptime(report_date, "%Y-%m-%dT%H:%M:%S+00:00").replace(
+            tzinfo=pytz.UTC
+        )
+        if report_date > (datetime.utcnow() - timedelta(days=30)).replace(
+            tzinfo=pytz.UTC
+        ):
+            return "Within the last 30 days"
+        else:
+            return report_date.strftime("%Y-%m-%d")
+
+
+async def get_credential_report(aws_account: AWSAccount) -> dict:
+    iam_client = await aws_account.get_boto3_client("iam")
+    try:
+        credential_report = await boto_crud_call(iam_client.get_credential_report)
+    except (
+        iam_client.exceptions.CredentialReportExpiredException,
+        iam_client.exceptions.CredentialReportNotReadyException,
+        iam_client.exceptions.CredentialReportNotPresentException,
+    ):
+        credential_report = None
+
+    if not credential_report or (
+        credential_report["GeneratedTime"]
+        < (datetime.utcnow() - timedelta(hours=12)).replace(tzinfo=pytz.UTC)
+    ):
+        log.info(
+            "Generating credential report",
+            aws_account=str(aws_account),
+        )
+        await boto_crud_call(iam_client.generate_credential_report)
+        for _ in range(18):
+            await asyncio.sleep(10)
+            try:
+                credential_report = await boto_crud_call(
+                    iam_client.get_credential_report
+                )
+                break
+            except iam_client.exceptions.CredentialReportNotReadyException:
+                log.info(
+                    "Waiting for credential report to be completed",
+                    aws_account=str(aws_account),
+                )
+                continue
+
+    if not credential_report:
+        log.warning(
+            "Credential report generation timeout",
+            aws_account=str(aws_account),
+        )
+        return {aws_account.account_id: {}}
+
+    report_str = credential_report["Content"].decode("utf-8")
+    reader = csv.DictReader(StringIO(report_str))
+    report_rows: list[dict] = [row for row in reader if row["user"] != "<root_account>"]
+    user_summaries = {}
+    for row in report_rows:
+        user_summaries[row["user"]] = {
+            "account": str(aws_account),
+            "mfa_enabled": row["mfa_active"] == "true",
+            "password": {
+                "enabled": row["password_enabled"] == "true",
+            },
+        }
+        if user_summaries[row["user"]]["password"]["enabled"]:
+            key = "password"
+            for related_key in ["last_used", "last_changed", "next_rotation"]:
+                user_summaries[row["user"]][key][related_key] = parse_report_date_str(
+                    row[f"{key}_{related_key}"]
+                )
+
+        for key in ["access_key_1", "access_key_2"]:
+            is_active = row[f"{key}_active"] == "true"
+            if is_active:
+                user_summaries[row["user"]][key] = {
+                    "enabled": is_active,
+                }
+                for related_key in ["last_rotated", "last_used_date"]:
+                    dict_key = related_key.replace("_date", "")
+                    user_summaries[row["user"]][key][dict_key] = parse_report_date_str(
+                        row[f"{key}_{related_key}"]
+                    )
+
+        for key in ["cert_1", "cert_2"]:
+            is_active = row[f"{key}_active"] == "true"
+            if is_active:
+                user_summaries[row["user"]][key] = {
+                    "enabled": is_active,
+                }
+                user_summaries[row["user"]][key][
+                    "last_rotated"
+                ] = parse_report_date_str(row[f"{key}_last_rotated"])
+
+    return user_summaries
+
+
+async def generate_user_aws_metadata(aws_config: AWSConfig):
+    user_aws_metadata_map = defaultdict(list)
+    all_account_reports = await asyncio.gather(
+        *[get_credential_report(a) for a in aws_config.accounts]
+    )
+    for account_report in all_account_reports:
+        for user, user_summary in account_report.items():
+            user_aws_metadata_map[user].append(user_summary)
+    return user_aws_metadata_map
 
 
 async def get_user_inline_policy_names(user_name: str, iam_client):
