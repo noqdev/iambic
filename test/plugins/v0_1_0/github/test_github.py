@@ -194,6 +194,15 @@ def mock_lint_git_changes():
 
 
 @pytest.fixture
+def mock_commits():
+    with patch(
+        "iambic.plugins.v0_1_0.github.github.prepare_local_repo_for_new_commits",
+        autospec=True,
+    ) as _mock_commits:
+        yield _mock_commits
+
+
+@pytest.fixture
 def mock_repository():
     with patch("iambic.core.git.Repo", autospec=True) as _mock_repository:
         yield _mock_repository
@@ -222,8 +231,6 @@ def test_issue_comment_with_not_applicable_comment_body(
 def test_issue_comment_with_clean_mergeable_state(
     mock_github_client,
     issue_comment_git_apply_context,
-    mock_lint_git_changes,
-    mock_resolve_config_template_path,
     mock_run_git_apply,
     mock_repository,
 ):
@@ -235,8 +242,6 @@ def test_issue_comment_with_clean_mergeable_state(
         issue_comment_git_apply_context["sha"]
     )
     handle_issue_comment(mock_github_client, issue_comment_git_apply_context)
-    assert mock_resolve_config_template_path.called
-    assert mock_lint_git_changes.called
     assert mock_run_git_apply.called
     assert mock_pull_request.merge.called
 
@@ -245,8 +250,6 @@ def test_issue_comment_with_clean_mergeable_state(
 def test_issue_comment_with_clean_mergeable_state_and_lambda_handler_crashed(
     mock_github_client,
     issue_comment_git_apply_context,
-    mock_lint_git_changes,
-    mock_resolve_config_template_path,
     mock_run_git_apply,
     mock_repository,
 ):
@@ -259,8 +262,6 @@ def test_issue_comment_with_clean_mergeable_state_and_lambda_handler_crashed(
     mock_run_git_apply.side_effect = Exception("unexpected failure")
     with pytest.raises(Exception):
         handle_issue_comment(mock_github_client, issue_comment_git_apply_context)
-    assert mock_resolve_config_template_path.called
-    assert mock_lint_git_changes.called
     assert mock_run_git_apply.called
     assert mock_pull_request.create_issue_comment.called
     assert "Traceback" in mock_pull_request.create_issue_comment.call_args[0][0]
@@ -271,6 +272,8 @@ def test_issue_comment_with_clean_mergeable_state_and_lambda_handler_crashed(
 def test_plan_issue_comment_with_clean_mergeable_state_and_lambda_handler_crashed(
     mock_github_client,
     issue_comment_git_plan_context,
+    mock_resolve_config_template_path,
+    mock_lint_git_changes,
     mock_run_git_plan,
     mock_repository,
 ):
@@ -283,6 +286,8 @@ def test_plan_issue_comment_with_clean_mergeable_state_and_lambda_handler_crashe
     mock_run_git_plan.side_effect = Exception("unexpected failure")
     with pytest.raises(Exception):
         handle_issue_comment(mock_github_client, issue_comment_git_plan_context)
+    assert mock_resolve_config_template_path.called
+    assert mock_lint_git_changes.called
     assert mock_run_git_plan.called
     assert mock_pull_request.create_issue_comment.called
     assert "Traceback" in mock_pull_request.create_issue_comment.call_args[0][0]
@@ -357,6 +362,8 @@ def test_get_session_name(repo_name, pr_number, expected_result):
 def test_issue_comment_with_git_plan(
     mock_github_client,
     issue_comment_git_plan_context,
+    mock_resolve_config_template_path,
+    mock_lint_git_changes,
     mock_run_git_plan,
     mock_repository,
 ):
@@ -367,6 +374,8 @@ def test_issue_comment_with_git_plan(
         issue_comment_git_plan_context["sha"]
     )
     handle_issue_comment(mock_github_client, issue_comment_git_plan_context)
+    assert mock_resolve_config_template_path.called
+    assert mock_lint_git_changes.called
     assert mock_run_git_plan.called
     assert not mock_pull_request.merge.called
 
@@ -377,11 +386,13 @@ def test_issue_comment_with_allowed_approver(
     mock_repository,
     mock_resolve_config_template_path,
     mock_load_config,
+    mock_commits,
 ):
     mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
     assert mock_repository
     assert mock_resolve_config_template_path
     assert mock_load_config
+    assert mock_commits
 
     approver: GithubBotApprover = (
         mock_load_config.side_effect.return_value.github.allowed_bot_approvers[0]
@@ -444,8 +455,10 @@ def test_issue_comment_with_not_allowed_approver(
     mock_repository,
     mock_resolve_config_template_path,
     mock_load_config,
+    mock_commits,
 ):
     mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
+    assert mock_commits
     assert mock_repository
     assert mock_resolve_config_template_path
     assert mock_load_config
@@ -459,8 +472,6 @@ def test_issue_comment_with_not_allowed_approver(
 def test_issue_comment_with_clean_mergeable_state_with_additional_commits(
     mock_github_client,
     issue_comment_git_apply_context,
-    mock_lint_git_changes,
-    mock_resolve_config_template_path,
     mock_run_git_apply,
     mock_repository,
 ):
@@ -480,8 +491,6 @@ def test_issue_comment_with_clean_mergeable_state_with_additional_commits(
     )
 
     handle_issue_comment(mock_github_client, issue_comment_git_apply_context)
-    assert mock_resolve_config_template_path.called
-    assert mock_lint_git_changes.called
     assert mock_run_git_apply.called
 
     # verify we did push back the changes to remote
@@ -492,7 +501,7 @@ def test_issue_comment_with_clean_mergeable_state_with_additional_commits(
     )
 
     # verify we are merging with the latest local repo sha
-    mock_pull_request.merge.assert_called_with(sha=post_sha)
+    mock_pull_request.merge.assert_called_with(sha=post_sha, merge_method="merge")
 
 
 def test_run_handler():

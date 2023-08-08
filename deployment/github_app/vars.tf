@@ -5,6 +5,60 @@ variable "aws_region" {
   default = "us-west-2"
 }
 
+variable "profile_name" {
+  type = string
+  description = "aws profile for provider"
+  default = ""
+}
+
+variable "name_suffix" {
+  type = string
+  description = "useful for testing to append suffix to resource names"
+  default = ""
+}
+
+variable "use_api_gateway_insetad_of_lambda_functions_url" {
+  type = bool
+  description = "Use API Gateway instead of lambda functions url"
+  default = false
+}
+
+variable "lambda_function_name" {
+  type = string
+  description = "function name for iambic"
+  default = "iambic_github_app_webhook"
+}
+
+variable "lambda_function_memory_size" {
+  type = number
+  description = "amount of memory in megabytes"
+  default = 2048
+}
+
+variable "lambda_function_timeout" {
+  type = number
+  description = "number of seconds before timeout"
+  default = 900
+}
+
+variable "lambda_execution_role_name" {
+  type = string
+  description = "execution role name for the lambda function"
+  default = "iambic_github_app_lambda_execution"
+}
+
+variable "api_gateway_name" {
+  type = string
+  description = "api gateway name for iambic"
+  default = "iambic"
+}
+
+variable "api_gateway_stage_name" {
+  type = string
+  description = "api gateway stage for iambic"
+  default = "prod"
+}
+
 variable "github_app_private_key_secret_id" {
   type        = string
   description = "AWS Secret ID that contains the Github App private key"
@@ -19,18 +73,10 @@ variable "github_webhook_secret_secret_id" {
   default = "iambic/github-app-webhook-secret"
 }
 
-variable "iambic_public_repo_url" {
-  type        = string
-  description = "Iambic Public Repo URL"
-
-  default = "public.ecr.aws/iambic"
-}
-
-variable "iambic_image_name" {
-  type        = string
-  description = "Iambic Image Repo"
-
-  default = "iambic"
+variable "iambic_image_repo_name" {
+  type = string
+  description = "ECR image uri holding the iambic image"
+  default =  "iambic-ecr-public/iambic/iambic"
 }
 
 variable "iambic_image_tag" {

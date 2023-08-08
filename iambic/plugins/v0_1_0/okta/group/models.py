@@ -130,6 +130,9 @@ class GroupProperties(ExpiryModel, BaseModel):
 
 class OktaGroupTemplate(BaseTemplate, ExpiryModel):
     template_type = OKTA_GROUP_TEMPLATE_TYPE
+    template_schema_url = (
+        "https://docs.iambic.org/reference/schemas/okta_group_template"
+    )
     owner: Optional[str] = Field(None, description="Owner of the group")
     properties: GroupProperties = Field(
         ..., description="Properties for the Okta Group"

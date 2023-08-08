@@ -57,7 +57,16 @@ def create_model_schemas(
         with open(json_schema_path, "w") as f:
             f.write(model.schema_json(by_alias=False, indent=2))
         with open(model_schema_path, "w") as f:
-            model_schema_md = "".join(parser.parse_schema(model.schema(by_alias=False)))
+            model_schema_l = parser.parse_schema(model.schema(by_alias=False))
+            model_schema_l.insert(
+                1,
+                "See [Template Schema Validation](/reference/template_validation_ide) "
+                "to learn how to validate templates automatically in your IDE.\n\n"
+                "## Description\n\n",
+            )
+            # Remove italics from description
+            model_schema_l[2] = model_schema_l[2].strip("*").replace("*\n\n", "\n\n")
+            model_schema_md = "".join(model_schema_l)
             text = re.sub(
                 re_pattern_move_links,
                 r"\n\2\n\n\1\3",
@@ -117,8 +126,10 @@ title: Template Schema
 
 These schema models are automatically generated. Check out
 [IAMbic IAMOps Philosophy](/reference/iamops_philosophy) and the
-[example IAMbic templates repository](https://github.com/noqdev/iambic-templates-examples) to see a real-life
-examples of IAMbic templates and GitOps flows.\n\n"""
+[example IAMbic templates repository](https://github.com/noqdev/iambic-templates-examples) to see real-life
+examples of IAMbic templates and GitOps flows. See [Template Schema Validation](/reference/template_validation_ide)
+to learn how to validate templates automatically in your IDE.
+\n\n"""
     schema_md_str += "# AWS Template Models\n"
     schema_md_str = create_model_schemas(
         parser, schema_dir, schema_md_str, aws_template_models

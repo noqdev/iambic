@@ -134,22 +134,24 @@ class UserProperties(BaseModel):
 
 class AwsIamUserTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_USER_TEMPLATE_TYPE
+    template_schema_url = (
+        "https://docs.iambic.org/reference/schemas/aws_iam_user_template"
+    )
     properties: UserProperties = Field(
         description="Properties of the user",
     )
 
     def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
         response = super(AwsIamUserTemplate, self)._apply_resource_dict(aws_account)
-        if "Tags" not in response:
-            response["Tags"] = []
+        response.setdefault("Tags", [])
 
-        if permissions_boundary := response.pop("PermissionsBoundary", []):
-            if isinstance(permissions_boundary, list):
-                permissions_boundary = permissions_boundary[0]
-            response["PermissionsBoundary"] = permissions_boundary
-
-        if isinstance(response.get("Description"), list):
-            response["Description"] = response["Description"][0]["Description"]
+        # Ensure only 1 of the following objects
+        # TODO: Have this handled in a cleaner way. Maybe via an attribute on a pydantic field
+        for flat_key in {"Description", "PermissionsBoundary", "Path"}:
+            if isinstance(response.get(flat_key), list):
+                response[flat_key] = response[flat_key][0]
+                if nested_val := response[flat_key].get(flat_key):
+                    response[flat_key] = nested_val
 
         return response
 

@@ -232,6 +232,7 @@ class GroupTemplateProperties(ExpiryModel, BaseModel):
 
 class AzureActiveDirectoryGroupTemplate(ExpiryModel, AzureADTemplate):
     template_type = AZURE_AD_GROUP_TEMPLATE_TYPE
+    template_schema_url = "https://docs.iambic.org/reference/schemas/azure_active_directory_group_template"
     owner: Optional[str] = Field(None, description="Owner of the group")
     properties: GroupTemplateProperties = Field(
         ..., description="Properties for the Azure AD Group"

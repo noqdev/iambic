@@ -83,17 +83,16 @@ def get_templated_user_file_path(
         .lower()
     )
 
+    # stitch desired location together
+    os_paths = [user_dir, separator]
     # using path components from path attribute
-    if user_path:
+    if user_path and "{{" not in user_path:
         user_path_components = user_path.split("/")
         # get rid of empty component
         user_path_components = [
             component for component in user_path_components if component
         ]
-
-    # stitch desired location together
-    os_paths = [user_dir, separator]
-    os_paths.extend(user_path_components)
+        os_paths.extend(user_path_components)
     os_paths.append(f"{file_name}.yaml")
 
     return str(os.path.join(*os_paths))
@@ -436,7 +435,7 @@ async def create_templated_user(  # noqa: C901
         user_dir,
         user_name,
         user_template_params.get("included_accounts"),
-        user_path=path,
+        user_path=path if isinstance(path, str) else None,
     )
     return create_or_update_template(
         file_path,

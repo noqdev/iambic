@@ -9,7 +9,7 @@ from iambic.plugins.v0_1_0.aws.models import ARN_RE, AccessModel
 
 
 class Path(AccessModel):
-    file_path: str = Field(..., hidden_from_schema=True)
+    path: str = Field(..., hidden_from_schema=True)
 
     @property
     def resource_type(self) -> str:
@@ -17,7 +17,7 @@ class Path(AccessModel):
 
     @property
     def resource_id(self) -> str:
-        return self.file_path
+        return self.path
 
 
 class MaxSessionDuration(AccessModel):

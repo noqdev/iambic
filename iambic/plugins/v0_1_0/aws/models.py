@@ -52,6 +52,7 @@ ARN_RE = r"(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}|cloudfront|aws|{{var.acco
 IAMBIC_HUB_ROLE_NAME = os.getenv("IAMBIC_HUB_ROLE_NAME", "IambicHubRole")
 IAMBIC_SPOKE_ROLE_NAME = os.getenv("IAMBIC_SPOKE_ROLE_NAME", "IambicSpokeRole")
 IAMBIC_CHANGE_DETECTION_SUFFIX = os.getenv("IAMBIC_CHANGE_DETECTION_SUFFIX", "")
+IAMBIC_GITHUB_APP_SUFFIX = os.getenv("IAMBIC_GITHUB_APP_SUFFIX", "")
 
 
 def get_hub_role_arn(account_id: str, role_name=None) -> str:
@@ -607,6 +608,39 @@ class AWSIdentityCenter(PydanticBaseModel):
     @property
     def region_name(self):
         return self.region if isinstance(self.region, str) else self.region.value
+
+    def dict(
+        self,
+        *,
+        include: Optional[
+            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
+        ] = None,
+        exclude: Optional[
+            Union["AbstractSetIntStr", "MappingIntStrAny"]  # noqa
+        ] = None,
+        by_alias: bool = False,
+        skip_defaults: Optional[bool] = None,
+        exclude_unset: bool = True,
+        exclude_defaults: bool = False,
+        exclude_none: bool = True,
+    ) -> "DictStrAny":  # noqa
+        # We have to override the original method to always
+        # write out the region value because it has a default
+        # Unfortunately, iambic dynamic config uses json/dict
+        # roundtrip during config sync. If the region value
+        # is not preserved, the identity center value is
+        # consider not setup.
+
+        resp = super(AWSIdentityCenter, self).dict(
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            skip_defaults=skip_defaults,
+            exclude_unset=exclude_unset,
+            exclude_defaults=False,
+            exclude_none=exclude_none,
+        )
+        return resp
 
 
 class AWSOrganization(BaseAWSAccountAndOrgModel):

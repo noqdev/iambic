@@ -138,6 +138,18 @@
             "justMyCode": true
         },
         {
+            "name": "Iambic: Lint",
+            "type": "python",
+            "request": "launch",
+            "module": "iambic.main",
+            "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
+            "args": [
+                "lint"
+            ],
+            "justMyCode": true
+        },
+        {
             "name": "Iambic: Config Discovery",
             "type": "python",
             "request": "launch",
@@ -186,6 +198,17 @@
                 "convert",
             ],
             "justMyCode": true
+        },
+        {
+            "name": "Iambic: Simulate Lambda GitHub Webhook",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/dev_tools/simulate_github_lambda/simulate-github-lambda.py",
+            "args": [
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "envFile": "${workspaceFolder}/.env",
         },
         {
             "name": "Iambic: Lambda App Import",

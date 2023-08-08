@@ -5,13 +5,16 @@ import importlib
 import itertools
 import os
 import subprocess
+import traceback
 from collections import defaultdict
 from enum import Enum
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import List, Optional, Union
 from uuid import uuid4
 
 import ujson as json
+from botocore.exceptions import ClientError, NoCredentialsError
 from pydantic import BaseModel, Field
 from pydantic import create_model as create_pydantic_model
 
@@ -29,11 +32,30 @@ from iambic.core.models import (
 from iambic.core.utils import sort_dict, yaml
 from iambic.plugins.v0_1_0 import PLUGIN_VERSION, aws, azure_ad, google_workspace, okta
 
-CURRENT_IAMBIC_VERSION = "1"
+try:
+    CURRENT_IAMBIC_VERSION = version("iambic-core")
+except PackageNotFoundError:
+    CURRENT_IAMBIC_VERSION = "unknown"
+
+
+class ExceptionReporting(BaseModel):
+    enabled: bool = Field(..., description="Enable or disable exception reporting.")
+    include_variables: Optional[bool] = Field(
+        False,
+        description="Include local variables in the report.",
+    )
+    automatically_send_reports: Optional[bool] = Field(
+        None, description="Automatically send reports without asking for user consent."
+    )
+    email_address: Optional[str] = Field(
+        None,
+        description="Email address for correspondence about the exception, if you would like us to communicate with you.",
+    )
 
 
 class CoreConfig(BaseModel):
     minimum_ulimit: int = 64000
+    exception_reporting: Optional[ExceptionReporting] = None
 
 
 class PluginType(Enum):
@@ -101,6 +123,7 @@ class ExtendsConfig(BaseModel):
 
 class Config(ConfigMixin, BaseTemplate):
     template_type: str = "NOQ::Core::Config"
+    template_schema_url = "https://docs.iambic.org/reference/schemas/config"
     version: str = Field(
         description="Do not change! The version of iambic this repo is compatible with.",
     )
@@ -431,7 +454,7 @@ class Config(ConfigMixin, BaseTemplate):
 
 
 async def load_config(
-    config_path: str,
+    config_path: str | Path,
     configure_plugins: bool = True,
     approved_plugins_only: bool = False,
 ) -> Config:
@@ -455,15 +478,42 @@ async def load_config(
     Returns:
     - Config: The configuration object created from the specified file.
     """
-    log.info("Loading config...")
-    config_path = str(
-        config_path
-    )  # Ensure it's a string in case it's a Path for pydantic
-    config_dict = yaml.load(open(config_path))
-    base_config = Config(file_path=config_path, **config_dict)
-    return await process_config(
-        base_config, config_path, config_dict, configure_plugins, approved_plugins_only
-    )
+    try:
+        log.info("Loading config...")
+        config_path = str(
+            config_path
+        )  # Ensure it's a string in case it's a Path for pydantic
+        config_dict = yaml.load(open(config_path))
+        base_config = Config(file_path=config_path, **config_dict)
+        return await process_config(
+            base_config,
+            config_path,
+            config_dict,
+            configure_plugins,
+            approved_plugins_only,
+        )
+    except NoCredentialsError:
+        log.error(
+            (
+                "Unable to detect AWS Credentials. Please follow the guide here "
+                "to set up AWS credentials: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html"
+            )
+        )
+        raise
+    except ClientError:
+        log.error(
+            "Unable to load existing configuration file",
+            config_path=config_path,
+            stacktrace="".join(traceback.format_list(traceback.extract_stack())[:-1]),
+        )
+        raise
+    except Exception as err:
+        log.error(
+            "Unable to load existing configuration file",
+            config_path=config_path,
+            error=repr(err),
+        )
+        raise
 
 
 async def process_config(

@@ -306,6 +306,9 @@ class ManagedPolicyProperties(BaseModel):
 
 class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
     template_type = AWS_MANAGED_POLICY_TEMPLATE_TYPE
+    template_schema_url = (
+        "https://docs.iambic.org/reference/schemas/aws_iam_managed_policy_template"
+    )
     properties: ManagedPolicyProperties = Field(
         description="The properties of the managed policy",
     )
@@ -316,15 +319,19 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
         return f"arn:{aws_account.partition.value}:iam::{aws_account.account_id}:policy{path}{policy_name}"
 
     def _apply_resource_dict(self, aws_account: AWSAccount = None) -> dict:
-        resource_dict = super()._apply_resource_dict(aws_account)
-        resource_dict["Arn"] = self.get_arn_for_account(aws_account)
+        response = super()._apply_resource_dict(aws_account)
+        response.setdefault("Tags", [])
+        response["Arn"] = self.get_arn_for_account(aws_account)
 
-        if policy_document := resource_dict.pop("PolicyDocument", []):
-            if isinstance(policy_document, list):
-                policy_document = policy_document[0]
-            resource_dict["PolicyDocument"] = policy_document
+        # Ensure only 1 of the following objects
+        # TODO: Have this handled in a cleaner way. Maybe via an attribute on a pydantic field
+        for flat_key in {"Path", "PolicyDocument"}:
+            if isinstance(response.get(flat_key), list):
+                response[flat_key] = response[flat_key][0]
+                if nested_val := response[flat_key].get(flat_key):
+                    response[flat_key] = nested_val
 
-        return resource_dict
+        return response
 
     async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
         client = await aws_account.get_boto3_client("iam")

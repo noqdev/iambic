@@ -1,6 +1,72 @@
 
 # Change Log
 
+## 0.11.23 (Aug 4, 2023)
+
+DOCS:
+* Update IAMbic GitHub Integration docs [#540](https://github.com/noqdev/iambic/pull/540)
+
+ENHANCEMENTS:
+* Support both iambic and /iambic syntax [#542](https://github.com/noqdev/iambic/pull/542)
+* Support iambic version in GitHub comments [#542](https://github.com/noqdev/iambic/pull/542)
+
+BUG FIXES:
+* iambic lint no longer converts expires_at relative time to an absolute [#530](https://github.com/noqdev/iambic/pull/530)
+* Fix issue when identity center details is lost during 2nd setup [#541](https://github.com/noqdev/iambic/pull/541)
+* Handling TooManyRequestsException in boto_crud_call [#544](https://github.com/noqdev/iambic/pull/544)
+* Improved logging in boto_crud_call [#544](https://github.com/noqdev/iambic/pull/544)
+
+THANKS:
+* `Rodrigo C.` from community slack on reporting the TooManyRequestsException issue on large orgs.
+
+## 0.11.17 (Aug 3, 2023)
+
+DOCS:
+* Fix typo [#533](https://github.com/noqdev/iambic/pull/533)
+
+ENHANCEMENTS:
+* Report unhandled exceptions [#516](https://github.com/noqdev/iambic/pull/516)
+
+BUG FIXES:
+* Handle multiple iam paths [#536](https://github.com/noqdev/iambic/pull/536)
+* Verify GitHub access before proceeding [#537](https://github.com/noqdev/iambic/pull/537)
+
+DEV TOOLS:
+* EN-2355 Implement dev workflow to test IAMbic GitHub webhook [#535](https://github.com/noqdev/iambic/pull/535)
+
+THANKS:
+* `Rodrigo C.` from community slack on reporting AWS multiple iam paths issue.
+* `Shatoria` from community slack on testing out the new IAMbic GitHub integration setup process.
+
+## 0.11.11 (Aug 2, 2023)
+
+ENHANCEMENTS:
+* GitHub App creation flow in iambic wizard [#515](https://github.com/noqdev/iambic/pull/515)
+
+## 0.11.8 (Aug 1, 2023)
+
+DOCS:
+* Change project description on PyPI [#527](https://github.com/noqdev/iambic/pull/527)
+** There were some reference to the old project name. Those were cleaned up.
+
+BUG FIXES:
+* Fix #491 Support "merge", "squash", and "rebase" merge method  [#525](https://github.com/noqdev/iambic/pull/525)
+* Fix security/dependabot/26 Bump certifi [#524](https://github.com/noqdev/iambic/pull/524)
+* Fixed bug where none type description was causing an exception on role [#528](https://github.com/noqdev/iambic/pull/528)
+* Attaching and detaching role tags now 2 distinct operations. Fixes to role attribute value resolver on Role._apply_to_account. [#528](https://github.com/noqdev/iambic/pull/528)
+
+THANKS:
+`datfinesoul` for reporting GitHub linear history use case. [#491](https://github.com/noqdev/iambic/issues/491)
+`Simon D.` in community slack for reporting the old project name references. [#527](https://github.com/noqdev/iambic/pull/527)
+
+## 0.11.03 (July 31, 2023)
+
+BUG FIXES:
+* Git commit message not reflecting the linting changes [#521](https://github.com/noqdev/iambic/pull/521)
+
+THANKS:
+`datfinesoul` for reporting git commit message not reflecting the actual changes. [#520](https://github.com/noqdev/iambic/issues/520)
+
 ## 0.11.01 (July 31, 2023)
 
 DOCS:

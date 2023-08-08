@@ -214,6 +214,14 @@ async def apply_role_tags(
 
         log.debug(log_str, tags=tags_to_remove, **log_params)
 
+        if tasks:
+            results: list[list[ProposedChange]] = await asyncio.gather(
+                *tasks, return_exceptions=True
+            )
+            for r in results:
+                response.extend(r)
+
+    tasks = []
     if tags_to_apply:
         log_str = "New tags discovered in AWS."
 

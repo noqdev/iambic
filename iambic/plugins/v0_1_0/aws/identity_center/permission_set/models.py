@@ -212,6 +212,7 @@ class AwsIdentityCenterPermissionSetTemplate(
     AccessModelMixin, AWSTemplate, ExpiryModel
 ):
     template_type: str = AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
+    template_schema_url = "https://docs.iambic.org/reference/schemas/aws_identity_center_permission_set_template"
     owner: Optional[str] = Field(None, description="Owner of the permission set")
     properties: PermissionSetProperties
     access_rules: Optional[list[PermissionSetAccess]] = []

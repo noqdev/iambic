@@ -8,7 +8,9 @@ import os
 import re
 import select
 import sys
+import time
 import uuid
+import webbrowser
 from enum import Enum
 from pathlib import Path
 from typing import Optional, Union
@@ -44,6 +46,11 @@ from iambic.core.template_generation import get_existing_template_map
 from iambic.core.utils import gather_templates, yaml
 from iambic.github.utils import create_workflow_files
 from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
+    create_github_app_code_build_stack,
+    create_github_app_ecr_pull_through_cache_stack,
+    create_github_app_ecr_repo_stack,
+    create_github_app_lambda_stack,
+    create_github_app_roles_stack,
     create_iambic_eventbridge_stacks,
     create_iambic_role_stacks,
     create_spoke_role_stack,
@@ -439,8 +446,10 @@ class ConfigurationWizard:
 
     @property
     def has_aws_account_or_organizations(self) -> bool:
-        return self.config.aws and (
-            self.config.aws.accounts or self.config.aws.organizations
+        return (
+            hasattr(self, "config")
+            and self.config.aws
+            and (self.config.aws.accounts or self.config.aws.organizations)
         )
 
     @property
@@ -503,22 +512,11 @@ class ConfigurationWizard:
         return f"{Path(self.config_path).parent.joinpath(secrets_file)}"
 
     async def set_config_details(self):
-        try:
-            self.config_path = str((await resolve_config_template_path(self.repo_dir)))
-        except RuntimeError:
-            self.config_path = f"{self.repo_dir}/iambic_config.yaml"
+        self.config_path = await self._get_config_path()
 
         if os.path.exists(self.config_path) and os.path.getsize(self.config_path) != 0:
             log.info("Found existing configuration file", config_path=self.config_path)
-            try:
-                self.config = await load_config(self.config_path)
-            except Exception as err:
-                log.error(
-                    "Unable to load existing configuration file",
-                    config_path=self.config_path,
-                    error=repr(err),
-                )
-                sys.exit(1)
+            self.config = await load_config(self.config_path)
         else:
             # Create a stubbed out config file to use for the wizard
             self.config_path = f"{self.repo_dir}/iambic_config.yaml"
@@ -529,6 +527,13 @@ class ConfigurationWizard:
             self.config = await process_config(
                 base_config, self.config_path, base_config.dict()
             )
+
+    async def _get_config_path(self):
+        try:
+            config_path = str((await resolve_config_template_path(self.repo_dir)))
+        except RuntimeError:
+            config_path = f"{self.repo_dir}/iambic_config.yaml"
+        return config_path
 
     def resolve_aws_profile_defaults_from_env(self) -> str:
         if "AWS_ACCESS_KEY_ID" in os.environ:
@@ -1104,7 +1109,7 @@ class ConfigurationWizard:
             identity_arn = get_identity_arn(default_caller_identity)
             click.echo(
                 f"\nIAMbic detected you are using {identity_arn} for AWS access.\n"
-                f"This identity will require the ability to create"
+                f"This identity will require the ability to create "
                 f"CloudFormation stacks, stack sets, and stack set instances."
             )
             if questionary.confirm("Would you like to use this identity?").ask():
@@ -1873,6 +1878,294 @@ class ConfigurationWizard:
         tags = aws_cf_parse_key_value_string(unparse_tags)
         return hub_role_name, spoke_role_name, tags
 
+    def configuration_github_app_aws_lambda_setup(self):
+        from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
+            IAMBIC_GITHUB_APP_SUFFIX,
+        )
+        from iambic.plugins.v0_1_0.github.create_github_app import (
+            get_github_app_secrets,
+        )
+
+        github_app_secrets = get_github_app_secrets()
+
+        assert github_app_secrets
+
+        # safe secret for pem and webhook_url
+
+        click.echo(
+            "\nSetting up a GitHub App for IAMbic involves creating CloudFormation stacks. \n"
+            "If you wish to inspect the templates used or handle their deployment manually, use the `iambic_github_app` templates at the following location:\n"
+            "https://github.com/noqdev/iambic/tree/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates\n"
+            "Note that IAMbic will verify the successful deployment of your stacks, and it will not attempt to overwrite or recreate them if they already exist.\n"
+        )
+
+        unparse_tags = questionary.text(
+            "Add Tags (leave blank or `team=ops_team, cost_center=engineering`): ",
+            default="",
+            validate=validate_aws_cf_input_tags,
+        ).ask()
+        tags = aws_cf_parse_key_value_string(unparse_tags)
+        if not questionary.confirm("Proceed?").unsafe_ask():
+            return
+
+        account_name_to_account_id = {
+            account.account_name: account.account_id
+            for account in self.config.aws.accounts
+        }
+        available_account_names = sorted(list(account_name_to_account_id.keys()))
+        questionary_params = {}
+        question_text = "We recommend you deploy Lambda integration on a non-management account.\nTarget AWS Account name: "
+        if len(available_account_names) < 10:
+            target_account_name = questionary.select(
+                question_text, choices=available_account_names, **questionary_params
+            ).unsafe_ask()
+        else:
+            target_account_name = questionary.autocomplete(
+                question_text,
+                choices=available_account_names,
+                style=CUSTOM_AUTO_COMPLETE_STYLE,
+                **questionary_params,
+            ).unsafe_ask()
+
+        target_account_id = account_name_to_account_id[target_account_name]
+        log.info(f"Target AWS Account ID is {target_account_id}")
+
+        session, _ = self.get_boto3_session_for_account(target_account_id)
+
+        # TODO migration notes since we are using a new secrets format
+        secretsmanager_client = session.client(
+            service_name="secretsmanager", region_name=self.aws_default_region
+        )
+        secrets_kwargs = {}
+        if tags:
+            secrets_kwargs["Tags"] = tags
+        try:
+            response = secretsmanager_client.create_secret(
+                Name="iambic/github-app-secrets",
+                Description="iambic github app private key",
+                SecretString=yaml.dump(github_app_secrets),
+                **secrets_kwargs,
+            )
+        except secretsmanager_client.exceptions.ResourceExistsException:
+            log.info(
+                f"iambic/github-app-secrets already exists in account: {target_account_id} in region: {self.aws_default_region}"
+            )
+
+            needs_to_prompt_user_to_update_secret = True
+            # verify the existing secrets actually match our known values
+            response = secretsmanager_client.get_secret_value(
+                SecretId="iambic/github-app-secrets",
+            )
+            if "SecretString" in response:
+                cloud_secrets = yaml.load(response["SecretString"])
+                if (
+                    cloud_secrets.get("pem", None)
+                    == github_app_secrets.get("pem", None)
+                ) and (
+                    cloud_secrets.get("webhook_secret", None)
+                    == github_app_secrets.get("webhook_secret", None)
+                ):
+                    needs_to_prompt_user_to_update_secret = False
+
+            if (
+                needs_to_prompt_user_to_update_secret
+                and not questionary.confirm(
+                    "Continue with value in existing Secret?"
+                ).unsafe_ask()
+            ):
+                log.error(
+                    "Please remove the iambic/github-app-secrets secret or update the secret before re-running this wizard"
+                )
+                return
+
+        cf_client = session.client(
+            "cloudformation", region_name=self.aws_default_region
+        )
+
+        # Note: We are not going to prompt user to give us an optional CloudFormation Role ARN
+        # to use because it seems like additional friction. If we get feedback to restore it,
+        # we will simply called cf_role_arn = self.cf_role_arn
+        cf_role_arn = None
+
+        successfully_created = asyncio.run(
+            create_github_app_roles_stack(
+                cf_client,
+                self.hub_account_id,
+                IAMBIC_HUB_ROLE_NAME,
+                cf_role_arn,
+                tags=tags,
+            )
+        )
+        assert successfully_created
+
+        # modify the trust policy of IambicHubRole to allow iambic lambda execution role
+        lambda_role_arn = f"arn:aws:iam::{target_account_id}:role/iambic_github_app_lambda_execution{IAMBIC_GITHUB_APP_SUFFIX}"
+
+        self.github_app_amend_trust_policy_for_iambic_integration(lambda_role_arn)
+
+        successfully_created = asyncio.run(
+            create_github_app_ecr_pull_through_cache_stack(
+                cf_client,
+                cf_role_arn,
+                tags=tags,
+            )
+        )
+        assert successfully_created
+
+        successfully_created = asyncio.run(
+            create_github_app_ecr_repo_stack(
+                cf_client,
+                cf_role_arn,
+                tags=tags,
+            )
+        )
+        assert successfully_created
+
+        successfully_created = asyncio.run(
+            create_github_app_code_build_stack(
+                cf_client,
+                target_account_id,
+                cf_role_arn,
+                tags=tags,
+            )
+        )
+        assert successfully_created
+
+        self.github_app_pull_latest_iambic_image(session)
+
+        self.github_app_wait_until_image_is_ready(session)
+
+        successfully_created = asyncio.run(
+            create_github_app_lambda_stack(
+                cf_client,
+                target_account_id,
+                cf_role_arn,
+                tags=tags,
+            )
+        )
+        assert successfully_created
+
+        webhook_url = None
+
+        lambda_stack_name = f"IAMbicGitHubAppLambda{IAMBIC_GITHUB_APP_SUFFIX}"
+        response = cf_client.describe_stacks(StackName=lambda_stack_name)
+        outputs = response["Stacks"][0]["Outputs"]
+        for output in outputs:
+            keyName = output["OutputKey"]
+            if keyName == "FunctionUrl":
+                webhook_url = output["OutputValue"]
+
+        assert webhook_url
+
+        from iambic.plugins.v0_1_0.github.manage_github_app import (
+            generate_jwt,
+            update_webhook_url,
+        )
+
+        github_app_jwt = generate_jwt(github_app_secrets)
+        try:
+            update_webhook_url(webhook_url, github_app_jwt)
+        except Exception:
+            log.exception(
+                "Failed to update webhook URL with GitHub App. Please manually update the webhook URL in the GitHub App settings page",
+                webhook_url=webhook_url,
+            )
+            if not questionary.confirm("Proceed?").unsafe_ask():
+                return
+
+        github_app_url = github_app_secrets.get("html_url", "")
+        log.info(
+            "We are attempting to open a browser window to the GitHub App installation page.\n"
+            "Please install the app and grant it access to your `iambic-templates` and `iambic-templates-gist` repositories.\n"
+            "If your browser doesn't open, please visit the following URL manually to install the GitHub app and grant access.\n"
+            f"{github_app_url}\n"
+        )
+        webbrowser.open(github_app_url, new=0, autoraise=True)
+
+    def github_app_amend_trust_policy_for_iambic_integration(self, lambda_role_arn):
+        hub_session, _ = self.get_boto3_session_for_account(self.hub_account_id)
+        hub_iam_client = hub_session.client("iam", region_name=self.aws_default_region)
+        hub_role_arn = self.config.aws.hub_role_arn
+        hub_role_name = hub_role_arn.split("/")[-1]
+        resp = hub_iam_client.get_role(RoleName=hub_role_name)
+        existing_trust_policy = resp["Role"]["AssumeRolePolicyDocument"]
+        trust_lambda_execution_role = False
+        needs_to_add_statement = True
+        statements: list = existing_trust_policy.get("Statement", [])
+        new_statement = {
+            "Sid": "AllowIAMbicLambdaIntegration",
+            "Effect": "Allow",
+            "Principal": {"AWS": lambda_role_arn},
+            "Action": ["sts:AssumeRole", "sts:TagSession"],
+        }
+        for statement in statements:  # FIXME: watch out other cases
+            if statement.get("Sid", "") == "AllowIAMbicLambdaIntegration":
+                needs_to_add_statement = False
+                if statement["Principal"]["AWS"] != lambda_role_arn:
+                    # Update the statement
+                    statement["Principal"]["AWS"] = lambda_role_arn
+                else:
+                    trust_lambda_execution_role = True
+        if needs_to_add_statement:
+            statements.append(new_statement)
+        if not trust_lambda_execution_role:
+            try:
+                resp = hub_iam_client.update_assume_role_policy(
+                    RoleName=hub_role_name,
+                    PolicyDocument=json.dumps(existing_trust_policy),
+                )
+                log.info(f"Added trust policy on {hub_role_arn} for {lambda_role_arn}")
+            except Exception as e:
+                log.error(e)
+
+    def github_app_pull_latest_iambic_image(self, session):
+        # FIXME shortcircuit if build image is already present
+        # FIXME but then how to deal with version upgrade
+        code_build_client = session.client(
+            "codebuild", region_name=self.aws_default_region
+        )
+
+        try:
+            response = code_build_client.start_build(
+                projectName="iambic_code_build",
+            )
+        except errors.ResourceNotFoundException:
+            log.exception(
+                "CodeBuild project not found. Please inspect the CloudFormation stacks in your AWS account to determine the cause of the failure"
+            )
+            raise
+
+        build_id = response["build"]["id"]
+        # FIXME explain why this is stalling for builds
+        log.info("Preparing container image. This process should take around 2 minutes")
+        for _ in range(6):
+            resp = code_build_client.batch_get_builds(ids=[build_id])
+            build_status = resp["builds"][0]["buildStatus"]
+            if build_status == "IN_PROGRESS":
+                time.sleep(30)
+                continue
+            elif build_status == "SUCCEEDED":
+                break
+            else:
+                raise ValueError(f"build status is {build_status}")
+
+    def github_app_wait_until_image_is_ready(self, session):
+        repository_name = "iambic-ecr-public/iambic/iambic"
+        ecr_client = session.client("ecr", region_name=self.aws_default_region)
+        for _ in range(6):
+            try:
+                resp = ecr_client.describe_images(
+                    repositoryName=repository_name, imageIds=[{"imageTag": "latest"}]
+                )
+                if len(resp["imageDetails"]) == 0:
+                    time.sleep(30)
+                    continue
+                else:
+                    break
+            except ecr_client.exceptions.ImageNotFoundException:
+                time.sleep(30)
+                continue
+
     def configuration_wizard_change_detection_setup(self, aws_org: AWSOrganization):
         click.echo(
             "\nTo setup change detection for iambic it requires creating CloudFormation stacks "
@@ -1957,7 +2250,9 @@ class ConfigurationWizard:
                 choices.append("Okta")
 
             if self.has_aws_account_or_organizations:
+                choices.append("Setup GitHub App Integration using AWS Lambda")
                 choices.append("Generate Github Action Workflows")
+                choices.append("Setup AWS change detection")
                 if (
                     self.config.aws.organizations
                     and not self.config.aws.sqs_cloudtrail_changes_queues
@@ -1997,6 +2292,14 @@ class ConfigurationWizard:
                         f"{secret_question_text} Proceed?"
                     ).unsafe_ask():
                         self.configuration_wizard_azure_ad()
+                elif action == "Setup GitHub App Integration using AWS Lambda":
+                    self.setup_aws_configuration()
+                    if self.has_confirm_cf_permissions:
+                        self.configuration_github_app_aws_lambda_setup()
+                    else:
+                        log.info(
+                            "Unable to edit this attribute without CloudFormation permissions."
+                        )
                 elif action == "Generate Github Action Workflows":
                     self.configuration_wizard_github_workflow()
                 elif action == "Setup AWS change detection":

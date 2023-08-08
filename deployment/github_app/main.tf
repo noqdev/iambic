@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 4.16"
+      version = "~> 5.9"
     }
   }
   required_version = ">= 1.2.0"
@@ -10,68 +10,39 @@ terraform {
 
 provider "aws" {
   region  = var.aws_region
+  profile = var.profile_name
 }
 
 data "aws_caller_identity" "current" {}
 
 locals {
   account_id    = data.aws_caller_identity.current.account_id
-  ecr_image_tag = "latest"
+  lambda_function_name = "${var.lambda_function_name}${var.name_suffix}"
+  api_gateway_name = "${var.api_gateway_name}${var.name_suffix}"
 }
 
-resource "null_resource" "iambic_public_repo" {
 
-  triggers = {
-    always_run = "${timestamp()}"
-  }
-
-  depends_on = [
-    aws_ecr_repository.iambic_private_ecr,
-  ]
-
-  provisioner "local-exec" {
-    command = <<EOF
-        docker logout ${var.iambic_public_repo_url}
-        docker pull ${var.iambic_public_repo_url}/${var.iambic_image_name}:${var.iambic_image_tag}
-        aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${local.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com
-        docker tag ${var.iambic_public_repo_url}/${var.iambic_image_name}:${var.iambic_image_tag} ${aws_ecr_repository.iambic_private_ecr.repository_url}:${local.ecr_image_tag}
-        docker push ${aws_ecr_repository.iambic_private_ecr.repository_url}:${local.ecr_image_tag}
-
-    EOF
-  }
-}
-
-resource "aws_ecr_repository" "iambic_private_ecr" { #tfsec:ignore:aws-ecr-repository-customer-key
-  name                 = "iambic_private_ecr"
-  image_tag_mutability = "MUTABLE" #tfsec:ignore:aws-ecr-enforce-immutable-repository
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
+data "aws_ecr_repository" "iambic_private_ecr" {
+  name = var.iambic_image_repo_name
 }
 
 data "aws_ecr_image" "iambic_private_ecr" {
-  repository_name = aws_ecr_repository.iambic_private_ecr.name
-  image_tag       = local.ecr_image_tag
-
-  depends_on = [
-    null_resource.iambic_public_repo,
-  ]
-
+  repository_name = data.aws_ecr_repository.iambic_private_ecr.name
+  image_tag       = var.iambic_image_tag
 }
 
 data "aws_iam_role" "iambic_github_app_lambda_execution" {
-  name = "iambic_github_app_lambda_execution"
+  name = var.lambda_execution_role_name
 }
 
 
 resource "aws_lambda_function" "iambic_github_app" {
-  image_uri     = "${aws_ecr_repository.iambic_private_ecr.repository_url}:latest" # repo and tag
+  image_uri     = "${data.aws_ecr_repository.iambic_private_ecr.repository_url}:${var.iambic_image_tag}"
   package_type  = "Image"
-  function_name = "iambic_github_app_webhook"
+  function_name = local.lambda_function_name
   role          = data.aws_iam_role.iambic_github_app_lambda_execution.arn
-  memory_size   = 2048
-  timeout       = 900
+  memory_size   = var.lambda_function_memory_size
+  timeout       = var.lambda_function_timeout
 
   source_code_hash = trimprefix(data.aws_ecr_image.iambic_private_ecr.id, "sha256:")
 
@@ -93,12 +64,124 @@ resource "aws_lambda_function" "iambic_github_app" {
 
   depends_on = [
     data.aws_iam_role.iambic_github_app_lambda_execution,
-    aws_ecr_repository.iambic_private_ecr,
-    null_resource.iambic_public_repo,
+    data.aws_ecr_repository.iambic_private_ecr,
   ]
 }
 
 resource "aws_lambda_function_url" "iambic_github_app" {
+  count = var.use_api_gateway_insetad_of_lambda_functions_url ? 0 : 1
   function_name      = aws_lambda_function.iambic_github_app.function_name
   authorization_type = "NONE"
+}
+
+resource "aws_api_gateway_rest_api" "iambic" {
+  count = var.use_api_gateway_insetad_of_lambda_functions_url ? 1 : 0
+  name = local.api_gateway_name
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
+  binary_media_types = [
+    # This is a workaround to force VTL not to transform the request body
+    "application/json",
+  ]
+}
+
+resource "aws_api_gateway_method" "iambic" {
+  count = var.use_api_gateway_insetad_of_lambda_functions_url ? 1 : 0
+  authorization = "NONE"
+  http_method   = "POST"
+  resource_id   = aws_api_gateway_rest_api.iambic[0].root_resource_id
+  rest_api_id   = aws_api_gateway_rest_api.iambic[0].id
+}
+
+resource "aws_api_gateway_integration" "iambic" {
+  count = var.use_api_gateway_insetad_of_lambda_functions_url ? 1 : 0
+  rest_api_id             = aws_api_gateway_rest_api.iambic[0].id
+  resource_id             = aws_api_gateway_rest_api.iambic[0].root_resource_id
+  http_method             = aws_api_gateway_method.iambic[0].http_method
+  integration_http_method = "POST"
+  type                    = "AWS"
+  uri                     = aws_lambda_function.iambic_github_app.invoke_arn
+  passthrough_behavior    = "WHEN_NO_MATCH"
+  content_handling        = "CONVERT_TO_TEXT"
+
+  request_parameters = {
+    "integration.request.header.X-Amz-Invocation-Type" = "'Event'"
+  }
+
+  request_templates = {
+    "application/json" = <<EOF
+{
+  "headers": {
+    #foreach($param in $input.params().header.keySet())
+    "$param": "$util.escapeJavaScript($input.params().header.get($param))"
+    #if($foreach.hasNext),#end
+    #end
+  },
+  "method": "$context.httpMethod",
+  "rawBody": "$util.escapeJavaScript($util.base64Decode($input.body))"
+}
+EOF
+  }
+}
+
+resource "aws_api_gateway_method_response" "response_200" {
+  count = var.use_api_gateway_insetad_of_lambda_functions_url ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.iambic[0].id
+  resource_id = aws_api_gateway_rest_api.iambic[0].root_resource_id
+  http_method = aws_api_gateway_method.iambic[0].http_method
+  status_code = "200"
+}
+
+resource "aws_api_gateway_integration_response" "response_200" {
+  count = var.use_api_gateway_insetad_of_lambda_functions_url ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.iambic[0].id
+  resource_id = aws_api_gateway_rest_api.iambic[0].root_resource_id
+  http_method = aws_api_gateway_method.iambic[0].http_method
+  status_code = aws_api_gateway_method_response.response_200[0].status_code
+}
+
+resource "aws_api_gateway_deployment" "iambic" {
+  count = var.use_api_gateway_insetad_of_lambda_functions_url ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.iambic[0].id
+
+  triggers = {
+    # NOTE: The configuration below will satisfy ordering considerations,
+    #       but not pick up all future REST API changes. More advanced patterns
+    #       are possible, such as using the filesha1() function against the
+    #       Terraform configuration file(s) or removing the .id references to
+    #       calculate a hash against whole resources. Be aware that using whole
+    #       resources will show a difference after the initial implementation.
+    #       It will stabilize to only change when resources change afterwards.
+    redeployment = sha1(jsonencode([
+      aws_api_gateway_rest_api.iambic[0].root_resource_id,
+      aws_api_gateway_method.iambic[0].id,
+      aws_api_gateway_integration.iambic[0].id,
+      aws_api_gateway_integration.iambic[0].request_templates,
+      aws_api_gateway_method_response.response_200[0].id,
+      aws_api_gateway_integration_response.response_200[0].id,
+    ]))
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_api_gateway_stage" "prod" {
+  count = var.use_api_gateway_insetad_of_lambda_functions_url ? 1 : 0
+  deployment_id = aws_api_gateway_deployment.iambic[0].id
+  rest_api_id   = aws_api_gateway_rest_api.iambic[0].id
+  stage_name    = var.api_gateway_stage_name
+}
+
+resource "aws_lambda_permission" "apigw_lambda" {
+  count = var.use_api_gateway_insetad_of_lambda_functions_url ? 1 : 0
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.iambic_github_app.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
+  source_arn = "arn:aws:execute-api:${var.aws_region}:${local.account_id}:${aws_api_gateway_rest_api.iambic[0].id}/*/*"
 }

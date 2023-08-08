@@ -1,11 +1,16 @@
 # Config
 
-*A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.*
+See [Template Schema Validation](/reference/template_validation_ide) to learn how to validate templates automatically in your IDE.
+
+## Description
+
+A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
 
 ## Properties
 
 - **`template_type`** *(string)*: Default: `"NOQ::Core::Config"`.
+- **`template_schema_url`** *(string)*: Default: `"https://docs.iambic.org/reference/schemas/config"`.
 - **`owner`** *(string)*
 - **`notes`** *(string)*
 - **`iambic_managed`**: Controls the directionality of Iambic changes. Default: `"undefined"`.
@@ -19,7 +24,7 @@ configurations for other models used in IAMbic.*
 - **`secrets`** *(object)*: Secrets should only be used in memory and never serialized out. Default: `{}`.
 - **`plugin_instances`** *(array)*: A list of the plugin instances parsed as part of the plugin paths.
   - **Items**: Refer to *[#/definitions/ProviderPlugin](#definitions/ProviderPlugin)*.
-- **`core`**: Core configuration options for iambic. Default: `{"minimum_ulimit": 64000}`.
+- **`core`**: Core configuration options for iambic. Default: `{"minimum_ulimit": 64000, "exception_reporting": null}`.
   - **All of**
     - : Refer to *[#/definitions/CoreConfig](#definitions/CoreConfig)*.
 ## Definitions
@@ -62,7 +67,16 @@ configurations for other models used in IAMbic.*
   - **`templates`** *(array)*: The list of templates used for this provider.
     - **Items**
 
+<a id="definitions/ExceptionReporting"></a>
+
+- **`ExceptionReporting`** *(object)*
+  - **`enabled`** *(boolean)*: Enable or disable exception reporting.
+  - **`include_variables`** *(boolean)*: Include local variables in the report. Default: `false`.
+  - **`automatically_send_reports`** *(boolean)*: Automatically send reports without asking for user consent.
+  - **`email_address`** *(string)*: Email address for correspondence about the exception, if you would like us to communicate with you.
+
 <a id="definitions/CoreConfig"></a>
 
 - **`CoreConfig`** *(object)*
   - **`minimum_ulimit`** *(integer)*: Default: `64000`.
+  - **`exception_reporting`**: Refer to *[#/definitions/ExceptionReporting](#definitions/ExceptionReporting)*.
