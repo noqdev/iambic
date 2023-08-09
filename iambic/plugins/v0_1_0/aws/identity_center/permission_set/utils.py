@@ -132,9 +132,9 @@ async def get_permission_set_users_and_groups(
 
     for account_assignments in all_account_assignments:
         for aa in account_assignments:
-            # FIXME
+            # Special case handling when identity_store using AD integrations
+            # cannot list users and groups ahead of time without filters.
             if aa["PrincipalId"] not in response[aa["PrincipalType"].lower()]:
-                "d-9067a5ad2b"
                 object_type = aa["PrincipalType"].lower()
 
                 if object_type == "user":
@@ -161,6 +161,8 @@ async def get_permission_set_users_and_groups(
                     }
                 else:
                     log.error(f"unknown object_type: {object_type}")
+            # End Special case handling when identity_store using AD integrations
+            # cannot list users and groups ahead of time without filters.
 
             response[aa["PrincipalType"].lower()][aa["PrincipalId"]]["accounts"].append(
                 aa["AccountId"]

@@ -439,7 +439,6 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
                     for permission_set in permission_set_details
                 }
 
-            # FIXME to simulate no knowledge of users and groups
             tmp_users_and_groups = await asyncio.gather(
                 *[
                     legacy_paginated_search(
