@@ -471,9 +471,6 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
                 for x in exceptions_seen:
                     log.error(x)
 
-            # technically, it will more like exceptions from the above flow
-            # so we will need to return_exceptions=True and handle exceptions parsing
-            users_and_groups = []  # FIXME to simulate we receive no results
             for user_or_group in users_and_groups:
                 if "Users" in user_or_group:
                     self.identity_center_details.user_map = {
