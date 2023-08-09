@@ -439,7 +439,8 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
                     for permission_set in permission_set_details
                 }
 
-            users_and_groups = await asyncio.gather(
+            # FIXME to simulate no knowledge of users and groups
+            tmp_users_and_groups = await asyncio.gather(
                 *[
                     legacy_paginated_search(
                         identity_store_client.list_users,
@@ -453,8 +454,26 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
                         retain_key=True,
                         IdentityStoreId=self.identity_center_details.identity_store_id,
                     ),
-                ]
+                ],
+                return_exceptions=True,
             )
+            users_and_groups = []
+            exceptions_seen = []
+            for x in tmp_users_and_groups:
+                if isinstance(x, Exception):
+                    exceptions_seen.append(x)
+                else:
+                    users_and_groups.append(x)
+            if exceptions_seen:
+                log.error(
+                    "seen exceptions during user_and_group resolution, defer resolution to later"
+                )
+                for x in exceptions_seen:
+                    log.error(x)
+
+            # technically, it will more like exceptions from the above flow
+            # so we will need to return_exceptions=True and handle exceptions parsing
+            users_and_groups = []  # FIXME to simulate we receive no results
             for user_or_group in users_and_groups:
                 if "Users" in user_or_group:
                     self.identity_center_details.user_map = {
