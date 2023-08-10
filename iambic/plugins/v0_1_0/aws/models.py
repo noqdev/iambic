@@ -186,7 +186,7 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
 
     class Config:
         fields = {"boto3_session_map": {"exclude": True}}
-        extra = Extra.forbid
+        extra = Extra.ignore
 
     @property
     def region_name(self):
@@ -317,7 +317,7 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
 
     class Config:
         fields = {"hub_session_info": {"exclude": True}}
-        extra = Extra.forbid
+        extra = Extra.ignore
 
     async def get_boto3_session(self, region_name: str = None):
         region_name = region_name or self.region_name
