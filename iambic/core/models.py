@@ -403,7 +403,7 @@ class TemplateChangeDetails(PydanticBaseModel):
 
     class Config:
         json_encoders = {PrettyOrderedSet: list}
-        extra = Extra.forbid
+        extra = Extra.ignore
 
     @validator("template_path")
     def validate_template_path(cls, v: Union[str, Path]):
@@ -676,7 +676,7 @@ class ExpiryModel(IambicPydanticBaseModel):
             datetime.datetime: simplify_dt,
             datetime.date: simplify_dt,
         }
-        extra = Extra.forbid
+        extra = Extra.ignore
 
     @validator("expires_at", pre=True)
     def parse_expires_at(cls, value):
