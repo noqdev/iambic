@@ -394,28 +394,31 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
                 ]["PolicyArn"]
 
             apply_awaitable = boto_crud_call(client.create_role, **account_role)
-            account_change_details.extend_changes(
-                await plugin_apply_wrapper(apply_awaitable, proposed_changes)
+            create_role_result = await plugin_apply_wrapper(
+                apply_awaitable, proposed_changes
             )
+            account_change_details.extend_changes(create_role_result)
 
-        tasks.extend(
-            [
-                apply_role_managed_policies(
-                    role_name,
-                    client,
-                    managed_policies,
-                    existing_managed_policies,
-                    log_params,
-                ),
-                apply_role_inline_policies(
-                    role_name,
-                    client,
-                    inline_policies,
-                    existing_inline_policies,
-                    log_params,
-                ),
-            ]
-        )
+        if not account_change_details.exceptions_seen:
+            # we can only proceed if we don't see other exceptions (like create exceptions).
+            tasks.extend(
+                [
+                    apply_role_managed_policies(
+                        role_name,
+                        client,
+                        managed_policies,
+                        existing_managed_policies,
+                        log_params,
+                    ),
+                    apply_role_inline_policies(
+                        role_name,
+                        client,
+                        inline_policies,
+                        existing_inline_policies,
+                        log_params,
+                    ),
+                ]
+            )
 
         changes_made = await asyncio.gather(*tasks)
         if any(changes_made):

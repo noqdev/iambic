@@ -1,6 +1,29 @@
 
 # Change Log
 
+## 0.11.32 (Aug 8, 2023)
+
+ENHANCEMENTS:
+* Address part of #490. Name the hyperlink with more details [#549](https://github.com/noqdev/iambic/pull/549)
+* Added a template_schema_url to all IAMbic templates. [#534](https://github.com/noqdev/iambic/pull/534)
+* Addresses some of #490 Plan output improvement [#550](https://github.com/noqdev/iambic/pull/550)
+
+BUG FIXES:
+* EN-2345 Runs lint before plan [#547](https://github.com/noqdev/iambic/pull/547)
+* EN-2343: Show message when credentials are not provided  [#539](https://github.com/noqdev/iambic/pull/539)
+* Fix #489 Handle change_summary differently during rendering [#548](https://github.com/noqdev/iambic/pull/548)
+* Fix #507 git apply exceptions is not properly reported in comments [#554](https://github.com/noqdev/iambic/pull/554)
+
+DEV EXPERIENCE:
+* Track *.png and *.jpg using Git LFS [#551](https://github.com/noqdev/iambic/pull/551)
+
+
+THANKS:
+* `datfinesoul` for giving feedback on auto formatting and relative time -> absolute timestamp commits made by automation
+* `datfinesoul` on reporting plan output is incorrect [#489](https://github.com/noqdev/iambic/issues/489)
+* `datfinesoul` on giving feedback on the need of ease of use to lookup schema reference in templates
+* `mike.p` on community slack for reporting the issue when the PR contains invalid AWS principal during git apply cycle.
+
 ## 0.11.23 (Aug 4, 2023)
 
 DOCS:
