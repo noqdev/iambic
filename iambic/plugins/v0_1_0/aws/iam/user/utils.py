@@ -7,7 +7,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from io import StringIO
 from itertools import chain
-from typing import TYPE_CHECKING, Union
+from typing import Union
 
 import pytz
 from deepdiff import DeepDiff
@@ -19,17 +19,20 @@ from iambic.core.utils import aio_wrapper, plugin_apply_wrapper
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, paginated_search
 
-if TYPE_CHECKING:
-    from iambic.plugins.v0_1_0.aws.handlers import AWSConfig
 
-
-def parse_report_date_str(report_date: str) -> str:
+def parse_report_date_str(report_date: str) -> Union[datetime, None]:
     if report_date in ["N/A", "no_information"]:
-        return "Never"
+        return None
     else:
-        report_date = datetime.strptime(report_date, "%Y-%m-%dT%H:%M:%S+00:00").replace(
+        return datetime.strptime(report_date, "%Y-%m-%dT%H:%M:%S+00:00").replace(
             tzinfo=pytz.UTC
         )
+
+
+def last_used_date_to_str(report_date: Union[datetime, None]) -> str:
+    if not report_date:
+        return "Never"
+    else:
         if report_date > (datetime.utcnow() - timedelta(days=30)).replace(
             tzinfo=pytz.UTC
         ):
@@ -77,7 +80,7 @@ async def get_credential_report(aws_account: AWSAccount) -> dict:
             "Credential report generation timeout",
             aws_account=str(aws_account),
         )
-        return {aws_account.account_id: {}}
+        return {}
 
     report_str = credential_report["Content"].decode("utf-8")
     reader = csv.DictReader(StringIO(report_str))
@@ -85,7 +88,7 @@ async def get_credential_report(aws_account: AWSAccount) -> dict:
     user_summaries = {}
     for row in report_rows:
         user_summaries[row["user"]] = {
-            "account": str(aws_account),
+            "account": aws_account.account_id,
             "mfa_enabled": row["mfa_active"] == "true",
             "password": {
                 "enabled": row["password_enabled"] == "true",
@@ -123,15 +126,19 @@ async def get_credential_report(aws_account: AWSAccount) -> dict:
     return user_summaries
 
 
-async def generate_user_aws_metadata(aws_config: AWSConfig):
-    user_aws_metadata_map = defaultdict(list)
+async def get_credential_summary_across_accounts(
+    aws_accounts: list[AWSAccount],
+) -> dict:
+    user_account_credential_map = defaultdict(dict)
     all_account_reports = await asyncio.gather(
-        *[get_credential_report(a) for a in aws_config.accounts]
+        *[get_credential_report(a) for a in aws_accounts]
     )
     for account_report in all_account_reports:
         for user, user_summary in account_report.items():
-            user_aws_metadata_map[user].append(user_summary)
-    return user_aws_metadata_map
+            user_account_credential_map[user][
+                user_summary.pop("account")
+            ] = user_summary
+    return user_account_credential_map
 
 
 async def get_user_inline_policy_names(user_name: str, iam_client):
@@ -188,6 +195,37 @@ async def get_user_inline_policies(
         ]
 
 
+async def get_user_credentials(user_name: str, iam_client, get_last_used: bool) -> dict:
+    response = {"AccessKeys": [], "Password": {}}
+
+    try:
+        _ = await boto_crud_call(iam_client.get_login_profile, UserName=user_name)
+        response["Password"]["Enabled"] = True
+    except iam_client.exceptions.NoSuchEntityException:
+        response["Password"]["Enabled"] = False
+
+    user_access_keys = await boto_crud_call(
+        iam_client.list_access_keys, UserName=user_name
+    )
+    user_access_keys = user_access_keys["AccessKeyMetadata"]
+    for key in user_access_keys:
+        access_key = {
+            "Id": key["AccessKeyId"],
+            "Enabled": key["Status"] == "Active",
+        }
+        if get_last_used:
+            last_used = await boto_crud_call(
+                iam_client.get_access_key_last_used, AccessKeyId=key["AccessKeyId"]
+            )
+            access_key["LastUsed"] = last_used_date_to_str(
+                last_used["AccessKeyLastUsed"].get("LastUsedDate")
+            )
+
+        response["AccessKeys"].append(access_key)
+
+    return response
+
+
 async def get_user_managed_policies(user_name: str, iam_client) -> list[dict[str, str]]:
     marker: dict[str, str] = {}
     policies = []
@@ -207,7 +245,12 @@ async def get_user_managed_policies(user_name: str, iam_client) -> list[dict[str
     return [{"PolicyArn": policy["PolicyArn"]} for policy in policies]
 
 
-async def get_user(user_name: str, iam_client, include_policies: bool = True) -> dict:
+async def get_user(
+    user_name: str,
+    iam_client,
+    include_policies: bool,
+    include_credentials: bool,
+) -> dict:
     try:
         current_user = (await boto_crud_call(iam_client.get_user, UserName=user_name))[
             "User"
@@ -222,6 +265,10 @@ async def get_user(user_name: str, iam_client, include_policies: bool = True) ->
             current_user["Groups"] = await get_user_groups(
                 user_name, iam_client, as_dict=False
             )
+        if include_credentials:
+            current_user["Credentials"] = await get_user_credentials(
+                user_name, iam_client, True
+            )
     except iam_client.exceptions.NoSuchEntityException:
         current_user = {}
 
@@ -235,7 +282,10 @@ async def get_user_across_accounts(
         iam_client = await aws_account.get_boto3_client("iam")
         return {
             aws_account.account_id: await get_user(
-                user_name, iam_client, include_policies
+                user_name,
+                iam_client,
+                include_policies,
+                getattr(aws_account, "enable_iam_user_credentials", False),
             )
         }
 
@@ -409,6 +459,126 @@ async def apply_user_permission_boundary(
         log.debug(
             log_str, permission_boundary=existing_boundary_policy_arn, **log_params
         )
+
+    if tasks:
+        results: list[list[ProposedChange]] = await asyncio.gather(*tasks)
+        return list(chain.from_iterable(results))
+    else:
+        return response
+
+
+async def apply_user_credentials(
+    user_name,
+    iam_client,
+    template_credentials: dict,
+    log_params: dict,
+) -> list[ProposedChange]:
+    if not template_credentials:
+        return []
+
+    tasks = []
+    response = []
+    current_credentials = await get_user_credentials(user_name, iam_client, False)
+    password_currently_enabled = current_credentials["Password"]["Enabled"]
+    template_access_key_map = {
+        access_key["Id"]: access_key
+        for access_key in template_credentials["AccessKeys"]
+    }
+    current_access_key_map = {
+        access_key["Id"]: access_key for access_key in current_credentials["AccessKeys"]
+    }
+
+    if password_currently_enabled and not template_credentials["Password"]["Enabled"]:
+        log_str = "Disable user password."
+        proposed_changes = [
+            ProposedChange(
+                change_type=ProposedChangeType.DELETE,
+                resource_type="aws:iam:user",
+                resource_id=user_name,
+                attribute="password",
+            )
+        ]
+        response.extend(proposed_changes)
+        if ctx.execute:
+            log_str = f"{log_str} Deleting password..."
+
+            tasks.append(
+                plugin_apply_wrapper(
+                    boto_crud_call(iam_client.delete_login_profile, UserName=user_name),
+                    proposed_changes,
+                )
+            )
+
+        log.debug(log_str, **log_params)
+    elif not password_currently_enabled and template_credentials["Password"]["Enabled"]:
+        return [
+            ProposedChange(
+                change_type=ProposedChangeType.CREATE,
+                resource_type="aws:iam:user",
+                resource_id=user_name,
+                attribute="password",
+                exceptions_seen=[
+                    "Enable user password is not supported in IAMbic. Please use the AWS Console or CLI."
+                ],
+            )
+        ]
+
+    for access_key_id, access_key in template_access_key_map.items():
+        current_access_key = current_access_key_map.get(access_key_id)
+        if not current_access_key:
+            # Template has an access key that does not exist in AWS
+            log.info(
+                "Desync detected on user access keys.",
+                desynced_access_key=access_key_id,
+                current_credentials=current_credentials,
+                **log_params,
+            )
+            continue
+        currently_enabled = current_access_key["Enabled"]
+        template_enabled = access_key["Enabled"]
+        if currently_enabled and not template_enabled:
+            log_str = "Disable user access key."
+            proposed_changes = [
+                ProposedChange(
+                    change_type=ProposedChangeType.DELETE,
+                    resource_type="aws:iam:user",
+                    resource_id=user_name,
+                    attribute=access_key_id,
+                    change_summary={"AccessKeyId": access_key_id},
+                )
+            ]
+            response.extend(proposed_changes)
+
+            if ctx.execute:
+                log_str = f"{log_str} Disabling access key..."
+
+                tasks.append(
+                    plugin_apply_wrapper(
+                        boto_crud_call(
+                            iam_client.update_access_key,
+                            UserName=user_name,
+                            AccessKeyId=access_key_id,
+                            Status="Inactive",
+                        ),
+                        proposed_changes,
+                    )
+                )
+
+            log.debug(log_str, access_key_id=current_access_key["Id"], **log_params)
+        elif not currently_enabled and template_enabled:
+            return [
+                ProposedChange(
+                    change_type=ProposedChangeType.CREATE,
+                    resource_type="aws:iam:user",
+                    resource_id=user_name,
+                    attribute=access_key_id,
+                    change_summary={"AccessKeyId": access_key_id},
+                    exceptions_seen=[
+                        "Enable user access key is not supported in IAMbic. "
+                        "Please use the AWS Console or CLI."
+                    ],
+                )
+            ]
 
     if tasks:
         results: list[list[ProposedChange]] = await asyncio.gather(*tasks)

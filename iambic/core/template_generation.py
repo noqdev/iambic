@@ -1028,13 +1028,13 @@ def merge_model(  # noqa: C901
                         except Exception as err:
                             log.exception(
                                 f"Failed to merge template attribute. {IAMBIC_ERR_MSG}",
-                                key=key,
+                                key=str(key),
                                 new_value=[
-                                    {"value": str(val), "type": type(val)}
+                                    {"value": str(val), "type": str(type(val))}
                                     for val in new_value
                                 ],
                                 existing_value=[
-                                    {"value": str(val), "type": type(val)}
+                                    {"value": str(val), "type": str(type(val))}
                                     for val in existing_value
                                 ],
                                 err=repr(err),

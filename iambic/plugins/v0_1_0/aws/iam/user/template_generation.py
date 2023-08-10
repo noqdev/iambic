@@ -25,9 +25,11 @@ from iambic.plugins.v0_1_0.aws.iam.user.models import (
 )
 from iambic.plugins.v0_1_0.aws.iam.user.utils import (
     get_user,
+    get_user_credentials,
     get_user_groups,
     get_user_inline_policies,
     get_user_managed_policies,
+    last_used_date_to_str,
     list_user_tags,
     list_users,
 )
@@ -151,7 +153,14 @@ async def generate_user_resource_file_for_all_accounts(
 ) -> list:
     async def get_user_for_account(aws_account: AWSAccount):
         iam_client = await aws_account.get_boto3_client("iam")
-        return {aws_account.account_id: await get_user(user_name, iam_client)}
+        return {
+            aws_account.account_id: await get_user(
+                user_name,
+                iam_client,
+                True,
+                getattr(aws_account, "enable_iam_user_credentials", False),
+            )
+        }
 
     account_resource_dir_map = {
         aws_account.account_id: get_response_dir(exe_message, aws_account)
@@ -212,6 +221,17 @@ async def set_user_resource_tags(
     iam_client = await aws_account.get_boto3_client("iam")
     user_tags = await list_user_tags(user_name, iam_client)
     await resource_file_upsert(user_resource_path, {"Tags": user_tags}, False)
+
+
+async def set_user_credentials(
+    user_name: str, user_resource_path: str, aws_account: AWSAccount
+):
+    iam_client = await aws_account.get_boto3_client("iam")
+    await resource_file_upsert(
+        user_resource_path,
+        {"Credentials": await get_user_credentials(user_name, iam_client, True)},
+        False,
+    )
 
 
 async def set_user_resource_inline_policies(
@@ -287,6 +307,7 @@ async def create_templated_user(  # noqa: C901
     permissions_boundary_resources = list()
     group_resources = list()
     tag_resources = list()
+    credential_resources = list()
     import_actions = set()
 
     for account_id, user_dict in account_id_to_user_map.items():
@@ -353,6 +374,19 @@ async def create_templated_user(  # noqa: C901
                 }
             )
 
+        if config.enable_iam_user_credentials:
+            if credentials := user_dict.get("credentials"):
+                if credentials.get("password"):
+                    credentials["password"]["last_used"] = last_used_date_to_str(
+                        user_dict.get("password_last_used")
+                    )
+                credential_resources.append(
+                    {
+                        "account_id": account_id,
+                        "resources": [{"resource_val": credentials}],
+                    }
+                )
+
         if description := user_dict.get("description"):
             description_resources.append(
                 {"account_id": account_id, "resources": [{"resource_val": description}]}
@@ -385,6 +419,19 @@ async def create_templated_user(  # noqa: C901
             num_of_accounts,
             permissions_boundary_resources,
             prefer_templatized=prefer_templatized,
+        )
+
+    if config.enable_iam_user_credentials and credential_resources:
+        user_template_properties["credentials"] = await group_dict_attribute(
+            aws_account_map,
+            num_of_accounts,
+            credential_resources,
+            prefer_templatized=prefer_templatized,
+        )
+        log.warning(
+            "Grouped credentials",
+            credentials=user_template_properties["credentials"],
+            ungrouped=credential_resources,
         )
 
     if description_resources:
@@ -470,6 +517,7 @@ async def collect_aws_users(
 
     set_user_resource_groups_semaphore = NoqSemaphore(set_user_resource_groups, 25)
     set_user_resource_tags_semaphore = NoqSemaphore(set_user_resource_tags, 30)
+    set_user_credentials_semaphore = NoqSemaphore(set_user_credentials, 30)
 
     log.info(
         "Generating AWS user templates. Beginning to retrieve AWS IAM Users.",
@@ -567,6 +615,13 @@ async def collect_aws_users(
             "Setting tags in user templates", accounts=list(aws_account_map.keys())
         )
         await set_user_resource_tags_semaphore.process(messages)
+
+        if config.enable_iam_user_credentials:
+            log.info(
+                "Setting credentials in user templates",
+                accounts=list(aws_account_map.keys()),
+            )
+            await set_user_credentials_semaphore.process(messages)
         log.info(
             "Finished retrieving user details", accounts=list(aws_account_map.keys())
         )

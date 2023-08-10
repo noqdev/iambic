@@ -317,7 +317,7 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
 
     class Config:
         fields = {"hub_session_info": {"exclude": True}}
-        extra = Extra.forbid
+        extra = Extra.allow
 
     async def get_boto3_session(self, region_name: str = None):
         region_name = region_name or self.region_name
@@ -499,6 +499,9 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
             "organization",
             "aws_config",
         }
+        if hasattr(self, "enable_iam_user_credentials"):
+            required_exclude.add("enable_iam_user_credentials")
+
         if exclude:
             exclude.update(required_exclude)
         else:
