@@ -64,6 +64,15 @@ def has_github_app_secrets_locally():
     return os.path.exists(full_path)
 
 
+def remove_github_app_secrets():
+    full_path = os.path.expanduser(SAVE_DIR)
+    os.makedirs(full_path, exist_ok=True)
+    full_path = f"{full_path}/.github_secrets.yaml"
+    if os.path.exists(full_path):
+        os.remove(full_path)
+        log.info(f"Remove local GitHub App secrets from {full_path}")
+
+
 def get_github_app_secrets():
     full_path = os.path.expanduser(SAVE_DIR)
     os.makedirs(full_path, exist_ok=True)

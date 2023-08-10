@@ -1884,11 +1884,37 @@ class ConfigurationWizard:
         )
         from iambic.plugins.v0_1_0.github.create_github_app import (
             get_github_app_secrets,
+            has_github_app_secrets_locally,
+            remove_github_app_secrets,
         )
+        from iambic.plugins.v0_1_0.github.manage_github_app import (
+            generate_jwt,
+            update_webhook_url,
+            verify_access,
+        )
+
+        if has_github_app_secrets_locally():
+            existing_secrets = get_github_app_secrets()
+            owner = existing_secrets.get("owner", {}).get("login", "UNKNOWN")
+            app_name = existing_secrets.get("name", "UNKNOWN_APP_NAME")
+            if not questionary.confirm(
+                f"We found existing GitHub app secrets for owner: {owner} as app: {app_name}.\n"
+                "Do you want us to use it to setup IAMbic GitHub integration"
+            ).unsafe_ask():
+                log.error(
+                    "Please remove ~/.iambic/.github_secrets.yaml before re-running this wizard"
+                )
+                return
 
         github_app_secrets = get_github_app_secrets()
 
         assert github_app_secrets
+
+        # verify github app control plane access
+        github_app_jwt = generate_jwt(github_app_secrets)
+        if not verify_access(github_app_jwt):
+            log.error("Unable to continue. Abort.")
+            return
 
         # safe secret for pem and webhook_url
 
@@ -2057,11 +2083,6 @@ class ConfigurationWizard:
 
         assert webhook_url
 
-        from iambic.plugins.v0_1_0.github.manage_github_app import (
-            generate_jwt,
-            update_webhook_url,
-        )
-
         github_app_jwt = generate_jwt(github_app_secrets)
         try:
             update_webhook_url(webhook_url, github_app_jwt)
@@ -2072,6 +2093,9 @@ class ConfigurationWizard:
             )
             if not questionary.confirm("Proceed?").unsafe_ask():
                 return
+
+        # Remove the local secrets because it's already saved in secret manager
+        remove_github_app_secrets()
 
         github_app_url = github_app_secrets.get("html_url", "")
         log.info(
