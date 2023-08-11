@@ -10,17 +10,30 @@
 
 "IAMbic: Version Control for IAM"
 
-Easily manage and streamline cloud Identity and Access Management (IAM) with IAMbic, a multi-cloud IAM control plane. Discover more at [https://docs.iambic.org](https://docs.iambic.org), and check out [BeABetterDev's IAMbic Overview and Deep Dive video](https://www.youtube.com/watch?v=ryEseI_-12o) on YouTube.
+IAMbic is designed for DevSecOps, Security, and Compliance teams. It provides enhanced visibility, auditing, and (optionally) control over IAM at scale. It integrates with IAM sources like AWS, Okta, Azure AD, and Google Workspace, consolidating them into a single version control system (Git) in a common, human-readable YAML files that are called "IAMbic templates".
+
+Whether you're managing resources through Terraform, CDK, CloudFormation, manual console operations, or a combination of these, IAMbic keeps your Git repository updated with the real-time state of your cloud IAM. Any IAM change, irrespective of its origin, triggers a git commit. This ensures you have a consolidated Git repository of all your IAM, presented in a common format, complete with a comprehensive audit trail in Git History. This trail details every change, its timestamp, and the responsible entity.
+
+If you'd prefer a hands-off approach, IAMbic can function purely as an auditing and visibility tool to have increased visibility over IAM changes, as mentioned above. But you can also use IAMbic to manage and prevent drift on the IAM resources that you specify. IAMbic templates are bi-directional, which means IAMbic can also write IAM changes back to the cloud through your CI/CD pipeline. A pull request with the desired change would be created in GitHub, approved, and then reflected back in the cloud and Git. Additionally, IAMbic lets you declare temporary access or permissions - It will take care of expiring and removing policies after a defined expiration period. Examples of this are [in IAMbic's Quick Start Guide](https://docs.iambic.org/getting_started/aws#31---create-dynamic-iam-role-policies-that-vary-per-account).
+
+If you opt to manage some of your resources via IAMbic, there's an optional feature to "prevent drift" on those resources. Any out-of-band changes to the IAMbic templates you've specified will be automatically reverted, making IAMbic the definitive source for that resource's definition. This is particularly useful for centralized resources like your cloud admin groups in Okta/Azure AD/Google Workspace, shared Permission Sets/IAM Roles, or Service Control Policies.
+
+If you'd like to learn more about the Github Pull-Request flow for making IAM changes, Check out an example on our [GitOps/IAMOps Philosophy page](https://docs.iambic.org/reference/iamops_philosophy#guide-to-the-iambic-apply-process). We also have a [sample iambic-templates repository](https://github.com/noqdev/iambic-templates-examples), which is fully managed by IAMbic.
+
+If you opt to manage some of your resources via IAMbic, there's an optional feature to "prevent drift" on those resources. Any out-of-band changes to the IAMbic templates you've specified will be automatically reverted, making IAMbic the definitive source for that resource's definition. This is particularly useful for centralized resources like your cloud admin group in Okta/Azure AD, shared Permission Sets/IAM Roles, or Service Control Policies.
+
+Discover more at [https://docs.iambic.org](https://docs.iambic.org), and check out [BeABetterDev's IAMbic Overview and Deep Dive video](https://www.youtube.com/watch?v=ryEseI_-12o) on YouTube. We're also on [Slack](https://communityinviter.com/apps/noqcommunity/noq) if you'd like help getting started or have any questions.
 
 ## Key Features
 
 <!-- Keep this in sync with the list of features in the IAMbic Docs Overview Page -->
 
-- **[Universal Cloud Identity](https://docs.iambic.org/getting_started/)**: Unify cloud identity management for AWS, Okta, Azure Active Directory, Google Workspace with more to come.
-- **[Temporary Access](https://docs.iambic.org/getting_started/aws#32---create-temporary-expiring-iam-permissions)**: Declaratively define and automate expiration dates for resources, permissions, and access rules.
+- **[Version Control for IAM](https://docs.iambic.org/getting_started/)**: IAMbic helps you audit and (optionally) manage IAM from different sources by bringing them together into one Git repository in an easy-to-read format.
+- **[Comprehensive audit trail](https://docs.iambic.org/getting_started/)**: IAMbic creates Git commits for all IAM changes, regardless of how they take place. This gives you a comprehensive audit trail in Git history.
+- **[Temporary Access and Permissions](https://docs.iambic.org/getting_started/aws#32---create-temporary-expiring-iam-permissions)**: Declaratively define and automate expiration dates for resources, permissions, and access rules.
+- **[Drift Prevention](https://docs.iambic.org/how_to_guides/prevent-drift)**: Protect the IAM resources you want to be exclusively managed via IAMbic. IAMbic will automatically revert any out-of-band changes to those resources.
 - **[Dynamic AWS Permissions](https://docs.iambic.org/getting_started/aws#31---create-dynamic-iam-role-policies-that-vary-per-account)**: Simplify multi-account AWS management with flexible templates, allowing multi-account roles to have different permissions and access rules on different accounts.
-- **[Drift Prevention](https://docs.iambic.org/how_to_guides/prevent-drift)**: Protect the IAM resources you want to be exclusively managed via IAMbic. What is in Git becomes the absolute source of truth.
-- **[GitOps-driven Cloud IAM (IAMOps)](https://docs.iambic.org/reference/iamops_philosophy)**: Leverage GitOps-driven Cloud IAM with human-readable formats and your favorite tools.
+- **[GitOps-driven Cloud IAM (IAMOps)](https://docs.iambic.org/reference/iamops_philosophy)**: Leverage GitOps-driven Cloud IAM in human-readable formats and with your favorite tools.
 - **Centralized Management**: IAMbic keeps Git updated with the latest, complete state of your cloud environment, maintaining a single source of truth for auditing and compliance across multiple cloud providers in Git.
 - **Extendable**: Integrate with various clouds and applications through a powerful plugin architecture.
 - **Auditable**: Track changes to IAM policies, permissions, and rules with Git history. For AWS, IAmbic annotates out-of-band commits with details from CloudTrail.
