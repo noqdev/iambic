@@ -19,13 +19,15 @@ from urllib.parse import urlparse
 
 import github
 from cryptography.hazmat.primitives import serialization
+from git.repo import Repo
 from github.PullRequest import PullRequest
+from github.Repository import Repository
 
 import iambic.output.markdown
 from iambic.config.dynamic_config import CURRENT_IAMBIC_VERSION, load_config
 from iambic.config.utils import resolve_config_template_path
 from iambic.core.context import ctx
-from iambic.core.git import Repo, clone_git_repo, get_remote_default_branch
+from iambic.core.git import clone_git_repo, get_remote_default_branch
 from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage, TemplateChangeDetails
@@ -345,7 +347,7 @@ def handle_issue_comment(
 def handle_iambic_git_apply(
     context: dict[str, Any],
     github_client: github.Github,
-    templates_repo: github.Repo,
+    templates_repo: Repository,
     pull_request: PullRequest,
     repo_name: str,
     pull_number: str,
@@ -447,7 +449,7 @@ def handle_iambic_git_apply(
 
 
 def maybe_merge(
-    templates_repo: github.Repo,
+    templates_repo: Repository,
     # pull_request: PullRequest,
     pull_number: int,
     merge_sha: str,
@@ -487,7 +489,7 @@ def maybe_merge(
 
 def _post_artifact_to_companion_repository(
     github_client: github.Github,
-    templates_repo: github.Repo,
+    templates_repo: Repository,
     pull_number: str,
     op_name: str,
     proposed_changes_path: str,
@@ -528,7 +530,7 @@ def _post_artifact_to_companion_repository(
 def handle_iambic_git_plan(
     context: dict[str, Any],
     github_client: github.Github,
-    templates_repo: github.Repo,
+    templates_repo: Repository,
     pull_request: PullRequest,
     repo_name: str,
     pull_number: str,
@@ -593,7 +595,7 @@ def handle_iambic_git_plan(
 def handle_iambic_approve(
     context: dict[str, Any],
     github_client: github.Github,
-    templates_repo: github.Repo,
+    templates_repo: Repository,
     pull_request: PullRequest,
     repo_name: str,
     pull_number: str,
@@ -669,7 +671,7 @@ def handle_iambic_approve(
 def handle_iambic_version(
     context: dict[str, Any],
     github_client: github.Github,
-    templates_repo: github.Repo,
+    templates_repo: Repository,
     pull_request: PullRequest,
     repo_name: str,
     pull_number: str,
@@ -687,7 +689,7 @@ def handle_iambic_version(
 def github_app_workflow_wrapper(workflow_func: Callable, ux_op_name: str) -> Callable:
     def wrapped_workflow_func(
         github_client: github.Github,
-        templates_repo: github.Repo,
+        templates_repo: Repository,
         repo_name: str,
         repo_url: str,
         default_branch: str,
@@ -712,7 +714,13 @@ def github_app_workflow_wrapper(workflow_func: Callable, ux_op_name: str) -> Cal
                     iambic_app, "lambda"
                 ).app.PLAN_OUTPUT_PATH = proposed_changes_path
 
-            template_changes = workflow_func(repo_url, default_branch)
+            template_changes = workflow_func(
+                repo_url,
+                default_branch,
+                github_client=github_client,
+                templates_repo=templates_repo,
+            )
+
             _process_template_changes(
                 github_client,
                 templates_repo,
@@ -754,7 +762,7 @@ def github_app_workflow_wrapper(workflow_func: Callable, ux_op_name: str) -> Cal
 
 def _process_template_changes(
     github_client: github.Github,
-    templates_repo: github.Repo,
+    templates_repo: Repository,
     pull_request: PullRequest,
     pull_number: str,
     proposed_changes_path: str,  # Path where we are sourcing the machine output
@@ -830,16 +838,16 @@ def handle_detect_changes_from_eventbridge(
     _handle_detect_changes_from_eventbridge(
         repo_url,
         default_branch,
-        # github_client=github_client,
-        # github_repo=templates_repo
+        github_client=github_client,
+        templates_repo=templates_repo,
     )
 
 
 def _handle_detect_changes_from_eventbridge(
     repo_url: str,
     default_branch: str,
-    # github_client: github.Github,
-    # github_repo: github.Repository, # type: ignore
+    github_client: github.Github,
+    templates_repo: Repository,  # type: ignore
 ) -> list[TemplateChangeDetails]:
     try:
         repo = prepare_local_repo_for_new_commits(
@@ -849,42 +857,45 @@ def _handle_detect_changes_from_eventbridge(
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
             temp_file_path = tmp.name
             atexit.register(os.unlink, temp_file_path)
+
         run_detect(get_lambda_repo_path(), message_details_file=temp_file_path)
         repo.git.add(".")
         diff_list = repo.head.commit.diff()
-        if len(diff_list) > 0:
-            repo.git.commit("-m", COMMIT_MESSAGE_FOR_DETECT)
 
-            note_content = None
-            if os.path.getsize(temp_file_path) > 0:
-                with open(temp_file_path, "r") as file:
-                    note_content = file.read()
-                # Add contents of `temp_file_path` as git notes to the last commit
-                repo.git.execute(["git", "notes", "add", "-m", note_content, "HEAD"])
-
-            repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()
-
-            # If notes were added, push them too
-            if note_content:
-                repo.git.push("origin", "refs/notes/*")
-                log.info(
-                    "Wrote Git Notes to file",
-                    note_content=note_content,
-                    path=temp_file_path,
-                )
-                # TODO: github_client and templates_repo are not defined in this scope
-                # Indeed, any method that starts with an underscore, has these definitions
-                # BTW, How to execute this part of the code locally?
-                # _post_artifact_to_companion_repository(
-                #     github_client=github_client,
-                #     templates_repo=github_repo,
-                #     pull_number="",
-                #     op_name="detect",
-                #     proposed_changes_path=temp_file_path,
-                #     markdown_summary=note_content,
-                # )
-        else:
+        if not len(diff_list):
             log.info("handle_detect no changes")
+            return []
+
+        repo.git.commit("-m", COMMIT_MESSAGE_FOR_DETECT)
+        repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()
+
+        note_content = None
+        if os.path.getsize(temp_file_path) > 0:
+            with open(temp_file_path, "r") as file:
+                note_content = file.read()
+            # Add contents of `temp_file_path` as git notes to the last commit
+            # repo.git.execute(["git", "notes", "add", "-m", note_content, "HEAD"])
+
+        if note_content:
+            # repo.git.push("origin", "refs/notes/*")
+            log.info(
+                "Wrote Git Notes to file",
+                note_content=note_content,
+                path=temp_file_path,
+            )
+
+            # TODO: github_client and templates_repo are not defined in this scope
+            # Indeed, any method that starts with an underscore, has these definitions
+            # BTW, How to execute this part of the code locally?
+            _post_artifact_to_companion_repository(
+                github_client=github_client,
+                templates_repo=templates_repo,
+                pull_number="",
+                op_name="detect",
+                proposed_changes_path=temp_file_path,
+                markdown_summary=note_content,
+            )
+
     except Exception as e:
         log.error("fault", exception=str(e))
         raise e
@@ -904,11 +915,16 @@ def handle_import(github_client: github.Github, context: dict[str, Any]) -> None
     _handle_import(repo_url, default_branch)
 
 
-def _handle_import(repo_url: str, default_branch: str) -> list[TemplateChangeDetails]:
+def _handle_import(
+    repo_url: str,
+    default_branch: str,
+    **kwargs,
+) -> list[TemplateChangeDetails]:
     try:
         exe_message = ExecutionMessage(
-            execution_id=str(uuid.uuid4()), command=Command.IMPORT
-        )
+            execution_id=str(uuid.uuid4()),
+            command=Command.IMPORT,
+        )  # type: ignore
         repo_dir = get_lambda_repo_path()
         repo = prepare_local_repo_for_new_commits(repo_url, repo_dir, "import")
         config_path = asyncio.run(resolve_config_template_path(repo_dir))
@@ -927,7 +943,11 @@ def _handle_import(repo_url: str, default_branch: str) -> list[TemplateChangeDet
     return []
 
 
-def _handle_enforce(repo_url: str, default_branch: str) -> list[TemplateChangeDetails]:
+def _handle_enforce(
+    repo_url: str,
+    default_branch: str,
+    **kwargs,
+) -> list[TemplateChangeDetails]:
     try:
         local_repo_path = get_lambda_repo_path()
         _ = prepare_local_repo_for_new_commits(repo_url, local_repo_path, "enforce")
@@ -964,7 +984,11 @@ def handle_expire(github_client: github.Github, context: dict[str, Any]) -> None
     _handle_expire(repo_url, default_branch)
 
 
-def _handle_expire(repo_url: str, default_branch: str) -> list[TemplateChangeDetails]:
+def _handle_expire(
+    repo_url: str,
+    default_branch: str,
+    **kwargs,
+) -> list[TemplateChangeDetails]:
     try:
         repo = prepare_local_repo_for_new_commits(
             repo_url, get_lambda_repo_path(), "expire"
