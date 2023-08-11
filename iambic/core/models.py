@@ -571,7 +571,7 @@ class BaseTemplate(
             exclude_none=exclude_none,
         )
         template_dict = json.loads(template_dict)
-        for forced_default_attr in {"template_type", "template_schema_url"}:
+        for forced_default_attr in ["template_type", "template_schema_url"]:
             template_dict[forced_default_attr] = self.__fields__[
                 forced_default_attr
             ].default
@@ -591,7 +591,7 @@ class BaseTemplate(
         as_yaml = yaml.dump(sorted_input_dict)
         # Force template_type and template_schema_url to be at the top of the yaml
         #   with the default value
-        for boosted_attr in {"template_type", "template_schema_url"}:
+        for boosted_attr in ["template_type", "template_schema_url"]:
             boosted_attr_str = (
                 f"{boosted_attr}: {self.__fields__[boosted_attr].default}"
             )
