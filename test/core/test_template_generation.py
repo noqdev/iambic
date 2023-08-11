@@ -104,6 +104,7 @@ class SampleModel(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+        # keep the forbid for testing code
         extra = Extra.forbid
 
     @property
