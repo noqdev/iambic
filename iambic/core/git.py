@@ -6,8 +6,8 @@ from io import StringIO
 from typing import TYPE_CHECKING, Optional, Type
 
 from deepdiff import DeepDiff
-from git import Repo
 from git.exc import GitCommandError
+from git.repo import Repo
 from pydantic import BaseModel as PydanticBaseModel
 
 from iambic.core.logger import log
