@@ -3,12 +3,11 @@ from __future__ import annotations
 import os
 import re
 from io import StringIO
-from typing import TYPE_CHECKING, Optional, Type, Union
+from typing import TYPE_CHECKING, Optional, Type
 
 from deepdiff import DeepDiff
 from git import Repo
 from git.exc import GitCommandError
-from github.Repository import Repository
 from pydantic import BaseModel as PydanticBaseModel
 
 from iambic.core.logger import log
@@ -62,9 +61,7 @@ def clone_git_repo(repo_url: str, repo_path: str, remote_branch_name: str):
     return repo
 
 
-def get_remote_default_branch(
-    repo: Union[Repo, Repository], remote_name: str = "origin"
-):
+def get_remote_default_branch(repo: Repo, remote_name: str = "origin"):
     # This is relying on `git remote show origin`
     # includes information  HEAD branch: THE_ACTUAL_BRANCH_NAME
     #

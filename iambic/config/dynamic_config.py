@@ -53,9 +53,14 @@ class ExceptionReporting(BaseModel):
     )
 
 
+class DetectionMessages(BaseModel):
+    enabled: bool = Field(..., description="Enable or disable detection messages.")
+
+
 class CoreConfig(BaseModel):
     minimum_ulimit: int = 64000
     exception_reporting: Optional[ExceptionReporting] = None
+    detection_messages: Optional[DetectionMessages] = None
 
 
 class PluginType(Enum):

@@ -24,7 +24,7 @@ from github.PullRequest import PullRequest
 from github.Repository import Repository
 
 import iambic.output.markdown
-from iambic.config.dynamic_config import CURRENT_IAMBIC_VERSION, load_config
+from iambic.config.dynamic_config import CURRENT_IAMBIC_VERSION, Config, load_config
 from iambic.config.utils import resolve_config_template_path
 from iambic.core.context import ctx
 from iambic.core.git import clone_git_repo, get_remote_default_branch
@@ -843,6 +843,65 @@ def handle_detect_changes_from_eventbridge(
     )
 
 
+def __get_config() -> Config:
+    """Load the config from lambda repo"""
+    repo_dir = get_lambda_repo_path()
+    config_path = asyncio.run(resolve_config_template_path(repo_dir))
+    config = asyncio.run(load_config(config_path))
+
+    return config
+
+
+def __save_detection_messages(
+    temp_file_path: str | None,
+    github_client: github.Github,
+    templates_repo: Repository,
+):
+    """Retrieve detection messages from tempFile and save it to companion repository as gists"""
+    if not temp_file_path:
+        return
+
+    note_content = None
+    if os.path.getsize(temp_file_path) > 0:
+        with open(temp_file_path, "r") as file:
+            note_content = file.read()
+        # Add contents of `temp_file_path` as git notes to the last commit
+        # repo.git.execute(["git", "notes", "add", "-m", note_content, "HEAD"])
+
+    if note_content:
+        # repo.git.push("origin", "refs/notes/*")
+        log.info(
+            "Wrote Git Notes to file",
+            note_content=note_content,
+            path=temp_file_path,
+        )
+
+        _post_artifact_to_companion_repository(
+            github_client=github_client,
+            templates_repo=templates_repo,
+            pull_number="",
+            op_name="detect",
+            proposed_changes_path=temp_file_path,
+            markdown_summary=note_content,
+        )
+
+
+def __get_detection_message_temp_file(config: Config) -> str | None:
+    """Returns a temporary file path to store detection messages if enabled in config"""
+    if not (
+        config.core
+        and config.core.detection_messages
+        and config.core.detection_messages.enabled
+    ):
+        return None
+
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        temp_file_path = tmp.name
+        atexit.register(os.unlink, temp_file_path)
+
+    return temp_file_path
+
+
 def _handle_detect_changes_from_eventbridge(
     repo_url: str,
     default_branch: str,
@@ -854,11 +913,11 @@ def _handle_detect_changes_from_eventbridge(
             repo_url, get_lambda_repo_path(), "detect"
         )
 
-        with tempfile.NamedTemporaryFile(delete=False) as tmp:
-            temp_file_path = tmp.name
-            atexit.register(os.unlink, temp_file_path)
+        config = __get_config()
+        temp_file_path = __get_detection_message_temp_file(config)
 
         run_detect(get_lambda_repo_path(), message_details_file=temp_file_path)
+
         repo.git.add(".")
         diff_list = repo.head.commit.diff()
 
@@ -866,36 +925,14 @@ def _handle_detect_changes_from_eventbridge(
             log.info("handle_detect no changes")
             return []
 
-        repo.git.commit("-m", COMMIT_MESSAGE_FOR_DETECT)
-        repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()
+        # repo.git.commit("-m", COMMIT_MESSAGE_FOR_DETECT)
+        # repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()
 
-        note_content = None
-        if os.path.getsize(temp_file_path) > 0:
-            with open(temp_file_path, "r") as file:
-                note_content = file.read()
-            # Add contents of `temp_file_path` as git notes to the last commit
-            # repo.git.execute(["git", "notes", "add", "-m", note_content, "HEAD"])
-
-        if note_content:
-            # repo.git.push("origin", "refs/notes/*")
-            log.info(
-                "Wrote Git Notes to file",
-                note_content=note_content,
-                path=temp_file_path,
-            )
-
-            # TODO: github_client and templates_repo are not defined in this scope
-            # Indeed, any method that starts with an underscore, has these definitions
-            # BTW, How to execute this part of the code locally?
-            _post_artifact_to_companion_repository(
-                github_client=github_client,
-                templates_repo=templates_repo,
-                pull_number="",
-                op_name="detect",
-                proposed_changes_path=temp_file_path,
-                markdown_summary=note_content,
-            )
-
+        __save_detection_messages(
+            temp_file_path=temp_file_path,
+            github_client=github_client,
+            templates_repo=templates_repo,
+        )
     except Exception as e:
         log.error("fault", exception=str(e))
         raise e
