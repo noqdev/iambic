@@ -589,15 +589,21 @@ class BaseTemplate(
         if notes := sorted_input_dict.get("notes"):
             sorted_input_dict["notes"] = LiteralScalarString(notes)
         as_yaml = yaml.dump(sorted_input_dict)
+
         # Force template_type and template_schema_url to be at the top of the yaml
-        #   with the default value
+        #  with the default value
+        header_lines = []
         for boosted_attr in ["template_type", "template_schema_url"]:
             boosted_attr_str = (
                 f"{boosted_attr}: {self.__fields__[boosted_attr].default}"
             )
+            header_lines.append(boosted_attr_str)
             as_yaml = as_yaml.replace(f"{boosted_attr_str}\n", "")
             as_yaml = as_yaml.replace(f"\n{boosted_attr_str}", "")
-            as_yaml = f"{boosted_attr_str}\n{as_yaml}"
+
+        header_text = "\n".join(header_lines)
+        as_yaml = f"{header_text}\n{as_yaml}"
+
         return as_yaml
 
     def write(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):

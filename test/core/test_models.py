@@ -224,3 +224,26 @@ async def test_template_delete(templates_repo: tuple[str, str]):
     # that don't actually exist in filesystem. those path
     # are relative to the git tree
     assert f"{repo_dir}/{diff_removed.a_path}" == template_path
+
+
+@pytest.mark.asyncio
+async def test_get_body(templates_repo: tuple[str, str]):
+    config_path, repo_dir = templates_repo
+    config = await load_config(config_path)
+
+    repo = git.Repo(repo_dir)
+    diff_index = repo.index.diff("HEAD")
+    # assert there is no local changes
+    assert len(diff_index) == 0
+
+    template = load_templates(
+        [f"{repo_dir}/{TEST_TEMPLATE_PATH}"], config.template_map
+    )[0]
+    template_body = template.get_body()
+    template_lines = template_body.split("\n")
+
+    # we have the order being explicit here
+    # this is to ensure first line is the type
+    # this is to ensure second lien is the schema url
+    assert template_lines[0] == "template_type: NOQ::Example::LocalFile"
+    assert template_lines[1] == "template_schema_url: test_url"
