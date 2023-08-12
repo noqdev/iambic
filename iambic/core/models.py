@@ -589,15 +589,39 @@ class BaseTemplate(
         if notes := sorted_input_dict.get("notes"):
             sorted_input_dict["notes"] = LiteralScalarString(notes)
         as_yaml = yaml.dump(sorted_input_dict)
-        # Force template_type and template_schema_url to be at the top of the yaml
-        #   with the default value
+        as_yaml_lines = as_yaml.split("\n")
+
+        # prepare iambic_header_lines
+        iambic_header_lines = []
         for boosted_attr in ["template_type", "template_schema_url"]:
             boosted_attr_str = (
                 f"{boosted_attr}: {self.__fields__[boosted_attr].default}"
             )
-            as_yaml = as_yaml.replace(f"{boosted_attr_str}\n", "")
-            as_yaml = as_yaml.replace(f"\n{boosted_attr_str}", "")
-            as_yaml = f"{boosted_attr_str}\n{as_yaml}"
+            iambic_header_lines.append(boosted_attr_str)
+
+        # prepare file header that is just #
+        file_header_lines = []
+        last_line_number = 0
+        for line_number, line in enumerate(as_yaml_lines):
+            if line.startswith("#"):
+                file_header_lines.append(line)
+                last_line_number = line_number + 1
+            else:
+                break
+
+        remaining_lines = []
+        # Get rid of lines that are already included in iambic_header_lines
+        for line in as_yaml_lines[last_line_number:]:
+            if line not in iambic_header_lines:
+                remaining_lines.append(line)
+
+        final_lines = []
+        final_lines.extend(file_header_lines)
+        final_lines.extend(iambic_header_lines)
+        final_lines.extend(remaining_lines)
+
+        as_yaml = "\n".join(final_lines)
+
         return as_yaml
 
     def write(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
