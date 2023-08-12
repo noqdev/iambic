@@ -122,7 +122,8 @@ def test_expiry_model_from_json_with_null():
     assert actual_model == expected_model
 
 
-TEST_TEMPLATE_YAML = """template_type: NOQ::Example::LocalFile
+TEST_TEMPLATE_YAML = """# comment line 1
+template_type: NOQ::Example::LocalFile
 template_schema_url: test_url
 notes: |-
   This is a test note
@@ -245,5 +246,6 @@ async def test_get_body(templates_repo: tuple[str, str]):
     # we have the order being explicit here
     # this is to ensure first line is the type
     # this is to ensure second lien is the schema url
-    assert template_lines[0] == "template_type: NOQ::Example::LocalFile"
-    assert template_lines[1] == "template_schema_url: test_url"
+    assert template_lines[0] == "# comment line 1"
+    assert template_lines[1] == "template_type: NOQ::Example::LocalFile"
+    assert template_lines[2] == "template_schema_url: test_url"
