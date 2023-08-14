@@ -278,6 +278,8 @@ async def create_templated_permission_set(  # noqa: C901
                                     nested_account_id
                                 ]
                                 for nested_account_id in details["accounts"]
+                                if nested_account_id
+                                in aws_account.identity_center_details.org_account_map  # IAMbic only tracks active account
                             ]
                         )
                     account_rules[account_rule_key] = {
