@@ -865,13 +865,10 @@ def __save_detection_messages(
     if os.path.getsize(temp_file_path) > 0:
         with open(temp_file_path, "r") as file:
             note_content = file.read()
-        # Add contents of `temp_file_path` as git notes to the last commit
-        # repo.git.execute(["git", "notes", "add", "-m", note_content, "HEAD"])
 
     if note_content:
-        # repo.git.push("origin", "refs/notes/*")
         log.info(
-            "Wrote Git Notes to file",
+            "Write changes to gists",
             note_content=note_content,
             path=temp_file_path,
         )
