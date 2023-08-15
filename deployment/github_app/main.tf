@@ -52,15 +52,10 @@ resource "aws_lambda_function" "iambic_github_app" {
   }
 
   environment {
-    variables =  merge({
+    variables =  {
       GITHUB_APP_SECRET_KEY_SECRET_ID     = var.github_app_private_key_secret_id
       GITHUB_APP_WEBHOOK_SECRET_SECRET_ID = var.github_webhook_secret_secret_id
-      REPOSITORY_CLONE_URL                 = var.repository_clone_url
-      REPOSITORY_FULL_NAME                 = var.repository_full_name
-
-    },
-    local.git_provider_vars
-    )
+    }
   }
 
   tracing_config {
@@ -229,42 +224,26 @@ resource "aws_cloudwatch_event_target" "import" {
   rule      = aws_cloudwatch_event_rule.import.name
   target_id = "LambdaImportTarget"
   arn       = aws_lambda_function.iambic_github_app.arn
-  input     = jsonencode({"command" : "import"})
+  input     = jsonencode({"command" : "import", "source": "EventBridgeCron"})
 }
 
 resource "aws_cloudwatch_event_target" "expire" {
   rule      = aws_cloudwatch_event_rule.expire.name
   target_id = "LambdaExpireTarget"
   arn       = aws_lambda_function.iambic_github_app.arn
-  input     = jsonencode({"command" : "expire"})
+  input     = jsonencode({"command" : "expire", "source": "EventBridgeCron"})
 }
 
 resource "aws_cloudwatch_event_target" "enforce" {
   rule      = aws_cloudwatch_event_rule.enforce.name
   target_id = "LambdaEnforceTarget"
   arn       = aws_lambda_function.iambic_github_app.arn
-  input     = jsonencode({"command" : "enforce"})
+  input     = jsonencode({"command" : "enforce", "source": "EventBridgeCron"})
 }
 
 resource "aws_cloudwatch_event_target" "detect" {
   rule      = aws_cloudwatch_event_rule.detect.name
   target_id = "LambdaDetectTarget"
   arn       = aws_lambda_function.iambic_github_app.arn
-  input     = jsonencode({"command" : "detect"})
-}
-
-locals {
-  git_provider_vars = {
-    github = {
-      GITHUB_APP_ID           = var.github_app_id
-      GITHUB_INSTALLATION_ID  = var.github_installation_id
-    }
-    gitlab = {
-      GITLAB_TOKEN = var.gitlab_token
-    }
-    bitbucket = {
-      BITBUCKET_USERNAME     = var.bitbucket_username
-      BITBUCKET_APP_PASSWORD = var.bitbucket_app_password
-    }
-  }[var.git_provider]
+  input     = jsonencode({"command" : "detect", "source": "EventBridgeCron"})
 }

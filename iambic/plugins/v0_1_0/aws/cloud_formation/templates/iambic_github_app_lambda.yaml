@@ -16,16 +16,16 @@ Parameters:
     Default: 900
   ImportSchedule:
     Type: String
-    Default: "cron(0 */2 * * ? *)" # Every 2 hours by default
+    Default: "cron(0 */2 * * *)" # Every 2 hours by default
   ExpireSchedule:
     Type: String
-    Default: "cron(5 * * * ? *)" # Every hour at minute 5
+    Default: "cron(5 * * * *)" # Every hour at minute 5
   EnforceSchedule:
     Type: String
-    Default: "cron(0 * * * ? *)" # Every hour
+    Default: "cron(0 * * * *)" # Every hour
   DetectSchedule:
     Type: String
-    Default: "cron(0/15 * * * ? *)" # Every 15 minutes
+    Default: "cron(*/5 * * * *)" # Every 5 minutes
 Resources:
   IambicWebHookLambda:
     Type: 'AWS::Lambda::Function'
