@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from functools import cache
 from itertools import chain
 
 from botocore.exceptions import ClientError
@@ -35,6 +36,24 @@ async def get_permission_set_details(
             return {}
         else:
             raise
+
+
+class WrapIdentityCenterStoreClient(object):
+    def __init__(self, boto3_identity_center_store_client, store_id):
+        self.boto3_identity_center_store_client = boto3_identity_center_store_client
+        self.store_id = store_id
+
+    @cache
+    def describe_user(self, guid):
+        return self.boto3_identity_center_store_client.describe_user(
+            IdentityStoreId=self.store_id, UserId=guid
+        )
+
+    @cache
+    def describe_group(self, guid):
+        return self.boto3_identity_center_store_client.describe_group(
+            IdentityStoreId=self.store_id, GroupId=guid
+        )
 
 
 async def generate_permission_set_map(aws_accounts: list[AWSAccount], templates: list):
@@ -78,6 +97,7 @@ async def generate_permission_set_map(aws_accounts: list[AWSAccount], templates:
 
 
 async def get_permission_set_users_and_groups(
+    wrap_identity_store_client,
     identity_center_client,
     instance_arn: str,
     permission_set_arn: str,
@@ -112,6 +132,38 @@ async def get_permission_set_users_and_groups(
 
     for account_assignments in all_account_assignments:
         for aa in account_assignments:
+            # Special case handling when identity_store using AD integrations
+            # cannot list users and groups ahead of time without filters.
+            if aa["PrincipalId"] not in response[aa["PrincipalType"].lower()]:
+                object_type = aa["PrincipalType"].lower()
+
+                if object_type == "user":
+                    info = wrap_identity_store_client.describe_user(aa["PrincipalId"])
+                    user_name = info.get("UserName", "ERROR_UNABLE_TO_LOOKUP_USERNAME")
+                    display_name = info.get(
+                        "DisplayName", "ERROR_UNABLE_TO_LOOKUP_DISPLAYNAME"
+                    )
+                    response[aa["PrincipalType"].lower()][aa["PrincipalId"]] = {
+                        "accounts": [],
+                        "user_name": user_name,
+                        "display_name": display_name,
+                    }
+                elif object_type == "group":
+                    info = wrap_identity_store_client.describe_group(aa["PrincipalId"])
+                    group_id = info.get("GroupId", "ERROR_UNABLE_TO_LOOKUP_GROUPID")
+                    display_name = info.get(
+                        "DisplayName", "ERROR_UNABLE_TO_LOOKUP_DISPLAYNAME"
+                    )
+                    response[aa["PrincipalType"].lower()][aa["PrincipalId"]] = {
+                        "accounts": [],
+                        "group_id": group_id,
+                        "display_name": display_name,
+                    }
+                else:
+                    log.error(f"unknown object_type: {object_type}")
+            # End Special case handling when identity_store using AD integrations
+            # cannot list users and groups ahead of time without filters.
+
             response[aa["PrincipalType"].lower()][aa["PrincipalId"]]["accounts"].append(
                 aa["AccountId"]
             )
@@ -122,6 +174,7 @@ async def get_permission_set_users_and_groups(
 
 
 async def get_permission_set_users_and_groups_as_access_rules(
+    wrap_identity_center_store_client,
     identity_center_client,
     instance_arn: str,
     permission_set_arn: str,
@@ -131,7 +184,12 @@ async def get_permission_set_users_and_groups_as_access_rules(
 ) -> list[dict]:
     name_map = {"user": "UserName", "group": "DisplayName"}
     permission_set_users_and_groups = await get_permission_set_users_and_groups(
-        identity_center_client, instance_arn, permission_set_arn, user_map, group_map
+        wrap_identity_center_store_client,
+        identity_center_client,
+        instance_arn,
+        permission_set_arn,
+        user_map,
+        group_map,
     )
     response = []
 

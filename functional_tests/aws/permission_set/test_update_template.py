@@ -17,6 +17,7 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     PermissionSetAccess,
 )
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
+    WrapIdentityCenterStoreClient,
     get_permission_set_users_and_groups_as_access_rules,
 )
 
@@ -121,6 +122,14 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
         )
 
         # test assignment
+        identity_store_client = await IAMBIC_TEST_DETAILS.identity_center_account.get_boto3_client(
+            "identitystore",
+            region_name=IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.region_name,
+        )
+        wrap_identity_store_client = WrapIdentityCenterStoreClient(
+            identity_store_client,
+            IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.identity_store_id,
+        )
 
         identity_center_client = await IAMBIC_TEST_DETAILS.identity_center_account.get_boto3_client(
             "sso-admin",
@@ -132,6 +141,7 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
             "PermissionSetArn"
         ]
         cloud_access_rules = await get_permission_set_users_and_groups_as_access_rules(
+            wrap_identity_store_client,
             identity_center_client,
             IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.instance_arn,
             permission_set_arn,
@@ -146,6 +156,7 @@ class UpdatePermissionSetTestCase(IsolatedAsyncioTestCase):
         changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
         screen_render_resource_changes([changes])
         cloud_access_rules = await get_permission_set_users_and_groups_as_access_rules(
+            wrap_identity_store_client,
             identity_center_client,
             IAMBIC_TEST_DETAILS.identity_center_account.identity_center_details.instance_arn,
             permission_set_arn,

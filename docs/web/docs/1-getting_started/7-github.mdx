@@ -236,8 +236,27 @@ If you like to follow a video walk through, click on the below video.
 1. The previous step should have brought to your GitHub App Install page.
 1. Select both `iambic-templates` and `iambic-templates-gist` for repository access.
 
+## Set the avatar of your GitHub App
 
-#### Open a pull request on your **iambic-templates** repo
+Because your GitHub app will be making comments in your pull requests, you want
+to set the avatar of your GitHub app to easily recognize the identity.
+
+We have provide both light and dark icons for you.
+
+<img src={"/img/git/app-icons/icon-light.png"} style={{width: '25%', display: 'auto', marginLeft: 'auto', marginRight: 'auto'}} />
+<img src={"/img/git/app-icons/icon-dark.png"} style={{width: '25%', display: 'auto', marginLeft: 'auto', marginRight: 'auto'}} />
+
+Download them to your local computer.
+
+1. From the previous section, click on "App Settings".
+<img src={"/img/git/app-icons/step-1-app-settings.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Scroll down to "Display Information", click on "Upload a logo..."
+<img src={"/img/git/app-icons/step-2-display.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Choose either the light icon or dark icon from your computer
+1. Click on the "Set new avatar" button
+<img src={"/img/git/app-icons/step-3-set-avatar.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+
+## Open a pull request on your **iambic-templates** repo
 
 1. `default_branch=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')`
 2. `git checkout -b task/change_description "$default_branch"`
@@ -255,7 +274,7 @@ If you like to follow a video walk through, click on the below video.
 9. Once your reviewer approves your changes, add `iambic apply` as a comment to instruct IAMbic to apply the changes. After the Cloud changes are successfully applied, IAMbic will merge the PR into your default branch (Typically main or master).
 
 
-#### Configure your GitHub Repository to require approvals before merging
+## Configure your GitHub Repository to require approvals before merging
 
 1. Go to the GitHub repository you had created previously, `ExampleOrg/iambic-templates`
 2. Navigate to Repository Settings, in the left navigation menu to "Branches" settings page; the URL will look something like `github.com/ExampleOrg/iambic-templates/settings/branches`
@@ -270,7 +289,7 @@ If you like to follow a video walk through, click on the below video.
 	1. Leave the default value for "Required number of approvals".
 	1. Enable "Require status checks to pass before merging". <!-- #TODO Is there a reason the prior 3 settings were on one line and this was on it's own line?  -->
 
-### Enable iambic-integrations to bypass review rules for default branch
+## Enable iambic-integrations to bypass review rules for default branch
 
 
 In the typical review flow for pull requests, approval from reviewers is necessary. However, certain actions like auto import or auto expiration
@@ -283,7 +302,7 @@ involve pushing changes back to the default branch without requiring manual appr
 5. In "Search for people, teams or apps", type in `iambic-integrations` to click on the GitHub App we have created.
 6. Click "Save changes".
 
-### Finish setting up your local repo
+## Finish setting up your local repo
 
 <!--
 

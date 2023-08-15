@@ -76,6 +76,11 @@ class FakeAccount(ProviderChild):
 
 
 @pytest.fixture
+def mock_wrap_identity_center_store_client():
+    yield MagicMock()
+
+
+@pytest.fixture
 def mock_ssoadmin_client_bundle():
     with mock_ssoadmin():
         ssoadmin_client = boto3.client("sso-admin")
@@ -158,10 +163,13 @@ async def test_generate_permission_set_map(mock_ssoadmin_client_bundle: tuple):
 
 
 @pytest.mark.asyncio
-async def test_get_permission_set_users_and_groups(mock_ssoadmin_client_bundle: tuple):
+async def test_get_permission_set_users_and_groups(
+    mock_ssoadmin_client_bundle: tuple, mock_wrap_identity_center_store_client
+):
     mock_ssoadmin_client, permission_set_arn = mock_ssoadmin_client_bundle
 
     response = await get_permission_set_users_and_groups(
+        mock_wrap_identity_center_store_client,
         mock_ssoadmin_client,
         EXAMPLE_IDENTITY_CENTER_INSTANCE_ARN,
         permission_set_arn,
@@ -174,11 +182,13 @@ async def test_get_permission_set_users_and_groups(mock_ssoadmin_client_bundle: 
 
 @pytest.mark.asyncio
 async def test_get_permission_set_users_and_groups_as_access_rules(
+    mock_wrap_identity_center_store_client,
     mock_ssoadmin_client_bundle: tuple,
 ):
     mock_ssoadmin_client, permission_set_arn = mock_ssoadmin_client_bundle
 
     response = await get_permission_set_users_and_groups_as_access_rules(
+        mock_wrap_identity_center_store_client,
         mock_ssoadmin_client,
         EXAMPLE_IDENTITY_CENTER_INSTANCE_ARN,
         permission_set_arn,

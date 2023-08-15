@@ -137,6 +137,7 @@ async def base_group_str_attribute(
     The reverse of resource_val_map which is an int representing the elem with a list of all resource_val reprs
         Under elem_resource_val_map
     """
+    num_provider_child_resources = len(provider_child_resources)
     for provider_child_resource_elem, provider_child_resource in enumerate(
         provider_child_resources
     ):
@@ -164,13 +165,20 @@ async def base_group_str_attribute(
             # Concretely, if a literal can both be repeated across accounts
             # or templatized across accounts, greedy algorithm may reach
             # different states.
-
-            provider_child_resources[provider_child_resource_elem]["resource_val_map"][
-                templatized_resource_val
-            ] = resource_elem
-            provider_child_resources[provider_child_resource_elem][
-                "elem_resource_val_map"
-            ][resource_elem] = [templatized_resource_val]
+            if num_provider_child_resources < 2:
+                provider_child_resources[provider_child_resource_elem][
+                    "resource_val_map"
+                ][resource_val] = resource_elem
+                provider_child_resources[provider_child_resource_elem][
+                    "elem_resource_val_map"
+                ][resource_elem] = [resource_val]
+            else:
+                provider_child_resources[provider_child_resource_elem][
+                    "resource_val_map"
+                ][templatized_resource_val] = resource_elem
+                provider_child_resources[provider_child_resource_elem][
+                    "elem_resource_val_map"
+                ][resource_elem] = [templatized_resource_val]
 
     grouped_resource_map = defaultdict(
         list
@@ -273,6 +281,7 @@ async def base_group_dict_attribute(
     Create a reverse of resource_hash_map which is an int representing the elem with a list of all resource_hash reprs
         Under elem_resource_hash_map
     """
+    num_provider_child_resources = len(provider_child_resources)
     hash_map = dict()
 
     for provider_child_resource_elem, provider_child_resource in enumerate(
@@ -395,6 +404,10 @@ async def base_group_dict_attribute(
                 resource_hash = resource_hashes[
                     -1
                 ]  # take the last one because it's the templatized version
+
+                # EXCEPT if there is only account, we won't templatized
+                if num_provider_child_resources < 2:
+                    resource_hash = resource_hashes[0]
 
             grouped_resource_map[resource_hash] = {
                 "resource_val": hash_map[resource_hash],

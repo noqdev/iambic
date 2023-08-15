@@ -1,6 +1,49 @@
 
 # Change Log
 
+## 0.11.43 (Aug 15, 2023)
+
+BUG FIXES:
+* EN-2381 Fixed identity center handling of suspended account [#568](https://github.com/noqdev/iambic/pull/568)
+* Added a check to skip code if OS is Windows fixes #570 [#571](https://github.com/noqdev/iambic/pull/571)
+* EN-2379 Turn on CF Stacksets for Organizations when possible [#569](https://github.com/noqdev/iambic/pull/569)
+
+THANKS:
+* `0xAJX` for reporting [#570](https://github.com/noqdev/iambic/issues/570) and the fix [#571](https://github.com/noqdev/iambic/pull/571)
+
+## 0.11.39 (Aug 11, 2023)
+
+BUG FIXES:
+* Fix template generation details [#566](https://github.com/noqdev/iambic/pull/566)
+
+## 0.11.38 (Aug 11, 2023)
+
+DOCS:
+* Fix EN-2239 Instruction to set GitHub App icon [#563](https://github.com/noqdev/iambic/pull/563)
+* Optimize readme for clarity [#564](https://github.com/noqdev/iambic/pull/564)
+
+BUG FIXES:
+* Fix EN-2377 Use list instead of set for deterministic iteration order [#565](https://github.com/noqdev/iambic/pull/564)
+
+## 0.11.35 (Aug 10, 2023)
+
+BUG FIXES:
+* Docs and script to update deployed lambda function [#552](https://github.com/noqdev/iambic/pull/552)
+* Enhance GitHub App local secrets handling [#559](https://github.com/noqdev/iambic/pull/559)
+* Fix condition in policy statement [#560](https://github.com/noqdev/iambic/pull/560)
+* Ignore extra fields because of forward compatibility reasons [#561](https://github.com/noqdev/iambic/pull/561)
+
+THANKS:
+* `datfinesoul` for giving feedback on need to have docs or automation to update the IAMbic GitHub integration
+
+## 0.11.33 (Aug 9, 2023)
+
+BUG FIXES:
+* EN-2373: change regions [#556](https://github.com/noqdev/iambic/pull/556)
+
+THANKS:
+* `dushyantb` for reporting issues when IAMbic is used in unsupported AWS regions
+
 ## 0.11.32 (Aug 8, 2023)
 
 ENHANCEMENTS:

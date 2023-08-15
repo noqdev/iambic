@@ -170,7 +170,7 @@ def test_merge_model_mix_types_4():
 
 
 @pytest.mark.asyncio
-async def test_group_dict_attribute(aws_accounts: list):
+async def test_group_dict_attribute_with_one_accounts(aws_accounts: list):
     number_of_accounts = 1
     target_account = aws_accounts[0]
     target_account_id = target_account.account_id
@@ -182,17 +182,7 @@ async def test_group_dict_attribute(aws_accounts: list):
     ]
     aws_accounts_map = {account.account_id: account for account in aws_accounts}
 
-    # validate the case if we don't prefer templatized resources
-    # dict_attributes = await group_dict_attribute(
-    #     aws_accounts_map,
-    #     number_of_accounts,
-    #     account_resources,
-    #     False,
-    #     prefer_templatized=False,
-    # )
-    # assert dict_attributes[0] == target_account_id
-
-    # validate the case if we prefer templatized resources
+    # validate the case if we have literal we the incoming account is only 1
     dict_attributes = await group_dict_attribute(
         aws_accounts_map,
         number_of_accounts,
@@ -202,7 +192,39 @@ async def test_group_dict_attribute(aws_accounts: list):
         False,
         prefer_templatized=True,
     )
-    assert dict_attributes[0] == "{{var.account_id}}"
+    assert dict_attributes[0] == target_account_id
+
+
+@pytest.mark.asyncio
+async def test_group_dict_attribute_with_two_accounts(aws_accounts: list):
+    assert len(aws_accounts) > 1
+    number_of_accounts = 1
+    target_account = aws_accounts[0]
+    target_account_id = target_account.account_id
+    another_account_id = aws_accounts[1].account_id
+    account_resources = [
+        {
+            "account_id": target_account_id,
+            "resources": [{"resource_val": {"test": f"{target_account_id}"}}],
+        },
+        {
+            "account_id": another_account_id,
+            "resources": [{"resource_val": {"test": f"{another_account_id}"}}],
+        },
+    ]
+    aws_accounts_map = {account.account_id: account for account in aws_accounts}
+
+    # validate the case if we have literal we the incoming account is only 1
+    dict_attributes = await group_dict_attribute(
+        aws_accounts_map,
+        number_of_accounts,
+        account_resources,
+        "account_id",
+        "included_accounts",
+        False,
+        prefer_templatized=True,
+    )
+    assert dict_attributes[0]["test"] == "{{var.account_id}}"
 
 
 @pytest.mark.asyncio

@@ -23,6 +23,7 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     PermissionSetProperties,
 )
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
+    WrapIdentityCenterStoreClient,
     enrich_permission_set_details,
     get_permission_set_details,
     get_permission_set_users_and_groups,
@@ -107,6 +108,7 @@ async def gather_permission_set_names(
 
 
 async def generate_permission_set_resource_file(
+    wrap_identity_store_client,
     identity_center_client,
     account_id: str,
     instance_arn: str,
@@ -119,6 +121,7 @@ async def generate_permission_set_resource_file(
         identity_center_client, instance_arn, permission_set
     )
     permission_set["assignments"] = await get_permission_set_users_and_groups(
+        wrap_identity_store_client,
         identity_center_client,
         instance_arn,
         permission_set["PermissionSetArn"],
@@ -278,6 +281,8 @@ async def create_templated_permission_set(  # noqa: C901
                                     nested_account_id
                                 ]
                                 for nested_account_id in details["accounts"]
+                                if nested_account_id
+                                in aws_account.identity_center_details.org_account_map  # IAMbic only tracks active account
                             ]
                         )
                     account_rules[account_rule_key] = {
@@ -463,6 +468,12 @@ async def collect_aws_permission_sets(
         identity_center_client = await aws_account.get_boto3_client(
             "sso-admin", region_name=aws_account.identity_center_details.region_name
         )
+        identity_store_client = await aws_account.get_boto3_client(
+            "identitystore", region_name=aws_account.identity_center_details.region_name
+        )
+        wrap_identity_store_client = WrapIdentityCenterStoreClient(
+            identity_store_client, aws_account.identity_center_details.identity_store_id
+        )
 
         if permission_set_names:
             for name in permission_set_names:
@@ -472,6 +483,7 @@ async def collect_aws_permission_sets(
                     messages.append(
                         dict(
                             account_id=aws_account.account_id,
+                            wrap_identity_store_client=wrap_identity_store_client,
                             identity_center_client=identity_center_client,
                             instance_arn=instance_arn,
                             permission_set=permission_set,
@@ -487,6 +499,7 @@ async def collect_aws_permission_sets(
                 messages.append(
                     dict(
                         account_id=aws_account.account_id,
+                        wrap_identity_store_client=wrap_identity_store_client,
                         identity_center_client=identity_center_client,
                         instance_arn=instance_arn,
                         permission_set=permission_set,
