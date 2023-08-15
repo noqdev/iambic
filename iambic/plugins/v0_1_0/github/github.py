@@ -925,8 +925,8 @@ def _handle_detect_changes_from_eventbridge(
             log.info("handle_detect no changes")
             return []
 
-        # repo.git.commit("-m", COMMIT_MESSAGE_FOR_DETECT)
-        # repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()
+        repo.git.commit("-m", COMMIT_MESSAGE_FOR_DETECT)
+        repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()
 
         __save_detection_messages(
             temp_file_path=temp_file_path,
