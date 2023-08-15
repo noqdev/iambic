@@ -349,14 +349,16 @@ def handle_issue_comment(
 def handle_workflow_run(
     github_token: str, github_client: github.Github, webhook_payload: dict[str, Any]
 ) -> None:
+    log_params = dict()
     action = webhook_payload["action"]
     if action != "requested":
         return
+    log_params.update(action=action)
 
     workflow_path = webhook_payload["workflow_run"]["path"]
+    log_params.update(workflow_path=workflow_path)
 
     if workflow_path not in WORKFLOW_DISPATCH_MAP:
-        log_params = {"workflow_path": workflow_path}
         log.error("handle_workflow_run: no op", **log_params)
         return
 
@@ -367,7 +369,15 @@ def handle_workflow_run(
     templates_repo = github_client.get_repo(repo_name)
     default_branch = templates_repo.default_branch
 
+    log_params.update(
+        default_branch=default_branch,
+        repo_name=repo_name,
+        repository_url=repository_url,
+    )
+
     workflow_func: Callable = WORKFLOW_DISPATCH_MAP[workflow_path]
+    log.info("Executing workflow", **log_params)
+
     return workflow_func(
         github_client,
         templates_repo,
