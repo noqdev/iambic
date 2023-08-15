@@ -2024,7 +2024,7 @@ class ConfigurationWizard:
         )
         assert successfully_created
 
-        # modify the trust policy of  IambicHubRole to allow iambic lambda execution role
+        # modify the trust policy of IambicHubRole to allow iambic lambda execution role
         lambda_role_arn = f"arn:aws:iam::{target_account_id}:role/iambic_github_app_lambda_execution{IAMBIC_GITHUB_APP_SUFFIX}"
 
         self.github_app_amend_trust_policy_for_iambic_integration(lambda_role_arn)
