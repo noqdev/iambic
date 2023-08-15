@@ -373,16 +373,36 @@ class ConfigurationWizard:
                 with contextlib.suppress(
                     ClientError, NoCredentialsError, FileNotFoundError
                 ):
+                    cf_client = self.boto3_session.client(
+                        "cloudformation", self.aws_default_region
+                    )
+                    cf_response = cf_client.describe_organizations_access()
+                    self._has_cf_stacksets_permissions = (
+                        cf_response["Status"] == "ENABLED"
+                    )
+
                     org_client = self.boto3_session.client("organizations")
                     self.autodetected_org_settings = org_client.describe_organization()[
                         "Organization"
                     ]
-                    self._has_cf_stacksets_permissions = "member.org.stacksets.cloudformation.amazonaws.com" in [
-                        p["ServicePrincipal"]
-                        for p in org_client.list_aws_service_access_for_organization()[
-                            "EnabledServicePrincipals"
-                        ]
-                    ]
+                    if self._has_cf_stacksets_permissions:
+                        return self._has_cf_stacksets_permissions
+
+                # Try turning it on for the user
+                with contextlib.suppress(
+                    ClientError, NoCredentialsError, FileNotFoundError
+                ):
+                    cf_client = self.boto3_session.client(
+                        "cloudformation", self.aws_default_region
+                    )
+                    _ = cf_client.activate_organizations_access()
+                    log.info(
+                        "We have activated Organization Access for CloudFormation StackSets"
+                    )
+                    cf_response = cf_client.describe_organizations_access()
+                    self._has_cf_stacksets_permissions = (
+                        cf_response["Status"] == "ENABLED"
+                    )
                     if self._has_cf_stacksets_permissions:
                         return self._has_cf_stacksets_permissions
 
