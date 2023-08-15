@@ -377,25 +377,45 @@ class ConfigurationWizard:
                 with contextlib.suppress(
                     ClientError, NoCredentialsError, FileNotFoundError
                 ):
+                    cf_client = self.boto3_session.client(
+                        "cloudformation", self.aws_default_region
+                    )
+                    cf_response = cf_client.describe_organizations_access()
+                    self._has_cf_stacksets_permissions = (
+                        cf_response["Status"] == "ENABLED"
+                    )
+
                     org_client = self.boto3_session.client("organizations")
                     self.autodetected_org_settings = org_client.describe_organization()[
                         "Organization"
                     ]
-                    self._has_cf_stacksets_permissions = "member.org.stacksets.cloudformation.amazonaws.com" in [
-                        p["ServicePrincipal"]
-                        for p in org_client.list_aws_service_access_for_organization()[
-                            "EnabledServicePrincipals"
-                        ]
-                    ]
+                    if self._has_cf_stacksets_permissions:
+                        return self._has_cf_stacksets_permissions
+
+                # Try turning it on for the user
+                with contextlib.suppress(
+                    ClientError, NoCredentialsError, FileNotFoundError
+                ):
+                    cf_client = self.boto3_session.client(
+                        "cloudformation", self.aws_default_region
+                    )
+                    _ = cf_client.activate_organizations_access()
+                    log.info(
+                        "We have activated Organization Access for CloudFormation StackSets"
+                    )
+                    cf_response = cf_client.describe_organizations_access()
+                    self._has_cf_stacksets_permissions = (
+                        cf_response["Status"] == "ENABLED"
+                    )
                     if self._has_cf_stacksets_permissions:
                         return self._has_cf_stacksets_permissions
 
                 click.echo(
-                    f"\nThis requires that you have the ability to "
-                    f"create CloudFormation stacks, stack sets, and stack set instances.\n"
-                    f"If you are using an AWS Organization, be sure that trusted access is enabled.\n"
-                    f"You can check this using the AWS Console:\n  "
-                    f"https://{self.aws_default_region}.console.aws.amazon.com/organizations/v2/home/services/CloudFormation%20StackSets"
+                    "\nThis requires that you have the ability to "
+                    "create CloudFormation stacks, stack sets, and stack set instances.\n"
+                    "If you are using an AWS Organization, be sure that trusted access is enabled.\n"
+                    "You can check this using the AWS Console:\n  "
+                    "https://us-east-1.console.aws.amazon.com/organizations/v2/home/services/CloudFormation%20StackSets"
                 )
                 if self._has_cf_stacksets_permissions is None:
                     self._has_cf_stacksets_permissions = questionary.confirm(
