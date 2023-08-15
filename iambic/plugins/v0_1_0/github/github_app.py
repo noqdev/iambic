@@ -222,8 +222,7 @@ def run_handler(event=None, context=None):
     """
 
     # debug
-    print(event)
-    print(context)
+    print("Event: ", event)
 
     # Check if the event source is CloudWatch Events
     if isinstance(event, dict) and event.get("source") == "EventBridgeCron":
@@ -338,8 +337,6 @@ def handle_issue_comment(
 
     comment_body = webhook_payload["comment"]["body"]
     comment_user_login = webhook_payload["comment"]["user"]["login"]
-    log_params = {"COMMENT_DISPATCH_MAP_KEYS": COMMENT_DISPATCH_MAP.keys()}
-    log.info("COMMENT_DISPATCH_MAP keys", **log_params)
 
     command_lookup = comment_body.split("\n")[0].strip()
 
@@ -399,7 +396,7 @@ def handle_workflow_run(
 
     workflow_path = webhook_payload.get("workflow_run", {}).get("path")
 
-    if workflow_path not in WORKFLOW_DISPATCH_MAP:
+    if workflow_path not in LEGACY_WORKFLOW_DISPATCH_MAP:
         log_params = {"workflow_path": workflow_path}
         log.error("handle_workflow_run: no op", **log_params)
         return
@@ -411,7 +408,7 @@ def handle_workflow_run(
     templates_repo = github_client.get_repo(repo_name)
     default_branch = templates_repo.default_branch
 
-    workflow_func: Callable = WORKFLOW_DISPATCH_MAP[workflow_path]
+    workflow_func: Callable = LEGACY_WORKFLOW_DISPATCH_MAP[workflow_path]
     return workflow_func(
         github_client,
         templates_repo,
@@ -454,7 +451,8 @@ AWS_EVENTS_WORKFLOW_DISPATCH_MAP: dict[str, Callable] = {
     ),
 }
 
-WORKFLOW_DISPATCH_MAP: dict[str, Callable] = {
+# These are legacy settings for the Github Action Workflows.
+LEGACY_WORKFLOW_DISPATCH_MAP: dict[str, Callable] = {
     ".github/workflows/iambic-enforce.yml": github_app_workflow_wrapper(
         _handle_enforce, "enforce"
     ),

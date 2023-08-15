@@ -303,8 +303,6 @@ def handle_issue_comment(
 ) -> HandleIssueCommentReturnCode:
     comment_body = context["event"]["comment"]["body"]
     comment_user_login = context["event"]["comment"]["user"]["login"]
-    log_params = {"COMMENT_DISPATCH_MAP_KEYS": COMMENT_DISPATCH_MAP.keys()}
-    log.info("COMMENT_DISPATCH_MAP keys", **log_params)
 
     command_lookup = comment_body.split("\n")[0]
 

@@ -44,7 +44,6 @@ from iambic.core.models import ExecutionMessage
 from iambic.core.parser import load_templates
 from iambic.core.template_generation import get_existing_template_map
 from iambic.core.utils import gather_templates, yaml
-from iambic.github.utils import create_workflow_files
 from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
     create_github_app_code_build_stack,
     create_github_app_ecr_pull_through_cache_stack,
@@ -1852,36 +1851,6 @@ class ConfigurationWizard:
         else:
             self.configuration_wizard_azure_ad_organization_add()
 
-    def configuration_wizard_github_workflow(self):
-        log.info(
-            "NOTE: Currently, only GitHub Workflows are supported. "
-            "However, you can modify the generated output to work with your Git provider."
-        )
-
-        if questionary.confirm("Proceed?").unsafe_ask():
-            commit_email = set_required_text_value(
-                "What is the E-Mail address to use for commits?"
-            )
-            repo_name = set_required_text_value(
-                "What is the name of the repository, including the organization (example: github_org/repo_name)?"
-            )
-            if self.config.aws and self.config.aws.organizations:
-                aws_org = self.config.aws.organizations[0]
-                region = aws_org.region_name
-            else:
-                region = set_aws_region(
-                    "What AWS region should the workflow run in?",
-                    default_val=RegionName.us_east_1,
-                )
-
-            create_workflow_files(
-                repo_dir=self.repo_dir,
-                repo_name=repo_name,
-                commit_email=commit_email,
-                assume_role_arn=self.config.aws.hub_role_arn,
-                region=region,
-            )
-
     def set_aws_cf_customization(self):
         hub_role_name = IAMBIC_HUB_ROLE_NAME
         spoke_role_name = IAMBIC_SPOKE_ROLE_NAME
@@ -2404,8 +2373,6 @@ class ConfigurationWizard:
                         log.info(
                             "Unable to edit this attribute without CloudFormation permissions."
                         )
-                elif action == "Generate Github Action Workflows":
-                    self.configuration_wizard_github_workflow()
                 elif action == "Setup AWS change detection":
                     self.setup_aws_configuration()
                     if self.has_cf_stacksets_permissions:
