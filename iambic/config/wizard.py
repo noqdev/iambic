@@ -1219,7 +1219,7 @@ class ConfigurationWizard:
     def configuration_wizard_aws_organizations_add(self):
         # we reset the previous known states since the user chose
         # enter this flow again, so we will re-query the cloud control plane.
-        self._reset_cf_stacksets_known_states()  # address EN-2380
+        self._reset_cf_stacksets_known_states()  # address https://github.com/noqdev/iambic/issues/574
         if not self.has_cf_stacksets_permissions:
             log.info(
                 "Unable to edit this attribute without CloudFormation permissions."
