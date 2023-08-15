@@ -52,14 +52,6 @@ from iambic.plugins.v0_1_0.github.github import (
 # in which we want other installed GitHub App to interact with the
 # integrations, we allow list such situations explicitly.
 ALLOWED_BOT_INTERACTIONS = ["iambic approve", "iambic apply"]
-GIT_PROVIDER = os.environ.get("GIT_PROVIDER")
-GITHUB_APP_ID = os.environ.get("GITHUB_APP_ID")
-GITHUB_INSTALLATION_ID = os.environ.get("GITHUB_INSTALLATION_ID")
-GITLAB_TOKEN = os.environ.get("GITLAB_TOKEN")
-BITBUCKET_USERNAME = os.environ.get("BITBUCKET_USERNAME")
-BITBUCKET_APP_PASSWORD = os.environ.get("BITBUCKET_APP_PASSWORD")
-REPOSITORY_CLONE_URL = os.environ.get("REPOSITORY_CLONE_URL")
-REPOSITORY_FULL_NAME = os.environ.get("REPOSITORY_FULL_NAME")
 
 
 def format_github_url(repository_url: str, github_token: str) -> str:
@@ -184,11 +176,17 @@ def lower_case_all_header_keys(d):
     return {key.lower(): value for key, value in d.items()}
 
 
-def handle_events_cron(
-    github_token: str, github_client: github.Github, event: dict[str, Any]
-) -> None:
-    assert isinstance(REPOSITORY_CLONE_URL, str)
-    assert isinstance(REPOSITORY_FULL_NAME, str)
+def handle_events_cron(event=None, context=None) -> None:
+    secrets = _get_app_secrets_as_lambda_context_current()
+    github_app_id = secrets["id"]
+    github_installation_id = secrets["installation_id"]
+    REPOSITORY_CLONE_URL = secrets["iambic_templates_repo_url"]
+    REPOSITORY_FULL_NAME = secrets["iambic_templates_repo_full_name"]
+    github_token = asyncio.run(
+        _get_installation_token(github_app_id, github_installation_id)
+    )
+    github_client = github.Github(github_token)
+
     command = event["command"]
 
     if not (callable := AWS_EVENTS_WORKFLOW_DISPATCH_MAP.get(command)):
@@ -223,13 +221,7 @@ def run_handler(event=None, context=None):
 
     # Check if the event source is CloudWatch Events
     if isinstance(event, dict) and event.get("source") == "EventBridgeCron":
-        assert isinstance(GITHUB_APP_ID, str)
-        assert isinstance(GITHUB_INSTALLATION_ID, str)
-        github_override_token = asyncio.run(
-            _get_installation_token(GITHUB_APP_ID, GITHUB_INSTALLATION_ID)
-        )
-        github_client = github.Github(github_override_token)
-        return handle_events_cron(github_override_token, github_client, event)
+        return handle_events_cron(event, context)
 
     # Http spec considers keys to be insensitive but different
     # proxy will pass along different case sensitive header key

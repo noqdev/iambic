@@ -1970,19 +1970,20 @@ class ConfigurationWizard:
             ),
             None,
         )
-        github_app_secrets["iambic_templates_repo_url"] = iambic_templates_repo[
-            "clone_url"
-        ]
-        github_app_secrets[
-            "iambic_templates_gist_repo_url"
-        ] = iambic_templates_gist_repo["clone_url"]
-        github_app_secrets["iambic_templates_repo_full_name"] = iambic_templates_repo[
-            "full_name"
-        ]
-        github_app_secrets[
-            "iambic_templates_gist_repo_full_name"
-        ] = iambic_templates_gist_repo["full_name"]
-        # safe secret for pem and webhook_url
+        github_app_secrets.update(
+            {
+                "iambic_templates_repo_url": iambic_templates_repo["clone_url"],
+                "iambic_templates_gist_repo_url": iambic_templates_gist_repo[
+                    "clone_url"
+                ],
+                "iambic_templates_repo_full_name": iambic_templates_repo["full_name"],
+                "iambic_templates_gist_repo_full_name": iambic_templates_gist_repo[
+                    "full_name"
+                ],
+                "github_installation_id": github_installation_id,
+            }
+        )
+        # save secret for pem and webhook_url
 
         click.echo(
             "\nSetting up a GitHub App for IAMbic involves creating CloudFormation stacks. \n"
