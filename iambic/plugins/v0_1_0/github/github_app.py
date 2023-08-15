@@ -183,7 +183,7 @@ def run_handler(event=None, context=None):
     """
 
     # debug
-    print(event)
+    # print(event)
 
     # Http spec considers keys to be insensitive but different
     # proxy will pass along different case sensitive header key
