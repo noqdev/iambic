@@ -125,11 +125,15 @@ def clear_stdin_buffer():
     """
     # Warning: This appears to work fine in a real terminal,
     # but not VSCode's Debug Terminal
-    r, _, _ = select.select([sys.stdin], [], [], 0)
-    while r:
-        # If there is input waiting, read and discard it.
-        sys.stdin.readline()
+
+    # Adding os check if windows then disabling this code as
+    # it is causing an error
+    if os.name != 'nt':
         r, _, _ = select.select([sys.stdin], [], [], 0)
+        while r:
+            # If there is input waiting, read and discard it.
+            sys.stdin.readline()
+            r, _, _ = select.select([sys.stdin], [], [], 0)
 
 
 def monkeypatch_questionary():
