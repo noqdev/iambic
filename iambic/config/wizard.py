@@ -1906,7 +1906,7 @@ class ConfigurationWizard:
         tags = aws_cf_parse_key_value_string(unparse_tags)
         return hub_role_name, spoke_role_name, tags
 
-    def configuration_github_app_aws_lambda_setup(self):
+    def configuration_github_app_aws_lambda_setup(self):  # noqa: C901
         from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
             IAMBIC_GITHUB_APP_SUFFIX,
         )

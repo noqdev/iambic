@@ -179,7 +179,7 @@ def lower_case_all_header_keys(d):
 def handle_events_cron(event=None, context=None) -> None:
     secrets = _get_app_secrets_as_lambda_context_current()
     github_app_id = secrets["id"]
-    github_installation_id = secrets["installation_id"]
+    github_installation_id = secrets["github_installation_id"]
     REPOSITORY_CLONE_URL = secrets["iambic_templates_repo_url"]
     REPOSITORY_FULL_NAME = secrets["iambic_templates_repo_full_name"]
     github_token = asyncio.run(
@@ -198,6 +198,12 @@ def handle_events_cron(event=None, context=None) -> None:
 
     templates_repo = github_client.get_repo(REPOSITORY_FULL_NAME)
     default_branch = templates_repo.default_branch
+    temp_templates_directory = tempfile.mkdtemp(prefix="lambda")
+    os.chdir(temp_templates_directory)
+    getattr(iambic_app, "lambda").app.init_plan_output_path()
+    getattr(iambic_app, "lambda").app.init_repo_base_path()
+    iambic.plugins.v0_1_0.github.github.init_shared_data_directory()
+    iambic.core.utils.init_writable_directory()
 
     return callable(
         github_client,
