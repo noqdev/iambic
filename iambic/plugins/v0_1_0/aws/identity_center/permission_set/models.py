@@ -21,6 +21,7 @@ from iambic.core.models import (
 from iambic.core.utils import aio_wrapper, evaluate_on_provider, plugin_apply_wrapper
 from iambic.plugins.v0_1_0.aws.iam.policy.models import PolicyStatement
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
+    WrapIdentityCenterStoreClient,
     apply_account_assignments,
     apply_permission_set_aws_managed_policies,
     apply_permission_set_customer_managed_policies,
@@ -413,6 +414,13 @@ class AwsIdentityCenterPermissionSetTemplate(
         :return:
         """
 
+        identity_store_client = await aws_account.get_boto3_client(
+            "identitystore", region_name=aws_account.identity_center_details.region_name
+        )
+        wrap_identity_store_client = WrapIdentityCenterStoreClient(
+            identity_store_client, aws_account.identity_center_details.identity_store_id
+        )
+
         identity_center_client = await aws_account.get_boto3_client(
             "sso-admin", region_name=aws_account.identity_center_details.region_name
         )
@@ -461,6 +469,7 @@ class AwsIdentityCenterPermissionSetTemplate(
 
             current_account_assignments = (
                 await get_permission_set_users_and_groups_as_access_rules(
+                    wrap_identity_store_client,
                     identity_center_client,
                     instance_arn,
                     permission_set_arn,
