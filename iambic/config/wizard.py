@@ -387,11 +387,11 @@ class ConfigurationWizard:
                         return self._has_cf_stacksets_permissions
 
                 click.echo(
-                    f"\nThis requires that you have the ability to "
-                    f"create CloudFormation stacks, stack sets, and stack set instances.\n"
-                    f"If you are using an AWS Organization, be sure that trusted access is enabled.\n"
-                    f"You can check this using the AWS Console:\n  "
-                    f"https://{self.aws_default_region}.console.aws.amazon.com/organizations/v2/home/services/CloudFormation%20StackSets"
+                    "\nThis requires that you have the ability to "
+                    "create CloudFormation stacks, stack sets, and stack set instances.\n"
+                    "If you are using an AWS Organization, be sure that trusted access is enabled.\n"
+                    "You can check this using the AWS Console:\n  "
+                    "https://us-east-1.console.aws.amazon.com/organizations/v2/home/services/CloudFormation%20StackSets"
                 )
                 if self._has_cf_stacksets_permissions is None:
                     self._has_cf_stacksets_permissions = questionary.confirm(
