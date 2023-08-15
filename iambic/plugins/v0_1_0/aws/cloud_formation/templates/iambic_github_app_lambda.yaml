@@ -14,6 +14,18 @@ Parameters:
   LambdaTimeout:
     Type: Number
     Default: 900
+  ImportSchedule:
+    Type: String
+    Default: "cron(0 */2 * * ? *)" # Every 2 hours by default
+  ExpireSchedule:
+    Type: String
+    Default: "cron(5 * * * ? *)" # Every hour at minute 5
+  EnforceSchedule:
+    Type: String
+    Default: "cron(0 * * * ? *)" # Every hour
+  DetectSchedule:
+    Type: String
+    Default: "cron(0/15 * * * ? *)" # Every 15 minutes
 Resources:
   IambicWebHookLambda:
     Type: 'AWS::Lambda::Function'
@@ -60,6 +72,79 @@ Resources:
       TargetFunctionArn: !GetAtt IambicWebHookLambda.Arn
     DependsOn:
       - IambicWebHookLambda
+
+  ImportCronRule:
+      Type: 'AWS::Events::Rule'
+      Properties:
+        ScheduleExpression:
+          Ref: ImportSchedule
+        Targets:
+          - Arn: !GetAtt IambicWebHookLambda.Arn
+            Id: "ImportCronTarget"
+            Input: '{"command": "import", "source": "EventBridgeCron"}'
+
+  ExpireCronRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      ScheduleExpression:
+        Ref: ExpireSchedule
+      Targets:
+        - Arn: !GetAtt IambicWebHookLambda.Arn
+          Id: "ExpireCronTarget"
+          Input: '{"command": "expire", "source": "EventBridgeCron"}'
+
+  EnforceCronRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      ScheduleExpression:
+        Ref: EnforceSchedule
+      Targets:
+        - Arn: !GetAtt IambicWebHookLambda.Arn
+          Id: "EnforceCronTarget"
+          Input: '{"command": "enforce", "source": "EventBridgeCron"}'
+
+  DetectCronRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      ScheduleExpression:
+        Ref: DetectSchedule
+      Targets:
+        - Arn: !GetAtt IambicWebHookLambda.Arn
+          Id: "DetectCronTarget"
+          Input: '{"command": "detect", "source": "EventBridgeCron"}'
+
+  ImportCronLambdaPermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      FunctionName: !Ref IambicWebHookLambda
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt ImportCronRule.Arn
+
+  ExpireCronLambdaPermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      FunctionName: !Ref IambicWebHookLambda
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt ExpireCronRule.Arn
+
+  EnforceCronLambdaPermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      FunctionName: !Ref IambicWebHookLambda
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt EnforceCronRule.Arn
+
+  DetectCronLambdaPermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      FunctionName: !Ref IambicWebHookLambda
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt DetectCronRule.Arn
+
 Outputs:
   FunctionUrl:
     Description: URL of the Lambda Function

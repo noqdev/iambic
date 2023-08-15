@@ -52,6 +52,14 @@ from iambic.plugins.v0_1_0.github.github import (
 # in which we want other installed GitHub App to interact with the
 # integrations, we allow list such situations explicitly.
 ALLOWED_BOT_INTERACTIONS = ["iambic approve", "iambic apply"]
+GIT_PROVIDER = os.environ.get("GIT_PROVIDER")
+GITHUB_APP_ID = os.environ.get("GITHUB_APP_ID")
+GITHUB_INSTALLATION_ID = os.environ.get("GITHUB_INSTALLATION_ID")
+GITLAB_TOKEN = os.environ.get("GITLAB_TOKEN")
+BITBUCKET_USERNAME = os.environ.get("BITBUCKET_USERNAME")
+BITBUCKET_APP_PASSWORD = os.environ.get("BITBUCKET_APP_PASSWORD")
+REPOSITORY_CLONE_URL = os.environ.get("REPOSITORY_CLONE_URL")
+REPOSITORY_FULL_NAME = os.environ.get("REPOSITORY_FULL_NAME")
 
 
 def format_github_url(repository_url: str, github_token: str) -> str:
@@ -176,6 +184,33 @@ def lower_case_all_header_keys(d):
     return {key.lower(): value for key, value in d.items()}
 
 
+def handle_events_cron(
+    github_token: str, github_client: github.Github, event: dict[str, Any]
+) -> None:
+    assert isinstance(REPOSITORY_CLONE_URL, str)
+    assert isinstance(REPOSITORY_FULL_NAME, str)
+    command = event["command"]
+
+    if not (callable := AWS_EVENTS_WORKFLOW_DISPATCH_MAP.get(command)):
+        log_params = {"command": command}
+        log.error("handle_events_cron: Unable to find command", **log_params)
+        return
+
+    repo_url = format_github_url(REPOSITORY_CLONE_URL, github_token)
+
+    templates_repo = github_client.get_repo(REPOSITORY_FULL_NAME)
+    default_branch = templates_repo.default_branch
+
+    return callable(
+        github_client,
+        templates_repo,
+        REPOSITORY_FULL_NAME,
+        repo_url,
+        default_branch,
+        proposed_changes_path=getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH,
+    )
+
+
 def run_handler(event=None, context=None):
     """
     Default handler for AWS Lambda. It is split out from the actual
@@ -184,6 +219,17 @@ def run_handler(event=None, context=None):
 
     # debug
     print(event)
+    print(context)
+
+    # Check if the event source is CloudWatch Events
+    if isinstance(event, dict) and event.get("source") == "EventBridgeCron":
+        assert isinstance(GITHUB_APP_ID, str)
+        assert isinstance(GITHUB_INSTALLATION_ID, str)
+        github_override_token = asyncio.run(
+            _get_installation_token(GITHUB_APP_ID, GITHUB_INSTALLATION_ID)
+        )
+        github_client = github.Github(github_override_token)
+        return handle_events_cron(github_override_token, github_client, event)
 
     # Http spec considers keys to be insensitive but different
     # proxy will pass along different case sensitive header key
@@ -353,7 +399,7 @@ def handle_workflow_run(
     if action != "requested":
         return
 
-    workflow_path = webhook_payload["workflow_run"]["path"]
+    workflow_path = webhook_payload.get("workflow_run", {}).get("path")
 
     if workflow_path not in WORKFLOW_DISPATCH_MAP:
         log_params = {"workflow_path": workflow_path}
@@ -384,7 +430,6 @@ EVENT_DISPATCH_MAP: dict[str, Callable] = {
     "workflow_run": handle_workflow_run,
 }
 
-
 # We are supporting both "iambic" and "/iambic"
 # for now during transition.
 COMMENT_DISPATCH_MAP: dict[str, Callable] = {
@@ -400,6 +445,15 @@ COMMENT_DISPATCH_MAP: dict[str, Callable] = {
     "/iambic approve": handle_iambic_approve,
     "iambic version": handle_iambic_version,
     "/iambic version": handle_iambic_version,
+}
+
+AWS_EVENTS_WORKFLOW_DISPATCH_MAP: dict[str, Callable] = {
+    "enforce": github_app_workflow_wrapper(_handle_enforce, "enforce"),
+    "expire": github_app_workflow_wrapper(_handle_expire, "expire"),
+    "import": github_app_workflow_wrapper(_handle_import, "import"),
+    "detect": github_app_workflow_wrapper(
+        _handle_detect_changes_from_eventbridge, "detect"
+    ),
 }
 
 WORKFLOW_DISPATCH_MAP: dict[str, Callable] = {

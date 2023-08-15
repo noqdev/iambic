@@ -52,10 +52,15 @@ resource "aws_lambda_function" "iambic_github_app" {
   }
 
   environment {
-    variables = {
+    variables =  merge({
       GITHUB_APP_SECRET_KEY_SECRET_ID     = var.github_app_private_key_secret_id
       GITHUB_APP_WEBHOOK_SECRET_SECRET_ID = var.github_webhook_secret_secret_id
-    }
+      REPOSITORY_CLONE_URL                 = var.repository_clone_url
+      REPOSITORY_FULL_NAME                 = var.repository_full_name
+
+    },
+    local.git_provider_vars
+    )
   }
 
   tracing_config {
@@ -184,4 +189,82 @@ resource "aws_lambda_permission" "apigw_lambda" {
 
   # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
   source_arn = "arn:aws:execute-api:${var.aws_region}:${local.account_id}:${aws_api_gateway_rest_api.iambic[0].id}/*/*"
+}
+
+resource "aws_lambda_permission" "allow_cloudwatch" {
+  count         = 4
+  statement_id  = "AllowExecutionFromCloudWatch${count.index}"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.iambic_github_app.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = element([
+    aws_cloudwatch_event_rule.import.arn,
+    aws_cloudwatch_event_rule.expire.arn,
+    aws_cloudwatch_event_rule.enforce.arn,
+    aws_cloudwatch_event_rule.detect.arn
+  ], count.index)
+}
+
+resource "aws_cloudwatch_event_rule" "import" {
+  name                = "schedule-import"
+  schedule_expression = var.import_schedule
+}
+
+resource "aws_cloudwatch_event_rule" "expire" {
+  name                = "schedule-expire"
+  schedule_expression = var.expire_schedule
+}
+
+resource "aws_cloudwatch_event_rule" "enforce" {
+  name                = "schedule-enforce"
+  schedule_expression = var.enforce_schedule
+}
+
+resource "aws_cloudwatch_event_rule" "detect" {
+  name                = "schedule-detect"
+  schedule_expression = var.detect_schedule
+}
+
+resource "aws_cloudwatch_event_target" "import" {
+  rule      = aws_cloudwatch_event_rule.import.name
+  target_id = "LambdaImportTarget"
+  arn       = aws_lambda_function.iambic_github_app.arn
+  input     = jsonencode({"command" : "import"})
+}
+
+resource "aws_cloudwatch_event_target" "expire" {
+  rule      = aws_cloudwatch_event_rule.expire.name
+  target_id = "LambdaExpireTarget"
+  arn       = aws_lambda_function.iambic_github_app.arn
+  input     = jsonencode({"command" : "expire"})
+}
+
+resource "aws_cloudwatch_event_target" "enforce" {
+  rule      = aws_cloudwatch_event_rule.enforce.name
+  target_id = "LambdaEnforceTarget"
+  arn       = aws_lambda_function.iambic_github_app.arn
+  input     = jsonencode({"command" : "enforce"})
+}
+
+resource "aws_cloudwatch_event_target" "detect" {
+  rule      = aws_cloudwatch_event_rule.detect.name
+  target_id = "LambdaDetectTarget"
+  arn       = aws_lambda_function.iambic_github_app.arn
+  input     = jsonencode({"command" : "detect"})
+}
+
+locals {
+  git_provider_vars = {
+    github = {
+      GITHUB_APP_ID           = var.github_app_id
+      GITHUB_INSTALLATION_ID  = var.github_installation_id
+    }
+    gitlab = {
+      GITLAB_TOKEN = var.gitlab_token
+    }
+    bitbucket = {
+      BITBUCKET_USERNAME     = var.bitbucket_username
+      BITBUCKET_APP_PASSWORD = var.bitbucket_app_password
+    }
+  }[var.git_provider]
 }

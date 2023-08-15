@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import os
 import time
 import webbrowser
 from multiprocessing import Process
 
 import aiohttp
+import requests
 import yaml
 from aiohttp import web
 
@@ -71,6 +73,82 @@ def remove_github_app_secrets():
     if os.path.exists(full_path):
         os.remove(full_path)
         log.info(f"Remove local GitHub App secrets from {full_path}")
+
+
+def get_github_app_installations(jwt_token):
+    headers = {
+        "Authorization": f"Bearer {jwt_token}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+    response = requests.get("https://api.github.com/app/installations", headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+
+def get_repos_for_installation(jwt_token, installation_id):
+    # First, we need to get an access token for the installation
+    headers = {
+        "Authorization": f"Bearer {jwt_token}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+    response = requests.post(
+        f"https://api.github.com/app/installations/{installation_id}/access_tokens",
+        headers=headers,
+    )
+    response.raise_for_status()
+    access_token = response.json()["token"]
+
+    # Use the access token to get the repos for the installation
+    headers = {
+        "Authorization": f"token {access_token}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+    response = requests.get(
+        "https://api.github.com/installation/repositories", headers=headers
+    )
+    response.raise_for_status()
+
+    return response.json().get("repositories", [])
+
+
+def get_github_app_description(jwt_token, app_id):
+    """
+    Retrieve the GitHub App's description.
+    """
+
+    headers = {
+        "Authorization": f"Bearer {jwt_token}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+
+    # Make a GET request to retrieve the GitHub App's metadata
+    response = requests.get(f"https://api.github.com/apps/{app_id}", headers=headers)
+    response.raise_for_status()
+
+    # Extract the description from the response
+    description = response.json().get("description", "")
+    return description
+
+
+def update_github_app_description(jwt_token, app_id, new_description):
+    """
+    Update the GitHub App's description.
+    """
+
+    headers = {
+        "Authorization": f"Bearer {jwt_token}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+
+    data = {"description": new_description}
+
+    # Make a PATCH request to update the GitHub App's metadata
+    response = requests.patch(
+        f"https://api.github.com/apps/{app_id}", headers=headers, data=json.dumps(data)
+    )
+    response.raise_for_status()
+
+    return response.json()
 
 
 def get_github_app_secrets():

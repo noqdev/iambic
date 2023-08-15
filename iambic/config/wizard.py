@@ -84,6 +84,10 @@ from iambic.plugins.v0_1_0.aws.utils import (
 from iambic.plugins.v0_1_0.azure_ad.handlers import import_azure_ad_resources
 from iambic.plugins.v0_1_0.azure_ad.iambic_plugin import AzureADConfig
 from iambic.plugins.v0_1_0.azure_ad.models import AzureADOrganization
+from iambic.plugins.v0_1_0.github.create_github_app import (
+    get_github_app_installations,
+    get_repos_for_installation,
+)
 from iambic.plugins.v0_1_0.google_workspace.handlers import import_google_resources
 from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import (
     GoogleProject,
@@ -128,7 +132,7 @@ def clear_stdin_buffer():
 
     # Adding os check if windows then disabling this code as
     # it is causing an error
-    if os.name != 'nt':
+    if os.name != "nt":
         r, _, _ = select.select([sys.stdin], [], [], 0)
         while r:
             # If there is input waiting, read and discard it.
@@ -1914,12 +1918,70 @@ class ConfigurationWizard:
 
         assert github_app_secrets
 
+        github_app_url = github_app_secrets.get("html_url", "")
+
+        log.info(
+            "We are attempting to open a browser window to the GitHub App installation page.\n"
+            "Please install the app and grant it access to your `iambic-templates` and `iambic-templates-gist` repositories.\n"
+            "If your browser doesn't open, please visit the following URL manually to install the GitHub app and grant access.\n"
+            f"{github_app_url}\n"
+            "Proceed once this is complete.\n\n"
+        )
+        webbrowser.open(github_app_url, new=0, autoraise=True)
+        if not questionary.confirm("Proceed?").unsafe_ask():
+            return
+
         # verify github app control plane access
         github_app_jwt = generate_jwt(github_app_secrets)
         if not verify_access(github_app_jwt):
-            log.error("Unable to continue. Abort.")
+            log.error("We were unable to verify access to Github. Aborting.")
             return
 
+        github_app_installations = get_github_app_installations(github_app_jwt)
+        if not github_app_installations:
+            log.error("Unable to find Github app installations. Aborting.")
+            return
+
+        if len(github_app_installations) > 1:
+            log.error(
+                "We found more than one Github app installation. It should only be installed in one Github Organization. Aborting."
+            )
+            return
+
+        github_installation_id = github_app_installations[0]["id"]
+
+        github_app_installation_repos = get_repos_for_installation(
+            github_app_jwt, github_installation_id
+        )
+
+        iambic_templates_repo = next(
+            (
+                r
+                for r in github_app_installation_repos
+                if "iambic-templates" in r["name"] and "-gist" not in r["name"]
+            ),
+            None,
+        )
+        iambic_templates_gist_repo = next(
+            (
+                r
+                for r in github_app_installation_repos
+                if "iambic-templates-gist" in r["name"]
+            ),
+            None,
+        )
+        github_app_secrets["iambic_templates_repo_url"] = iambic_templates_repo[
+            "clone_url"
+        ]
+        github_app_secrets[
+            "iambic_templates_gist_repo_url"
+        ] = iambic_templates_gist_repo["clone_url"]
+        github_app_secrets["iambic_templates_repo_full_name"] = iambic_templates_repo[
+            "full_name"
+        ]
+        github_app_secrets[
+            "iambic_templates_gist_repo_full_name"
+        ] = iambic_templates_gist_repo["full_name"]
         # safe secret for pem and webhook_url
 
         click.echo(
@@ -1944,8 +2006,10 @@ class ConfigurationWizard:
         }
         available_account_names = sorted(list(account_name_to_account_id.keys()))
         questionary_params = {}
-        question_text = "We recommend you deploy Lambda integration on a non-management account.\nTarget AWS Account name: "
-        if len(available_account_names) < 10:
+        question_text = "We recommend you deploy Lambda integration on a non-management account.\nTarget AWS Account profile: "
+        if len(available_account_names) == 1:
+            target_account_name = available_account_names[0]
+        elif len(available_account_names) < 10:
             target_account_name = questionary.select(
                 question_text, choices=available_account_names, **questionary_params
             ).unsafe_ask()
@@ -2100,15 +2164,6 @@ class ConfigurationWizard:
 
         # Remove the local secrets because it's already saved in secret manager
         remove_github_app_secrets()
-
-        github_app_url = github_app_secrets.get("html_url", "")
-        log.info(
-            "We are attempting to open a browser window to the GitHub App installation page.\n"
-            "Please install the app and grant it access to your `iambic-templates` and `iambic-templates-gist` repositories.\n"
-            "If your browser doesn't open, please visit the following URL manually to install the GitHub app and grant access.\n"
-            f"{github_app_url}\n"
-        )
-        webbrowser.open(github_app_url, new=0, autoraise=True)
 
     def github_app_amend_trust_policy_for_iambic_integration(self, lambda_role_arn):
         hub_session, _ = self.get_boto3_session_for_account(self.hub_account_id)
