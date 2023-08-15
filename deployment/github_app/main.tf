@@ -52,7 +52,7 @@ resource "aws_lambda_function" "iambic_github_app" {
   }
 
   environment {
-    variables =  {
+    variables = {
       GITHUB_APP_SECRET_KEY_SECRET_ID     = var.github_app_private_key_secret_id
       GITHUB_APP_WEBHOOK_SECRET_SECRET_ID = var.github_webhook_secret_secret_id
     }

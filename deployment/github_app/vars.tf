@@ -105,32 +105,3 @@ variable "detect_schedule" {
   description = "Cron expression for the detect job"
   default     = "*/5 * * * *"
 }
-
-variable "git_provider" {
-  description = "Git provider (e.g., github, gitlab, bitbucket)"
-  type        = string
-}
-
-variable "github_app_id" {
-  description = "GitHub App ID"
-  type        = string
-  default     = ""
-}
-
-variable "github_installation_id" {
-  description = "GitHub Installation ID"
-  type        = string
-  default     = ""
-}
-
-variable "repository_clone_url" {
-  description = "Repository clone URL"
-  type        = string
-  default     = ""
-}
-
-variable "repository_full_name" {
-  description = "Repository full name"
-  type        = string
-  default     = ""
-}
