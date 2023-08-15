@@ -33,7 +33,8 @@ cloud settings without having to make time-consuming requests to your cloud prov
 ### Iambic Import Process
 
 The IAMbic import process grabs updates from your cloud environment and puts them
-into your Git repository as IAMbic templates. IAMbic comes with GitHub actions that run on a schedule to
+into your Git repository as IAMbic templates. IAMbic comes with AWS EventBridge Rules
+that run on a schedule to
 automatically import changes from your cloud environment. If you want, you can also
 run the import process manually. [This commit](https://github.com/noqdev/iambic-templates-examples/commit/d71bb346a6d370a6e67398a9fff402c0b5b29a0c)
 serves as an example of a real-life import process of existing AWS resources into Git by IAMbic.

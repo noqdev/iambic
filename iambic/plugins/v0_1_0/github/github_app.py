@@ -451,7 +451,8 @@ AWS_EVENTS_WORKFLOW_DISPATCH_MAP: dict[str, Callable] = {
     ),
 }
 
-# These are legacy settings for the Github Action Workflows.
+# These are settings for the legacy Github Action Workflows. It should be safe
+# to deprecate after users have fully migrated to AWS Events.
 LEGACY_WORKFLOW_DISPATCH_MAP: dict[str, Callable] = {
     ".github/workflows/iambic-enforce.yml": github_app_workflow_wrapper(
         _handle_enforce, "enforce"

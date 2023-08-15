@@ -83,7 +83,7 @@ class HandleIssueCommentReturnCode(Enum):
     LINTED = 8
 
 
-# context is a dictionary structure published by Github Action
+# context is a dictionary structure published by the Github Webhook event
 # https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
 def run_handler(context: dict[str, Any]):
     github_token: str = context["token"]

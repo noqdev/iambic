@@ -2324,7 +2324,6 @@ class ConfigurationWizard:
 
             if self.has_aws_account_or_organizations:
                 choices.append("Setup GitHub App Integration using AWS Lambda")
-                choices.append("Generate Github Action Workflows")
                 choices.append("Setup AWS change detection")
                 if (
                     self.config.aws.organizations

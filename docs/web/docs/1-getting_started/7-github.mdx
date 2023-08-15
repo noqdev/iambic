@@ -4,16 +4,7 @@ title: Deploy on GitHub
 
 ### Configuring GitHub to work with IAMbic
 These steps will guide you through the process of setting up an IAMOps/GitOps workflow using
-GitHub Actions and an IAMbic Lambda function.
-
-:::note
-
-The instructions below leverage GitHub Action hosted runners. Github bills usage of action runners to the nearest full minute.
-You can find more details [here](https://docs.github.com/en/billing/managing-billing-for-github-actions/about-billing-for-github-actions).
-To avoid being charged, you might consider using self-hosted runners. Alternatively, you can reduce the frequency of your IAMbic
-action runs by changing their schedules after you have completed the setup process below.
-
-:::
+a GitHub app, Amazon Eventbridge Rules, and an IAMbic Lambda function.
 
 <!--
 
@@ -130,13 +121,14 @@ This page will walk you through the steps of configuring IAMbic, GitHub, and AWS
 ![IAMbic Git Flow](/img/git/iambic_git_flow.png)
 
 1. Developer Alice wants to create an application role. She creates a different branch, makes her changes, and submits a pull request with her changes to the IAMbic templates repository.
-2. Once the PR is created, the IAMbic GitHub action will run `iambic plan --git-aware` to calculate the changes required due to the PR, and submits the proposed changes back into the PR as a comment.
+2. Once the PR is created, the IAMbic GitHub application will send a webhook event to the IAMbic lambda function to run
+  `iambic plan --git-aware` to calculate the changes required due to the PR, and submits the proposed changes back into the PR as a comment.
 3. Reviewer Bob will review the template changes along with the proposed_changes. Bob may request additional changes.
-4. Optional: Developer Alice updates the PR. The IAMbic GitHub action will run `iambic plan --git-aware` again to calculate the new changes required.
+4. Optional: Developer Alice updates the PR. The IAMbic Github Application will send another Webhook event to re-run `iambic plan --git-aware` again to calculate the new changes.
 5. Reviewer Bob approves the PR.
 6. Developer Alice comments with `iambic apply` in the PR.
-7. The IAMbic GitHub action will apply the changes in the PR.
-8. Once git-apply is successful, the GitHub action will close the pull request.
+7. The IAMbic GitHub application will send another webhook event to the IAMbic lambda function to apply the changes from the PR into the cloud.
+8. Once git-apply is successful, the Lambda function will merge the change into the default branch of the repository, and close the pull request.
 
 :::tip
 

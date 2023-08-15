@@ -27,12 +27,12 @@ unified view in Git instead of logging into each cloud console or using a differ
 
 ### How does IAMbic work in a production environment?
 
-IAMbic provides all essential tools and GitHub Actions to facilitate quick setup in a production environment.
+IAMbic provides all essential tools and AWS Eventbridge Rules to facilitate quick setup in a production environment.
 
-These GitHub actions perform the following tasks:
+These Eventbridge Rules perform the following tasks:
 
 1. Regularly import IAM changes into Git, ensuring that Git remains "eventually consistent" with your permissions across AWS, Okta, Azure AD, and Google Workspace.
-1. Identify changes in near-real-time for AWS, utilizing AWS EventBridge rules monitoring IAM changes events through CloudTrail.
+1. Identify changes in near-real-time for AWS, utilizing AWS EventBridge filters to monitor IAM changes events through CloudTrail.
 1. Terminate access and permissions defined to expire within IAMbic templates.
 1. Enforce drift prevention - If a user designates IAMbic as the "source of truth" in a template, IAMbic will periodically revert any out-of-band changes to the source of truth as dictated by the IAMbic template.
 
@@ -64,7 +64,7 @@ access rule, or cloud policy.
 In a [production GitOps flow](https://docs.iambic.org/reference/iamops_philosophy#guide-to-the-iambic-apply-process),  relative expiration ("in 20 hours") is converted to a UTC timestamp
 after a PR is applied and just before the PR is merged.
 
-[GitHub Actions](https://github.com/noqdev/iambic/tree/main/iambic/github/templates) periodically verify whether a resource, access rule, or cloud permission has expired.
+AWS Eventbridge Rules execute IAMbic's lambda function in your environment to periodically verify whether a resource, access rule, or cloud permission has expired.
 If so, the entity will be removed in the cloud (or resource), and the template will be updated (or discarded) in Git.
 
 ### How does drift prevention / auto reversion work?
@@ -72,8 +72,8 @@ If so, the entity will be removed in the cloud (or resource), and the template w
 In a [production GitOps flow](https://docs.iambic.org/reference/iamops_philosophy#guide-to-the-iambic-apply-process), IAMbic imports all cloud resources into a read/write state by default.
 Meaning, if alterations are made to a cloud resource through the AWS/Okta console, Terraform, or other means, IAMbic will automatically import these changes into Git and update any associated resource template.
 
-We can instruct IAMbic to "prevent drift" on a resource by specifying `iambic_managed: enforced` in a template. Please refer to [Preventing Drift](/how_to_guides/prevent-drift) for specific guidance and examples. A periodic
-[GitHub Action](https://github.com/noqdev/iambic/blob/main/iambic/github/templates/iambic-enforce.yml) will load all templates with `iambic_managed: enforced` and compare them to cloud state.
+We can instruct IAMbic to "prevent drift" on a resource by specifying `iambic_managed: enforced` in a template. Please refer to [Preventing Drift](/how_to_guides/prevent-drift) for specific guidance and examples.
+An EventBridge rule runes periodically, instructing IAMbic's lambda function to load all templates that specify `iambic_managed: enforced` and compare them to cloud state.
 If there are any differences, the cloud resource will be reverted to the state defined in the IAMbic template.
 
 ### Can I create cloud identities/policies? Or does IAMbic only support importing and modifying existing ones?
@@ -116,15 +116,13 @@ Issue `iambic apply` as a comment to instruct Iambic to apply the change
 For an example flow, please see [Pull Request #13 in the iambic-templates-examples repository](https://github.com/noqdev/iambic-templates-examples/pull/13).
 
 
-### How do the GitHub Actions function in IAMbic?
+### How do Amazon Eventbridge Rules function in IAMbic?
 
-The GitHub Actions are an integral part of IAMbic operations. They are defined within the IAMbic repository under [iambic/github/templates](https://github.com/noqdev/iambic/blob/main/iambic/github/templates/).
-These actions function based on a preset cron schedule, which initiates an event within GitHub. This event is then picked up by the Webhook
-defined in your [IAMbic GitHub App](/getting_started/github). The webhook then triggers a Lambda function (which runs IAMbic in a Docker container) to run the desired action.
+Amazon Eventbridge Rules are an integral part of IAMbic operations. They are defined within the IAMbic Lambda App CloudFormation Template
+([iambic/plugins/v0_1_0/aws/cloud_formation/templates/iambic_github_app_lambda.yaml](https://github.com/noqdev/iambic/blob/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates/iambic_github_app_lambda.yaml)).
+These rules function based on a preset cron schedule, which invoke AWS Lambda with instructions to perform the desired action.
 
-The GitHub actions themselves are short-lived, and are not used to manage cloud identities or policies in your cloud environment.
-
-You are welcome to modify the schedule of each action to suit your needs. For instance, you may want to run `iambic-import` or `iambic-import` more frequently.
+You are welcome to modify the AWS Eventbridge Rules of each action to suit your needs. For instance, you may want to run `IAMbic Import` more frequently than the default time.
 
 It's important to note that IAMbic's design is open and flexible, and we gladly welcome contributions for enhancing its functionality.
 This includes supporting alternative methods of running IAMbic.
@@ -169,8 +167,8 @@ To specify the expiration of a user or their permissions, you need to add `expir
 at the same level as a policy, or at the same level as a policy statement within a policy. If you're using inline policies
 or permission boundaries, the syntax remains the same.
 
-To expire, you can either run `iambic apply` on the template. In the production flow, this would be handled by the
-[expire GitHub Action](https://github.com/noqdev/iambic/blob/main/iambic/github/templates/iambic-expire.yml).
+To expire, you can either run `iambic apply` on the template. In the production flow, this would be handled by an
+Amazon Eventbridge Rule.
 
 For example, if you want to expire the entire user `TestUser` at Dec 31, 2023, you can add
 `expires_at: 2023-12-31` at the top level of the template like this:
@@ -221,7 +219,7 @@ required or when managing IAM resources across multiple AWS accounts.
 
 Yes, you can automate the iambic apply command in a Continuous Integration/Continuous Deployment (CI/CD) pipeline. To do this, you would
 typically use a [GitOps approach](/reference/iamops_philosophy) where any changes made to your IAMbic templates in a designated Git
-repository automatically trigger a pipeline that executes the `iambic apply` command. IAMbic ships with GitHub actions, a Lambda container,
+repository automatically trigger a pipeline that executes the `iambic apply` command. IAMbic ships with Amazon EventBridge rules, a Lambda container,
 and a Setup Wizard that help you set these up.
 
 The `iambic apply` command can be run in a CI/CD tool like Jenkins, Travis, or GitHub Actions,
