@@ -54,13 +54,8 @@ We are rapidly expanding support for existing resources and cloud providers, so 
 
 ## Installing IAMbic and Supported Versions
 
-IAMbic is available on PyPI:
-
-```console
-python -m pip install iambic-core
-```
-
-IAMbic officially supports Python 3.9+.
+1. [Install the required Prerequisites](https://docs.iambic.org/getting_started/prerequisites)
+2. [Install and configure IAMbic](https://docs.iambic.org/getting_started/install_and_configure)
 
 ### Template Examples
 

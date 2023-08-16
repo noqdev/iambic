@@ -5,8 +5,7 @@ toc_max_heading_level: 5
 ---
 
 Before getting started with IAMbic, make sure you have the following prerequisites
-installed on your system.
-
+and permissions:
 
 ## Operating system
 
@@ -23,13 +22,24 @@ of in a Docker container. This is the recommended way to run IAMbic.
 
 1. Install Python 3.9+ ([Download Python](https://www.python.org/downloads/))
 
-## AWS
+## Github CLI (Recommended)
 
-AWS is required to run the Setup Wizard, as IAMbic uses AWS to create an AWS
-Secrets Manager secret with sensitive information such as your Okta, Google,
-and/or Azure AD credentials.
+IAMbic uses the Github CLI to simplify the process of creating repositories and a Github application. You can still
+proceed without performing this step, but you will need to create repositories manually
 
-## Docker
+1. [Install GitHub CLI](https://cli.github.com/manual/installation)
+2. [Authenticate GitHub CLI to Github](https://cli.github.com/manual/)
+
+## AWS administrative access
+
+Administrative access in AWS is required to run the Setup Wizard, as IAMbic leverages CloudFormation to create resources across your AWS Organization and/or accounts
+
+## GitHub administrative access
+
+IAMbic uses GitHub to store and version control your IAM. Administrative access to your GitHub organization is required to run the Setup Wizard, as this will
+require the ability to create repositories and a Github application
+
+## Docker (Optional)
 
 Docker is only needed if you want to run IAMbic in a container.
 

@@ -245,7 +245,7 @@ After the command succeeds, you can check on each account via AWS Console to com
 
 ### 3.2 - Create Temporary, Expiring IAM Permissions
 
-Now it's time to learn the process of writing temporary permissions that expire after a set period of time. Permissions are only expired if you're running IAMbic continually (IAMbic includes GitHub actions to automate this). For the purposes of this tutorial, we will trigger a run locally. In the template below, you'll notice the addition of the `expires_at:` attribute on different lines. Add them to your file.
+Now it's time to learn the process of writing temporary permissions that expire after a set period of time. Permissions are only expired if you're running IAMbic continually (IAMbic leverages Amazon Eventbridge Rules to automate this). For the purposes of this tutorial, we will trigger a run locally. In the template below, you'll notice the addition of the `expires_at:` attribute on different lines. Add them to your file.
 <!-- #TODO There's not a lot of actual instruction here, we're just showing an edited file. Could maybe use one more sentence. -->
 
 Notice that `expires_at` can be a datetime string, a date, or even "tomorrow", "yesterday", "in N days", etc. This is thanks to the wonderful [dateparser](https://dateparser.readthedocs.io/) library ❤️.

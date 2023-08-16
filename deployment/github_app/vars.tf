@@ -85,3 +85,23 @@ variable "iambic_image_tag" {
 
   default = "latest"
 }
+
+variable "import_schedule" {
+  description = "Cron expression for the import job"
+  default     = "cron(0 */2 * * ? *)"
+}
+
+variable "expire_schedule" {
+  description = "Cron expression for the expire job"
+  default     = "cron(5 * * * ? *)"
+}
+
+variable "enforce_schedule" {
+  description = "Cron expression for the enforce job"
+  default     = "cron(0 * * * ? *)"
+}
+
+variable "detect_schedule" {
+  description = "Cron expression for the detect job"
+  default     = "cron(*/5 * * * ? *)"
+}

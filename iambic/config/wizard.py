@@ -44,7 +44,6 @@ from iambic.core.models import ExecutionMessage
 from iambic.core.parser import load_templates
 from iambic.core.template_generation import get_existing_template_map
 from iambic.core.utils import gather_templates, yaml
-from iambic.github.utils import create_workflow_files
 from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
     create_github_app_code_build_stack,
     create_github_app_ecr_pull_through_cache_stack,
@@ -84,6 +83,10 @@ from iambic.plugins.v0_1_0.aws.utils import (
 from iambic.plugins.v0_1_0.azure_ad.handlers import import_azure_ad_resources
 from iambic.plugins.v0_1_0.azure_ad.iambic_plugin import AzureADConfig
 from iambic.plugins.v0_1_0.azure_ad.models import AzureADOrganization
+from iambic.plugins.v0_1_0.github.create_github_app import (
+    get_github_app_installations,
+    get_repos_for_installation,
+)
 from iambic.plugins.v0_1_0.google_workspace.handlers import import_google_resources
 from iambic.plugins.v0_1_0.google_workspace.iambic_plugin import (
     GoogleProject,
@@ -1856,36 +1859,6 @@ class ConfigurationWizard:
         else:
             self.configuration_wizard_azure_ad_organization_add()
 
-    def configuration_wizard_github_workflow(self):
-        log.info(
-            "NOTE: Currently, only GitHub Workflows are supported. "
-            "However, you can modify the generated output to work with your Git provider."
-        )
-
-        if questionary.confirm("Proceed?").unsafe_ask():
-            commit_email = set_required_text_value(
-                "What is the E-Mail address to use for commits?"
-            )
-            repo_name = set_required_text_value(
-                "What is the name of the repository, including the organization (example: github_org/repo_name)?"
-            )
-            if self.config.aws and self.config.aws.organizations:
-                aws_org = self.config.aws.organizations[0]
-                region = aws_org.region_name
-            else:
-                region = set_aws_region(
-                    "What AWS region should the workflow run in?",
-                    default_val=RegionName.us_east_1,
-                )
-
-            create_workflow_files(
-                repo_dir=self.repo_dir,
-                repo_name=repo_name,
-                commit_email=commit_email,
-                assume_role_arn=self.config.aws.hub_role_arn,
-                region=region,
-            )
-
     def set_aws_cf_customization(self):
         hub_role_name = IAMBIC_HUB_ROLE_NAME
         spoke_role_name = IAMBIC_SPOKE_ROLE_NAME
@@ -1910,7 +1883,7 @@ class ConfigurationWizard:
         tags = aws_cf_parse_key_value_string(unparse_tags)
         return hub_role_name, spoke_role_name, tags
 
-    def configuration_github_app_aws_lambda_setup(self):
+    def configuration_github_app_aws_lambda_setup(self):  # noqa: C901
         from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
             IAMBIC_GITHUB_APP_SUFFIX,
         )
@@ -1942,13 +1915,72 @@ class ConfigurationWizard:
 
         assert github_app_secrets
 
+        github_app_url = github_app_secrets.get("html_url", "")
+
+        log.info(
+            "We are attempting to open a browser window to the GitHub App installation page.\n"
+            "Please install the app and grant it access to your `iambic-templates` and `iambic-templates-gist` repositories.\n"
+            "If your browser doesn't open, please visit the following URL manually to install the GitHub app and grant access.\n"
+            f"{github_app_url}\n"
+            "Proceed once this is complete.\n\n"
+        )
+        webbrowser.open(github_app_url, new=0, autoraise=True)
+        if not questionary.confirm("Proceed?").unsafe_ask():
+            return
+
         # verify github app control plane access
         github_app_jwt = generate_jwt(github_app_secrets)
         if not verify_access(github_app_jwt):
-            log.error("Unable to continue. Abort.")
+            log.error("We were unable to verify access to Github. Aborting.")
             return
 
-        # safe secret for pem and webhook_url
+        github_app_installations = get_github_app_installations(github_app_jwt)
+        if not github_app_installations:
+            log.error("Unable to find Github app installations. Aborting.")
+            return
+
+        if len(github_app_installations) > 1:
+            log.error(
+                "We found more than one Github app installation. It should only be installed in one Github Organization. Aborting."
+            )
+            return
+
+        iambic_github_installation_id = github_app_installations[0]["id"]
+
+        github_app_installation_repos = get_repos_for_installation(
+            github_app_jwt, iambic_github_installation_id
+        )
+
+        iambic_templates_repo = next(
+            (
+                r
+                for r in github_app_installation_repos
+                if "iambic-templates" in r["name"] and "-gist" not in r["name"]
+            ),
+            None,
+        )
+        iambic_templates_gist_repo = next(
+            (
+                r
+                for r in github_app_installation_repos
+                if "iambic-templates-gist" in r["name"]
+            ),
+            None,
+        )
+        github_app_secrets.update(
+            {
+                "iambic_templates_repo_url": iambic_templates_repo["clone_url"],
+                "iambic_templates_gist_repo_url": iambic_templates_gist_repo[
+                    "clone_url"
+                ],
+                "iambic_templates_repo_full_name": iambic_templates_repo["full_name"],
+                "iambic_templates_gist_repo_full_name": iambic_templates_gist_repo[
+                    "full_name"
+                ],
+                "iambic_github_installation_id": iambic_github_installation_id,
+            }
+        )
+        # save secret for pem and webhook_url
 
         click.echo(
             "\nSetting up a GitHub App for IAMbic involves creating CloudFormation stacks. \n"
@@ -1973,7 +2005,9 @@ class ConfigurationWizard:
         available_account_names = sorted(list(account_name_to_account_id.keys()))
         questionary_params = {}
         question_text = "We recommend you deploy Lambda integration on a non-management account.\nTarget AWS Account name: "
-        if len(available_account_names) < 10:
+        if len(available_account_names) == 1:
+            target_account_name = available_account_names[0]
+        elif len(available_account_names) < 10:
             target_account_name = questionary.select(
                 question_text, choices=available_account_names, **questionary_params
             ).unsafe_ask()
@@ -2128,15 +2162,6 @@ class ConfigurationWizard:
 
         # Remove the local secrets because it's already saved in secret manager
         remove_github_app_secrets()
-
-        github_app_url = github_app_secrets.get("html_url", "")
-        log.info(
-            "We are attempting to open a browser window to the GitHub App installation page.\n"
-            "Please install the app and grant it access to your `iambic-templates` and `iambic-templates-gist` repositories.\n"
-            "If your browser doesn't open, please visit the following URL manually to install the GitHub app and grant access.\n"
-            f"{github_app_url}\n"
-        )
-        webbrowser.open(github_app_url, new=0, autoraise=True)
 
     def github_app_amend_trust_policy_for_iambic_integration(self, lambda_role_arn):
         hub_session, _ = self.get_boto3_session_for_account(self.hub_account_id)
@@ -2307,7 +2332,6 @@ class ConfigurationWizard:
 
             if self.has_aws_account_or_organizations:
                 choices.append("Setup GitHub App Integration using AWS Lambda")
-                choices.append("Generate Github Action Workflows")
                 choices.append("Setup AWS change detection")
                 if (
                     self.config.aws.organizations
@@ -2356,8 +2380,6 @@ class ConfigurationWizard:
                         log.info(
                             "Unable to edit this attribute without CloudFormation permissions."
                         )
-                elif action == "Generate Github Action Workflows":
-                    self.configuration_wizard_github_workflow()
                 elif action == "Setup AWS change detection":
                     self.setup_aws_configuration()
                     if self.has_cf_stacksets_permissions:

@@ -13,28 +13,18 @@ RUN adduser --system --user-group --home ${FUNCTION_DIR} iambic \
     && chmod -R 777 ${FUNCTION_DIR}
 
 # build the dependencies first to reuse the layer more often
-COPY --chown=iambic:iambic poetry.lock ${FUNCTION_DIR}/poetry.lock
-COPY --chown=iambic:iambic pyproject.toml ${FUNCTION_DIR}/pyproject.toml
-COPY --chown=iambic:iambic README.md ${FUNCTION_DIR}/README.md
-
-RUN touch ${FUNCTION_DIR}/iambic/__init__.py
+COPY --chown=iambic:iambic poetry.lock pyproject.toml README.md ${FUNCTION_DIR}/
 
 RUN /usr/local/bin/pip3 install poetry setuptools pip --upgrade \
-    && /usr/local/bin/poetry install \
-    && /usr/local/bin/poetry build \
+    && poetry config virtualenvs.create false --local \
+    && poetry export -f requirements.txt --output requirements.txt \
+    && /usr/local/bin/pip3 install -r requirements.txt \
     && /usr/local/bin/pip3 install awslambdaric
-
-RUN /usr/local/bin/pip3 install ${FUNCTION_DIR}/dist/*.whl
-
 
 # build the iambic package last
 COPY --chown=iambic:iambic iambic/ ${FUNCTION_DIR}/iambic
 
 RUN /usr/local/bin/poetry install \
-    && /usr/local/bin/poetry build
-
-RUN /usr/local/bin/pip3 uninstall iambic-core -y
-RUN /usr/local/bin/pip3 install ${FUNCTION_DIR}/dist/iambic*.whl \
     && rm -rf ${FUNCTION_DIR}/dist
 
 ENV IAMBIC_REPO_DIR /templates
