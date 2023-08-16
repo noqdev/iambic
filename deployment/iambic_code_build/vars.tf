@@ -5,6 +5,12 @@ variable "aws_region" {
   default = "us-west-2"
 }
 
+variable "profile_name" {
+  type = string
+  description = "aws profile for provider"
+  default = ""
+}
+
 variable "target_account_id" {
   type = string
   description = "AWS account id of where the codebuild is deployed"
