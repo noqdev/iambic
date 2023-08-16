@@ -1,6 +1,19 @@
 
 # Change Log
 
+## 0.11.48 (Aug 16, 2023)
+
+BUG FIXES:
+* Workaround for #557 Defer GUID resolution [#558](https://github.com/noqdev/iambic/pull/558)
+* Fix EN-2380 clear known cf stacksets state if user enter into add org flow [#573](https://github.com/noqdev/iambic/pull/573)
+* Fix for exception raised when iambic plan command is run on empty template file [#578](https://github.com/noqdev/iambic/pull/578)
+* Fix for encoding error when writing proposed_changes.txt [#576](https://github.com/noqdev/iambic/pull/576)
+
+THANKS:
+* `dushyantb` reporting [#557](https://github.com/noqdev/iambic/issues/557) and testing [#558](https://github.com/noqdev/iambic/pull/558)
+* ` 0xAJX` reporting [#577](https://github.com/noqdev/iambic/issues/577) and contributed the fix [#578](https://github.com/noqdev/iambic/pull/578)
+* ` 0xAJX` reporting [#575](https://github.com/noqdev/iambic/issues/575) and contributed the fix [#576](https://github.com/noqdev/iambic/pull/576)
+
 ## 0.11.43 (Aug 15, 2023)
 
 BUG FIXES:
