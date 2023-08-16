@@ -1969,7 +1969,7 @@ class ConfigurationWizard:
                 "iambic_templates_gist_repo_full_name": iambic_templates_gist_repo[
                     "full_name"
                 ],
-                "github_installation_id": github_installation_id,
+                "iambic_github_installation_id": github_installation_id,
             }
         )
         # save secret for pem and webhook_url
@@ -1996,7 +1996,7 @@ class ConfigurationWizard:
         }
         available_account_names = sorted(list(account_name_to_account_id.keys()))
         questionary_params = {}
-        question_text = "We recommend you deploy Lambda integration on a non-management account.\nTarget AWS Account profile: "
+        question_text = "We recommend you deploy Lambda integration on a non-management account.\nTarget AWS Account name: "
         if len(available_account_names) == 1:
             target_account_name = available_account_names[0]
         elif len(available_account_names) < 10:

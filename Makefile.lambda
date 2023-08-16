@@ -1,6 +1,6 @@
 # public.ecr.aws/l1s5s8m2 is the public ecr repository for integration testing
 # Override variables below by setting environment variables and running. Example:
-# AWS_ACCOUNT=242350334841 AWS_REGION=us-east-1 LAMBDA_CONTAINER_REPO_NAME=iambic-ecr-public/iambic/iambic PROFILE_NAME=test/test_admin make -f Makefile.lambda auth_to_ecr upload_docker_lambda
+# AWS_ACCOUNT=123456789012 AWS_REGION=us-east-1 LAMBDA_CONTAINER_REPO_NAME=iambic-ecr-public/iambic/iambic PROFILE_NAME=PROFILE make -f Makefile.lambda auth_to_ecr upload_docker_lambda
 
 AWS_ACCOUNT ?= "442632209887"
 AWS_REGION ?= "us-west-2"
