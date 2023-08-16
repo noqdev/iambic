@@ -16,6 +16,7 @@ from iambic.core.utils import NoqSemaphore, aio_wrapper, plugin_apply_wrapper
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, legacy_paginated_search
 
 if TYPE_CHECKING:
+    from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
     from iambic.plugins.v0_1_0.aws.models import AWSAccount
     from iambic.plugins.v0_1_0.aws.organizations.scp.models import (
         ServiceControlPolicyItem,
@@ -354,6 +355,7 @@ async def apply_update_policy_targets(
     current_policy,
     log_params,
     aws_account: AWSAccount,
+    aws_config: AWSConfig,
     *args,
 ) -> list[ProposedChange]:
     """Apply update policy targets.
@@ -376,6 +378,7 @@ async def apply_update_policy_targets(
         current_policy,
         log_params,
         aws_account,
+        aws_config,
     )
 
     tasks += t
@@ -387,6 +390,7 @@ async def apply_update_policy_targets(
         current_policy,
         log_params,
         aws_account,
+        aws_config,
     )
 
     tasks += t
@@ -552,6 +556,8 @@ def __apply_targets(
     current_policy,
     log_params,
     aws_account: AWSAccount,
+    aws_config: AWSConfig,
+    *args,
 ):
     """Apply targets to policy."""
     from iambic.plugins.v0_1_0.aws.organizations.scp.models import (
@@ -568,7 +574,7 @@ def __apply_targets(
             ).values()
         )
     )
-    targets = PolicyTargetProperties.unparse_targets(targets, aws_account.aws_config)
+    targets = PolicyTargetProperties.unparse_targets(targets, aws_config)
 
     current_targets = list(
         map(lambda t: t.get("TargetId"), current_policy.get("Targets"))
@@ -617,6 +623,7 @@ def __remove_targets(
     current_policy,
     log_params,
     aws_account: AWSAccount,
+    aws_config: AWSConfig,
 ):
     """Remove targets from policy that are not in the template."""
     from iambic.plugins.v0_1_0.aws.organizations.scp.models import (
@@ -633,7 +640,7 @@ def __remove_targets(
             ).values()
         )
     )
-    targets = PolicyTargetProperties.unparse_targets(targets, aws_account.aws_config)
+    targets = PolicyTargetProperties.unparse_targets(targets, aws_config)
 
     current_targets = list(
         map(lambda t: t.get("TargetId"), current_policy.get("Targets"))

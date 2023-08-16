@@ -268,7 +268,12 @@ class AwsScpPolicyTemplate(AWSTemplate, AccessModel):
         resource_dict["Arn"] = self.get_arn()
         return resource_dict
 
-    async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
+    async def _apply_to_account(
+        self,
+        aws_account: AWSAccount,
+        aws_config: Optional[AWSConfig] = None,
+        **kwargs,
+    ) -> AccountChangeDetails:
         if self.account_id != aws_account.account_id:
             return AccountChangeDetails(
                 account=str(aws_account),
@@ -361,6 +366,7 @@ class AwsScpPolicyTemplate(AWSTemplate, AccessModel):
                 current_policy,
                 log_params,
                 aws_account,
+                aws_config,
             ]
 
             tasks = [
@@ -407,7 +413,14 @@ class AwsScpPolicyTemplate(AWSTemplate, AccessModel):
             current_policy = await get_policy(client, account_policy.get("PolicyId"))
             current_policy = current_policy.dict()
 
-            args = [client, account_policy, current_policy, log_params, aws_account]
+            args = [
+                client,
+                account_policy,
+                current_policy,
+                log_params,
+                aws_account,
+                aws_config,
+            ]
 
             tasks = [
                 apply_update_policy_tags(*args),

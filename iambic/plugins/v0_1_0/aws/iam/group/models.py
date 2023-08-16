@@ -102,7 +102,9 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
         return "aws-service-group" in self.properties.path
 
     async def _apply_to_account(  # noqa: C901
-        self, aws_account: AWSAccount
+        self,
+        aws_account: AWSAccount,
+        **kwargs,
     ) -> AccountChangeDetails:
         client = await aws_account.get_boto3_client("iam")
         account_group = self.apply_resource_dict(aws_account)

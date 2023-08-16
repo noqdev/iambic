@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 from enum import Enum
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 import boto3
 import botocore
@@ -307,12 +307,9 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
         description="The role arn to assume into when making calls to the account",
         exclude=True,
     )
-    organization: Optional[AWSOrganization] = Field(
+
+    organization: Optional[AWSOrganization if TYPE_CHECKING else Any] = Field(
         None, description="The AWS Organization this account belongs to"
-    )
-    aws_config: Optional[AWSConfig] = Field(
-        None,
-        description="when an account is an organization account, it needs the AWS Config settings",
     )
 
     class Config:
@@ -489,7 +486,7 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
         when the account is the organization account
         """
         self.organization = organization
-        self.aws_config = config
+        # self.aws_config = config
 
     def dict(
         self,
@@ -568,7 +565,8 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
     @property
     def organization_account(self) -> bool:
         """if current account is an organization account"""
-        return bool(self.organization and self.aws_config)
+        # return bool(self.organization and self.aws_config)
+        return bool(self.organization)
 
     def __str__(self):
         return f"{self.account_name} - ({self.account_id})"
@@ -824,7 +822,11 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
 class AWSTemplate(BaseTemplate, ExpiryModel):
     identifier: str
 
-    async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
+    async def _apply_to_account(
+        self,
+        aws_account: AWSAccount,
+        **kwargs,
+    ) -> AccountChangeDetails:
         raise NotImplementedError
 
     async def apply(self, config: AWSConfig) -> TemplateChangeDetails:
@@ -842,7 +844,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
         for account in config.accounts:
             if evaluate_on_provider(self, account):
                 relevant_accounts.append(account)
-                tasks.append(self._apply_to_account(account))
+                tasks.append(self._apply_to_account(account, aws_config=config))
 
         if not relevant_accounts:
             if ctx.execute:
