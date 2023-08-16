@@ -20,7 +20,7 @@ def file_render_resource_changes(
     # Render template
     template = env.get_template("text_file_summary.jinja2")
     rendered_data = template.render(iambic=template_data)
-    with open(filepath, "w", encoding='utf-8') as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         f.write(rendered_data)
 
 
