@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import time
 import webbrowser
@@ -109,46 +108,6 @@ def get_repos_for_installation(jwt_token, installation_id):
     response.raise_for_status()
 
     return response.json().get("repositories", [])
-
-
-def get_github_app_description(jwt_token, app_id):
-    """
-    Retrieve the GitHub App's description.
-    """
-
-    headers = {
-        "Authorization": f"Bearer {jwt_token}",
-        "Accept": "application/vnd.github.v3+json",
-    }
-
-    # Make a GET request to retrieve the GitHub App's metadata
-    response = requests.get(f"https://api.github.com/apps/{app_id}", headers=headers)
-    response.raise_for_status()
-
-    # Extract the description from the response
-    description = response.json().get("description", "")
-    return description
-
-
-def update_github_app_description(jwt_token, app_id, new_description):
-    """
-    Update the GitHub App's description.
-    """
-
-    headers = {
-        "Authorization": f"Bearer {jwt_token}",
-        "Accept": "application/vnd.github.v3+json",
-    }
-
-    data = {"description": new_description}
-
-    # Make a PATCH request to update the GitHub App's metadata
-    response = requests.patch(
-        f"https://api.github.com/apps/{app_id}", headers=headers, data=json.dumps(data)
-    )
-    response.raise_for_status()
-
-    return response.json()
 
 
 def get_github_app_secrets():
