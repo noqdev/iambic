@@ -179,11 +179,11 @@ def lower_case_all_header_keys(d):
 def handle_events_cron(event=None, context=None) -> None:
     secrets = _get_app_secrets_as_lambda_context_current()
     github_app_id = secrets["id"]
-    github_installation_id = secrets["iambic_github_installation_id"]
+    iambic_github_installation_id = secrets["iambic_github_installation_id"]
     REPOSITORY_CLONE_URL = secrets["iambic_templates_repo_url"]
     REPOSITORY_FULL_NAME = secrets["iambic_templates_repo_full_name"]
     github_token = asyncio.run(
-        _get_installation_token(github_app_id, github_installation_id)
+        _get_installation_token(github_app_id, iambic_github_installation_id)
     )
     github_client = github.Github(github_token)
 

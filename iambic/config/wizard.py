@@ -1937,10 +1937,10 @@ class ConfigurationWizard:
             )
             return
 
-        github_installation_id = github_app_installations[0]["id"]
+        iambic_github_installation_id = github_app_installations[0]["id"]
 
         github_app_installation_repos = get_repos_for_installation(
-            github_app_jwt, github_installation_id
+            github_app_jwt, iambic_github_installation_id
         )
 
         iambic_templates_repo = next(
@@ -1969,7 +1969,7 @@ class ConfigurationWizard:
                 "iambic_templates_gist_repo_full_name": iambic_templates_gist_repo[
                     "full_name"
                 ],
-                "iambic_github_installation_id": github_installation_id,
+                "iambic_github_installation_id": iambic_github_installation_id,
             }
         )
         # save secret for pem and webhook_url
