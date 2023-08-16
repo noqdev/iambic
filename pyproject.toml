@@ -18,7 +18,7 @@ name = "iambic-core"
 packages = [
     { include="iambic", from="." },
 ]
-version = "0.11.47"
+version = "0.11.48"
 license = "Apache-2.0"
 description = "IAMbic is a multi-cloud IAM control plane that unifies cloud identity management for AWS, Okta, Azure Active Directory, Google Workspace and more into Git."
 authors = ["Noq Software <hello@noq.dev>"]
