@@ -2332,7 +2332,6 @@ class ConfigurationWizard:
 
             if self.has_aws_account_or_organizations:
                 choices.append("Setup GitHub App Integration using AWS Lambda")
-                choices.append("Setup AWS change detection")
                 if (
                     self.config.aws.organizations
                     and not self.config.aws.sqs_cloudtrail_changes_queues
