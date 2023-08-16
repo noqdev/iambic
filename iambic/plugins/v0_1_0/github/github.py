@@ -610,12 +610,11 @@ def handle_iambic_approve(
 
     try:
         repo_dir = get_lambda_repo_path()
-        _ = prepare_local_repo_for_new_commits(repo_url, repo_dir, "approve")
-        config_path = asyncio.run(resolve_config_template_path(repo_dir))
         # it's important to load the config from main branch
         # we want to guard against a requester directly changing the approver
         # knowledge in the config of the iambic-template repository
-        main_config = asyncio.run(load_config(config_path))
+        _ = prepare_local_repo_for_new_commits(repo_url, repo_dir, "approve")
+        main_config = __get_config()
         github_main_config: GithubConfig = main_config.github
         allowed_bot_approvers = github_main_config.allowed_bot_approvers
         matching_approvers = [
@@ -961,8 +960,7 @@ def _handle_import(
         )  # type: ignore
         repo_dir = get_lambda_repo_path()
         repo = prepare_local_repo_for_new_commits(repo_url, repo_dir, "import")
-        config_path = asyncio.run(resolve_config_template_path(repo_dir))
-        config = asyncio.run(load_config(config_path))
+        config = __get_config()
         asyncio.run(config.run_import(exe_message, repo_dir))
         repo.git.add(".")
         diff_list = repo.head.commit.diff()
@@ -985,8 +983,7 @@ def _handle_enforce(
     try:
         local_repo_path = get_lambda_repo_path()
         _ = prepare_local_repo_for_new_commits(repo_url, local_repo_path, "enforce")
-        config_path = asyncio.run(resolve_config_template_path(local_repo_path))
-        config = asyncio.run(load_config(config_path))
+        config = __get_config()
         # we are not restoring teh original ctx because we expect
         # this is called in a completely separate process
         ctx.eval_only = False
