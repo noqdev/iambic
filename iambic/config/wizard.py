@@ -128,7 +128,7 @@ def clear_stdin_buffer():
 
     # Adding os check if windows then disabling this code as
     # it is causing an error
-    if os.name != 'nt':
+    if os.name != "nt":
         r, _, _ = select.select([sys.stdin], [], [], 0)
         while r:
             # If there is input waiting, read and discard it.
@@ -369,6 +369,11 @@ class ConfigurationWizard:
         asyncio.run(self.set_config_details())
         check_and_update_resource_limit(self.config)
         log.debug("Starting configuration wizard", config_path=self.config_path)
+
+    def _reset_cf_stacksets_known_states(self):
+        # call this if you want to bust the previous known states whether
+        # the user has CF StackSets permissions.
+        self._has_cf_stacksets_permissions = None
 
     @property
     def has_cf_stacksets_permissions(self):
@@ -1212,6 +1217,9 @@ class ConfigurationWizard:
             self.config.write()
 
     def configuration_wizard_aws_organizations_add(self):
+        # we reset the previous known states since the user chose
+        # enter this flow again, so we will re-query the cloud control plane.
+        self._reset_cf_stacksets_known_states()  # address https://github.com/noqdev/iambic/issues/574
         if not self.has_cf_stacksets_permissions:
             log.info(
                 "Unable to edit this attribute without CloudFormation permissions."
