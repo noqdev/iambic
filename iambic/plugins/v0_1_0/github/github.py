@@ -492,7 +492,8 @@ def _post_artifact_to_companion_repository(
     op_name: str,
     proposed_changes_path: str,
     markdown_summary: str,
-    default_base_name: str = "proposed_changes.yaml",
+    default_base_name: str = None,
+    write_summary: bool = True,
 ):
     url = None
     try:
@@ -503,19 +504,27 @@ def _post_artifact_to_companion_repository(
         pr_prefix = f"pr-{pull_number}" if pull_number else "no-pr"
         # the intentional expansion is due to the machine logs (json version)
         # is implicitly written to proposed_changes_path with a json suffix.
+        default_base_name_available = True
         for artifact_path in [initial_path, initial_path.with_suffix(".json")]:
             lines = []
             if artifact_path.exists():
                 with open(artifact_path) as f:
                     lines = f.readlines()
+                remote_path_base_name = artifact_path.name
+                if default_base_name and default_base_name_available:
+                    remote_path_base_name = default_base_name
+                    default_base_name_available = False
                 remote_repo_path = (
-                    f"{pr_prefix}/{op_name}/{now_timestamp}/{artifact_path.name}"
+                    f"{pr_prefix}/{op_name}/{now_timestamp}/{remote_path_base_name}"
                 )
-                gist_repo.create_file(remote_repo_path, op_name, "".join(lines))
-        # always write the summary
-        md_repo_path = f"{pr_prefix}/{op_name}/{now_timestamp}/summary.md"
-        result = gist_repo.create_file(md_repo_path, op_name, markdown_summary)
-        url = result["content"].html_url
+                result = gist_repo.create_file(
+                    remote_repo_path, op_name, "".join(lines)
+                )
+                url = result["content"].html_url
+        if write_summary:
+            md_repo_path = f"{pr_prefix}/{op_name}/{now_timestamp}/summary.md"
+            result = gist_repo.create_file(md_repo_path, op_name, markdown_summary)
+            url = result["content"].html_url
     except Exception:
         # Decision to keep going is we do not want a failure of posting to companion
         # repository (for full machine and human readable contents) to stop the rest of
@@ -853,10 +862,10 @@ def __save_detection_messages(
     temp_file_path: str | None,
     github_client: github.Github,
     templates_repo: Repository,
-):
+) -> str:
     """Retrieve detection messages from tempFile and save it to companion repository as gists"""
     if not temp_file_path:
-        return
+        return ""
 
     note_content = None
     if os.path.getsize(temp_file_path) > 0:
@@ -870,14 +879,18 @@ def __save_detection_messages(
             path=temp_file_path,
         )
 
-        _post_artifact_to_companion_repository(
+        return _post_artifact_to_companion_repository(
             github_client=github_client,
             templates_repo=templates_repo,
             pull_number="",
             op_name="detect",
             proposed_changes_path=temp_file_path,
             markdown_summary=note_content,
+            default_base_name="cloudtrail.json",
+            write_summary=False,
         )
+
+    return ""
 
 
 def __get_detection_message_temp_file(config: Config) -> str | None:
@@ -919,14 +932,20 @@ def _handle_detect_changes_from_eventbridge(
             log.info("handle_detect no changes")
             return []
 
-        repo.git.commit("-m", COMMIT_MESSAGE_FOR_DETECT)
-        repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()
-
-        __save_detection_messages(
+        url = __save_detection_messages(
             temp_file_path=temp_file_path,
             github_client=github_client,
             templates_repo=templates_repo,
         )
+
+        url_snippet = f"For cloudtrail details, see {url}"
+        commit_log = COMMIT_MESSAGE_FOR_DETECT
+        if url:
+            commit_log = f"{commit_log}\n\n{url_snippet}"
+
+        repo.git.commit("-m", commit_log)
+        repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()
+
     except Exception as e:
         log.error("fault", exception=str(e))
         raise e
