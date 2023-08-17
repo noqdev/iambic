@@ -300,6 +300,7 @@ async def test_apply_update_policy_targets(mock_organizations_client):
         scp_item.dict(),
         dict(resource_type="policy"),
         AWSAccount(account_name="test"),
+        AWSConfig(),
     )
 
     assert len(changes) == 2
