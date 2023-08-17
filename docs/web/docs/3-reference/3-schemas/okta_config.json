@@ -66,8 +66,7 @@
         "idp_name",
         "org_url",
         "api_token"
-      ],
-      "additionalProperties": false
+      ]
     }
   }
 }

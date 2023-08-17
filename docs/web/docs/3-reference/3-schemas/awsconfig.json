@@ -39,6 +39,15 @@
       "description": "aws iambic spoke role is configured as read_only. If true, it will restrict IAMbic capability in AWS",
       "default": false,
       "type": "boolean"
+    },
+    "import_rules": {
+      "title": "Import Rules",
+      "description": "A list of rules to determine which resources to import from AWS",
+      "default": [],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ImportRule"
+      }
     }
   },
   "definitions": {
@@ -46,17 +55,38 @@
       "title": "RegionName",
       "description": "An enumeration.",
       "enum": [
-        "us-east-1",
-        "us-west-1",
-        "us-west-2",
-        "eu-west-1",
-        "eu-west-2",
-        "eu-central-1",
-        "ap-southeast-1",
-        "ap-southeast-2",
+        "af-south-1",
+        "ap-east-1",
         "ap-northeast-1",
         "ap-northeast-2",
-        "sa-east-1"
+        "ap-northeast-3",
+        "ap-south-1",
+        "ap-south-2",
+        "ap-southeast-1",
+        "ap-southeast-2",
+        "ap-southeast-3",
+        "ap-southeast-4",
+        "ca-central-1",
+        "cn-north-1",
+        "cn-northwest-1",
+        "eu-central-1",
+        "eu-central-2",
+        "eu-north-1",
+        "eu-south-1",
+        "eu-south-2",
+        "eu-west-1",
+        "eu-west-2",
+        "eu-west-3",
+        "il-central-1",
+        "me-central-1",
+        "me-south-1",
+        "sa-east-1",
+        "us-east-1",
+        "us-east-2",
+        "us-gov-east-1",
+        "us-gov-west-1",
+        "us-west-1",
+        "us-west-2"
       ]
     },
     "AWSIdentityCenter": {
@@ -226,15 +256,14 @@
         "preferred_spoke_role_name": {
           "title": "Preferred Spoke Role Name",
           "description": "SpokeRoleName use across organization",
-          "default": "IambicSpokeRoleCurtis",
+          "default": "IambicSpokeRole",
           "type": "string"
         }
       },
       "required": [
         "hub_role_arn",
         "org_account_id"
-      ],
-      "additionalProperties": false
+      ]
     },
     "Partition": {
       "title": "Partition",
@@ -393,12 +422,95 @@
           "title": "Assume Role Arn",
           "description": "The role arn to assume into when making calls to the account",
           "type": "string"
+        },
+        "organization": {
+          "title": "Organization",
+          "description": "The AWS Organization this account belongs to"
         }
       },
       "required": [
         "account_name"
-      ],
-      "additionalProperties": false
+      ]
+    },
+    "ImportRuleTag": {
+      "title": "ImportRuleTag",
+      "type": "object",
+      "properties": {
+        "key": {
+          "title": "Key",
+          "description": "The key of the tag to match",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "description": "The value of the tag to match",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key"
+      ]
+    },
+    "ImportAction": {
+      "title": "ImportAction",
+      "description": "An enumeration.",
+      "enum": [
+        "ignore",
+        "set_import_only"
+      ]
+    },
+    "ImportRule": {
+      "title": "ImportRule",
+      "type": "object",
+      "properties": {
+        "match_tags": {
+          "title": "Match Tags",
+          "description": "A list of tags to match for the rule",
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ImportRuleTag"
+          }
+        },
+        "match_names": {
+          "title": "Match Names",
+          "description": "A list of resource names to match for the rule",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "match_paths": {
+          "title": "Match Paths",
+          "description": "A list of resource paths to match for the rule",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "match_template_types": {
+          "title": "Match Template Types",
+          "description": "A list of resource template types to match for the rule",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "action": {
+          "description": "The action to take when the rule matches (e.g., 'ignore', 'set_import_only')",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ImportAction"
+            }
+          ]
+        }
+      },
+      "required": [
+        "action"
+      ]
     }
   }
 }

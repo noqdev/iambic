@@ -89,7 +89,6 @@
     "properties",
     "idp_name"
   ],
-  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",

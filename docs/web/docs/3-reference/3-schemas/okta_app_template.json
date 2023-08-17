@@ -90,7 +90,6 @@
     "properties",
     "idp_name"
   ],
-  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -166,8 +165,7 @@
           "description": "Group assigned to the app",
           "type": "string"
         }
-      },
-      "additionalProperties": false
+      }
     },
     "AppProperties": {
       "title": "AppProperties",
@@ -260,8 +258,7 @@
       },
       "required": [
         "name"
-      ],
-      "additionalProperties": false
+      ]
     }
   }
 }

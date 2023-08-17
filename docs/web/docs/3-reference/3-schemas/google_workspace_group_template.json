@@ -78,7 +78,6 @@
   "required": [
     "properties"
   ],
-  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -224,8 +223,7 @@
             }
           ]
         }
-      },
-      "additionalProperties": false
+      }
     },
     "WhoCanInvite": {
       "title": "WhoCanInvite",
