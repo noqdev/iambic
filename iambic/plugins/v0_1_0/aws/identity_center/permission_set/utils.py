@@ -45,15 +45,39 @@ class WrapIdentityCenterStoreClient(object):
 
     @cache
     def describe_user(self, guid):
-        return self.boto3_identity_center_store_client.describe_user(
-            IdentityStoreId=self.store_id, UserId=guid
-        )
+        try:
+            # the comment out code is used to simulate a AD mismatch with IdentityCenter during development
+            # raise self.boto3_identity_center_store_client.exceptions.ResourceNotFoundException({"error_response": "foo"}, "describe_user")
+            return self.boto3_identity_center_store_client.describe_user(
+                IdentityStoreId=self.store_id, UserId=guid
+            )
+        except (
+            self.boto3_identity_center_store_client.exceptions.ResourceNotFoundException
+        ):
+            log.error(f"Cannot resolve user: {guid}")
+            # this make up value allows to capture the raw API output from permission set assignment
+            return {
+                "UserName": guid,
+                "DisplayName": guid,
+            }
 
     @cache
     def describe_group(self, guid):
-        return self.boto3_identity_center_store_client.describe_group(
-            IdentityStoreId=self.store_id, GroupId=guid
-        )
+        try:
+            # the comment out code is used to simulate a AD mismatch with IdentityCenter during development
+            # raise self.boto3_identity_center_store_client.exceptions.ResourceNotFoundException({"error_response": "foo"}, "describe_group")
+            return self.boto3_identity_center_store_client.describe_group(
+                IdentityStoreId=self.store_id, GroupId=guid
+            )
+        except (
+            self.boto3_identity_center_store_client.exceptions.ResourceNotFoundException
+        ):
+            log.error(f"Cannot resolve group: {guid}")
+            # this make up value allows to capture the raw API output from permission set assignment
+            return {
+                "GroupId": guid,
+                "DisplayName": guid,
+            }
 
 
 async def generate_permission_set_map(aws_accounts: list[AWSAccount], templates: list):
