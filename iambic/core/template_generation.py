@@ -64,7 +64,10 @@ async def get_existing_template_map(
 
 
 def templatize_resource(
-    provider_child: ProviderChild, resource, valid_characters_re: str = r"[\w_+=,.@-]"
+    provider_child: ProviderChild,
+    resource,
+    valid_characters_re: str = r"[\w_+=,.@-]",
+    substitute_variables: bool = True,
 ):
     resource_type = type(resource)
 
@@ -73,13 +76,14 @@ def templatize_resource(
     elif resource_type != str:
         resource = str(resource)
 
-    if variables := getattr(provider_child, "variables", None):
-        for var in variables:
-            if isinstance(var.value, str):
-                var.value = sanitize_string(var.value, valid_characters_re)
+    if substitute_variables:
+        if variables := getattr(provider_child, "variables", None):
+            for var in variables:
+                if isinstance(var.value, str):
+                    var.value = sanitize_string(var.value, valid_characters_re)
 
-            var_key_str = "{{var.{}}}".format(var.key)
-            resource = resource.replace(var.value, "{{{}}}".format(var_key_str))
+                var_key_str = "{{var.{}}}".format(var.key)
+                resource = resource.replace(var.value, "{{{}}}".format(var_key_str))
 
     return (
         json.loads(resource)
