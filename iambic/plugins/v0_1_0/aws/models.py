@@ -310,7 +310,7 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
 
     organization: Optional[AWSOrganization if TYPE_CHECKING else Any] = Field(
         None, description="The AWS Organization this account belongs to"
-    )
+    )  # workaround for generate_docs
 
     class Config:
         fields = {"hub_session_info": {"exclude": True}}
@@ -486,7 +486,6 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
         when the account is the organization account
         """
         self.organization = organization
-        # self.aws_config = config
 
     def dict(
         self,
@@ -565,7 +564,6 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
     @property
     def organization_account(self) -> bool:
         """if current account is an organization account"""
-        # return bool(self.organization and self.aws_config)
         return bool(self.organization)
 
     def __str__(self):
