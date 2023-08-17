@@ -14,13 +14,13 @@ IAMbic runs on Mac, Linux, or Windows Subsystem for Linux (WSL). Before getting 
 and permissions:
 
 1. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
-2. Install [Python](https://www.python.org/downloads/) 3.9+. Running IAMbic locally instead of Docker is the recommended way. 
+2. Install [Python](https://www.python.org/downloads/) 3.9+. Running IAMbic locally instead of Docker is the recommended way.
 3. [Install the GitHub CLI](https://cli.github.com/manual#installation) and [authenticate with Github](https://cli.github.com/manual/) (recommended)
 4. Set up administrative access in AWS to run the IAMbic Setup Wizard. (required)
 5. Set up administrative access to your Github organization or personal account. (required)
 6. [Install Docker](https://docs.docker.com/get-docker/) and verify it's installed. (optional)
 
-Notes: 
+Notes:
 - IAMbic leverages CloudFormation to create resources across your AWS Organization and/or accounts. So administrative access to AWS is required to run the Setup Wizard.
 - IAMbic uses GitHub to store and version control your IAM. Administrative access to your GitHub organization is required to run the Setup Wizard, as this will
 require the ability to create repositories and a Github Application.
@@ -57,7 +57,7 @@ Please follow these steps to set up the repositories:
 export ORG_NAME=<your_github_organization_name>
 ```
 
-or 
+or
 
 
 ```bash
@@ -249,4 +249,3 @@ Depending on your goals, you may configure IAMbic to work with AWS and supported
 - [Continue with Okta Organizations](./okta)
 - [Continue with Azure Active Directory](./azure_ad)
 - [Continue with Google Groups](./google)
-
