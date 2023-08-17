@@ -406,7 +406,9 @@ class AwsIdentityCenterPermissionSetTemplate(
         return response
 
     async def _apply_to_account(  # noqa: C901
-        self, aws_account: AWSAccount
+        self,
+        aws_account: AWSAccount,
+        **kwargs,
     ) -> AccountChangeDetails:
         """Apply the permission set to the given AWS account
 

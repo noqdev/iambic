@@ -1,5 +1,9 @@
 # AWSConfig
 
+See [Template Schema Validation](/reference/template_validation_ide) to learn how to validate templates automatically in your IDE.
+
+## Description
+
 ## Properties
 
 - **`organizations`** *(array)*: A list of AWS Organizations to be managed by iambic. Default: `[]`.
@@ -10,12 +14,14 @@
 - **`sqs_cloudtrail_changes_queues`** *(array)*: Default: `[]`.
   - **Items** *(string)*
 - **`spoke_role_is_read_only`** *(boolean)*: aws iambic spoke role is configured as read_only. If true, it will restrict IAMbic capability in AWS. Default: `false`.
+- **`import_rules`** *(array)*: A list of rules to determine which resources to import from AWS. Default: `[]`.
+  - **Items**: Refer to *[#/definitions/ImportRule](#definitions/ImportRule)*.
 ## Definitions
 
 
 <a id="definitions/RegionName"></a>
 
-- **`RegionName`**: An enumeration. Must be one of: `["us-east-1", "us-west-1", "us-west-2", "eu-west-1", "eu-west-2", "eu-central-1", "ap-southeast-1", "ap-southeast-2", "ap-northeast-1", "ap-northeast-2", "sa-east-1"]`.
+- **`RegionName`**: An enumeration. Must be one of: `["af-south-1", "ap-east-1", "ap-northeast-1", "ap-northeast-2", "ap-northeast-3", "ap-south-1", "ap-south-2", "ap-southeast-1", "ap-southeast-2", "ap-southeast-3", "ap-southeast-4", "ca-central-1", "cn-north-1", "cn-northwest-1", "eu-central-1", "eu-central-2", "eu-north-1", "eu-south-1", "eu-south-2", "eu-west-1", "eu-west-2", "eu-west-3", "il-central-1", "me-central-1", "me-south-1", "sa-east-1", "us-east-1", "us-east-2", "us-gov-east-1", "us-gov-west-1", "us-west-1", "us-west-2"]`.
 
 <a id="definitions/AWSIdentityCenter"></a>
 
@@ -50,7 +56,7 @@ configurations for other models used in IAMbic.
 
 <a id="definitions/AWSOrganization"></a>
 
-- **`AWSOrganization`** *(object)*: Cannot contain additional properties.
+- **`AWSOrganization`** *(object)*
   - **`default_region`**: Default region to use when making AWS requests. Default: `"us-east-1"`.
     - **All of**
       - : Refer to *[#/definitions/RegionName](#definitions/RegionName)*.
@@ -70,7 +76,7 @@ configurations for other models used in IAMbic.
   - **`account_rules`** *(array)*: A list of rules used to determine how organization accounts are handled. Default: `[]`.
     - **Items**: Refer to *[#/definitions/AWSOrgAccountRule](#definitions/AWSOrgAccountRule)*.
   - **`spoke_role_is_read_only`** *(boolean)*: if true, the spoke role will be limited to read-only permissions. Default: `false`.
-  - **`preferred_spoke_role_name`** *(string)*: SpokeRoleName use across organization. Default: `"IambicSpokeRoleCurtis"`.
+  - **`preferred_spoke_role_name`** *(string)*: SpokeRoleName use across organization. Default: `"IambicSpokeRole"`.
 
 <a id="definitions/Partition"></a>
 
@@ -99,7 +105,7 @@ configurations for other models used in IAMbic.
 
 - **`AWSAccount`** *(object)*: Inherited by the provider class to provide a consistent interface for AccessModelMixin<br \>  For AWS, this is the AWS account
 For GCP, this is the GCP project
-For Okta, this is the IDP domain. Cannot contain additional properties.
+For Okta, this is the IDP domain.
   - **`default_region`**: Default region to use when making AWS requests. Default: `"us-east-1"`.
     - **All of**
       - : Refer to *[#/definitions/RegionName](#definitions/RegionName)*.
@@ -122,3 +128,29 @@ For Okta, this is the IDP domain. Cannot contain additional properties.
   - **`identity_center_details`**: Refer to *[#/definitions/IdentityCenterDetails](#definitions/IdentityCenterDetails)*.
   - **`spoke_role_arn`** *(string)*: (Auto-populated) The role arn to assume into when making calls to the account.
   - **`assume_role_arn`** *(string)*: The role arn to assume into when making calls to the account.
+  - **`organization`**: The AWS Organization this account belongs to.
+
+<a id="definitions/ImportRuleTag"></a>
+
+- **`ImportRuleTag`** *(object)*
+  - **`key`** *(string)*: The key of the tag to match.
+  - **`value`** *(string)*: The value of the tag to match.
+
+<a id="definitions/ImportAction"></a>
+
+- **`ImportAction`**: An enumeration. Must be one of: `["ignore", "set_import_only"]`.
+
+<a id="definitions/ImportRule"></a>
+
+- **`ImportRule`** *(object)*
+  - **`match_tags`** *(array)*: A list of tags to match for the rule. Default: `[]`.
+    - **Items**: Refer to *[#/definitions/ImportRuleTag](#definitions/ImportRuleTag)*.
+  - **`match_names`** *(array)*: A list of resource names to match for the rule. Default: `[]`.
+    - **Items** *(string)*
+  - **`match_paths`** *(array)*: A list of resource paths to match for the rule. Default: `[]`.
+    - **Items** *(string)*
+  - **`match_template_types`** *(array)*: A list of resource template types to match for the rule. Default: `[]`.
+    - **Items** *(string)*
+  - **`action`**: The action to take when the rule matches (e.g., 'ignore', 'set_import_only').
+    - **All of**
+      - : Refer to *[#/definitions/ImportAction](#definitions/ImportAction)*.

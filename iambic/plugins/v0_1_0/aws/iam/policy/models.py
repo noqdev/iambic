@@ -351,7 +351,11 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
 
         return response
 
-    async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
+    async def _apply_to_account(
+        self,
+        aws_account: AWSAccount,
+        **kwargs,
+    ) -> AccountChangeDetails:
         client = await aws_account.get_boto3_client("iam")
         account_policy = self.apply_resource_dict(aws_account)
         policy_name = account_policy["PolicyName"]

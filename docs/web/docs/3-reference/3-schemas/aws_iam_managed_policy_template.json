@@ -128,7 +128,6 @@
     "identifier",
     "properties"
   ],
-  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -489,8 +488,7 @@
       },
       "required": [
         "effect"
-      ],
-      "additionalProperties": false
+      ]
     },
     "ManagedPolicyDocument": {
       "title": "ManagedPolicyDocument",
@@ -655,8 +653,7 @@
       "required": [
         "key",
         "value"
-      ],
-      "additionalProperties": false
+      ]
     },
     "ManagedPolicyProperties": {
       "title": "ManagedPolicyProperties",
