@@ -115,12 +115,16 @@ class PolicyTargetProperties(BaseModel):
             elif target_id.startswith("r-"):
                 key = "roots"
             else:
-                target_id = list(
+                known_accounts = list(
                     map(
                         lambda a: a.account_name,
                         filter(lambda a: a.account_id == target_id, config.accounts),
                     )
-                )[0]
+                )
+                if len(known_accounts) > 0:
+                    # if an account is suspend and not assumable, we will not be able
+                    # to look up from config.
+                    target_id = known_accounts[0]
 
             data[key].append(target_id)
 
