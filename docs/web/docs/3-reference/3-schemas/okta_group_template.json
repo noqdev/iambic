@@ -90,7 +90,6 @@
     "properties",
     "idp_name"
   ],
-  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -229,8 +228,7 @@
       },
       "required": [
         "username"
-      ],
-      "additionalProperties": false
+      ]
     },
     "GroupProperties": {
       "title": "GroupProperties",
@@ -315,8 +313,7 @@
       },
       "required": [
         "name"
-      ],
-      "additionalProperties": false
+      ]
     }
   }
 }

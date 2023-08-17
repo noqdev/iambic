@@ -138,7 +138,6 @@
     "identifier",
     "properties"
   ],
-  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -401,8 +400,7 @@
       },
       "required": [
         "policy_arn"
-      ],
-      "additionalProperties": false
+      ]
     },
     "Principal": {
       "title": "Principal",
@@ -653,8 +651,7 @@
       },
       "required": [
         "effect"
-      ],
-      "additionalProperties": false
+      ]
     },
     "AssumeRolePolicyDocument": {
       "title": "AssumeRolePolicyDocument",
@@ -819,8 +816,7 @@
       "required": [
         "key",
         "value"
-      ],
-      "additionalProperties": false
+      ]
     },
     "ManagedPolicyRef": {
       "title": "ManagedPolicyRef",
@@ -919,8 +915,7 @@
       },
       "required": [
         "policy_arn"
-      ],
-      "additionalProperties": false
+      ]
     },
     "PolicyDocument": {
       "title": "PolicyDocument",
@@ -1039,8 +1034,7 @@
       },
       "required": [
         "policy_name"
-      ],
-      "additionalProperties": false
+      ]
     },
     "RoleProperties": {
       "title": "RoleProperties",
@@ -1263,8 +1257,7 @@
             "type": "string"
           }
         }
-      },
-      "additionalProperties": false
+      }
     }
   }
 }
