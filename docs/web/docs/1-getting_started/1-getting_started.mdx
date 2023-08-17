@@ -1,0 +1,254 @@
+---
+title: Getting started
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import AsciinemaWidget from '../../src/components/AsciinemaWidget';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Pre-requisites
+
+IAMbic runs on Mac, Linux, or Windows Subsystem for Linux (WSL). Before getting started with IAMbic, make sure you have the following pre-requisites
+and permissions:
+
+1. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+2. Install [Python](https://www.python.org/downloads/) 3.9+. Running IAMbic locally instead of Docker is the recommended way. 
+3. [Install the GitHub CLI](https://cli.github.com/manual#installation) and [authenticate with Github](https://cli.github.com/manual/) (recommended)
+4. Set up administrative access in AWS to run the IAMbic Setup Wizard. (required)
+5. Set up administrative access to your Github organization or personal account. (required)
+6. [Install Docker](https://docs.docker.com/get-docker/) and verify it's installed. (optional)
+
+Notes: 
+- IAMbic leverages CloudFormation to create resources across your AWS Organization and/or accounts. So administrative access to AWS is required to run the Setup Wizard.
+- IAMbic uses GitHub to store and version control your IAM. Administrative access to your GitHub organization is required to run the Setup Wizard, as this will
+require the ability to create repositories and a Github Application.
+
+# Installing and Configuring IAMbic
+
+#TODO: summarize what this article is about, give an overview
+
+Before starting, make sure you have the following information:
+
+- AWS organization ID (if applicable) or AWS account ID(s)
+- AWS IAM credentials with admin privileges
+- Knowledge on [AWS Hub and Spoke Roles](/reference/aws_hub_and_spoke_roles)
+
+## Configure AWS IAM credentials
+
+First, create credentials with Administrator privileges on AWS. They can be at the Organization level, or in personal account (good for testing). These credentials and account information will be used to run the IAMbic Setup Wizard.
+
+If required by your organization, you may refer to a list of
+[specific permissions](/reference/aws_permissions_for_setup_wizard) required to run the wizard to set up
+a scoped role.
+
+Refer to the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html)
+for specific guidance on configuring credentials.
+
+## Set up the Github Repositories
+
+Github repositories repository are used to store IAMbic templates for importing your cloud resources.
+IAMbic provides GitHub workflows that keep IAM identities and permissions updated within your repository.
+
+Please follow these steps to set up the repositories:
+
+1. Set an environment variable containing your Github Organization name (or your Github username):
+
+```bash
+export ORG_NAME=<your_github_organization_name>
+```
+
+or 
+
+
+```bash
+export ORG_NAME=<your_github_username>
+```
+
+<Tabs>
+<TabItem value="gh_cli" label="GitHub CLI" default>
+
+2. Create the `iambic-templates` and `iambic-templates-gist` repositories required by IAMbic:
+
+```bash
+gh repo create "${ORG_NAME}/iambic-templates" \
+  --private --template noqdev/github-iambic-templates
+gh repo create "${ORG_NAME}/iambic-templates-gist" \
+  --private --template noqdev/github-iambic-templates-gist
+```
+
+</TabItem>
+<TabItem value="gh_web" label="GitHub Web UI">
+
+2. Create the `iambic-templates` and `iambic-templates-gist` repositories required by IAMbic by visiting the following links.
+
+:::danger
+
+Set these repositories to **Private**, and name them `iambic-templates` and `iambic-templates-gist`
+respectively
+
+:::
+
+- [Click here to install the `iambic-templates` repository](https://github.com/noqdev/github-iambic-templates/generate)
+- [Click here to install the `iambic-templates-gist` repository](https://github.com/noqdev/github-iambic-templates-gist/generate)
+
+</TabItem>
+</Tabs>
+
+3. Clone the `iambic-templates` repository and install IAMbic locally in a Python virtual environment.
+
+```bash
+gh repo clone ${ORG_NAME}/iambic-templates
+```
+
+*Note*: No need to clone `iambic-templates-gist`. It'll be used later.
+
+4. Install IAMbic in a Python virtual environment, for example:
+
+```bash
+cd iambic-templates
+python3 -m venv venv
+source venv/bin/activate
+pip install iambic-core
+```
+
+## Configuring IAMbic
+
+To start the IAMbic Wizard, run the following command:
+
+```bash
+iambic setup
+```
+
+<AsciinemaWidget src="/recordings/iambic_setup.cast" rows={30} idleTimeLimit={3} preload={true} />
+
+Alternatively, you can [create the configuration manually](/how_to_guides/manually_create_the_configuration).
+
+Check out other commands with `iambic --help`.
+
+Running the wizard produces config files locally, which will need to be committed and pushed to Github:
+
+```bash
+git status
+git add .
+git commit -m "Add imported resources"
+git push
+```
+
+## Running IAMbic in production
+
+In a production deployment, IAMbic imports and applies should be run in a CI/CD pipeline, triggered by a Github webhook.
+IAMbic provides the following to make this easy:
+
+- A Github Application that can be installed on your Github Organization (or personal account)
+- A Docker container that will be deployed in AWS Lambda
+- AWS EventBridge rules that will trigger the Lambda function to run IAMbic commands periodically.
+
+### Setup the Github Application
+
+IAMbic uses a Github Application to manage the Github workflows that keep your IAM resources up to date. In order to install it, make sure again that you have:
+
+* GitHub org admin permissions
+* AWS administrator permissions with the ability to assume IambicHubRole in the management account
+* AWS administrator permissions to deploy the IAMbic GitHub integration.
+
+To configure the application, run:
+
+```bash
+iambic setup
+```
+
+* Select `Setup GitHub App Integration using AWS Lambda` option
+* Give the application access to your `iambic-templates` and `iambic-templates-gist` repositories. **Do not** give it access to your other repositories.
+
+Check out this video for a walkthrough:
+
+[![Setup IAMbic GitHub Integration](https://img.youtube.com/vi/3PikJZ0pW8A/0.jpg)](https://youtu.be/3PikJZ0pW8A)
+
+### Set the avatar of your GitHub App (Recommended)
+
+<details>
+  <summary>Expand for instructions</summary>
+
+Set up an avatar for your GitHub app to easily recognize its identity in pull requests.
+
+We have provide both light and dark icons for you.
+
+<img src={"/img/git/app-icons/icon-light.png"} style={{width: '25%', display: 'auto', marginLeft: 'auto', marginRight: 'auto'}} />
+<img src={"/img/git/app-icons/icon-dark.png"} style={{width: '25%', display: 'auto', marginLeft: 'auto', marginRight: 'auto'}} />
+
+Download them to your local computer.
+
+1. From the previous section, click on "App Settings".
+<img src={"/img/git/app-icons/step-1-app-settings.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+2. Scroll down to "Display Information", click on "Upload a logo..."
+<img src={"/img/git/app-icons/step-2-display.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+3. Choose either the light icon or dark icon from your computer
+4. Click on the "Set new avatar" button
+<img src={"/img/git/app-icons/step-3-set-avatar.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+
+</details>
+
+
+### Configure your GitHub Repository to require approvals before merging
+
+Now that the app is installed, you need to protect your branch and put some merge guardrails in place:
+
+1. Go to the GitHub repository you had created previously, `ExampleOrg/iambic-templates`
+2. Navigate to Repository Settings, in the left navigation menu to "Branches" settings page; the URL will look something like `github.com/ExampleOrg/iambic-templates/settings/branches`
+
+![IAMbic Git Flow](/img/git/github-settings-menu.png)
+
+3. Add a branch protection rule.
+4. Set the branch name pattern to `main` (Or the name of your default branch, if it isn't `main`).
+5. Configure the options
+  - Enable "Require a pull request before merging".
+  - Enable "Require Approvals".
+  - Leave the default value for "Required number of approvals".
+  - Enable "Require status checks to pass before merging".
+6. Click "Save changes" to save the branch protection rule.
+
+### Enable iambic-integrations to bypass review rules for default branch
+
+In the typical review flow for pull requests, approval from reviewers is necessary. However, certain actions like auto import or auto expiration
+involve pushing changes back to the default branch without requiring manual approvals.
+
+1. Go to your iambic templates repository settings (https://github.com/ExampleOrg/ExampleIambicTemplatesRepository/settings).
+2. Click "Branches" in the top left navigation.
+3. Click on "Edit" for your default branch (typically "main" or "master") under "Branch protection rules".
+4. Click on "Allow specified actors to bypass required pull requests".
+5. In "Search for people, teams or apps", type in `iambic-integrations` to click on the GitHub App we have created.
+6. Click "Save changes".
+
+### Open a pull request on your **iambic-templates** repository
+
+Once you have configured the Github Application, and have configured your branch setting, you can start making changes to your config by creating PRs:
+
+1. `default_branch=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')`
+2. `git checkout -b task/change_description "$default_branch"`
+3. Edit one of your description within your templates, like `resources/github/iam_role_lambda.yaml`.
+  See [here](/getting_started/aws#3-create-and-manage-an-iam-role-across-multiple-aws-accounts) for an example template if needed.
+4. Add your changes to your branch, and push it to github:
+  ```bash
+  git add resources/github/iam_role_lambda.yaml
+  git commit -m "Change Description"
+  git push origin HEAD
+  ```
+5. Create a pull request.
+6. The installed GitHub App will comment with a plan for the changes. If you would like IAMbic to re-plan the changes, you can comment `iambic plan`.
+7. The plan will be provided as an inline comment if it is less than 65kb. Larger plans are uploaded to the `iambic-templates-gist` repository and linked as a comment in the PR
+8. Add reviewers to review your PR and IAMbic's plan in the PR comments.
+9. Once your reviewer approves your changes, add `iambic apply` as a comment to instruct IAMbic to apply the changes. After the Cloud changes are successfully applied, IAMbic will merge the PR into your default branch (Typically main or master).
+
+
+## Next Steps
+
+Now that you have IAMbic installed and configured, you're ready to move on to the next steps.
+Depending on your goals, you may configure IAMbic to work with AWS and supported identity providers.
+
+- [Continue with AWS IAM](./aws)
+- [Continue with Okta Organizations](./okta)
+- [Continue with Azure Active Directory](./azure_ad)
+- [Continue with Google Groups](./google)
+
