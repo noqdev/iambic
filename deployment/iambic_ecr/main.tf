@@ -10,9 +10,7 @@ terraform {
 
 provider "aws" {
   region  = var.aws_region
-
-  # uncomment the profile config if your terraform setup uses aws profile
-  # profile = "YOUR_CONFIGURED_PROFILE"
+  profile = var.profile_name
 }
 
 

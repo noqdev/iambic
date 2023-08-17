@@ -11,13 +11,12 @@ between your Git repository and your Cloud IAM. This process can be resource-int
 comparing them to your existing IAMbic templates, and updating them if needed.
 
 By default, this `import` operation runs every four hours
-in a standard production deployment via GitHub using the
-[iambic-import.yml Github Action template](https://github.com/noqdev/iambic/blob/main/iambic/github/templates/iambic-import.yml).
+in a standard production deployment via GitHub using AWS EventBridge Rules
 
 However, if you're like us, you'd want a more real-time reflection of your IAM in Git, desiring changes to be visible
 soon after their occurrence. For AWS, this is achievable via AWS Change Detection. This feature utilizes AWS EventBridge and
-SQS to promptly identify modifications to your IAM resources. A [GitHub action](https://github.com/noqdev/iambic/blob/main/iambic/github/templates/iambic-detect.yml)
-can be ran frequently to perform the inexpensive operation of reading an SQS queue, and refreshing the cloud resources that have changed.
+SQS to promptly identify modifications to your IAM resources. IAMbic can be
+invoked frequently to perform the inexpensive operation of reading an SQS queue, and refreshing the cloud resources that have changed.
 By default, this action runs every 15 minutes. If you're using self-hosted runners, and have a normal IAM setup,
 you should be able to run the detection flow every minute. Git would typically be updated with the actual state of your cloud IAM
 within a few minutes of the change occurring.

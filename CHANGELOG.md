@@ -1,6 +1,37 @@
 
 # Change Log
 
+## 0.11.52 (Aug 16, 2023)
+
+DOCS:
+* Simplify installation instructions [#567](https://github.com/noqdev/iambic/pull/567)
+
+ENHANCEMENTS:
+* EventBridge Schedule to invoke detect, expire, enforce, and import periodic tasks [#567](https://github.com/noqdev/iambic/pull/567)
+
+BUG FIXES:
+* Fix #581 Relax Target to stay as account id if we cannot look up its account name [#583](https://github.com/noqdev/iambic/pull/583)
+* Fix #555 Duplicate menu item [#584](https://github.com/noqdev/iambic/pull/584)
+
+DEV EXPERIENCE:
+* Fix pre-commit complaints [#580](https://github.com/noqdev/iambic/pull/580)
+
+THANKS:
+* `rodolphoescobar` reporting SCP import issue [#581](https://github.com/noqdev/iambic/issues/581)
+
+## 0.11.48 (Aug 16, 2023)
+
+BUG FIXES:
+* Workaround for #557 Defer GUID resolution [#558](https://github.com/noqdev/iambic/pull/558)
+* Fix EN-2380 clear known cf stacksets state if user enter into add org flow [#573](https://github.com/noqdev/iambic/pull/573)
+* Fix for exception raised when iambic plan command is run on empty template file [#578](https://github.com/noqdev/iambic/pull/578)
+* Fix for encoding error when writing proposed_changes.txt [#576](https://github.com/noqdev/iambic/pull/576)
+
+THANKS:
+* `dushyantb` reporting [#557](https://github.com/noqdev/iambic/issues/557) and testing [#558](https://github.com/noqdev/iambic/pull/558)
+* ` 0xAJX` reporting [#577](https://github.com/noqdev/iambic/issues/577) and contributed the fix [#578](https://github.com/noqdev/iambic/pull/578)
+* ` 0xAJX` reporting [#575](https://github.com/noqdev/iambic/issues/575) and contributed the fix [#576](https://github.com/noqdev/iambic/pull/576)
+
 ## 0.11.43 (Aug 15, 2023)
 
 BUG FIXES:

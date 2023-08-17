@@ -176,6 +176,45 @@ def lower_case_all_header_keys(d):
     return {key.lower(): value for key, value in d.items()}
 
 
+def handle_events_cron(event=None, context=None) -> None:
+    secrets = _get_app_secrets_as_lambda_context_current()
+    github_app_id = secrets["id"]
+    iambic_github_installation_id = secrets["iambic_github_installation_id"]
+    REPOSITORY_CLONE_URL = secrets["iambic_templates_repo_url"]
+    REPOSITORY_FULL_NAME = secrets["iambic_templates_repo_full_name"]
+    github_token = asyncio.run(
+        _get_installation_token(github_app_id, iambic_github_installation_id)
+    )
+    github_client = github.Github(github_token)
+
+    command = event["command"]
+
+    if not (callable := AWS_EVENTS_WORKFLOW_DISPATCH_MAP.get(command)):
+        log_params = {"command": command}
+        log.error("handle_events_cron: Unable to find command", **log_params)
+        return
+
+    repo_url = format_github_url(REPOSITORY_CLONE_URL, github_token)
+
+    templates_repo = github_client.get_repo(REPOSITORY_FULL_NAME)
+    default_branch = templates_repo.default_branch
+    temp_templates_directory = tempfile.mkdtemp(prefix="lambda")
+    os.chdir(temp_templates_directory)
+    getattr(iambic_app, "lambda").app.init_plan_output_path()
+    getattr(iambic_app, "lambda").app.init_repo_base_path()
+    iambic.plugins.v0_1_0.github.github.init_shared_data_directory()
+    iambic.core.utils.init_writable_directory()
+
+    return callable(
+        github_client,
+        templates_repo,
+        REPOSITORY_FULL_NAME,
+        repo_url,
+        default_branch,
+        proposed_changes_path=getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH,
+    )
+
+
 def run_handler(event=None, context=None):
     """
     Default handler for AWS Lambda. It is split out from the actual
@@ -183,7 +222,11 @@ def run_handler(event=None, context=None):
     """
 
     # debug
-    # print(event)
+    print("Event: ", event)
+
+    # Check if the event source is CloudWatch Events
+    if isinstance(event, dict) and event.get("source") == "EventBridgeCron":
+        return handle_events_cron(event, context)
 
     # Http spec considers keys to be insensitive but different
     # proxy will pass along different case sensitive header key
@@ -294,8 +337,6 @@ def handle_issue_comment(
 
     comment_body = webhook_payload["comment"]["body"]
     comment_user_login = webhook_payload["comment"]["user"]["login"]
-    log_params = {"COMMENT_DISPATCH_MAP_KEYS": COMMENT_DISPATCH_MAP.keys()}
-    log.info("COMMENT_DISPATCH_MAP keys", **log_params)
 
     command_lookup = comment_body.split("\n")[0].strip()
 
@@ -355,10 +396,9 @@ def handle_workflow_run(
         return
     log_params.update(action=action)
 
-    workflow_path = webhook_payload["workflow_run"]["path"]
+    workflow_path = webhook_payload.get("workflow_run", {}).get("path")
     log_params.update(workflow_path=workflow_path)
-
-    if workflow_path not in WORKFLOW_DISPATCH_MAP:
+    if workflow_path not in LEGACY_WORKFLOW_DISPATCH_MAP:
         log.error("handle_workflow_run: no op", **log_params)
         return
 
@@ -375,7 +415,7 @@ def handle_workflow_run(
         repository_url=repository_url,
     )
 
-    workflow_func: Callable = WORKFLOW_DISPATCH_MAP[workflow_path]
+    workflow_func: Callable = LEGACY_WORKFLOW_DISPATCH_MAP[workflow_path]
     log.info("Executing workflow", **log_params)
 
     return workflow_func(
@@ -394,7 +434,6 @@ EVENT_DISPATCH_MAP: dict[str, Callable] = {
     "workflow_run": handle_workflow_run,
 }
 
-
 # We are supporting both "iambic" and "/iambic"
 # for now during transition.
 COMMENT_DISPATCH_MAP: dict[str, Callable] = {
@@ -412,7 +451,18 @@ COMMENT_DISPATCH_MAP: dict[str, Callable] = {
     "/iambic version": handle_iambic_version,
 }
 
-WORKFLOW_DISPATCH_MAP: dict[str, Callable] = {
+AWS_EVENTS_WORKFLOW_DISPATCH_MAP: dict[str, Callable] = {
+    "enforce": github_app_workflow_wrapper(_handle_enforce, "enforce"),
+    "expire": github_app_workflow_wrapper(_handle_expire, "expire"),
+    "import": github_app_workflow_wrapper(_handle_import, "import"),
+    "detect": github_app_workflow_wrapper(
+        _handle_detect_changes_from_eventbridge, "detect"
+    ),
+}
+
+# These are settings for the legacy Github Action Workflows. It should be safe
+# to deprecate after users have fully migrated to AWS Events.
+LEGACY_WORKFLOW_DISPATCH_MAP: dict[str, Callable] = {
     ".github/workflows/iambic-enforce.yml": github_app_workflow_wrapper(
         _handle_enforce, "enforce"
     ),
