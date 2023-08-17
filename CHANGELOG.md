@@ -1,6 +1,24 @@
 
 # Change Log
 
+## 0.11.52 (Aug 16, 2023)
+
+DOCS:
+* Simplify installation instructions [#567](https://github.com/noqdev/iambic/pull/567)
+
+ENHANCEMENTS:
+* EventBridge Schedule to invoke detect, expire, enforce, and import periodic tasks [#567](https://github.com/noqdev/iambic/pull/567)
+
+BUG FIXES:
+* Fix #581 Relax Target to stay as account id if we cannot look up its account name [#583](https://github.com/noqdev/iambic/pull/583)
+* Fix #555 Duplicate menu item [#584](https://github.com/noqdev/iambic/pull/584)
+
+DEV EXPERIENCE:
+* Fix pre-commit complaints [#580](https://github.com/noqdev/iambic/pull/580)
+
+THANKS:
+* `rodolphoescobar` reporting SCP import issue [#581](https://github.com/noqdev/iambic/issues/581)
+
 ## 0.11.48 (Aug 16, 2023)
 
 BUG FIXES:
