@@ -932,11 +932,18 @@ def _handle_detect_changes_from_eventbridge(
             log.info("handle_detect no changes")
             return []
 
-        url = __save_detection_messages(
-            temp_file_path=temp_file_path,
-            github_client=github_client,
-            templates_repo=templates_repo,
-        )
+        url = None
+        try:
+            url = __save_detection_messages(
+                temp_file_path=temp_file_path,
+                github_client=github_client,
+                templates_repo=templates_repo,
+            )
+        except Exception as e:
+            captured_traceback = traceback.format_exc()
+            log.error("__save_detection_messages failed", exception=captured_traceback)
+            # continue because it's possible the gist crashes but
+            # we still want to capture the cloud changes
 
         url_snippet = f"For cloudtrail details, see {url}"
         commit_log = COMMIT_MESSAGE_FOR_DETECT
