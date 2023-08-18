@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import atexit
 import datetime
 import json
 import os
@@ -18,13 +19,15 @@ from urllib.parse import urlparse
 
 import github
 from cryptography.hazmat.primitives import serialization
+from git.repo import Repo
 from github.PullRequest import PullRequest
+from github.Repository import Repository
 
 import iambic.output.markdown
-from iambic.config.dynamic_config import CURRENT_IAMBIC_VERSION, load_config
+from iambic.config.dynamic_config import CURRENT_IAMBIC_VERSION, Config, load_config
 from iambic.config.utils import resolve_config_template_path
 from iambic.core.context import ctx
-from iambic.core.git import Repo, clone_git_repo, get_remote_default_branch
+from iambic.core.git import clone_git_repo, get_remote_default_branch
 from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage, TemplateChangeDetails
@@ -342,7 +345,7 @@ def handle_issue_comment(
 def handle_iambic_git_apply(
     context: dict[str, Any],
     github_client: github.Github,
-    templates_repo: github.Repo,
+    templates_repo: Repository,
     pull_request: PullRequest,
     repo_name: str,
     pull_number: str,
@@ -444,7 +447,7 @@ def handle_iambic_git_apply(
 
 
 def maybe_merge(
-    templates_repo: github.Repo,
+    templates_repo: Repository,
     # pull_request: PullRequest,
     pull_number: int,
     merge_sha: str,
@@ -484,12 +487,13 @@ def maybe_merge(
 
 def _post_artifact_to_companion_repository(
     github_client: github.Github,
-    templates_repo: github.Repo,
+    templates_repo: Repository,
     pull_number: str,
     op_name: str,
     proposed_changes_path: str,
     markdown_summary: str,
-    default_base_name: str = "proposed_changes.yaml",
+    default_base_name: str = None,
+    write_summary: bool = True,
 ):
     url = None
     try:
@@ -500,19 +504,27 @@ def _post_artifact_to_companion_repository(
         pr_prefix = f"pr-{pull_number}" if pull_number else "no-pr"
         # the intentional expansion is due to the machine logs (json version)
         # is implicitly written to proposed_changes_path with a json suffix.
+        default_base_name_available = True
         for artifact_path in [initial_path, initial_path.with_suffix(".json")]:
             lines = []
             if artifact_path.exists():
                 with open(artifact_path) as f:
                     lines = f.readlines()
+                remote_path_base_name = artifact_path.name
+                if default_base_name and default_base_name_available:
+                    remote_path_base_name = default_base_name
+                    default_base_name_available = False
                 remote_repo_path = (
-                    f"{pr_prefix}/{op_name}/{now_timestamp}/{artifact_path.name}"
+                    f"{pr_prefix}/{op_name}/{now_timestamp}/{remote_path_base_name}"
                 )
-                gist_repo.create_file(remote_repo_path, op_name, "".join(lines))
-        # always write the summary
-        md_repo_path = f"{pr_prefix}/{op_name}/{now_timestamp}/summary.md"
-        result = gist_repo.create_file(md_repo_path, op_name, markdown_summary)
-        url = result["content"].html_url
+                result = gist_repo.create_file(
+                    remote_repo_path, op_name, "".join(lines)
+                )
+                url = result["content"].html_url
+        if write_summary:
+            md_repo_path = f"{pr_prefix}/{op_name}/{now_timestamp}/summary.md"
+            result = gist_repo.create_file(md_repo_path, op_name, markdown_summary)
+            url = result["content"].html_url
     except Exception:
         # Decision to keep going is we do not want a failure of posting to companion
         # repository (for full machine and human readable contents) to stop the rest of
@@ -525,7 +537,7 @@ def _post_artifact_to_companion_repository(
 def handle_iambic_git_plan(
     context: dict[str, Any],
     github_client: github.Github,
-    templates_repo: github.Repo,
+    templates_repo: Repository,
     pull_request: PullRequest,
     repo_name: str,
     pull_number: str,
@@ -590,7 +602,7 @@ def handle_iambic_git_plan(
 def handle_iambic_approve(
     context: dict[str, Any],
     github_client: github.Github,
-    templates_repo: github.Repo,
+    templates_repo: Repository,
     pull_request: PullRequest,
     repo_name: str,
     pull_number: str,
@@ -605,12 +617,11 @@ def handle_iambic_approve(
 
     try:
         repo_dir = get_lambda_repo_path()
-        _ = prepare_local_repo_for_new_commits(repo_url, repo_dir, "approve")
-        config_path = asyncio.run(resolve_config_template_path(repo_dir))
         # it's important to load the config from main branch
         # we want to guard against a requester directly changing the approver
         # knowledge in the config of the iambic-template repository
-        main_config = asyncio.run(load_config(config_path))
+        _ = prepare_local_repo_for_new_commits(repo_url, repo_dir, "approve")
+        main_config = __get_config()
         github_main_config: GithubConfig = main_config.github
         allowed_bot_approvers = github_main_config.allowed_bot_approvers
         matching_approvers = [
@@ -666,7 +677,7 @@ def handle_iambic_approve(
 def handle_iambic_version(
     context: dict[str, Any],
     github_client: github.Github,
-    templates_repo: github.Repo,
+    templates_repo: Repository,
     pull_request: PullRequest,
     repo_name: str,
     pull_number: str,
@@ -684,7 +695,7 @@ def handle_iambic_version(
 def github_app_workflow_wrapper(workflow_func: Callable, ux_op_name: str) -> Callable:
     def wrapped_workflow_func(
         github_client: github.Github,
-        templates_repo: github.Repo,
+        templates_repo: Repository,
         repo_name: str,
         repo_url: str,
         default_branch: str,
@@ -709,7 +720,13 @@ def github_app_workflow_wrapper(workflow_func: Callable, ux_op_name: str) -> Cal
                     iambic_app, "lambda"
                 ).app.PLAN_OUTPUT_PATH = proposed_changes_path
 
-            template_changes = workflow_func(repo_url, default_branch)
+            template_changes = workflow_func(
+                repo_url,
+                default_branch,
+                github_client=github_client,
+                templates_repo=templates_repo,
+            )
+
             _process_template_changes(
                 github_client,
                 templates_repo,
@@ -751,7 +768,7 @@ def github_app_workflow_wrapper(workflow_func: Callable, ux_op_name: str) -> Cal
 
 def _process_template_changes(
     github_client: github.Github,
-    templates_repo: github.Repo,
+    templates_repo: Repository,
     pull_request: PullRequest,
     pull_number: str,
     proposed_changes_path: str,  # Path where we are sourcing the machine output
@@ -823,25 +840,112 @@ def handle_detect_changes_from_eventbridge(
     repo_name = context["repository"]
     templates_repo = github_client.get_repo(repo_name)
     default_branch = get_remote_default_branch(templates_repo)
-    _handle_detect_changes_from_eventbridge(repo_url, default_branch)
+
+    _handle_detect_changes_from_eventbridge(
+        repo_url,
+        default_branch,
+        github_client=github_client,
+        templates_repo=templates_repo,
+    )
+
+
+def __get_config() -> Config:
+    """Load the config from lambda repo"""
+    repo_dir = get_lambda_repo_path()
+    config_path = asyncio.run(resolve_config_template_path(repo_dir))
+    config = asyncio.run(load_config(config_path))
+
+    return config
+
+
+def __save_detection_messages(
+    temp_file_path: str | None,
+    github_client: github.Github,
+    templates_repo: Repository,
+) -> str:
+    """Retrieve detection messages from tempFile and save it to companion repository as gists"""
+    if not temp_file_path:
+        return ""
+
+    note_content = None
+    if os.path.getsize(temp_file_path) > 0:
+        with open(temp_file_path, "r") as file:
+            note_content = file.read()
+
+    if note_content:
+        log.info(
+            "Write changes to gists",
+            note_content=note_content,
+            path=temp_file_path,
+        )
+
+        return _post_artifact_to_companion_repository(
+            github_client=github_client,
+            templates_repo=templates_repo,
+            pull_number="",
+            op_name="detect",
+            proposed_changes_path=temp_file_path,
+            markdown_summary=note_content,
+            default_base_name="cloudtrail.json",
+            write_summary=False,
+        )
+
+    return ""
+
+
+def __get_detection_message_temp_file(config: Config) -> str | None:
+    """Returns a temporary file path to store detection messages if enabled in config"""
+    if not (
+        config.core
+        and config.core.detection_messages
+        and config.core.detection_messages.enabled
+    ):
+        return None
+
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        temp_file_path = tmp.name
+        atexit.register(os.unlink, temp_file_path)
+
+    return temp_file_path
 
 
 def _handle_detect_changes_from_eventbridge(
-    repo_url: str, default_branch: str
+    repo_url: str,
+    default_branch: str,
+    github_client: github.Github,
+    templates_repo: Repository,  # type: ignore
 ) -> list[TemplateChangeDetails]:
     try:
         repo = prepare_local_repo_for_new_commits(
             repo_url, get_lambda_repo_path(), "detect"
         )
 
-        run_detect(get_lambda_repo_path())
+        config = __get_config()
+        temp_file_path = __get_detection_message_temp_file(config)
+
+        run_detect(get_lambda_repo_path(), message_details_file=temp_file_path)
+
         repo.git.add(".")
         diff_list = repo.head.commit.diff()
-        if len(diff_list) > 0:
-            repo.git.commit("-m", COMMIT_MESSAGE_FOR_DETECT)
-            repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()
-        else:
+
+        if not len(diff_list):
             log.info("handle_detect no changes")
+            return []
+
+        url = __save_detection_messages(
+            temp_file_path=temp_file_path,
+            github_client=github_client,
+            templates_repo=templates_repo,
+        )
+
+        url_snippet = f"For cloudtrail details, see {url}"
+        commit_log = COMMIT_MESSAGE_FOR_DETECT
+        if url:
+            commit_log = f"{commit_log}\n\n{url_snippet}"
+
+        repo.git.commit("-m", commit_log)
+        repo.remotes.origin.push(refspec=f"HEAD:{default_branch}").raise_if_error()
+
     except Exception as e:
         log.error("fault", exception=str(e))
         raise e
@@ -861,15 +965,19 @@ def handle_import(github_client: github.Github, context: dict[str, Any]) -> None
     _handle_import(repo_url, default_branch)
 
 
-def _handle_import(repo_url: str, default_branch: str) -> list[TemplateChangeDetails]:
+def _handle_import(
+    repo_url: str,
+    default_branch: str,
+    **kwargs,
+) -> list[TemplateChangeDetails]:
     try:
         exe_message = ExecutionMessage(
-            execution_id=str(uuid.uuid4()), command=Command.IMPORT
-        )
+            execution_id=str(uuid.uuid4()),
+            command=Command.IMPORT,
+        )  # type: ignore
         repo_dir = get_lambda_repo_path()
         repo = prepare_local_repo_for_new_commits(repo_url, repo_dir, "import")
-        config_path = asyncio.run(resolve_config_template_path(repo_dir))
-        config = asyncio.run(load_config(config_path))
+        config = __get_config()
         asyncio.run(config.run_import(exe_message, repo_dir))
         repo.git.add(".")
         diff_list = repo.head.commit.diff()
@@ -884,12 +992,15 @@ def _handle_import(repo_url: str, default_branch: str) -> list[TemplateChangeDet
     return []
 
 
-def _handle_enforce(repo_url: str, default_branch: str) -> list[TemplateChangeDetails]:
+def _handle_enforce(
+    repo_url: str,
+    default_branch: str,
+    **kwargs,
+) -> list[TemplateChangeDetails]:
     try:
         local_repo_path = get_lambda_repo_path()
         _ = prepare_local_repo_for_new_commits(repo_url, local_repo_path, "enforce")
-        config_path = asyncio.run(resolve_config_template_path(local_repo_path))
-        config = asyncio.run(load_config(config_path))
+        config = __get_config()
         # we are not restoring teh original ctx because we expect
         # this is called in a completely separate process
         ctx.eval_only = False
@@ -921,7 +1032,11 @@ def handle_expire(github_client: github.Github, context: dict[str, Any]) -> None
     _handle_expire(repo_url, default_branch)
 
 
-def _handle_expire(repo_url: str, default_branch: str) -> list[TemplateChangeDetails]:
+def _handle_expire(
+    repo_url: str,
+    default_branch: str,
+    **kwargs,
+) -> list[TemplateChangeDetails]:
     try:
         repo = prepare_local_repo_for_new_commits(
             repo_url, get_lambda_repo_path(), "expire"

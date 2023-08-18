@@ -41,3 +41,41 @@ Setting up change detection with IAMbic is a straightforward process. Run the co
 
 Executing this command will initiate the Cloudformation Stack and Stackset on your behalf,
 effectively activating AWS Change Detection for your IAM resources.
+
+#### Filtering Event Messages using AWS EventBridge Rules
+You may customize the EventBridge rule that is used to trigger IAMbic resource imports on changes, if you want
+to trigger refreshes on a subset of events.
+
+To modify the AWS EventBridge rule, visit the [Amazon EventBridge page](https://us-east-1.console.aws.amazon.com/events/home?region=us-east-1#/rules)
+in the rule's respective region, select the rule that you want to modify and edit the `event pattern` attribute.
+By default, IAMbic uses the rule configuration below, what is listening to mutation events from IAM, Identity Center (SSO) and Organizations.
+
+```yaml
+EventPattern:
+    detail-type:
+        - AWS API Call via CloudTrail
+    detail:
+        eventSource:
+            - iam.amazonaws.com
+            - sso.amazonaws.com
+            - organizations.amazonaws.com
+        eventName:
+            - prefix: Create
+            - prefix: Update
+            - prefix: Attach
+            - prefix: Detach
+            - prefix: Add
+            - prefix: Delete
+            - prefix: Put
+            - prefix: Remove
+            - prefix: Tag
+            - prefix: Untag
+```
+Please be cautious when modifying the Event Pattern.
+An incorrect configuration could cause IAMbic to miss events that are important to you, or flood IAMbic with irrelevant CloudTrail logs.
+Reference the guides below to understand how event patterns can be modified.
+
+Additional Resources:
+- [Docs for Amazon EventBridge events](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-events.html)
+- [Reference for Amazon EventBridge - Rule ](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-events-rule.html)
+- [Guide for Content filtering in Amazon EventBridge event patterns](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns-content-based-filtering.html)

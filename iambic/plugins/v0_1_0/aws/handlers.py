@@ -3,9 +3,10 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import os
 import uuid
 from itertools import chain
-from typing import TYPE_CHECKING, Coroutine, Union
+from typing import TYPE_CHECKING, Coroutine, Optional, Union
 
 import boto3
 
@@ -512,7 +513,9 @@ async def import_organization_resources(
 
 
 async def detect_changes(  # noqa: C901
-    config: AWSConfig, repo_dir: str
+    config: AWSConfig,
+    repo_dir: str,
+    message_details_file: Optional[str] = None,
 ) -> Union[str, None]:
     if not config.sqs_cloudtrail_changes_queues:
         log.debug("No cloudtrail changes queue arn found. Returning")
@@ -546,6 +549,8 @@ async def detect_changes(  # noqa: C901
         messages = sqs.receive_message(QueueUrl=queue_url, MaxNumberOfMessages=10).get(
             "Messages", []
         )
+
+        detect_log_details = []
 
         while messages:
             processed_messages = []
@@ -701,6 +706,12 @@ async def detect_changes(  # noqa: C901
                             )
 
                         if resource_id:
+                            detect_log_details.append(
+                                {
+                                    "resource_id": resource_id,
+                                    **message_body,
+                                }
+                            )
                             commit_message = (
                                 f"{commit_message}User {session_name} performed action {event} "
                                 f"on {resource_type}({resource_id}) on account {account_id}.\n"
@@ -858,6 +869,12 @@ async def detect_changes(  # noqa: C901
                         )
                     )
         await asyncio.gather(*tasks)
+
+        if message_details_file and detect_log_details:
+            os.makedirs(os.path.dirname(message_details_file), exist_ok=True)
+            with open(message_details_file, "w") as f:
+                f.write(json.dumps(detect_log_details, indent=2))
+            log.info("Message details written to file", file=message_details_file)
 
         return commit_message
 

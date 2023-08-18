@@ -53,9 +53,14 @@ class ExceptionReporting(BaseModel):
     )
 
 
+class DetectionMessages(BaseModel):
+    enabled: bool = Field(..., description="Enable or disable detection messages.")
+
+
 class CoreConfig(BaseModel):
     minimum_ulimit: int = 64000
     exception_reporting: Optional[ExceptionReporting] = None
+    detection_messages: Optional[DetectionMessages] = None
 
 
 class PluginType(Enum):
@@ -322,11 +327,13 @@ class Config(ConfigMixin, BaseTemplate):
 
         return template_changes
 
-    async def run_detect_changes(self, repo_dir: str) -> Union[str, None]:
+    async def run_detect_changes(
+        self, repo_dir: str, message_details_file: Optional[str]
+    ) -> Union[str, None]:
         change_str_list = await asyncio.gather(
             *[
                 plugin.async_detect_changes_callable(
-                    self.get_config_plugin(plugin), repo_dir
+                    self.get_config_plugin(plugin), repo_dir, message_details_file
                 )
                 for plugin in self.configured_plugins
                 if plugin.async_detect_changes_callable
