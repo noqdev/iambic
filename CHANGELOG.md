@@ -3,7 +3,7 @@
 
 ## 0.11.59 (Aug 18, 2023)
 
-BUG FIXES: 
+BUG FIXES:
 * Fix #593 PermissionSet InlinePolicy to support single statement syntax [#594](https://github.com/noqdev/iambic/pull/594)
 
 THANKS:
