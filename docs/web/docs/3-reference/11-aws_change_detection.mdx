@@ -42,7 +42,25 @@ Setting up change detection with IAMbic is a straightforward process. Run the co
 Executing this command will initiate the Cloudformation Stack and Stackset on your behalf,
 effectively activating AWS Change Detection for your IAM resources.
 
-#### Filtering Event Messages using AWS EventBridge Rules
+## Configure CloudTrail Log Integration with AWS Change Detection
+
+1. Make sure you have already configure AWS Change Detection from the above section
+1. Make sure you have allowed your gist repo to be accessed by your IAMbic GitHub App
+<img src={"/img/aws/change_detection_config/01-gist-repo-access.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. (Optional) If you have branch protection in your gist repo, you allow your IAMbic GItHub App to bypass pull request requirement
+<img src={"/img/aws/change_detection_config/02-optional-branch-protection.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Update your IAMbic config in your `iambic-templates` repo just like this example [change](https://github.com/noqdev/iambic-templates-examples/commit/e15442b1275504d5953b83ca1030ad3427468058):
+<img src={"/img/aws/change_detection_config/03-enable-detection-messages.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Make an out-of-band change in your AWS console to update the description of a IAM role
+<img src={"/img/aws/change_detection_config/04a-make-out-of-band-changes.png"} style={{width: '50%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+<br/>
+<img src={"/img/aws/change_detection_config/04b-make-out-of-band-changes.png"} style={{width: '50%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Trigger a detect run in your IAMbic template repo (Note: This is a manual run. Automatic run is triggered from EventBridge Rule Schedule)
+<img src={"/img/aws/change_detection_config/05-run-detect-action.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. In a few minutes, you should see the out-of-band change reflected in your `iambic-templates` repo
+<img src={"/img/aws/change_detection_config/06-detect-result.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+
+## Filtering Event Messages using AWS EventBridge Rules
 You may customize the EventBridge rule that is used to trigger IAMbic resource imports on changes, if you want
 to trigger refreshes on a subset of events.
 
