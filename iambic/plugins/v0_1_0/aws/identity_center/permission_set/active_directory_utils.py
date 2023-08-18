@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import json
 import socket
 
 import aiohttp
 from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
+
+from iambic.core import noq_json
 
 
 async def alternate_list_users(session, directory_id, region):
@@ -24,7 +25,7 @@ async def alternate_list_users(session, directory_id, region):
     url = f"https://{domain}/identitystore/"
 
     payload = {"IdentityStoreId": directory_id, "MaxResults": 100}
-    data = json.dumps(payload)
+    data = noq_json.dumps(payload)
 
     sigv4 = SigV4Auth(session.get_credentials(), "identitystore", region)
 
@@ -47,12 +48,12 @@ async def alternate_list_users(session, directory_id, region):
             text = await r.text()
 
         # necessary because the response header is not regular json
-        id_resp = json.loads(text)
+        id_resp = noq_json.loads(text)
         total_users.extend(id_resp["Users"])
 
         while "NextToken" in id_resp:
             payload["NextToken"] = id_resp["NextToken"]
-            data = json.dumps(payload)
+            data = noq_json.dumps(payload)
             request = AWSRequest(method="POST", url=url, data=data, headers=headers)
             request.context["payload_signing_enabled"] = True
             sigv4.add_auth(request)
@@ -62,15 +63,17 @@ async def alternate_list_users(session, directory_id, region):
                 prepped.url, headers=prepped.headers, data=data
             ) as r:
                 text = await r.text
-                id_resp = json.loads(text)
+                id_resp = noq_json.loads(text)
 
             total_users.extend(id_resp["Users"])
 
     # for compatibility for list_users
     for user in total_users:
-        if "display_name" in user.get("user_attributes", {}).get(
-            "display_name", {}
-        ).get("string_value", None):
+        if (
+            user.get("user_attributes", {})
+            .get("display_name", {})
+            .get("string_value", None)
+        ):
             user["display_name"] = user["user_attributes"]["display_name"][
                 "string_value"
             ]
@@ -95,7 +98,7 @@ async def alternate_list_groups(session, directory_id, region):
             raise
     url = f"https://{domain}/identitystore/"
     payload = {"IdentityStoreId": directory_id, "MaxResults": 100}
-    data = json.dumps(payload)
+    data = noq_json.dumps(payload)
 
     sigv4 = SigV4Auth(session.get_credentials(), "identitystore", region)
 
@@ -118,12 +121,12 @@ async def alternate_list_groups(session, directory_id, region):
         ) as r:
             text = await r.text()
 
-        id_resp = json.loads(text)
+        id_resp = noq_json.loads(text)
         total_groups.extend(id_resp["Groups"])
 
         while "NextToken" in id_resp:
             payload["NextToken"] = id_resp["NextToken"]
-            data = json.dumps(payload)
+            data = noq_json.dumps(payload)
             request = AWSRequest(method="POST", url=url, data=data, headers=headers)
             request.context["payload_signing_enabled"] = True
             sigv4.add_auth(request)
@@ -133,14 +136,16 @@ async def alternate_list_groups(session, directory_id, region):
                 prepped.url, headers=prepped.headers, data=data
             ) as r:
                 text = await r.text
-                id_resp = json.loads(text)
+                id_resp = noq_json.loads(text)
                 total_groups.extend(id_resp["Groups"])
 
     # for compatibility for list_users
     for group in total_groups:
-        if "display_name" in group.get("group_attributes", {}).get(
-            "display_name", {}
-        ).get("string_value", None):
+        if (
+            group.get("group_attributes", {})
+            .get("display_name", {})
+            .get("string_value", None)
+        ):
             group["display_name"] = group["group_attributes"]["display_name"][
                 "string_value"
             ]
