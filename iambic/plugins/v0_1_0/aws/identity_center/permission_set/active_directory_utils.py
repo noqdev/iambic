@@ -10,18 +10,7 @@ from iambic.core import noq_json
 
 
 async def alternate_list_users(session, directory_id, region):
-    domain = f"up.sso.{region}.amazonaws.com"
-    try:
-        ip_list = list({addr[-1][0] for addr in socket.getaddrinfo(domain, 0, 0, 0, 0)})
-    except socket.gaierror:
-        domain = f"up-sso.{region}.amazonaws.com"
-        try:
-            ip_list = list(
-                {addr[-1][0] for addr in socket.getaddrinfo(domain, 0, 0, 0, 0)}
-            )
-            assert ip_list
-        except socket.gaierror:
-            raise
+    domain = choose_up_sso_domain(region)
     url = f"https://{domain}/identitystore/"
 
     payload = {"IdentityStoreId": directory_id, "MaxResults": 100}
@@ -83,7 +72,9 @@ async def alternate_list_users(session, directory_id, region):
     return {"Users": total_users}
 
 
-async def alternate_list_groups(session, directory_id, region):
+# Unfortunately, the up.sso domain is not consistent. some region use up.sso
+# while others use up-sso. That's the fate of undocumented API
+def choose_up_sso_domain(region):
     domain = f"up.sso.{region}.amazonaws.com"
     try:
         ip_list = list({addr[-1][0] for addr in socket.getaddrinfo(domain, 0, 0, 0, 0)})
@@ -96,6 +87,11 @@ async def alternate_list_groups(session, directory_id, region):
             assert ip_list
         except socket.gaierror:
             raise
+    return domain
+
+
+async def alternate_list_groups(session, directory_id, region):
+    domain = choose_up_sso_domain(region)
     url = f"https://{domain}/identitystore/"
     payload = {"IdentityStoreId": directory_id, "MaxResults": 100}
     data = noq_json.dumps(payload)
