@@ -135,16 +135,10 @@ async def alternate_list_groups(session, directory_id, region):
                 id_resp = noq_json.loads(text)
                 total_groups.extend(id_resp["Groups"])
 
-    # for compatibility for list_users
+    # for compatibility for list_groups
     for group in total_groups:
-        if (
-            group.get("group_attributes", {})
-            .get("display_name", {})
-            .get("string_value", None)
-        ):
-            group["display_name"] = group["group_attributes"]["display_name"][
-                "string_value"
-            ]
+        if group.get("DisplayName", None):
+            group["display_name"] = group["DisplayName"]
         else:
             group["display_name"] = "ERROR UNABLE TO DECODE, CONTACT DEVELOPERS"
 
