@@ -120,6 +120,36 @@ def test_permission_boundary_with_customer_managed_policy_ref_with_custom_path()
     )
 
 
+def test_statement_as_dict():
+    properties = PermissionSetProperties(
+        name="foo",
+        description="A",
+        statement={
+            "Sid": "Statement1",
+            "Effect": "Deny",
+            "Action": ["s3:ListAllMyBuckets"],
+            "Resource": "*",
+        },
+    )
+    assert properties
+
+
+def test_statement_as_list_of_dict():
+    properties = PermissionSetProperties(
+        name="foo",
+        description="A",
+        statement=[
+            {
+                "Sid": "Statement1",
+                "Effect": "Deny",
+                "Action": ["s3:ListAllMyBuckets"],
+                "Resource": "*",
+            }
+        ],
+    )
+    assert properties
+
+
 def test_description_validation_with_valid_string():
     properties = PermissionSetProperties(name="foo", description="A")
     assert properties.description == "A"
