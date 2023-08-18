@@ -1,6 +1,30 @@
 
 # Change Log
 
+## 0.11.58 (Aug 18, 2023)
+
+BUG FIXES:
+* Cloudtrail logs as git notes on 'detect' commit [#522](https://github.com/noqdev/iambic/pull/522)
+* Use alternative implementation of list_users and list_groups [#591](https://github.com/noqdev/iambic/pull/591)
+
+THANKS:
+* `dushyantbhardwaj9` for contributing the alternate implementation of list_users and list_groups to workaround some AD + IdentityCenter issues [#557](https://github.com/noqdev/iambic/issues/557)
+
+## 0.11.56 (Aug 17, 2023)
+
+DOCS:
+* Update JSON Schema and Schema markdown [#586](https://github.com/noqdev/iambic/pull/586)
+
+BUG FIXES:
+* EN-2348: add guards when schema generator fails [#582](https://github.com/noqdev/iambic/pull/582)
+* Fix #587 when describe_user and describe_group fail to lookup PrincipalID [#588](https://github.com/noqdev/iambic/pull/588)
+
+ENHANCEMENTS:
+* Allow disabling variable substitution [#589](https://github.com/noqdev/iambic/pull/589)
+
+THANKS:
+* `rodolphoescobar` reporting ResourceNotFoundException in import resources [#587](https://github.com/noqdev/iambic/issues/587)
+
 ## 0.11.52 (Aug 16, 2023)
 
 DOCS:
