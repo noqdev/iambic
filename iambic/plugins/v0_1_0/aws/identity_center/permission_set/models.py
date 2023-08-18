@@ -125,7 +125,11 @@ class SessionDuration(BaseModel):
 
 class InlinePolicy(BaseModel, ExpiryModel):
     version: Optional[str] = None
-    statement: Optional[List[PolicyStatement]] = Field(
+
+    # As usual, the non-list statement is a legacy syntax that AWS has continued
+    # to support. The grammar does not actually document this.
+    #
+    statement: Optional[Union[List[PolicyStatement], PolicyStatement]] = Field(
         None,
         description="List of policy statements",
     )
