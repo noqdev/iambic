@@ -939,7 +939,7 @@ def _handle_detect_changes_from_eventbridge(
                 github_client=github_client,
                 templates_repo=templates_repo,
             )
-        except Exception as e:
+        except Exception:
             captured_traceback = traceback.format_exc()
             log.error("__save_detection_messages failed", exception=captured_traceback)
             # continue because it's possible the gist crashes but
