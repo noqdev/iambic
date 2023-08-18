@@ -33,6 +33,10 @@ from iambic.core.utils import (
     get_provider_value,
     sort_dict,
 )
+from iambic.plugins.v0_1_0.aws.identity_center.permission_set.active_directory_utils import (
+    alternate_list_groups,
+    alternate_list_users,
+)
 from iambic.plugins.v0_1_0.aws.utils import (
     RegionName,
     boto_crud_call,
@@ -466,6 +470,37 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
                 )
                 for x in exceptions_seen:
                     log.error(x)
+
+            if not users_and_groups:
+                mgmt_spoke_role_session = await self.get_boto3_session(region)
+                tmp_users_and_groups = await asyncio.gather(
+                    *[
+                        alternate_list_users(
+                            mgmt_spoke_role_session,
+                            self.identity_center_details.identity_store_id,
+                            region,
+                        ),
+                        alternate_list_groups(
+                            mgmt_spoke_role_session,
+                            self.identity_center_details.identity_store_id,
+                            region,
+                        ),
+                    ],
+                    return_exceptions=True,
+                )
+                users_and_groups = []
+                exceptions_seen = []
+                for x in tmp_users_and_groups:
+                    if isinstance(x, Exception):
+                        exceptions_seen.append(x)
+                    else:
+                        users_and_groups.append(x)
+                if exceptions_seen:
+                    log.error(
+                        "seen exceptions during user_and_group resolution, defer resolution to later"
+                    )
+                    for x in exceptions_seen:
+                        log.error(x)
 
             for user_or_group in users_and_groups:
                 if "Users" in user_or_group:
