@@ -1,10 +1,20 @@
 
 # Change Log
 
+## 0.11.59 (Aug 18, 2023)
+
+BUG FIXES: 
+* Fix #593 PermissionSet InlinePolicy to support single statement syntax [#594](https://github.com/noqdev/iambic/pull/594)
+
+THANKS:
+`rodolphoescobar` reporting Permission Set InlinePolicy issue [#593](https://github.com/noqdev/iambic/issues/593)
+
 ## 0.11.58 (Aug 18, 2023)
 
-BUG FIXES:
+ENHANCEMENTS:
 * Cloudtrail logs as git notes on 'detect' commit [#522](https://github.com/noqdev/iambic/pull/522)
+
+BUG FIXES:
 * Use alternative implementation of list_users and list_groups [#591](https://github.com/noqdev/iambic/pull/591)
 
 THANKS:
