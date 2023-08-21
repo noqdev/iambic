@@ -20,6 +20,24 @@ If you'd like to learn more about the Github Pull-Request flow for making IAM ch
 
 Discover more at [https://docs.iambic.org](https://docs.iambic.org), and check out [BeABetterDev's IAMbic Overview and Deep Dive video](https://www.youtube.com/watch?v=ryEseI_-12o) on YouTube. We're also on [Slack](https://communityinviter.com/apps/noqcommunity/noq) if you'd like help getting started or have any questions.
 
+## IAMbic versus Terraform (or other IaC tools)
+
+| Feature | IAMbic | Terraform (or other IaC) |
+| --- | --- | --- |
+| Multi-Account AWS and Orgs | Native Support | 3rd Party Tools (Terragrunt, etc) |
+| Declarative Temporary<br>Access/Permissions | Native Support | No  |
+| Imports current IAM<br>to VCS | Yes | 3rd Party Tools<br> (Limited to single AWS Account)  |
+| Auto-commits new IAM<br>changes to VCS | Yes | No  |
+| Cloudtrail Attribution for IAM changes | Yes | No  |
+| Bi-Directional Sync | Yes | No  |
+| Drift Prevention | Yes | Limited |
+| Central Source of Truth<br>for current state of all  IAM | Yes | No  |
+| Multi-Cloud Support | Currently AWS, Azure AD, Okta, and Google Workspace,<br>with more coming soon. | Yes |
+| Language | YAML | HCL |
+| Open Source | Yes | No  |
+| Governance & Compliance | Native in VCS | No  |
+| Community Support | Growing | Strong |
+
 ## Key Features
 
 <!-- Keep this in sync with the list of features in the IAMbic Docs Overview Page -->
