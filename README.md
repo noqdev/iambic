@@ -28,6 +28,7 @@ Discover more at [https://docs.iambic.org](https://docs.iambic.org), and check o
 | Declarative Temporary<br>Access/Permissions | Native Support | No  |
 | Imports current IAM<br>to VCS | Yes | No  |
 | Auto-commits new IAM<br>changes to VCS | Yes | No  |
+| Cloudtrail Attribution for IAM changes | Yes | No  |
 | Bi-Directional Sync | Yes | No  |
 | Drift Prevention | Yes | Limited |
 | Central Source of Truth<br>for current state of all  IAM | Yes | No  |
