@@ -6,7 +6,8 @@ from typing import Type, Union
 import xxhash
 
 from iambic.core import noq_json as json
-from iambic.core.iambic_enum import IambicManaged
+from iambic.core.context import ctx
+from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import AccessModelMixin, BaseModel, BaseTemplate, ProviderChild
 from iambic.core.parser import load_templates
@@ -597,6 +598,18 @@ def create_or_update_template(
 
         try:
             merged_template.write()
+
+            if ctx.command == Command.Import:
+                # https://github.com/noqdev/iambic/issues/600
+                # we want to assert against bad exclude_account statement
+                if isinstance(new_template, AccessModelMixin) and isinstance(
+                    existing_template, AccessModelMixin
+                ):
+                    existing_access_model: AccessModelMixin = existing_template
+                    new_access_model: AccessModelMixin = merged_template
+                    if len(existing_access_model.excluded_children) == 0:
+                        assert len(new_access_model.excluded_children) == 0
+
             return merged_template
         except Exception as err:
             log.exception(
@@ -608,6 +621,14 @@ def create_or_update_template(
     else:
         try:
             new_template.write()
+
+            if ctx.command == Command.Import:
+                # https://github.com/noqdev/iambic/issues/600
+                # we want to assert against bad exclude_account statement
+                if isinstance(new_template, AccessModelMixin):
+                    access_model: AccessModelMixin = new_template
+                    assert len(access_model.excluded_children) == 0
+
             return new_template
         except Exception as err:
             log.exception(
