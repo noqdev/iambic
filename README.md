@@ -26,7 +26,7 @@ Discover more at [https://docs.iambic.org](https://docs.iambic.org), and check o
 | --- | --- | --- |
 | Multi-Account AWS and Orgs | Native Support | 3rd Party Tools (Terragrunt, etc) |
 | Declarative Temporary<br>Access/Permissions | Native Support | No  |
-| Imports current IAM<br>to VCS | Yes | No  |
+| Imports current IAM<br>to VCS | Yes | 3rd Party Tools<br> (Limited to single AWS Account)  |
 | Auto-commits new IAM<br>changes to VCS | Yes | No  |
 | Cloudtrail Attribution for IAM changes | Yes | No  |
 | Bi-Directional Sync | Yes | No  |
