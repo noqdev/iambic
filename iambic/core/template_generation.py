@@ -599,7 +599,7 @@ def create_or_update_template(
         try:
             merged_template.write()
 
-            if ctx.command == Command.Import:
+            if ctx.command == Command.IMPORT:
                 # https://github.com/noqdev/iambic/issues/600
                 # we want to assert against bad exclude_account statement
                 if isinstance(new_template, AccessModelMixin) and isinstance(
@@ -622,7 +622,7 @@ def create_or_update_template(
         try:
             new_template.write()
 
-            if ctx.command == Command.Import:
+            if ctx.command == Command.IMPORT:
                 # https://github.com/noqdev/iambic/issues/600
                 # we want to assert against bad exclude_account statement
                 if isinstance(new_template, AccessModelMixin):
