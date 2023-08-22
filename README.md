@@ -18,9 +18,20 @@ If you'd prefer a hands-off approach, IAMbic can function purely as an auditing 
 
 If you'd like to learn more about the Github Pull-Request flow for making IAM changes, Check out an example on our [GitOps/IAMOps Philosophy page](https://docs.iambic.org/reference/iamops_philosophy#guide-to-the-iambic-apply-process). We also have a [sample iambic-templates repository](https://github.com/noqdev/iambic-templates-examples), which is fully managed by IAMbic.
 
-Discover more at [https://docs.iambic.org](https://docs.iambic.org), and check out [BeABetterDev's IAMbic Overview and Deep Dive video](https://www.youtube.com/watch?v=ryEseI_-12o) on YouTube. We're also on [Slack](https://communityinviter.com/apps/noqcommunity/noq) if you'd like help getting started or have any questions.
+Discover more at [https://docs.iambic.org](https://docs.iambic.org).
 
-## IAMbic versus Terraform (or other IaC tools)
+Check out BeABetterDev's IAMbic Overview and Deep Dive video below for a quick overview of IAMbic's capabilities.
+
+[![IAMbic Overview and Deep Dive video](https://img.youtube.com/vi/ryEseI_-12o/mqdefault.jpg)](https://www.youtube.com/watch?v=ryEseI_-12o)
+
+We're also on [Slack](https://communityinviter.com/apps/noqcommunity/noq) if you'd like help getting started or have any questions.
+
+## Integration with Terraform or other IaC tools
+
+IAMbic is designed to work in harmony with Terraform and other Infrastructure-as-Code (IaC) solutions. It acts as a complementary tool, enhancing the strengths of existing IaC setups by providing centralized visibility and auditing for Identity and Access Management (IAM). To understand how IAMbic and Terraform elevate IAM together, and how they can be integrated seamlessly in your DevOps pipeline, check out our
+[in-depth blog post](https://www.noq.dev/blog/iambic-and-terraform-collaborators-not-competitors).
+
+Below is a table of the key differences between IAMbic and Terraform:
 
 | Feature | IAMbic | Terraform (or other IaC) |
 | --- | --- | --- |
@@ -35,7 +46,7 @@ Discover more at [https://docs.iambic.org](https://docs.iambic.org), and check o
 | Multi-Cloud Support | Currently AWS, Azure AD, Okta, and Google Workspace,<br>with more coming soon. | Yes |
 | Language | YAML | HCL |
 | Open Source | Yes | No  |
-| Governance & Compliance | Native in VCS | No  |
+| Centralized <br> Governance & Compliance | Native in VCS | No  |
 | Community Support | Growing | Strong |
 
 ## Key Features
