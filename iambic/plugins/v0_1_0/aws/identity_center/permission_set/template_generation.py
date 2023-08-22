@@ -266,6 +266,9 @@ async def create_templated_permission_set(  # noqa: C901
                 .get(assignment_type, {})
                 .items()
             ):
+                # NOTE: do not change how to calculate account_rule_key without updating the resource_id definition
+                # We are relying on it to subsequent document merges
+                # this is linked to PermissionSetAccess
                 accounts = sorted(details["accounts"])
                 account_rule_key = "_".join(accounts)
                 if not account_rules.get(account_rule_key):

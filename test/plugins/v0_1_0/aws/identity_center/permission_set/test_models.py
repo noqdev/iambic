@@ -26,7 +26,7 @@ from iambic.core.models import (
     ProviderChild,
     TemplateChangeDetails,
 )
-from iambic.core.template_generation import merge_access_model_list
+from iambic.core.template_generation import merge_access_model_list, merge_model
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AwsIdentityCenterPermissionSetTemplate,
@@ -236,6 +236,122 @@ class FakeAccount(ProviderChild):
     @property
     def all_identifiers(self) -> set[str]:
         return set([self.name])
+
+
+def test_merge_template_access_rules(aws_accounts):
+    existing_properties = {
+        "name": "bar",
+    }
+    existing_access_rules = [
+        {
+            "included_orgs": ["org_1"],
+            "users": [
+                "user@example.com",
+            ],
+            "groups": ["group@example.com"],
+            "expires_at": "in 3 days",
+        }
+    ]
+    existing_document = AwsIdentityCenterPermissionSetTemplate(
+        identifier="bar",
+        file_path="foo",
+        properties=existing_properties,
+        access_rules=existing_access_rules,
+    )
+    new_properties = {
+        "name": "bar",
+    }
+    new_access_rules = [
+        {
+            "included_orgs": ["org_1"],
+            "users": [
+                "another_user@example.com",
+            ],
+            "groups": ["another_group@example.com"],
+        }
+    ]
+    new_document = AwsIdentityCenterPermissionSetTemplate(
+        identifier="bar",
+        file_path="foo",
+        properties=new_properties,
+        access_rules=new_access_rules,
+    )
+    merged_document: AwsIdentityCenterPermissionSetTemplate = merge_model(
+        new_document, existing_document, aws_accounts
+    )
+    assert existing_access_rules != new_access_rules
+    # the assignment for permission set is cloud driven, so we
+    # merged document access_rules for permission sets has to follow
+    # the cloud
+    assert merged_document.access_rules[0].users == new_document.access_rules[0].users
+    assert merged_document.access_rules[0].groups == new_document.access_rules[0].groups
+    # but expires_at is iambic metadata, so that didn't get overwritten from cloud
+    assert (
+        merged_document.access_rules[0].expires_at
+        == existing_document.access_rules[0].expires_at
+    )
+
+
+def test_merge_template_access_rules_selected_accounts(aws_accounts: list[AWSAccount]):
+    existing_properties = {
+        "name": "bar",
+    }
+    existing_access_rules = [
+        {
+            "included_orgs": ["org_1"],
+            "included_accounts": [
+                aws_accounts[0].account_name,
+                aws_accounts[1].account_name,
+            ],
+            "users": [
+                "user@example.com",
+            ],
+            "groups": ["group@example.com"],
+            "expires_at": "in 3 days",
+        }
+    ]
+    existing_document = AwsIdentityCenterPermissionSetTemplate(
+        identifier="bar",
+        file_path="foo",
+        properties=existing_properties,
+        access_rules=existing_access_rules,
+    )
+    new_properties = {
+        "name": "bar",
+    }
+    new_access_rules = [
+        {
+            "included_orgs": ["org_1"],
+            "included_accounts": [
+                aws_accounts[0].account_name,
+                aws_accounts[1].account_name,
+            ],
+            "users": [
+                "another_user@example.com",
+            ],
+            "groups": ["another_group@example.com"],
+        }
+    ]
+    new_document = AwsIdentityCenterPermissionSetTemplate(
+        identifier="bar",
+        file_path="foo",
+        properties=new_properties,
+        access_rules=new_access_rules,
+    )
+    merged_document: AwsIdentityCenterPermissionSetTemplate = merge_model(
+        new_document, existing_document, aws_accounts
+    )
+    assert existing_access_rules != new_access_rules
+    # the assignment for permission set is cloud driven, so we
+    # merged document access_rules for permission sets has to follow
+    # the cloud
+    assert merged_document.access_rules[0].users == new_document.access_rules[0].users
+    assert merged_document.access_rules[0].groups == new_document.access_rules[0].groups
+    # but expires_at is iambic metadata, so that didn't get overwritten from cloud
+    assert (
+        merged_document.access_rules[0].expires_at
+        == existing_document.access_rules[0].expires_at
+    )
 
 
 def test_merge_access_rule():
