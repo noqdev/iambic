@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from functools import cache
 from itertools import chain
 
@@ -14,6 +15,20 @@ from iambic.core.models import ProposedChange, ProposedChangeType
 from iambic.core.utils import aio_wrapper, async_batch_processor, plugin_apply_wrapper
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 from iambic.plugins.v0_1_0.aws.utils import boto_crud_call, legacy_paginated_search
+
+# This is used to signal a fallback value is used
+# during PrincipalID resolution. Some AD setup with
+# IdentityCenter may reach a state we cannot resolve
+# the PrincipalID from the directory.
+IS_IAMBIC_FALLBACK_VALUE = "IS_IAMBIC_FALLBACK_VALUE"
+
+
+# Why are we relying on os.environ instead of config?
+# Because PrincipalID resolution function does not
+# have the config object available.
+IAMBIC_SKIP_NOT_RESOLVABLE_PRINCIPAL_ID = os.environ.get(
+    "IAMBIC_SKIP_NOT_RESOLVABLE_PRINCIPAL_ID", False
+)
 
 
 async def get_permission_set_details(
@@ -59,6 +74,7 @@ class WrapIdentityCenterStoreClient(object):
             return {
                 "UserName": guid,
                 "DisplayName": guid,
+                IS_IAMBIC_FALLBACK_VALUE: True,
             }
 
     @cache
@@ -77,6 +93,7 @@ class WrapIdentityCenterStoreClient(object):
             return {
                 "GroupId": guid,
                 "DisplayName": guid,
+                IS_IAMBIC_FALLBACK_VALUE: True,
             }
 
 
@@ -160,25 +177,48 @@ async def get_permission_set_users_and_groups(
             # cannot list users and groups ahead of time without filters.
             if aa["PrincipalId"] not in response[aa["PrincipalType"].lower()]:
                 object_type = aa["PrincipalType"].lower()
+                principal_id = aa["PrincipalId"]
+                account_id = aa["AccountId"]
 
                 if object_type == "user":
-                    info = wrap_identity_store_client.describe_user(aa["PrincipalId"])
+                    info = wrap_identity_store_client.describe_user(principal_id)
+                    if (
+                        IS_IAMBIC_FALLBACK_VALUE in info
+                        and info[IS_IAMBIC_FALLBACK_VALUE]
+                    ):
+                        log.error(
+                            f"permission set: {permission_set_arn} cannot resolve user PrincipalID: {principal_id} for account: {account_id}"
+                        )
+                        if IAMBIC_SKIP_NOT_RESOLVABLE_PRINCIPAL_ID:
+                            # skip the fallback value if we were told to skip it.
+                            continue
                     user_name = info.get("UserName", "ERROR_UNABLE_TO_LOOKUP_USERNAME")
                     display_name = info.get(
                         "DisplayName", "ERROR_UNABLE_TO_LOOKUP_DISPLAYNAME"
                     )
-                    response[aa["PrincipalType"].lower()][aa["PrincipalId"]] = {
+                    response[aa["PrincipalType"].lower()][principal_id] = {
                         "accounts": [],
                         "user_name": user_name,
                         "display_name": display_name,
                     }
                 elif object_type == "group":
-                    info = wrap_identity_store_client.describe_group(aa["PrincipalId"])
+                    info = wrap_identity_store_client.describe_group(principal_id)
+                    if (
+                        IS_IAMBIC_FALLBACK_VALUE in info
+                        and info[IS_IAMBIC_FALLBACK_VALUE]
+                    ):
+                        log.error(
+                            f"permission set: {permission_set_arn} cannot resolve group PrincipalID: {principal_id} for account: {account_id}"
+                        )
+                        if IAMBIC_SKIP_NOT_RESOLVABLE_PRINCIPAL_ID:
+                            # skip the fallback value if we were told to skip it.
+                            continue
+
                     group_id = info.get("GroupId", "ERROR_UNABLE_TO_LOOKUP_GROUPID")
                     display_name = info.get(
                         "DisplayName", "ERROR_UNABLE_TO_LOOKUP_DISPLAYNAME"
                     )
-                    response[aa["PrincipalType"].lower()][aa["PrincipalId"]] = {
+                    response[aa["PrincipalType"].lower()][principal_id] = {
                         "accounts": [],
                         "group_id": group_id,
                         "display_name": display_name,
@@ -188,9 +228,14 @@ async def get_permission_set_users_and_groups(
             # End Special case handling when identity_store using AD integrations
             # cannot list users and groups ahead of time without filters.
 
-            response[aa["PrincipalType"].lower()][aa["PrincipalId"]]["accounts"].append(
-                aa["AccountId"]
-            )
+            if aa["PrincipalId"] in response[aa["PrincipalType"].lower()]:
+                # the conditional can be false when the data in the control
+                # plane is in inconsistent state. Meaning. IdentityCenter account
+                # assignment exists when it's not possible to identify user.
+                # yes... it can happen
+                response[aa["PrincipalType"].lower()][aa["PrincipalId"]][
+                    "accounts"
+                ].append(aa["AccountId"])
 
     response["user"] = {k: v for k, v in response["user"].items() if v["accounts"]}
     response["group"] = {k: v for k, v in response["group"].items() if v["accounts"]}
