@@ -629,7 +629,12 @@ class BaseTemplate(
         self.validate_model_afterward()
 
         as_yaml = self.get_body(exclude_none, exclude_unset, exclude_defaults)
-        os.makedirs(os.path.dirname(os.path.expanduser(self.file_path)), exist_ok=True)
+        parent_directory = os.path.dirname(os.path.expanduser(self.file_path))
+        # if the user feeds in a filename like 'xyz.yaml'
+        # parent_directory is '', which is not acceptable
+        # to makedirs
+        if parent_directory:
+            os.makedirs(parent_directory, exist_ok=True)
         with open(self.file_path, "w") as f:
             f.write(as_yaml)
 
