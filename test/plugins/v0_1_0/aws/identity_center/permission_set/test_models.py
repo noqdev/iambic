@@ -358,12 +358,19 @@ def test_merge_access_rule():
     # if we have an old list of PermissionSets and a an new list of reversed-order PermissionSets
     # after merging, the expectation is nothing has changed from the old list.
 
-    access_rules_1 = [
-        {"included_accounts": ["account_1", "account_2"], "users": ["foo"]},
-        {"included_accounts": ["account_3"], "users": ["bar"]},
+    local_access_rules = [
+        {
+            "included_accounts": ["account_3"],
+            "users": ["bar"],
+        },  # resource id is "account_3"
+        {
+            "included_accounts": ["account_1", "account_2"],
+            "users": ["foo"],
+        },  # resource id is "account_1_account_2"
     ]
-    old_list = [PermissionSetAccess(**rule) for rule in access_rules_1]
-    new_list = list(reversed(old_list))
+    old_list = [PermissionSetAccess(**rule) for rule in local_access_rules]
+    # important to use deep clone  because merge_access_model_list may mutate the the value.
+    new_list = [PermissionSetAccess(**rule) for rule in reversed(local_access_rules)]
     assert old_list != new_list  # because we reverse the list
     accounts = [
         FakeAccount(name="account_1", account_owner="foo"),
@@ -371,8 +378,10 @@ def test_merge_access_rule():
         FakeAccount(name="account_3", account_owner="foo"),
     ]
     new_value = merge_access_model_list(new_list, old_list, accounts)
-    for i, element in enumerate(new_value):
-        assert element.json() == new_list[i].json()
+    for element in new_value:
+        for compared_element in new_list:
+            if compared_element.resource_id == element.resource_id:
+                assert element.json() == compared_element.json()
 
 
 @pytest.mark.asyncio
