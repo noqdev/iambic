@@ -451,7 +451,11 @@ class Config(ConfigMixin, BaseTemplate):
         )
 
         file_path = os.path.expanduser(self.file_path)
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        parent_directory = os.path.dirname(file_path)
+        # if the user feeds in a filename like 'xyz.yaml'
+        # parent_directory is '', which is not acceptable
+        # to makedirs
+        os.makedirs(parent_directory, exist_ok=True)
         with open(file_path, "w") as f:
             f.write(yaml.dump(sorted_input_dict))
 
