@@ -68,7 +68,12 @@ class PermissionSetAccess(AccessModel, ExpiryModel):
 
     @property
     def resource_id(self):
-        return ""
+        # NOTE: do not change how to resource_id definition without updating template generation
+        # We are relying on it to subsequent document merges
+        # this is linked to PermissionSetAccess rule generation
+        accounts = sorted(self.included_accounts)
+        account_rule_key = "_".join(accounts)
+        return account_rule_key
 
 
 class AWSIdentityCenterInstance(BaseModel):
@@ -238,7 +243,11 @@ class AwsIdentityCenterPermissionSetTemplate(
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
-        return {"access_rules"}
+        # reminder for future readers that the access rules
+        # is not iambic_specific_knowledge because the user
+        # and groups assignment are maintained within
+        # account assignment in permission sets in the cloud.
+        return {}
 
     @validator("access_rules")
     def sort_access_rules(cls, v: list[PermissionSetAccess]):
