@@ -275,6 +275,9 @@ class AwsIdentityCenterPermissionSetTemplate(
         user_assignments = set()
         group_assignments = set()
 
+        unresolved_users = set()
+        unresolved_groups = set()
+
         for rule in self.access_rules:
             rule_hit = None
 
@@ -349,12 +352,29 @@ class AwsIdentityCenterPermissionSetTemplate(
                         user_assignments.update(reverse_user_map.values())
                     elif user_hit := reverse_user_map.get(rule_user):
                         user_assignments.add(user_hit)
+                    else:
+                        # Note that current logic depends on reverse_user_map locally cache
+                        # the entire directory available in memory. This is problematic
+                        # for some large directory over 1000 users. Since we don't have
+                        # directory this big, we don't know of the effect yet.
+                        unresolved_users.add(rule_user)
 
                 for rule_group in rule.groups:
                     if rule_group == "*":
                         group_assignments.update(reverse_group_map.values())
                     elif group_hit := reverse_group_map.get(rule_group):
                         group_assignments.add(group_hit)
+                    else:
+                        # Note that current logic depends on reverse_group_map locally cache
+                        # the entire directory available in memory. This is problematic
+                        # for some large directory over 1000 groups. Since we don't have
+                        # directory this big, we don't know of the effect yet.
+                        unresolved_groups.add(rule_group)
+
+                if (len(unresolved_users) > 0) or (len(unresolved_groups) > 0):
+                    raise ValueError(
+                        f"detected either unresolved_users: {unresolved_users} or unresolved_groups: {unresolved_groups} Correct them in the template."
+                    )
 
                 if len(group_assignments) == len(reverse_group_map) and len(
                     user_assignments
@@ -812,16 +832,27 @@ class AwsIdentityCenterPermissionSetTemplate(
 
         account_changes = await asyncio.gather(*tasks, return_exceptions=True)
         proposed_changes: list[AccountChangeDetails] = []
-        exceptions_seen = set()
+        exceptions_seen: list[ProposedChange] = []
 
         for account_change in account_changes:
             if isinstance(account_change, AccountChangeDetails):
                 proposed_changes.append(account_change)
             else:
-                exceptions_seen.add(str(account_change))
+                # If its exception without wrapped as a ProposedChange,
+                # we can only assign Unknown for a lot of the values.
+                exceptions_seen.append(
+                    ProposedChange(
+                        change_type=ProposedChangeType.UNKNOWN,
+                        exceptions_seen=[str(account_change)],
+                        account=relevant_accounts_str[0]
+                        if len(relevant_accounts_str) > 0
+                        else None,  # this is a hack but i don't know of another way
+                        resource_id=self.resource_id,  # this is the closet we can get
+                        resource_type=self.resource_type,  # this is the closet we can get
+                    )
+                )
 
         if exceptions_seen:
-            exceptions_seen = list(exceptions_seen)
             proposed_change_accounts = set(
                 change.account for change in proposed_changes
             )
