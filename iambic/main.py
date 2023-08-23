@@ -370,12 +370,26 @@ def plan(templates: list, plan_output: str, repo_dir: str, git_aware: bool):
 def run_git_plan(
     output_path: str,
     repo_dir: str = str(pathlib.Path.cwd()),
+    config_path: pathlib.Path = None,
+    config: Config = None,
+    skip_flag_expired_resources_phase: bool = False,
 ) -> list[TemplateChangeDetails]:
     ctx.eval_only = True
-    config_path = asyncio.run(resolve_config_template_path(repo_dir))
-    config = asyncio.run(load_config(config_path))
+
+    if config_path is None:
+        config_path = asyncio.run(resolve_config_template_path(repo_dir))
+
+    if config is None:
+        config = asyncio.run(load_config(config_path))
     check_and_update_resource_limit(config)
-    template_changes = asyncio.run(plan_git_changes(config_path, repo_dir))
+    template_changes = asyncio.run(
+        plan_git_changes(
+            config_path,
+            repo_dir,
+            config=config,
+            skip_flag_expired_resources_phase=skip_flag_expired_resources_phase,
+        )
+    )
     output_proposed_changes(template_changes, output_path, exit_on_error=False)
     screen_render_resource_changes(template_changes)
     return template_changes
