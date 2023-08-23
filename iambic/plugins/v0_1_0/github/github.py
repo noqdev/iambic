@@ -564,7 +564,10 @@ def handle_iambic_git_plan(
 
         # run lint
         config_path = asyncio.run(resolve_config_template_path(repo_dir))
-        asyncio.run(lint_git_changes(config_path, repo_dir, False, None, None))
+        config = asyncio.run(load_config(config_path))
+        asyncio.run(
+            lint_git_changes(config_path, repo_dir, False, None, None, config=config)
+        )
         repo.git.add(".")
         diff_list = repo.head.commit.diff()
         if len(diff_list) > 0:
@@ -576,7 +579,15 @@ def handle_iambic_git_plan(
         else:
             log.debug("git_plan did not introduce linting changes")
 
-        template_changes = run_git_plan(proposed_changes_path, repo_dir)
+        template_changes = run_git_plan(
+            proposed_changes_path,
+            repo_dir,
+            config_path=config_path,
+            config=config,
+            # I do not want to pay the cost to flag expired resource in a pull request that I am working something else.
+            # Let the main branch pay the cost of expiring resources.
+            skip_flag_expired_resources_phase=True,
+        )
         _process_template_changes(
             github_client,
             templates_repo,
