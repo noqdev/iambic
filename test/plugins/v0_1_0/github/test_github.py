@@ -273,10 +273,12 @@ def test_plan_issue_comment_with_clean_mergeable_state_and_lambda_handler_crashe
     mock_github_client,
     issue_comment_git_plan_context,
     mock_resolve_config_template_path,
+    mock_load_config,
     mock_lint_git_changes,
     mock_run_git_plan,
     mock_repository,
 ):
+    assert mock_load_config
     mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
     mock_pull_request.mergeable_state = MERGEABLE_STATE_CLEAN
     mock_pull_request.head.sha = issue_comment_git_plan_context["sha"]
@@ -363,10 +365,12 @@ def test_issue_comment_with_git_plan(
     mock_github_client,
     issue_comment_git_plan_context,
     mock_resolve_config_template_path,
+    mock_load_config,
     mock_lint_git_changes,
     mock_run_git_plan,
     mock_repository,
 ):
+    assert mock_load_config
     mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
     mock_pull_request.mergeable_state = MERGEABLE_STATE_CLEAN
     mock_pull_request.head.sha = issue_comment_git_plan_context["sha"]
