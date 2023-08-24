@@ -22,20 +22,16 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.template_generatio
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
+# These fixture must already exist in IdentityCenter for testing
+IAMBIC_TEST_USER = "iambic_test_user@iambic.org"
+IAMBIC_TEST_GROUP = "iambic_test_group"
+
 
 def attach_access_rule(
     permission_set_template: AwsIdentityCenterPermissionSetTemplate,
     aws_account: AWSAccount,
     exclude_accounts: int = 0,
 ) -> AwsIdentityCenterPermissionSetTemplate:
-    users = [
-        details["UserName"]
-        for details in aws_account.identity_center_details.user_map.values()
-    ]
-    groups = [
-        details["DisplayName"]
-        for details in aws_account.identity_center_details.user_map.values()
-    ]
     org_accounts = list(aws_account.identity_center_details.org_account_map.values())
     if exclude_accounts:
         exclude_accounts = min(exclude_accounts, len(org_accounts) - 1)
@@ -49,8 +45,8 @@ def attach_access_rule(
 
     permission_set_template.access_rules.append(
         PermissionSetAccess(
-            users=users[: random.randint(1, len(users))],
-            groups=users[: random.randint(1, len(groups))],
+            users=[IAMBIC_TEST_USER],
+            groups=[IAMBIC_TEST_GROUP],
             excluded_accounts=excluded_accounts,
             included_accounts=included_accounts,
         )
