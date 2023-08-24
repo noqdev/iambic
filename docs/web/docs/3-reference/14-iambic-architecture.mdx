@@ -1,0 +1,59 @@
+Audience
+
+The target audience is developers who want to contribute to noqdev/iambic project.
+
+# Objective
+
+IAMbic can bi-directional sync between cloud control plane and human-readable YAML files.
+
+# IAMbic plugins
+
+We tend to package each cloud service into it's own plugin for organization.
+
+For example, AWS is its own plugin as Google Workspace is its separate plugin.
+
+# IAMbic core
+
+IAMbic core defines the basic data flow and command interface.
+
+## command interface
+
+Inspired by popular `git` command, the `iambic` command wraps all the functionalities as subcommands.
+
+### import
+
+import delegate each plugin to retrieve IAM footprint from the cloud and serialize information
+as human readable YAML files.
+
+### plan
+
+plan takes a list of templates file path. Each template contain a template type which maps back to a plugin.
+The plugin is tasked to calculate if any needed changes is required by comparing to the current cloud state.
+
+### apply
+
+apply takes a list of templates file path. Each template contain a template type which maps back to a plugin.
+The plugin is tasked to calculate if any needed changes is required by comparing to the current cloud state.
+The core will display the information back to the user. Once user gives confirmation to proceed, plugin is
+tasked to issue cloud API request to achieve the desired state.
+
+## human readable YAML files
+
+Each plugin defines the template type they support. For example, AWS plugin supports IAM User, IAM Group,
+IAM Role, IdentityCenter PermissionSet. IAMbic uses Pydantic library to declare the schema of template.
+
+YAML is chosen for its portability. Pydantic Schema (often reference as model in the codebase) is
+abstraction on top of YAML to support validation. Plugin tends to have cloud specific data it needs to
+serialize. IAMbic core itself has some common attributes like `identifier` that are maintain only
+as metadata in the YAML itself. These metadata often don't persist in the vendor cloud API. The intend
+of such local metadata is expand the capability outside of vendor cloud API. For example, AWS IAM Role
+does not have a native expiration semantics. By using local metadata, IAMbic can implement a expiration
+mechanism outside of the vendor cloud API.
+
+# Git Integrations
+
+The Git integrations is a set of abstraction on top of IAMbic to model team collaboration of templates.
+IAMbic expects team to check-in their IAMbic templates into a git repo. The default branch is where
+IAMbic periodically imports from control plane to reflect the cloud state in a Git repository. We expect
+team member makes branches and ask their peers to review the change. IAMbic is tasked as the coordinator
+plan, apply the branches and merge it back to default branch.
