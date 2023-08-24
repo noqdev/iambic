@@ -8,6 +8,7 @@ import json
 import os
 import tempfile
 import time
+from abc import ABC, abstractmethod
 from functools import cache
 from typing import Any, Callable
 from urllib.parse import urlparse
@@ -37,6 +38,136 @@ from iambic.plugins.v0_1_0.github.github import (
     handle_iambic_version,
     iambic_app,
 )
+
+
+class BaseGitClient(ABC):
+    @abstractmethod
+    def get_repo(self, repo_name):
+        pass
+
+    @abstractmethod
+    def get_pull(self, repo_name, pull_number):
+        pass
+
+    @abstractmethod
+    def add_comment(self, repo: Any, pull_number: int, text: str) -> None:
+        pass
+
+
+class GithubClient(BaseGitClient):
+    def __init__(self, secrets):
+        self.github_app_id = secrets["id"]
+        self.iambic_github_installation_id = secrets["iambic_github_installation_id"]
+        self.github_token = asyncio.run(
+            _get_installation_token(
+                self.github_app_id, self.iambic_github_installation_id
+            )
+        )
+        self.client = github.Github(self.github_token)
+
+    def get_repo(self, repo_full_name):
+        return self.client.get_repo(repo_full_name)
+
+    def get_pull(self, repo, pull_number):
+        return repo.get_pull(pull_number)
+
+    def add_comment(self, repo: Any, pull_number: int, text: str) -> None:
+        pull_request = repo.get_pull(pull_number)
+        pull_request.create_issue_comment(text)
+
+    def format_url(self, repo_url: str) -> str:
+        """Format the GitHub repository URL with the token."""
+        return f"https://x-access-token:{self.github_token}@{repo_url.split('://')[1]}"
+
+
+class BitbucketClient(BaseGitClient):
+    def __init__(self, secrets):
+        self.username = secrets["username"]
+        self.password = secrets["password"]
+        self.client = bitbucket.Client(self.username, self.password)
+
+    def get_repo(self, repo_full_name):
+        return self.client.get_repository(repo_full_name)
+
+    def get_pull(self, repo, pull_number):
+        return repo.get_pull_request(pull_number)
+
+    def add_comment(self, repo: Any, pull_number: int, text: str) -> None:
+        project, repository = repo.split(
+            "/"
+        )  # Assuming 'repo' is a string like 'project/repository'
+        repo.get_pull_request(pull_number).add_comment(text)
+
+    def format_url(self, repo_url: str) -> str:
+        """Format the Bitbucket repository URL with username and password."""
+        username = self.username
+        password = self.password
+        return f"https://{username}:{password}@{repo_url.split('://')[1]}"
+
+
+class CodeCommitClient(BaseGitClient):
+    def __init__(self, secrets):
+        self.access_key = secrets["access_key"]
+        self.secret_key = secrets["secret_key"]
+        self.client = boto3.client(
+            "codecommit",
+            aws_access_key_id=self.access_key,
+            aws_secret_access_key=self.secret_key,
+        )
+
+    def get_repo(self, repo_full_name):
+        # Implement based on your need
+        pass
+
+    def get_pull(self, repo, pull_number):
+        # Implement based on your need
+        pass
+
+    def add_comment(self, repo: Any, pull_number: int, text: str) -> None:
+        self.client.post_comment_for_pull_request(
+            pullRequestId=str(pull_number), repositoryName=repo, content=text
+        )
+
+    def format_url(self, repo_url: str) -> str:
+        return repo_url
+
+
+class GitlabClient(BaseGitClient):
+    def __init__(self, secrets):
+        self.private_token = secrets["private_token"]
+        self.client = gitlab.Gitlab(
+            "https://gitlab.com", private_token=self.private_token
+        )
+
+    def get_repo(self, repo_full_name):
+        return self.client.projects.get(repo_full_name)
+
+    def get_pull(self, repo, pull_number):
+        return repo.mergerequests.get(pull_number)
+
+    def add_comment(self, repo: Any, pull_number: int, text: str) -> None:
+        merge_request = repo.mergerequests.get(pull_number)
+        merge_request.notes.create({"body": text})
+
+    def format_url(self, repo_url: str) -> str:
+        return f"https://oauth2:{self.private_token}@{repo_url.split('://')[1]}"
+
+
+def create_git_client(secrets):
+    provider = secrets.get("provider", "github")
+
+    if provider == "github":
+        git_client = GithubClient(secrets)
+    elif provider == "bitbucket":
+        git_client = BitbucketClient(secrets)
+    elif provider == "codecommit":
+        git_client = CodeCommitClient(secrets)
+    elif provider == "gitlab":
+        git_client = GitlabClient(secrets)
+    else:
+        raise Exception(f"Provider {provider} is not supported")
+    return git_client
+
 
 # FIXME Lambda execution time is at most 15 minutes, and the Github installation token is at most
 # 10 min validation period.
@@ -168,8 +299,7 @@ async def _get_installation_token(app_id, installation_id):
     async with aiohttp.ClientSession() as session:
         async with session.post(access_tokens_url, headers=headers) as resp:
             payload = json.loads(await resp.text())
-            installation_token = payload["token"]
-            return installation_token
+            return payload["token"]
 
 
 def lower_case_all_header_keys(d):
@@ -178,14 +308,9 @@ def lower_case_all_header_keys(d):
 
 def handle_events_cron(event=None, context=None) -> None:
     secrets = _get_app_secrets_as_lambda_context_current()
-    github_app_id = secrets["id"]
-    iambic_github_installation_id = secrets["iambic_github_installation_id"]
+    git_client = create_git_client(secrets)
     REPOSITORY_CLONE_URL = secrets["iambic_templates_repo_url"]
     REPOSITORY_FULL_NAME = secrets["iambic_templates_repo_full_name"]
-    github_token = asyncio.run(
-        _get_installation_token(github_app_id, iambic_github_installation_id)
-    )
-    github_client = github.Github(github_token)
 
     command = event["command"]
 
@@ -194,9 +319,9 @@ def handle_events_cron(event=None, context=None) -> None:
         log.error("handle_events_cron: Unable to find command", **log_params)
         return
 
-    repo_url = format_github_url(REPOSITORY_CLONE_URL, github_token)
+    repo_url = git_client.format_url(REPOSITORY_CLONE_URL)
 
-    templates_repo = github_client.get_repo(REPOSITORY_FULL_NAME)
+    templates_repo = git_client.get_repo(REPOSITORY_FULL_NAME)
     default_branch = templates_repo.default_branch
     temp_templates_directory = tempfile.mkdtemp(prefix="lambda")
     os.chdir(temp_templates_directory)
@@ -206,7 +331,7 @@ def handle_events_cron(event=None, context=None) -> None:
     iambic.core.utils.init_writable_directory()
 
     return callable(
-        github_client,
+        git_client,
         templates_repo,
         REPOSITORY_FULL_NAME,
         repo_url,
