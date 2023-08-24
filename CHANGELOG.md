@@ -1,6 +1,33 @@
 
 # Change Log
 
+## 0.11.73 (Aug 23, 2023)
+
+DOCS:
+* Update README with IAMbic/TF Differences ; Video img [#605](https://github.com/noqdev/iambic/pull/605)
+* IAC Comparison Table [#598](https://github.com/noqdev/iambic/pull/598)
+* Update doc on how to turn on Cloudtrail logs integration [#597](https://github.com/noqdev/iambic/pull/597)
+* Fix doc links [#596](https://github.com/noqdev/iambic/pull/596)
+* Rewrite the getting started section. [#590](https://github.com/noqdev/iambic/pull/590)
+
+BUG FIXES:
+* Fixed #608 Implement import filtering protocol for SCP [#609](https://github.com/noqdev/iambic/pull/609)
+* Fixed #602 Propagate errors if invalid user or group assignment [#606](https://github.com/noqdev/iambic/pull/606)
+* Optimize GitHub PR plan time [#607](https://github.com/noqdev/iambic/pull/607)
+* Fix IdentityCenter access rules not being updated [#604](https://github.com/noqdev/iambic/pull/604)
+* Fixed EN-2401 Check parent directory truthy-ness before attempt to create it [#603](https://github.com/noqdev/iambic/pull/603)
+* Enhance error message during PrincipalID resolution [#599](https://github.com/noqdev/iambic/pull/599)
+* Fix error handling for detect not able to create gist [#595](https://github.com/noqdev/iambic/pull/595)
+
+DEV:
+* Fix flaky functional test on account assignment [#612](https://github.com/noqdev/iambic/pull/612)
+
+THANKS:
+* `hilyas` contributing better docs [#590](https://github.com/noqdev/iambic/pull/590)
+* `rodolphoescobar` reporting NOQ::AWS::Organizations::SCP Filter does not work [#608](https://github.com/noqdev/iambic/issues/608)
+* `dushyantbhardwaj9` reporting iambic does not throw warning/error for users/groups that do not exists in the Idp [#602](https://github.com/noqdev/iambic/issues/602)
+* `dushyantbhardwaj9` reporting import not updating existing IdentityCenter access rules in templates.
+
 ## 0.11.59 (Aug 18, 2023)
 
 BUG FIXES:
