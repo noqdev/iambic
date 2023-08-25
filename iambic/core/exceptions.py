@@ -102,7 +102,6 @@ def exception_reporter(exc_type, exc_value, exc_traceback: TracebackType | None)
         # Check if the input is coming from a terminal (TTY)
         is_tty = os.isatty(sys.stdin.fileno())
         if is_tty:
-
             # SIGALRM only available in Unix like system
             if getattr(signal, "SIGALRM", None):
                 # Set the alarm signal handler
