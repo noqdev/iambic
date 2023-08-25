@@ -102,10 +102,13 @@ def exception_reporter(exc_type, exc_value, exc_traceback: TracebackType | None)
         # Check if the input is coming from a terminal (TTY)
         is_tty = os.isatty(sys.stdin.fileno())
         if is_tty:
-            # Set the alarm signal handler
-            signal.signal(signal.SIGALRM, alarm_handler)
-            # Set the alarm to go off after 5 minutes
-            signal.alarm(TIMEOUT)
+
+            # SIGALRM only available in Unix like system
+            if getattr(signal, "SIGALRM", None):
+                # Set the alarm signal handler
+                signal.signal(signal.SIGALRM, alarm_handler)
+                # Set the alarm to go off after 5 minutes
+                signal.alarm(TIMEOUT)
 
         repo_directory = os.environ.get("IAMBIC_REPO_DIR", str(pathlib.Path.cwd()))
         config = None
