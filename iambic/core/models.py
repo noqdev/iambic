@@ -685,8 +685,13 @@ class Variable(PydanticBaseModel):
 
 
 class ExpiryModel(IambicPydanticBaseModel):
-    expires_at: Optional[Union[str, datetime.datetime, datetime.date]] = Field(
-        None, description="The date and time the resource will be/was set to deleted."
+    expires_at: Optional[str] = Field(
+        None,
+        description=(
+            "The date and time the resource will be/was set to deleted."
+            "It can be a string representing a date and time, a datetime.datetime object, or a datetime.date object."
+        ),
+        examples=["in 3 days", "2023-09-01", "2023-08-31T12:00:00"],
     )
     deleted: Optional[bool] = Field(
         False,
@@ -695,9 +700,13 @@ class ExpiryModel(IambicPydanticBaseModel):
             "Upon being set to true, the resource will be deleted the next time iambic is ran."
         ),
     )
-    expires_at_default: Optional[Union[str, datetime.datetime, datetime.date]] = Field(
+    expires_at_default: Optional[str] = Field(
         None,
-        description="A value that is set by IAMbic at run time and should not be set by the user.",
+        description=(
+            "The date and time the resource will be/was set to deleted."
+            "It can be a string representing a date and time, a datetime.datetime object, or a datetime.date object."
+        ),
+        examples=["in 3 days", "2023-09-01", "2023-08-31T12:00:00"],
     )
 
     class Config:

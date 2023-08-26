@@ -9,17 +9,39 @@ configurations for other models used in IAMbic.
 
 ## Properties
 
-- **`expires_at`**: The date and time the resource will be/was set to deleted.
-  - **Any of**
-    - *string*
-    - *string*
-    - *string*
+- **`expires_at`** *(string)*: The date and time the resource will be/was set to deleted.It can be a string representing a date and time, a datetime.datetime object, or a datetime.date object.
+
+  Examples:
+  ```yaml
+  in 3 days
+  ...
+  ```
+
+  ```yaml
+  '2023-09-01'
+  ```
+
+  ```yaml
+  '2023-08-31T12:00:00'
+  ```
+
 - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
-- **`expires_at_default`**: A value that is set by IAMbic at run time and should not be set by the user.
-  - **Any of**
-    - *string*
-    - *string*
-    - *string*
+- **`expires_at_default`** *(string)*: The date and time the resource will be/was set to deleted.It can be a string representing a date and time, a datetime.datetime object, or a datetime.date object.
+
+  Examples:
+  ```yaml
+  in 3 days
+  ...
+  ```
+
+  ```yaml
+  '2023-09-01'
+  ```
+
+  ```yaml
+  '2023-08-31T12:00:00'
+  ```
+
 - **`template_type`** *(string)*: Default: `"NOQ::GoogleWorkspace::Group"`.
 - **`template_schema_url`** *(string)*: Default: `"https://docs.iambic.org/reference/schemas/google_workspace_group_template"`.
 - **`owner`** *(string)*: Owner of the group.
@@ -55,17 +77,39 @@ configurations for other models used in IAMbic.
 
 - **`GroupMember`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic.
-  - **`expires_at`**: The date and time the resource will be/was set to deleted.
-    - **Any of**
-      - *string*
-      - *string*
-      - *string*
+  - **`expires_at`** *(string)*: The date and time the resource will be/was set to deleted.It can be a string representing a date and time, a datetime.datetime object, or a datetime.date object.
+
+    Examples:
+    ```yaml
+    in 3 days
+    ...
+    ```
+
+    ```yaml
+    '2023-09-01'
+    ```
+
+    ```yaml
+    '2023-08-31T12:00:00'
+    ```
+
   - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
-  - **`expires_at_default`**: A value that is set by IAMbic at run time and should not be set by the user.
-    - **Any of**
-      - *string*
-      - *string*
-      - *string*
+  - **`expires_at_default`** *(string)*: The date and time the resource will be/was set to deleted.It can be a string representing a date and time, a datetime.datetime object, or a datetime.date object.
+
+    Examples:
+    ```yaml
+    in 3 days
+    ...
+    ```
+
+    ```yaml
+    '2023-09-01'
+    ```
+
+    ```yaml
+    '2023-08-31T12:00:00'
+    ```
+
   - **`email`** *(string)*: Email address. However, when the type is CUSTOMER, it represents all users in a domain.
   - **`customer_id`** *(string)*: When the type is CUSTOMER, it represents customer id of a domain.
   - **`expand`** *(boolean)*: Expand the group into the members of the group. This is useful for nested groups. Default: `false`.
@@ -106,12 +150,12 @@ configurations for other models used in IAMbic.
 
 - **`GroupProperties`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic.
-  - **`name`** *(string)*
-  - **`domain`** *(string)*
-  - **`email`** *(string)*
-  - **`description`** *(string)*
+  - **`name`** *(string, required)*
+  - **`domain`** *(string, required)*
+  - **`email`** *(string, required)*
+  - **`description`** *(string, required)*
   - **`welcome_message`** *(string)*
-  - **`members`** *(array)*
+  - **`members`** *(array, required)*
     - **Items**: Refer to *[#/definitions/GroupMember](#definitions/GroupMember)*.
   - **`who_can_invite`**: Default: `"ALL_MANAGERS_CAN_INVITE"`.
     - **All of**
