@@ -45,6 +45,9 @@ from iambic.core.parser import load_templates
 from iambic.core.template_generation import get_existing_template_map
 from iambic.core.utils import gather_templates, yaml
 from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
+    create_code_build_roles_stack,
+    create_generic_git_provider_lambda_roles_stack,
+    create_generic_git_provider_lambda_stack,
     create_github_app_code_build_stack,
     create_github_app_ecr_pull_through_cache_stack,
     create_github_app_ecr_repo_stack,
@@ -65,6 +68,7 @@ from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
 from iambic.plugins.v0_1_0.aws.models import (
     ARN_RE,
     IAMBIC_CHANGE_DETECTION_SUFFIX,
+    IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX,
     IAMBIC_HUB_ROLE_NAME,
     IAMBIC_SPOKE_ROLE_NAME,
     AWSAccount,
@@ -1883,6 +1887,229 @@ class ConfigurationWizard:
         tags = aws_cf_parse_key_value_string(unparse_tags)
         return hub_role_name, spoke_role_name, tags
 
+    def configuration_generic_git_provider_aws_lambda_setup(self):  # noqa: C901
+        input_username = questionary.text(
+            "username (consult your git provider docs when using access token): ",
+        ).ask()
+        input_token = questionary.password(
+            "access token (consult your git provider docs): ",
+        ).ask()
+        input_clone_url = questionary.text(
+            "clone url (must start with https://): ",
+        ).ask()
+        input_default_branch_name = questionary.text(
+            "default branch: ", default="main"
+        ).ask()
+        input_repo_full_name = questionary.text(
+            "repo full name (typically company_name/iambic-templates): ",
+        ).ask()
+        generic_git_provider_secrets = {
+            "username": input_username,
+            "token": input_token,
+            "clone_url": input_clone_url,
+            "default_branch_name": input_default_branch_name,
+            "repo_full_name": input_repo_full_name,
+        }
+        # TODO do a verification to prevent bad input get into secret manager
+
+        click.echo(
+            "\nSetting up a GitHub App for IAMbic involves creating CloudFormation stacks. \n"
+            "If you wish to inspect the templates used or handle their deployment manually, use the `iambic_generic_git_provider` templates at the following location:\n"
+            "https://github.com/noqdev/iambic/tree/main/iambic/plugins/v0_1_0/aws/cloud_formation/templates\n"
+            "Note that IAMbic will verify the successful deployment of your stacks, and it will not attempt to overwrite or recreate them if they already exist.\n"
+        )
+
+        unparse_tags = questionary.text(
+            "Add Tags (leave blank or `team=ops_team, cost_center=engineering`): ",
+            default="",
+            validate=validate_aws_cf_input_tags,
+        ).ask()
+        tags = aws_cf_parse_key_value_string(unparse_tags)
+        if not questionary.confirm("Proceed?").unsafe_ask():
+            return
+
+        account_name_to_account_id = {
+            account.account_name: account.account_id
+            for account in self.config.aws.accounts
+        }
+        available_account_names = sorted(list(account_name_to_account_id.keys()))
+        questionary_params = {}
+        question_text = "We recommend you deploy Lambda integration on a non-management account.\nTarget AWS Account name: "
+        if len(available_account_names) == 1:
+            target_account_name = available_account_names[0]
+        elif len(available_account_names) < 10:
+            target_account_name = questionary.select(
+                question_text, choices=available_account_names, **questionary_params
+            ).unsafe_ask()
+        else:
+            target_account_name = questionary.autocomplete(
+                question_text,
+                choices=available_account_names,
+                style=CUSTOM_AUTO_COMPLETE_STYLE,
+                **questionary_params,
+            ).unsafe_ask()
+
+        target_account_id = account_name_to_account_id[target_account_name]
+        log.info(f"Target AWS Account ID is {target_account_id}")
+
+        session, _ = self.get_boto3_session_for_account(target_account_id)
+
+        secretsmanager_client = session.client(
+            service_name="secretsmanager", region_name=self.aws_default_region
+        )
+        secrets_kwargs = {}
+        generic_git_provider_secret_arn = None
+        if tags:
+            secrets_kwargs["Tags"] = tags
+        try:
+            response = secretsmanager_client.create_secret(
+                Name="iambic/generic-git-provider-secrets",
+                Description="iambic github app private key",
+                SecretString=yaml.dump(generic_git_provider_secrets),
+                **secrets_kwargs,
+            )
+            generic_git_provider_secret_arn = response["ARN"]
+        except secretsmanager_client.exceptions.ResourceExistsException:
+            log.info(
+                f"iambic/generic-git-provider-secrets already exists in account: {target_account_id} in region: {self.aws_default_region}"
+            )
+
+            # verify the existing secrets actually match our known values
+            response = secretsmanager_client.describe_secret(
+                SecretId="iambic/generic-git-provider-secrets",
+            )
+            generic_git_provider_secret_arn = response["ARN"]
+            response = secretsmanager_client.get_secret_value(
+                SecretId="iambic/generic-git-provider-secrets",
+            )
+
+            if not questionary.confirm(
+                "Continue with value in existing Secret?"
+            ).unsafe_ask():
+                log.error(
+                    "Please remove the iambic/generic-git-provider-secrets secret or update the secret before re-running this wizard"
+                )
+                return
+
+        cf_client = session.client(
+            "cloudformation", region_name=self.aws_default_region
+        )
+
+        # Note: We are not going to prompt user to give us an optional CloudFormation Role ARN
+        # to use because it seems like additional friction. If we get feedback to restore it,
+        # we will simply called cf_role_arn = self.cf_role_arn
+        cf_role_arn = None
+
+        successfully_created = asyncio.run(
+            create_generic_git_provider_lambda_roles_stack(
+                cf_client,
+                self.hub_account_id,
+                IAMBIC_HUB_ROLE_NAME,
+                cf_role_arn,
+                tags=tags,
+            )
+        )
+        assert successfully_created
+
+        # modify the trust policy of IambicHubRole to allow iambic lambda execution role
+        lambda_role_arn = f"arn:aws:iam::{target_account_id}:role/iambic_generic_git_provider_lambda_execution{IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX}"
+
+        self.github_app_amend_trust_policy_for_iambic_integration(
+            lambda_role_arn, target_sid="AllowIAMbicGenericGitProviderLambdaIntegration"
+        )
+
+        successfully_created = asyncio.run(
+            create_code_build_roles_stack(
+                cf_client,
+                cf_role_arn,
+                tags=tags,
+            )
+        )
+        assert successfully_created
+
+        try:
+            successfully_created = asyncio.run(
+                create_github_app_ecr_pull_through_cache_stack(
+                    cf_client,
+                    cf_role_arn,
+                    stack_name=f"IAMbicECRPullThroughCache{IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX}",
+                    tags=tags,
+                )
+            )
+            assert successfully_created
+
+            successfully_created = asyncio.run(
+                create_github_app_ecr_repo_stack(
+                    cf_client,
+                    cf_role_arn,
+                    stack_name=f"IAMbicECRRepo{IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX}",
+                    tags=tags,
+                )
+            )
+            assert successfully_created
+
+            code_build_role_arn = f"arn:aws:iam::{target_account_id}:role/iambic_code_build{IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX}"
+            code_build_name = f"iambic_code_build{IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX}"
+
+            successfully_created = asyncio.run(
+                create_github_app_code_build_stack(
+                    cf_client,
+                    target_account_id,
+                    cf_role_arn,
+                    code_build_role_arn=code_build_role_arn,
+                    code_build_name=code_build_name,
+                    stack_name=f"IAMbicGenericGitProviderCodeBuild{IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX}",
+                    tags=tags,
+                )
+            )
+            assert successfully_created
+
+        except Exception as e:
+            log.error(str(e))
+            # keep going: doing this because during development, we use the ecr cache rule and repo for many other things
+
+        self.github_app_pull_latest_iambic_image(session)
+
+        self.github_app_wait_until_image_is_ready(session)
+
+        successfully_created = asyncio.run(
+            create_generic_git_provider_lambda_stack(
+                cf_client,
+                target_account_id,
+                generic_git_provider_secret_arn,
+                cf_role_arn,
+                tags=tags,
+            )
+        )
+        assert successfully_created
+
+        # TODO Disable for now since we don't have webhook integrated yet.
+        # webhook_url = None
+
+        # lambda_stack_name = f"IAMbicGenericGitProviderLambda{IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX}"
+        # response = cf_client.describe_stacks(StackName=lambda_stack_name)
+        # outputs = response["Stacks"][0]["Outputs"]
+        # for output in outputs:
+        #     keyName = output["OutputKey"]
+        #     if keyName == "FunctionUrl":
+        #         webhook_url = output["OutputValue"]
+
+        # assert webhook_url
+
+        # github_app_jwt = generate_jwt(generic_git_provider_secrets)
+        # try:
+        #     update_webhook_url(webhook_url, github_app_jwt)
+        # except Exception:
+        #     log.exception(
+        #         "Failed to update webhook URL with GitHub App. Please manually update the webhook URL in the GitHub App settings page",
+        #         webhook_url=webhook_url,
+        #     )
+        #     if not questionary.confirm("Proceed?").unsafe_ask():
+        #         return
+
+        # # Remove the local secrets because it's already saved in secret manager
+        # remove_github_app_secrets()
+
     def configuration_github_app_aws_lambda_setup(self):  # noqa: C901
         from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
             IAMBIC_GITHUB_APP_SUFFIX,
@@ -2163,7 +2390,11 @@ class ConfigurationWizard:
         # Remove the local secrets because it's already saved in secret manager
         remove_github_app_secrets()
 
-    def github_app_amend_trust_policy_for_iambic_integration(self, lambda_role_arn):
+    def github_app_amend_trust_policy_for_iambic_integration(
+        self, lambda_role_arn, target_sid=None
+    ):
+        if target_sid is None:
+            target_sid = "AllowIAMbicLambdaIntegration"
         hub_session, _ = self.get_boto3_session_for_account(self.hub_account_id)
         hub_iam_client = hub_session.client("iam", region_name=self.aws_default_region)
         hub_role_arn = self.config.aws.hub_role_arn
@@ -2174,13 +2405,13 @@ class ConfigurationWizard:
         needs_to_add_statement = True
         statements: list = existing_trust_policy.get("Statement", [])
         new_statement = {
-            "Sid": "AllowIAMbicLambdaIntegration",
+            "Sid": target_sid,
             "Effect": "Allow",
             "Principal": {"AWS": lambda_role_arn},
             "Action": ["sts:AssumeRole", "sts:TagSession"],
         }
         for statement in statements:  # FIXME: watch out other cases
-            if statement.get("Sid", "") == "AllowIAMbicLambdaIntegration":
+            if statement.get("Sid", "") == target_sid:
                 needs_to_add_statement = False
                 if statement["Principal"]["AWS"] != lambda_role_arn:
                     # Update the statement
@@ -2332,6 +2563,9 @@ class ConfigurationWizard:
 
             if self.has_aws_account_or_organizations:
                 choices.append("Setup GitHub App Integration using AWS Lambda")
+                choices.append(
+                    "Setup Generic Git Provider Integration using AWS Lambda"
+                )
                 if (
                     self.config.aws.organizations
                     and not self.config.aws.sqs_cloudtrail_changes_queues
@@ -2375,6 +2609,16 @@ class ConfigurationWizard:
                     self.setup_aws_configuration()
                     if self.has_confirm_cf_permissions:
                         self.configuration_github_app_aws_lambda_setup()
+                    else:
+                        log.info(
+                            "Unable to edit this attribute without CloudFormation permissions."
+                        )
+                elif (
+                    action == "Setup Generic Git Provider Integration using AWS Lambda"
+                ):
+                    self.setup_aws_configuration()
+                    if self.has_confirm_cf_permissions:
+                        self.configuration_generic_git_provider_aws_lambda_setup()
                     else:
                         log.info(
                             "Unable to edit this attribute without CloudFormation permissions."

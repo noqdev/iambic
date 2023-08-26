@@ -23,6 +23,8 @@ from iambic.plugins.v0_1_0.github.github import (
     iambic_app,
 )
 
+GENERIC_GIT_PROVIDER_SECRET_ARN = os.environ.get("GENERIC_GIT_PROVIDER_SECRET_ARN")
+
 
 def run_handler(event=None, context=None):
     """
@@ -46,7 +48,7 @@ def _get_app_secrets_as_lambda_context_current() -> dict:
 
     try:
         get_secret_value_response = client.get_secret_value(
-            SecretId="iambic/github-app-secrets"
+            SecretId=GENERIC_GIT_PROVIDER_SECRET_ARN,
         )
     except ClientError as e:
         # For a list of exceptions thrown, see
