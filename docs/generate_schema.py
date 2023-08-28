@@ -69,8 +69,6 @@ models = (
 
 
 def model_customization_for_config(json_schema_string):
-    import os
-
     return json_schema_string.replace(
         os.getcwd(), "."
     )  # i want to replace all current directory string with just "."
