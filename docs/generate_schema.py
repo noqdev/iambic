@@ -147,6 +147,10 @@ def create_model_schemas(
             )
 
             text = re.sub(re_pattern_replace_br, r"<br \>", text)
+
+            if class_name in SCHEMA_OVERRIDE_BY_CLASS_NAME:
+                text = SCHEMA_OVERRIDE_BY_CLASS_NAME[class_name](text)
+
             f.write(text)
 
     return schema_md_str
