@@ -68,6 +68,19 @@ models = (
 )
 
 
+def model_customization_for_config(json_schema_string):
+    import os
+
+    return json_schema_string.replace(
+        os.getcwd(), "."
+    )  # i want to replace all current directory string with just "."
+
+
+SCHEMA_OVERRIDE_BY_CLASS_NAME = {
+    "Config": model_customization_for_config,
+}
+
+
 def create_model_schemas(
     parser: jsonschema2md2.Parser,
     schema_dir: str,
@@ -93,12 +106,16 @@ def create_model_schemas(
         with open(json_schema_path, "w") as f:
             model.update_forward_refs(**{m.__name__: m for m in models})
             try:
-                f.write(
-                    model.schema_json(
-                        by_alias=False,
-                        indent=2,
-                    )
+                model_json_schema_as_string = model.schema_json(
+                    by_alias=False,
+                    indent=2,
                 )
+                if class_name in SCHEMA_OVERRIDE_BY_CLASS_NAME:
+                    model_json_schema_as_string = SCHEMA_OVERRIDE_BY_CLASS_NAME[
+                        class_name
+                    ](model_json_schema_as_string)
+
+                f.write(model_json_schema_as_string)
             except Exception as e:
                 log.error(f"Error generating schema for {class_name}: {e}")
                 if raise_exception:

@@ -194,8 +194,11 @@ configurations for other models used in IAMbic.
       - *string*
       - *string*
   - **`version`** *(string)*
-  - **`statement`** *(array)*: List of policy statements.
-    - **Items**: Refer to *[#/definitions/PolicyStatement](#definitions/PolicyStatement)*.
+  - **`statement`**: List of policy statements.
+    - **Any of**
+      - *array*
+        - **Items**: Refer to *[#/definitions/PolicyStatement](#definitions/PolicyStatement)*.
+      - : Refer to *[#/definitions/PolicyStatement](#definitions/PolicyStatement)*.
 
 <a id="definitions/ManagedPolicyArn"></a>
 

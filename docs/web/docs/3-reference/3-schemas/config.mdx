@@ -17,14 +17,14 @@ configurations for other models used in IAMbic.
   - **All of**
     - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
 - **`version`** *(string)*: Do not change! The version of iambic this repo is compatible with.
-- **`plugins`** *(array)*: The plugins used by your IAMbic template repo. Default: `[{"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/aws", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/google_workspace", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/okta", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/github", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/azure_ad", "version": "v0.1.0"}]`.
+- **`plugins`** *(array)*: The plugins used by your IAMbic template repo. Default: `[{"type": "DIRECTORY_PATH", "location": "/Users/stevenmoy/noqdev/iambic/iambic/plugins/v0_1_0/aws", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/Users/stevenmoy/noqdev/iambic/iambic/plugins/v0_1_0/google_workspace", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/Users/stevenmoy/noqdev/iambic/iambic/plugins/v0_1_0/okta", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/Users/stevenmoy/noqdev/iambic/iambic/plugins/v0_1_0/github", "version": "v0.1.0"}, {"type": "DIRECTORY_PATH", "location": "/Users/stevenmoy/noqdev/iambic/iambic/plugins/v0_1_0/azure_ad", "version": "v0.1.0"}]`.
   - **Items**: Refer to *[#/definitions/PluginDefinition](#definitions/PluginDefinition)*.
 - **`extends`** *(array)*: Default: `[]`.
   - **Items**: Refer to *[#/definitions/ExtendsConfig](#definitions/ExtendsConfig)*.
 - **`secrets`** *(object)*: Secrets should only be used in memory and never serialized out. Default: `{}`.
 - **`plugin_instances`** *(array)*: A list of the plugin instances parsed as part of the plugin paths.
   - **Items**: Refer to *[#/definitions/ProviderPlugin](#definitions/ProviderPlugin)*.
-- **`core`**: Core configuration options for iambic. Default: `{"minimum_ulimit": 64000, "exception_reporting": null}`.
+- **`core`**: Core configuration options for iambic. Default: `{"minimum_ulimit": 64000, "exception_reporting": null, "detection_messages": null}`.
   - **All of**
     - : Refer to *[#/definitions/CoreConfig](#definitions/CoreConfig)*.
 ## Definitions
@@ -75,8 +75,14 @@ configurations for other models used in IAMbic.
   - **`automatically_send_reports`** *(boolean)*: Automatically send reports without asking for user consent.
   - **`email_address`** *(string)*: Email address for correspondence about the exception, if you would like us to communicate with you.
 
+<a id="definitions/DetectionMessages"></a>
+
+- **`DetectionMessages`** *(object)*
+  - **`enabled`** *(boolean)*: Enable or disable detection messages.
+
 <a id="definitions/CoreConfig"></a>
 
 - **`CoreConfig`** *(object)*
   - **`minimum_ulimit`** *(integer)*: Default: `64000`.
   - **`exception_reporting`**: Refer to *[#/definitions/ExceptionReporting](#definitions/ExceptionReporting)*.
+  - **`detection_messages`**: Refer to *[#/definitions/DetectionMessages](#definitions/DetectionMessages)*.
