@@ -118,13 +118,13 @@ class UserProperties(BaseModel):
     user_name: str = Field(
         description="Name of the user",
     )
-    credentials: Optional[Union[None, Credentials, list[Credentials]]] = Field(
+    credentials: Optional[Union[Credentials, list[Credentials]]] = Field(
         None,
         description="A summary of which credentials have been enabled for the user",
     )
     path: Optional[Union[str, list[Path]]] = "/"
     permissions_boundary: Optional[
-        Union[None, PermissionBoundary, list[PermissionBoundary]]
+        Union[PermissionBoundary, list[PermissionBoundary]]
     ] = None
     tags: Optional[list[Tag]] = Field(
         [],

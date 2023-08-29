@@ -428,11 +428,6 @@ async def create_templated_user(  # noqa: C901
             credential_resources,
             prefer_templatized=prefer_templatized,
         )
-        log.warning(
-            "Grouped credentials",
-            credentials=user_template_properties["credentials"],
-            ungrouped=credential_resources,
-        )
 
     if description_resources:
         user_template_properties["description"] = await group_int_or_str_attribute(

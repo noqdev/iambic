@@ -81,7 +81,7 @@ class AWSConfig(ConfigMixin, BaseModel):
         description="If true, IAM User templates will include "
         "summary info of the user password and access keys. "
         "It will also allow iambic to delete a user passwords and disable access keys. "
-        "Enable is not currently supported until "
+        "Enabling IAM user access keys from iambic is not currently supported until "
         "a secure way to store generated credentials is implemented.",
     )
     min_accounts_required_for_wildcard_included_accounts: int = Field(
