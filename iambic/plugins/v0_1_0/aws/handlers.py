@@ -446,10 +446,10 @@ async def import_aws_resources(
                 base_output_dir,
                 "iam",
                 [
-                    # collect_aws_roles,
+                    collect_aws_roles,
                     collect_aws_users,
-                    # collect_aws_groups,
-                    # collect_aws_managed_policies,
+                    collect_aws_groups,
+                    collect_aws_managed_policies,
                 ],
                 [
                     generate_aws_role_templates,
