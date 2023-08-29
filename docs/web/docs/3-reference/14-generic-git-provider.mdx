@@ -3,83 +3,52 @@ title: Setup IAMbic with Generic Git Provider
 ---
 
 # Overview
-Current implementation IAMbic work best with GitHub. As the project evolves, more Git provider
-will be supported. Until then, if you like to use IAMbic with non-explicitly supported provider.
-You can use this guide to setup IAMbic.
+IAMbic primarily supports GitHub, but you can set it up with other Git providers using this guide.
+The method involves using HTTPS protocol and HTTP basic auth. Create a repository-specific access
+token for safer authentication.
 
-The generic git provider support uses https protocol with http basic auth to authenticate with
-git provider to clone the repository. Almost all git providers has a way to create a repository-scoped
-access token. Consult your Git provider documentation to generate a repository-scope access token.
-We recommend against using your regular username/password to authenticate for IAMbic usage. It's
-safer to generate a app specific access token to audit access to your private repository.
+If your Git provider is explicitly supported, it's better to use the specific
+implementation for additional features.
 
-As a reminder, if your git provider has explicit support, you should use the provider specific
-implementation as that has more native integrated features.
+# Pre-requisites
+1. Create a private repository called `iambic-templates` on your Git provider. Keep this repository private.
+The contents of the repository will be like [this](https://github.com/noqdev/github-iambic-templates)
+1. Run `iambic setup` and commit the generated config file to your private repository.
+1. Generate a repository-scoped access token. Guidance for popular providers is provided below.
 
-# Pre-requisite
-
-1. In your git provider, create a repository called `iambic-templates`. The contents of the repository will be like
-[this](https://github.com/noqdev/github-iambic-templates). We recommend you to keep this repository private
-because there is no need for this to be publicly accessible.
-1. Run `iambic setup` to generate the necessary IAMbic config file. Check the config file into your private repository.
-1. Generate a repository-scoped access token for your private repository. Next section includes include some well known
-providers.
-
-
-# Generate repository-scoped access token
+# Generate Repository-Scoped Access Token
 
 ## BitBucket
-1. Navigate to your BitBucket `iambic-templates` repository.
-1. Click "Repository Settings"
-1. Click "Access tokens" under Security
-<img src={"/img/git/generic-git-provider/bitbucket-repository-settings.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
-1. Click "Create Repository Access Token"
-<img src={"/img/git/generic-git-provider/bitbucket-security-access-tokens.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
-1. For name, input `iambic-integrations`. For scopes, click "Write" under repository. In order for iambic to integrate
-<img src={"/img/git/generic-git-provider/bitbucket-create-repository-access-token.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
-automatic import. The token needs to have write permission to write the new change into the repository. Click Create.
-<img src={"/img/git/generic-git-provider/bitbucket-create-repository-access-token-2.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
-1. Save the token in a a safe place. You will not be able to return to this screen later.
+Follow the steps below to create a repository access token in BitBucket:
+1. Navigate to `iambic-templates` → "Repository Settings" → "Access tokens" under Security.
+   <img src="/img/git/generic-git-provider/bitbucket-repository-settings.png" style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Click "Create Repository Access Token".
+   <img src="/img/git/generic-git-provider/bitbucket-security-access-tokens.png" style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Name it `iambic-integrations`, select "Write" under repository, and click Create.
+   <img src="/img/git/generic-git-provider/bitbucket-create-repository-access-token.png" style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+   <img src="/img/git/generic-git-provider/bitbucket-create-repository-access-token-2.png" style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Save the token. You'll use it as the "access token" and `x-token-auth` as the username.
 <img src={"/img/git/generic-git-provider/bitbucket-create-repository-access-token-3.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
-1. Note the value is later on referenced as the "access token".
-1. For BitBucket, the corresponding username is  `x-token-auth`
 
 ## AWS CodeCommit
-1. Navigate to AWS IAM user. If you don't already have an IAM user to represent automation usage. Please create one.
-The IAM user does not need AWS API keys or AWS console login. You don't have to create them for the only https codecommit usage.
-<img src={"/img/git/generic-git-provider/aws-codecommit-iam-user.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
-1. Click on "Security Credentials"
-<img src={"/img/git/generic-git-provider/aws-codecommit-iam-user-security-credentials.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
-1. Click on "Generate credentials"
-1. Save the username and password in a safe place. You will not be able to go back to this screen later.
-<img src={"/img/git/generic-git-provider/aws-codecommit-iam-user-security-credentials-generate-credentials.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+Follow these steps for AWS CodeCommit:
+1. Navigate to IAM → User → "Security Credentials".
+   <img src="/img/git/generic-git-provider/aws-codecommit-iam-user-security-credentials.png" style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Click "Generate credentials" and save them.
+   <img src="/img/git/generic-git-provider/aws-codecommit-iam-user-security-credentials-generate-credentials.png" style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
 
 ## GitLab
-1. Navigate to your `iambic-templates` repository in GitLab
-1. Click "Settings", then click "Access Token"
-<img src={"/img/git/generic-git-provider/gitlab-settings.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
-1. Click "Add new token"
-<img src={"/img/git/generic-git-provider/gitlab-add-new-token.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
-1. Token name, input "iambic-integrations"
-1. Expiration date, pick a date you are comfortable with. When your token is expired, you have to generate a new one.
-1. Select a role, choose "Maintainer". (iambic automatic import will push to iambic-template default branch)
-1. Select scopes, choose "write repository" (iambic automatic import will push to iambic-template default branch).
-<img src={"/img/git/generic-git-provider/gitlab-add-new-token-details.png"} style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
-1. Save the token in a a safe place. You will not be able to return to this screen later.
-1. For GitLab, the corresponding username is  name of your token. In this instruction, we name it `iambic-integrations`
+Here's how to generate a token in GitLab:
+1. Go to `iambic-templates` → "Settings" → "Access Token".
+   <img src="/img/git/generic-git-provider/gitlab-settings.png" style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Click "Add new token", name it `iambic-integrations`, and select "Maintainer" role with "write repository" scope.
+   <img src="/img/git/generic-git-provider/gitlab-add-new-token-details.png" style={{width: '100%', display: 'block', marginLeft: 'auto', marginRight: 'auto'}} />
+1. Save the token. You'll use it as the "access token" and `iambic-integrations` as the username.
 
-# Install AWS Lambda to run automatic import to your iambic-templates repository with a generic git provider
-1. Navigate to your locally clone checkout of your private `iambic-templates` repository
-1. Run `iambic setup`
-1. Select "Setup Generic Git Provider Integration using AWS Lambda"
-1. When prompt for "username": use the username for your prepared access token.
-1. When prompt for "access token": use your prepared access token for "iambic-templates" repository.
-1. When prompt for "clone url", this is the https clone url for private repository.
-(for example: "https://bitbucket.org/iambic-test-org/iambic-templates.git") yours will be different.
-1. When prompt for "default branch", input your configured default branch. This is typically default or main.
-1. When prompt for "repo full name", input your "YOUR_ORG_IDENTIFIER/iambic-templates".
-(for example: "iambic-test-org/iambic-templates"). Yours should be different.
-1. Follow the onscreen instruction, until you are return to the menu.
-1. Select Done.
-1. At this point, a AWS Lambda function is installed in your account to periodically run "iambic import".
-The up-to-date templates will be pushed into your configured repository.
+# AWS Lambda Setup for Automatic Import
+1. Navigate to your local copy of `iambic-templates` and run `iambic setup`.
+1. Choose "Setup Generic Git Provider Integration using AWS Lambda".
+1. Provide username, access token, clone URL, default branch, and repo full name when prompted.
+    1. Example clone URL: "https://bitbucket.org/iambic-test-org/iambic-templates.git"
+    1. Example repo full name: "YOUR_ORG_IDENTIFIER/iambic-templates"
+1. Follow on-screen instructions to complete the setup. AWS Lambda will be configured to periodically run "iambic import".
