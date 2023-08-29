@@ -1,0 +1,47 @@
+# Audience
+
+This documentation is intended for developers who wish to contribute to the noqdev/iambic project.
+
+# Objective
+
+IAMbic allows for bi-directional synchronization between cloud control planes and human-readable YAML files.
+
+# IAMbic Plugins
+
+IAMbic organizes each cloud service into individual plugins for better manageability.
+For example, AWS and Google Workspace have their separate plugins.
+
+# IAMbic Core
+
+The core of IAMbic lays out the basic data flow and provides a command-line interface for operations.
+
+## Command Interface
+
+Inspired by the `git` command-line tool, IAMbic offers a variety of subcommands.
+
+### `import`
+The `import` subcommand instructs each plugin to fetch IAM configuration from the cloud and serialize it into human-readable YAML files.
+
+### `plan`
+The `plan` subcommand processes a list of template file paths, with each template tied to a specific plugin.
+The plugin analyzes the current cloud state and identifies any changes needed.
+
+### `apply`
+The `apply` subcommand is similar to `plan`, but it executes changes after user confirmation.
+It issues cloud API requests to bring the cloud state in line with the desired configuration.
+
+## Human-Readable YAML Files
+
+Each plugin supports specific template types. For example, the AWS plugin handles IAM User, IAM Group, IAM Role, and Identity Center
+Permission Sets. IAMbic employs the Pydantic library to declare schemas for these templates.
+
+YAML is chosen for portability, with Pydantic providing validation. Metadata, such as `identifier`, are kept only in the local
+YAML files and are not persistent in the vendor's cloud API. This approach allows IAMbic to implement features, like expiration
+mechanisms, that may not be natively supported by the cloud service.
+
+# Git Integrations
+
+IAMbic integrates with Git to support team collaboration. Teams are expected to commit their IAMbic templates to a Git repository.
+IAMbic then periodically imports the cloud state into this repository, mirroring it on the default branch.
+Team members can create branches for changes, submit them for peer review, and IAMbic coordinates the plan and apply processes
+before merging changes back into the default branch.
