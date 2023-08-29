@@ -41,27 +41,27 @@
       "default": [
         {
           "type": "DIRECTORY_PATH",
-          "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/aws",
+          "location": "./iambic/plugins/v0_1_0/aws",
           "version": "v0.1.0"
         },
         {
           "type": "DIRECTORY_PATH",
-          "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/google_workspace",
+          "location": "./iambic/plugins/v0_1_0/google_workspace",
           "version": "v0.1.0"
         },
         {
           "type": "DIRECTORY_PATH",
-          "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/okta",
+          "location": "./iambic/plugins/v0_1_0/okta",
           "version": "v0.1.0"
         },
         {
           "type": "DIRECTORY_PATH",
-          "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/github",
+          "location": "./iambic/plugins/v0_1_0/github",
           "version": "v0.1.0"
         },
         {
           "type": "DIRECTORY_PATH",
-          "location": "/home/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/azure_ad",
+          "location": "./iambic/plugins/v0_1_0/azure_ad",
           "version": "v0.1.0"
         }
       ],
@@ -97,7 +97,8 @@
       "description": "Core configuration options for iambic.",
       "default": {
         "minimum_ulimit": 64000,
-        "exception_reporting": null
+        "exception_reporting": null,
+        "detection_messages": null
       },
       "allOf": [
         {
@@ -251,6 +252,20 @@
         "enabled"
       ]
     },
+    "DetectionMessages": {
+      "title": "DetectionMessages",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "description": "Enable or disable detection messages.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ]
+    },
     "CoreConfig": {
       "title": "CoreConfig",
       "type": "object",
@@ -262,6 +277,9 @@
         },
         "exception_reporting": {
           "$ref": "#/definitions/ExceptionReporting"
+        },
+        "detection_messages": {
+          "$ref": "#/definitions/DetectionMessages"
         }
       }
     }
