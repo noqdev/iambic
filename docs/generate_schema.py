@@ -19,6 +19,7 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
     AwsIdentityCenterPermissionSetTemplate,
 )
 from iambic.plugins.v0_1_0.aws.models import AWSAccount, AWSOrganization
+from iambic.plugins.v0_1_0.aws.organizations.scp.models import AwsScpPolicyTemplate
 from iambic.plugins.v0_1_0.azure_ad.group.models import (
     AzureActiveDirectoryGroupTemplate,
 )
@@ -40,6 +41,7 @@ aws_template_models = [
     AwsIdentityCenterPermissionSetTemplate,
     AwsIamGroupTemplate,
     AwsIamUserTemplate,
+    AwsScpPolicyTemplate,
 ]
 azure_ad_template_models = [
     AzureActiveDirectoryGroupTemplate,

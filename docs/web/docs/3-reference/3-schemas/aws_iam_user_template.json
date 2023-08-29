@@ -46,6 +46,11 @@
     "expires_at": {
       "title": "Expiresat",
       "description": "The date and time the resource will be/was set to deleted.",
+      "examples": [
+        "in 3 days",
+        "2023-09-01",
+        "2023-08-31T12:00:00"
+      ],
       "anyOf": [
         {
           "type": "string"
@@ -69,6 +74,11 @@
     "expires_at_default": {
       "title": "Expiresatdefault",
       "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+      "examples": [
+        "in 3 days",
+        "2023-09-01",
+        "2023-08-31T12:00:00"
+      ],
       "anyOf": [
         {
           "type": "string"
@@ -235,6 +245,11 @@
         "expires_at": {
           "title": "Expiresat",
           "description": "The date and time the resource will be/was set to deleted.",
+          "examples": [
+            "in 3 days",
+            "2023-09-01",
+            "2023-08-31T12:00:00"
+          ],
           "anyOf": [
             {
               "type": "string"
@@ -258,6 +273,11 @@
         "expires_at_default": {
           "title": "Expiresatdefault",
           "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "examples": [
+            "in 3 days",
+            "2023-09-01",
+            "2023-08-31T12:00:00"
+          ],
           "anyOf": [
             {
               "type": "string"
@@ -334,6 +354,11 @@
         "expires_at": {
           "title": "Expiresat",
           "description": "The date and time the resource will be/was set to deleted.",
+          "examples": [
+            "in 3 days",
+            "2023-09-01",
+            "2023-08-31T12:00:00"
+          ],
           "anyOf": [
             {
               "type": "string"
@@ -357,6 +382,11 @@
         "expires_at_default": {
           "title": "Expiresatdefault",
           "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "examples": [
+            "in 3 days",
+            "2023-09-01",
+            "2023-08-31T12:00:00"
+          ],
           "anyOf": [
             {
               "type": "string"
@@ -433,6 +463,11 @@
         "expires_at": {
           "title": "Expiresat",
           "description": "The date and time the resource will be/was set to deleted.",
+          "examples": [
+            "in 3 days",
+            "2023-09-01",
+            "2023-08-31T12:00:00"
+          ],
           "anyOf": [
             {
               "type": "string"
@@ -456,6 +491,11 @@
         "expires_at_default": {
           "title": "Expiresatdefault",
           "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "examples": [
+            "in 3 days",
+            "2023-09-01",
+            "2023-08-31T12:00:00"
+          ],
           "anyOf": [
             {
               "type": "string"
@@ -515,6 +555,11 @@
         "expires_at": {
           "title": "Expiresat",
           "description": "The date and time the resource will be/was set to deleted.",
+          "examples": [
+            "in 3 days",
+            "2023-09-01",
+            "2023-08-31T12:00:00"
+          ],
           "anyOf": [
             {
               "type": "string"
@@ -538,6 +583,11 @@
         "expires_at_default": {
           "title": "Expiresatdefault",
           "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "examples": [
+            "in 3 days",
+            "2023-09-01",
+            "2023-08-31T12:00:00"
+          ],
           "anyOf": [
             {
               "type": "string"
@@ -677,6 +727,11 @@
         "expires_at": {
           "title": "Expiresat",
           "description": "The date and time the resource will be/was set to deleted.",
+          "examples": [
+            "in 3 days",
+            "2023-09-01",
+            "2023-08-31T12:00:00"
+          ],
           "anyOf": [
             {
               "type": "string"
@@ -700,6 +755,11 @@
         "expires_at_default": {
           "title": "Expiresatdefault",
           "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "examples": [
+            "in 3 days",
+            "2023-09-01",
+            "2023-08-31T12:00:00"
+          ],
           "anyOf": [
             {
               "type": "string"
@@ -865,6 +925,11 @@
         "expires_at": {
           "title": "Expiresat",
           "description": "The date and time the resource will be/was set to deleted.",
+          "examples": [
+            "in 3 days",
+            "2023-09-01",
+            "2023-08-31T12:00:00"
+          ],
           "anyOf": [
             {
               "type": "string"
@@ -888,6 +953,11 @@
         "expires_at_default": {
           "title": "Expiresatdefault",
           "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "examples": [
+            "in 3 days",
+            "2023-09-01",
+            "2023-08-31T12:00:00"
+          ],
           "anyOf": [
             {
               "type": "string"
