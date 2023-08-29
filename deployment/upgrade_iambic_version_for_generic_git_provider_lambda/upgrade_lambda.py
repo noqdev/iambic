@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import time
 
@@ -36,8 +37,7 @@ def start_code_build_with_pin_version(ver):
     )
 
     build_id = response["build"]["id"]
-    # FIXME explain why this is stalling for builds
-    # log.info("Preparing container image. This process should take around 2 minutes")
+    logging.info("Preparing container image. This process should take around 2 minutes")
     for _ in range(6):
         resp = code_build_client.batch_get_builds(ids=[build_id])
         build_status = resp["builds"][0]["buildStatus"]

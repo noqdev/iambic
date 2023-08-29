@@ -20,7 +20,7 @@ class GenericGitClient(object):
         self.default_branch_name = secrets["default_branch_name"]
         self.repo_full_name = secrets["repo_full_name"]
 
-        # we should always take the precaution someone did not give us a non-https url
+        # we should always take the precaution someone give us a non-https url
         assert self.clone_url.startswith("https://")
         # we should always take the precaution someone did not sneak an @ in the url
         # that may accidentally be a password. A simple assert may print the potential

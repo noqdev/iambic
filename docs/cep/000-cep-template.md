@@ -1,7 +1,7 @@
 # CEP xxx - Code Enhancement Proposal Title
 
 ## Champion
-Who will help organize the effort of getting this implement?
+Who will help organize the effort of getting this implemented?
 
 ## Summary
 Short summary about a code enhancement proposal

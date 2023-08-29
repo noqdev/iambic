@@ -2083,33 +2083,6 @@ class ConfigurationWizard:
         )
         assert successfully_created
 
-        # TODO Disable for now since we don't have webhook integrated yet.
-        # webhook_url = None
-
-        # lambda_stack_name = f"IAMbicGenericGitProviderLambda{IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX}"
-        # response = cf_client.describe_stacks(StackName=lambda_stack_name)
-        # outputs = response["Stacks"][0]["Outputs"]
-        # for output in outputs:
-        #     keyName = output["OutputKey"]
-        #     if keyName == "FunctionUrl":
-        #         webhook_url = output["OutputValue"]
-
-        # assert webhook_url
-
-        # github_app_jwt = generate_jwt(generic_git_provider_secrets)
-        # try:
-        #     update_webhook_url(webhook_url, github_app_jwt)
-        # except Exception:
-        #     log.exception(
-        #         "Failed to update webhook URL with GitHub App. Please manually update the webhook URL in the GitHub App settings page",
-        #         webhook_url=webhook_url,
-        #     )
-        #     if not questionary.confirm("Proceed?").unsafe_ask():
-        #         return
-
-        # # Remove the local secrets because it's already saved in secret manager
-        # remove_github_app_secrets()
-
     def configuration_github_app_aws_lambda_setup(self):  # noqa: C901
         from iambic.plugins.v0_1_0.aws.cloud_formation.utils import (
             IAMBIC_GITHUB_APP_SUFFIX,
