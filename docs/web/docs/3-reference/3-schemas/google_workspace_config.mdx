@@ -14,14 +14,14 @@ See [Template Schema Validation](/reference/template_validation_ide) to learn ho
 <a id="definitions/GoogleSubject"></a>
 
 - **`GoogleSubject`** *(object)*
-  - **`domain`** *(string)*
-  - **`service_account`** *(string)*
+  - **`domain`** *(string, required)*
+  - **`service_account`** *(string, required)*
 
 <a id="definitions/Variable"></a>
 
 - **`Variable`** *(object)*
-  - **`key`** *(string)*
-  - **`value`** *(string)*
+  - **`key`** *(string, required)*
+  - **`value`** *(string, required)*
 
 <a id="definitions/IambicManaged"></a>
 
@@ -30,19 +30,19 @@ See [Template Schema Validation](/reference/template_validation_ide) to learn ho
 <a id="definitions/GoogleProject"></a>
 
 - **`GoogleProject`** *(object)*
-  - **`project_id`** *(string)*
+  - **`project_id`** *(string, required)*
   - **`project_name`** *(string)*
-  - **`subjects`** *(array)*
+  - **`subjects`** *(array, required)*
     - **Items**: Refer to *[#/definitions/GoogleSubject](#definitions/GoogleSubject)*.
-  - **`type`** *(string)*
-  - **`private_key_id`** *(string)*
-  - **`private_key`** *(string)*
-  - **`client_email`** *(string)*
-  - **`client_id`** *(string)*
-  - **`auth_uri`** *(string)*
-  - **`token_uri`** *(string)*
-  - **`auth_provider_x509_cert_url`** *(string)*
-  - **`client_x509_cert_url`** *(string)*
+  - **`type`** *(string, required)*
+  - **`private_key_id`** *(string, required)*
+  - **`private_key`** *(string, required)*
+  - **`client_email`** *(string, required)*
+  - **`client_id`** *(string, required)*
+  - **`auth_uri`** *(string, required)*
+  - **`token_uri`** *(string, required)*
+  - **`auth_provider_x509_cert_url`** *(string, required)*
+  - **`client_x509_cert_url`** *(string, required)*
   - **`variables`** *(array)*: A list of variables to be used when creating templates. Default: `[]`.
     - **Items**: Refer to *[#/definitions/Variable](#definitions/Variable)*.
   - **`iambic_managed`**: Controls the directionality of iambic changes. Default: `"undefined"`.

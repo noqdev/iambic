@@ -3,7 +3,8 @@ from __future__ import annotations
 import os
 import re
 
-import jsonschema2md2
+# inline jsonschem2md via vendor
+import dev_tools.vendor.jsonschema2md as jsonschema2md2
 
 from iambic.config.dynamic_config import Config, ExtendsConfig
 from iambic.core.logger import log
