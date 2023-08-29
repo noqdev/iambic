@@ -15,15 +15,15 @@ and permissions:
 
 1. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
 2. Install [Python](https://www.python.org/downloads/) 3.9+. Running IAMbic locally instead of Docker is the recommended way.
-3. [Install the GitHub CLI](https://cli.github.com/manual#installation) and [authenticate with Github](https://cli.github.com/manual/) (recommended)
+3. [Install the GitHub CLI](https://cli.github.com/manual#installation) and [authenticate with GitHub](https://cli.github.com/manual/) (recommended)
 4. Set up administrative access in AWS to run the IAMbic Setup Wizard. (required)
-5. Set up administrative access to your Github organization or personal account. (required)
+5. Set up administrative access to your GitHub organization or personal account. (required)
 6. [Install Docker](https://docs.docker.com/get-docker/) and verify it's installed. (optional)
 
 Notes:
 - IAMbic leverages CloudFormation to create resources across your AWS Organization and/or accounts. So administrative access to AWS is required to run the Setup Wizard.
 - IAMbic uses GitHub to store and version control your IAM. Administrative access to your GitHub organization is required to run the Setup Wizard, as this will
-require the ability to create repositories and a Github Application.
+require the ability to create repositories and a GitHub Application.
 
 # Installing and Configuring IAMbic
 
@@ -44,14 +44,14 @@ a scoped role.
 Refer to the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html)
 for specific guidance on configuring credentials.
 
-## Set up the Github Repositories
+## Set up the GitHub Repositories
 
-Github repositories are used to store IAMbic templates and change summaries for your cloud resources.
+GitHub repositories are used to store IAMbic templates and change summaries for your cloud resources.
 IAMbic provides GitHub workflows that keep IAM identities and permissions updated within your repository.
 
 Please follow these steps to set up the repositories:
 
-1. Set an environment variable containing your Github Organization name (or your Github username):
+1. Set an environment variable containing your GitHub Organization name (or your GitHub username):
 
 ```bash
 export ORG_NAME=<your_github_organization_name>
@@ -125,7 +125,7 @@ Alternatively, you can [create the configuration manually](/how_to_guides/manual
 
 Check out other commands with `iambic --help`.
 
-Running the wizard produces config files locally, which will need to be committed and pushed to Github:
+Running the wizard produces config files locally, which will need to be committed and pushed to GitHub:
 
 ```bash
 git status
@@ -136,16 +136,16 @@ git push
 
 ## Running IAMbic in production
 
-In a production deployment, IAMbic imports and applies should be run in a CI/CD pipeline, triggered by a Github webhook.
+In a production deployment, IAMbic imports and applies should be run in a CI/CD pipeline, triggered by a GitHub webhook.
 IAMbic provides the following to make this easy:
 
-- A Github Application that can be installed on your Github Organization (or personal account)
+- A GitHub Application that can be installed on your GitHub Organization (or personal account)
 - A Docker container that will be deployed in AWS Lambda
 - AWS EventBridge rules that will trigger the Lambda function to run IAMbic commands periodically.
 
-### Setup the Github Application
+### Setup the GitHub Application
 
-IAMbic uses a Github Application to manage the Github workflows that keep your IAM resources up to date. In order to install it, make sure again that you have:
+IAMbic uses a GitHub Application to manage the GitHub workflows that keep your IAM resources up to date. In order to install it, make sure again that you have:
 
 * GitHub org admin permissions
 * AWS administrator permissions with the ability to assume IambicHubRole in the management account
@@ -221,7 +221,7 @@ involve pushing changes back to the default branch without requiring manual appr
 
 ### Open a pull request on your **iambic-templates** repository
 
-Once you have configured the Github Application, and have configured your branch setting, you can start making changes to your config by creating PRs:
+Once you have configured the GitHub Application, and have configured your branch setting, you can start making changes to your config by creating PRs:
 
 1. `default_branch=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')`
 2. `git checkout -b task/change_description "$default_branch"`
