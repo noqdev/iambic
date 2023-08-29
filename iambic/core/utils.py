@@ -355,6 +355,11 @@ def flatten_comment_data(data):
 def transform_comments(yaml_dict):
     from ruamel.yaml import CommentedMap
 
+    # If this is None then return empty dictionary
+    # None can only occur if the template file is empty
+    if yaml_dict is None:
+        return {}
+
     comment_dict = {}
     yaml_dict["metadata_commented_dict"] = comment_dict
     if yaml_dict.ca.comment:

@@ -195,6 +195,9 @@ class UserProperties(BaseModel):
 
 class AwsIamUserTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_USER_TEMPLATE_TYPE
+    template_schema_url = (
+        "https://docs.iambic.org/reference/schemas/aws_iam_user_template"
+    )
     properties: UserProperties = Field(
         description="Properties of the user",
     )
@@ -214,7 +217,9 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
         return response
 
     async def _apply_to_account(  # noqa: C901
-        self, aws_account: AWSAccount
+        self,
+        aws_account: AWSAccount,
+        **kwargs,
     ) -> AccountChangeDetails:
         client = await aws_account.get_boto3_client("iam")
         self = await remove_expired_resources(

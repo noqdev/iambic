@@ -53,9 +53,14 @@ class ExceptionReporting(BaseModel):
     )
 
 
+class DetectionMessages(BaseModel):
+    enabled: bool = Field(..., description="Enable or disable detection messages.")
+
+
 class CoreConfig(BaseModel):
     minimum_ulimit: int = 64000
     exception_reporting: Optional[ExceptionReporting] = None
+    detection_messages: Optional[DetectionMessages] = None
 
 
 class PluginType(Enum):
@@ -123,6 +128,7 @@ class ExtendsConfig(BaseModel):
 
 class Config(ConfigMixin, BaseTemplate):
     template_type: str = "NOQ::Core::Config"
+    template_schema_url = "https://docs.iambic.org/reference/schemas/config"
     version: str = Field(
         description="Do not change! The version of iambic this repo is compatible with.",
     )
@@ -321,11 +327,13 @@ class Config(ConfigMixin, BaseTemplate):
 
         return template_changes
 
-    async def run_detect_changes(self, repo_dir: str) -> Union[str, None]:
+    async def run_detect_changes(
+        self, repo_dir: str, message_details_file: Optional[str]
+    ) -> Union[str, None]:
         change_str_list = await asyncio.gather(
             *[
                 plugin.async_detect_changes_callable(
-                    self.get_config_plugin(plugin), repo_dir
+                    self.get_config_plugin(plugin), repo_dir, message_details_file
                 )
                 for plugin in self.configured_plugins
                 if plugin.async_detect_changes_callable
@@ -443,7 +451,11 @@ class Config(ConfigMixin, BaseTemplate):
         )
 
         file_path = os.path.expanduser(self.file_path)
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        parent_directory = os.path.dirname(file_path)
+        # if the user feeds in a filename like 'xyz.yaml'
+        # parent_directory is '', which is not acceptable
+        # to makedirs
+        os.makedirs(parent_directory, exist_ok=True)
         with open(file_path, "w") as f:
             f.write(yaml.dump(sorted_input_dict))
 

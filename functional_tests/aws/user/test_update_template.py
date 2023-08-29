@@ -12,7 +12,6 @@ from functional_tests.aws.user.utils import generate_user_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core import noq_json as json
 from iambic.core.iambic_enum import Command
-from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import (
     get_existing_template_map,
@@ -25,7 +24,6 @@ from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, Policy
 from iambic.plugins.v0_1_0.aws.iam.user.models import (
     AWS_IAM_USER_TEMPLATE_TYPE,
     AwsIamUserTemplate,
-    UserPassword,
 )
 from iambic.plugins.v0_1_0.aws.iam.user.template_generation import (
     collect_aws_users,
@@ -346,7 +344,7 @@ class UpdateUserCredentialTestCase(IsolatedAsyncioTestCase):
             )
             try:
                 await boto_crud_call(client.update_login_profile, **boto_kwargs)
-            except:
+            except:  # noqa: E722
                 await boto_crud_call(client.create_login_profile, **boto_kwargs)
 
         await asyncio.gather(

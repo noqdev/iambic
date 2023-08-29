@@ -264,6 +264,7 @@ class BaseModel(IambicPydanticBaseModel):
             "owner",
             "notes",
             "template_type",
+            "template_schema_url",
             "file_path",
             "metadata_iambic_fields",
             "metadata_commented_dict",
@@ -402,7 +403,7 @@ class TemplateChangeDetails(PydanticBaseModel):
 
     class Config:
         json_encoders = {PrettyOrderedSet: list}
-        extra = Extra.forbid
+        extra = Extra.ignore
 
     @validator("template_path")
     def validate_template_path(cls, v: Union[str, Path]):
@@ -530,6 +531,7 @@ class BaseTemplate(
     BaseModel,
 ):
     template_type: str
+    template_schema_url: str
     file_path: Union[str, Path] = Field(..., hidden_from_schema=True)
     owner: Optional[str]
     notes: Optional[str]
@@ -569,7 +571,10 @@ class BaseTemplate(
             exclude_none=exclude_none,
         )
         template_dict = json.loads(template_dict)
-        template_dict["template_type"] = self.template_type
+        for forced_default_attr in ["template_type", "template_schema_url"]:
+            template_dict[forced_default_attr] = self.__fields__[
+                forced_default_attr
+            ].default
         return template_dict
 
     def get_body(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
@@ -584,11 +589,39 @@ class BaseTemplate(
         if notes := sorted_input_dict.get("notes"):
             sorted_input_dict["notes"] = LiteralScalarString(notes)
         as_yaml = yaml.dump(sorted_input_dict)
-        # Force template_type to be at the top of the yaml
-        template_type_str = f"template_type: {self.template_type}"
-        as_yaml = as_yaml.replace(f"{template_type_str}\n", "")
-        as_yaml = as_yaml.replace(f"\n{template_type_str}", "")
-        as_yaml = f"{template_type_str}\n{as_yaml}"
+        as_yaml_lines = as_yaml.split("\n")
+
+        # prepare iambic_header_lines
+        iambic_header_lines = []
+        for boosted_attr in ["template_type", "template_schema_url"]:
+            boosted_attr_str = (
+                f"{boosted_attr}: {self.__fields__[boosted_attr].default}"
+            )
+            iambic_header_lines.append(boosted_attr_str)
+
+        # prepare file header that is just #
+        file_header_lines = []
+        last_line_number = 0
+        for line_number, line in enumerate(as_yaml_lines):
+            if line.startswith("#"):
+                file_header_lines.append(line)
+                last_line_number = line_number + 1
+            else:
+                break
+
+        remaining_lines = []
+        # Get rid of lines that are already included in iambic_header_lines
+        for line in as_yaml_lines[last_line_number:]:
+            if line not in iambic_header_lines:
+                remaining_lines.append(line)
+
+        final_lines = []
+        final_lines.extend(file_header_lines)
+        final_lines.extend(iambic_header_lines)
+        final_lines.extend(remaining_lines)
+
+        as_yaml = "\n".join(final_lines)
+
         return as_yaml
 
     def write(self, exclude_none=True, exclude_unset=True, exclude_defaults=True):
@@ -596,7 +629,12 @@ class BaseTemplate(
         self.validate_model_afterward()
 
         as_yaml = self.get_body(exclude_none, exclude_unset, exclude_defaults)
-        os.makedirs(os.path.dirname(os.path.expanduser(self.file_path)), exist_ok=True)
+        parent_directory = os.path.dirname(os.path.expanduser(self.file_path))
+        # if the user feeds in a filename like 'xyz.yaml'
+        # parent_directory is '', which is not acceptable
+        # to makedirs
+        if parent_directory:
+            os.makedirs(parent_directory, exist_ok=True)
         with open(self.file_path, "w") as f:
             f.write(as_yaml)
 
@@ -667,7 +705,7 @@ class ExpiryModel(IambicPydanticBaseModel):
             datetime.datetime: simplify_dt,
             datetime.date: simplify_dt,
         }
-        extra = Extra.forbid
+        extra = Extra.ignore
 
     @validator("expires_at", pre=True)
     def parse_expires_at(cls, value):

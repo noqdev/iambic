@@ -20,4 +20,4 @@ make test
 
 `functional_test` target will execute the functional tests with dependency on specific cloud resources.
 External developers have no access to them. Please defer to mintainers to verify functional tests.
-These functional tests will be run via Github Actions.
+

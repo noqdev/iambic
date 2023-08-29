@@ -21,6 +21,7 @@ from iambic.core.models import (
 from iambic.core.utils import aio_wrapper, evaluate_on_provider, plugin_apply_wrapper
 from iambic.plugins.v0_1_0.aws.iam.policy.models import PolicyStatement
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
+    WrapIdentityCenterStoreClient,
     apply_account_assignments,
     apply_permission_set_aws_managed_policies,
     apply_permission_set_customer_managed_policies,
@@ -67,7 +68,12 @@ class PermissionSetAccess(AccessModel, ExpiryModel):
 
     @property
     def resource_id(self):
-        return ""
+        # NOTE: do not change how to resource_id definition without updating template generation
+        # We are relying on it to subsequent document merges
+        # this is linked to PermissionSetAccess rule generation
+        accounts = sorted(self.included_accounts)
+        account_rule_key = "_".join(accounts)
+        return account_rule_key
 
 
 class AWSIdentityCenterInstance(BaseModel):
@@ -124,7 +130,11 @@ class SessionDuration(BaseModel):
 
 class InlinePolicy(BaseModel, ExpiryModel):
     version: Optional[str] = None
-    statement: Optional[List[PolicyStatement]] = Field(
+
+    # As usual, the non-list statement is a legacy syntax that AWS has continued
+    # to support. The grammar does not actually document this.
+    #
+    statement: Optional[Union[List[PolicyStatement], PolicyStatement]] = Field(
         None,
         description="List of policy statements",
     )
@@ -212,6 +222,7 @@ class AwsIdentityCenterPermissionSetTemplate(
     AccessModelMixin, AWSTemplate, ExpiryModel
 ):
     template_type: str = AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
+    template_schema_url = "https://docs.iambic.org/reference/schemas/aws_identity_center_permission_set_template"
     owner: Optional[str] = Field(None, description="Owner of the permission set")
     properties: PermissionSetProperties
     access_rules: Optional[list[PermissionSetAccess]] = []
@@ -232,7 +243,11 @@ class AwsIdentityCenterPermissionSetTemplate(
 
     @classmethod
     def iambic_specific_knowledge(cls) -> set[str]:
-        return {"access_rules"}
+        # reminder for future readers that the access rules
+        # is not iambic_specific_knowledge because the user
+        # and groups assignment are maintained within
+        # account assignment in permission sets in the cloud.
+        return {}
 
     @validator("access_rules")
     def sort_access_rules(cls, v: list[PermissionSetAccess]):
@@ -259,6 +274,9 @@ class AwsIdentityCenterPermissionSetTemplate(
 
         user_assignments = set()
         group_assignments = set()
+
+        unresolved_users = set()
+        unresolved_groups = set()
 
         for rule in self.access_rules:
             rule_hit = None
@@ -334,12 +352,29 @@ class AwsIdentityCenterPermissionSetTemplate(
                         user_assignments.update(reverse_user_map.values())
                     elif user_hit := reverse_user_map.get(rule_user):
                         user_assignments.add(user_hit)
+                    else:
+                        # Note that current logic depends on reverse_user_map locally cache
+                        # the entire directory available in memory. This is problematic
+                        # for some large directory over 1000 users. Since we don't have
+                        # directory this big, we don't know of the effect yet.
+                        unresolved_users.add(rule_user)
 
                 for rule_group in rule.groups:
                     if rule_group == "*":
                         group_assignments.update(reverse_group_map.values())
                     elif group_hit := reverse_group_map.get(rule_group):
                         group_assignments.add(group_hit)
+                    else:
+                        # Note that current logic depends on reverse_group_map locally cache
+                        # the entire directory available in memory. This is problematic
+                        # for some large directory over 1000 groups. Since we don't have
+                        # directory this big, we don't know of the effect yet.
+                        unresolved_groups.add(rule_group)
+
+                if (len(unresolved_users) > 0) or (len(unresolved_groups) > 0):
+                    raise ValueError(
+                        f"detected either unresolved_users: {unresolved_users} or unresolved_groups: {unresolved_groups} Correct them in the template."
+                    )
 
                 if len(group_assignments) == len(reverse_group_map) and len(
                     user_assignments
@@ -404,13 +439,22 @@ class AwsIdentityCenterPermissionSetTemplate(
         return response
 
     async def _apply_to_account(  # noqa: C901
-        self, aws_account: AWSAccount
+        self,
+        aws_account: AWSAccount,
+        **kwargs,
     ) -> AccountChangeDetails:
         """Apply the permission set to the given AWS account
 
         :param aws_account:
         :return:
         """
+
+        identity_store_client = await aws_account.get_boto3_client(
+            "identitystore", region_name=aws_account.identity_center_details.region_name
+        )
+        wrap_identity_store_client = WrapIdentityCenterStoreClient(
+            identity_store_client, aws_account.identity_center_details.identity_store_id
+        )
 
         identity_center_client = await aws_account.get_boto3_client(
             "sso-admin", region_name=aws_account.identity_center_details.region_name
@@ -460,6 +504,7 @@ class AwsIdentityCenterPermissionSetTemplate(
 
             current_account_assignments = (
                 await get_permission_set_users_and_groups_as_access_rules(
+                    wrap_identity_store_client,
                     identity_center_client,
                     instance_arn,
                     permission_set_arn,
@@ -787,16 +832,27 @@ class AwsIdentityCenterPermissionSetTemplate(
 
         account_changes = await asyncio.gather(*tasks, return_exceptions=True)
         proposed_changes: list[AccountChangeDetails] = []
-        exceptions_seen = set()
+        exceptions_seen: list[ProposedChange] = []
 
         for account_change in account_changes:
             if isinstance(account_change, AccountChangeDetails):
                 proposed_changes.append(account_change)
             else:
-                exceptions_seen.add(str(account_change))
+                # If its exception without wrapped as a ProposedChange,
+                # we can only assign Unknown for a lot of the values.
+                exceptions_seen.append(
+                    ProposedChange(
+                        change_type=ProposedChangeType.UNKNOWN,
+                        exceptions_seen=[str(account_change)],
+                        account=relevant_accounts_str[0]
+                        if len(relevant_accounts_str) > 0
+                        else None,  # this is a hack but i don't know of another way
+                        resource_id=self.resource_id,  # this is the closet we can get
+                        resource_type=self.resource_type,  # this is the closet we can get
+                    )
+                )
 
         if exceptions_seen:
-            exceptions_seen = list(exceptions_seen)
             proposed_change_accounts = set(
                 change.account for change in proposed_changes
             )

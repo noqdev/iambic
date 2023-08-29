@@ -29,7 +29,8 @@ IAMbic templates support declarative definitions of temporary principals, permis
 enabling zero-standing-permissions and breakglass access.
 
 
-IAMbic includes [Github Actions](/getting_started/github) that automatically run IAMbic workflows in CI/CD.
+IAMbic leverages a [Github App](/getting_started/configuring_iambic#setup-the-github-application) that automatically run IAMbic plan and apply workflows via CI/CD.
+Recurring workflows are triggered by Amazon Eventbridge Rules, and run on a schedule.
 
 These workflows manage the following tasks:
 
@@ -85,7 +86,7 @@ manage IAM at scale across multiple providers. IaC promotes decentralization by 
 the identities in your environment in a single place.
 
 IAMbic is designed specifically to help manage your cloud principals and their permissions across multiple providers and
-accounts by centralizing them into a single Git repository. IAMbic also includes Github actions that keep your permissions
+accounts by centralizing them into a single Git repository. IAMbic leverages Amazon Eventbridge Rules to keep your permissions
 updated with the actual state of your cloud environments and identity providers. This way, you can have a complete and current
 picture of your permissions, regardless of how they are being managed.
 
@@ -97,4 +98,4 @@ complete and mutable representation of your permissions in one central location.
 
 ## Getting started
 
-To get started with IAMbic, head on over to [Install and Configure](/getting_started/install_and_configure).
+To get started with IAMbic, head on over to [Install and Configure](/getting_started/configuring_iambic).

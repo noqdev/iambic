@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set
 
 from dictdiffer import diff
@@ -211,7 +212,7 @@ def get_applicable_changes(
         for proposed_change in getattr(template_change, attribute, []):
             if isinstance(proposed_change, AccountChangeDetails):
                 # If proposed change is a list of AccountChangeDetails, we need to iterate through those
-                for account_change in proposed_change.proposed_changes:
+                for account_change in getattr(proposed_change, attribute, []):
                     if account_change.change_type.value == proposed_change_type:
                         applicable_changes.add(
                             _get_annotated_change(
@@ -317,7 +318,12 @@ class ExceptionSummary(PydanticBaseModel):
 
 
 class ActionSummaries(PydanticBaseModel):
-    num_actions: Optional[int]
+    num_create_actions: Optional[int]
+    num_update_actions: Optional[int]
+    num_delete_actions: Optional[int]
+    num_attach_actions: Optional[int]
+    num_detach_actions: Optional[int]
+    num_unknown_actions: Optional[int]
     num_templates: Optional[int]
     num_accounts: Optional[int]
     num_exceptions: Optional[int]
@@ -331,9 +337,20 @@ class ActionSummaries(PydanticBaseModel):
             ActionSummary.compile_proposed_changes(changes, x)
             for x in list([e.value for e in ProposedChangeType])
         ]
-        instance.num_actions = sum(
-            [1 for x in instance.action_summaries if x.count > 0]
-        )
+
+        # Aggregate action type to counts
+        action_type_to_count = defaultdict(int)
+        for action_summary in instance.action_summaries:
+            count_so_far = action_type_to_count[action_summary.action]
+            count_so_far += action_summary.count
+            action_type_to_count[action_summary.action] = count_so_far
+        instance.num_create_actions = action_type_to_count["Create"]
+        instance.num_update_actions = action_type_to_count["Update"]
+        instance.num_delete_actions = action_type_to_count["Delete"]
+        instance.num_attach_actions = action_type_to_count["Attach"]
+        instance.num_detach_actions = action_type_to_count["Detach"]
+        instance.num_unknown_actions = action_type_to_count["Unknown"]
+
         instance.num_templates = sum(
             [len(x.templates) for x in instance.action_summaries]
         )

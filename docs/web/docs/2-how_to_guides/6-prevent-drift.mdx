@@ -9,7 +9,7 @@ However, there may be instances where you want to prevent out-of-band changes to
 This is where `iambic_managed: enforced` mode comes in.
 
 By adding `iambic_managed: enforced` at the top-level of an IAMbic template, IAMbic will ensure that any out-of-band changes to the resource are
-reverted to the state that is defined in Git. IAMbic ships with GitHub actions that will automatically revert any out-of-band changes on enforced
+reverted to the state that is defined in Git. IAMbic ships with AWS Eventbridge rules that will automatically revert any out-of-band changes on enforced
 templates to their Git state.
 
 To manually perform this action, run `iambic apply --enforced-only --force` from within your iambic-templates repository.

@@ -8,6 +8,11 @@
       "default": "NOQ::Core::Config",
       "type": "string"
     },
+    "template_schema_url": {
+      "title": "Templateschemaurl",
+      "default": "https://docs.iambic.org/reference/schemas/config",
+      "type": "string"
+    },
     "owner": {
       "title": "Owner",
       "type": "string"
@@ -36,27 +41,27 @@
       "default": [
         {
           "type": "DIRECTORY_PATH",
-          "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/aws",
+          "location": "./iambic/plugins/v0_1_0/aws",
           "version": "v0.1.0"
         },
         {
           "type": "DIRECTORY_PATH",
-          "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/google_workspace",
+          "location": "./iambic/plugins/v0_1_0/google_workspace",
           "version": "v0.1.0"
         },
         {
           "type": "DIRECTORY_PATH",
-          "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/okta",
+          "location": "./iambic/plugins/v0_1_0/okta",
           "version": "v0.1.0"
         },
         {
           "type": "DIRECTORY_PATH",
-          "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/github",
+          "location": "./iambic/plugins/v0_1_0/github",
           "version": "v0.1.0"
         },
         {
           "type": "DIRECTORY_PATH",
-          "location": "/Users/ccastrapel/localrepos/iambic/iambic/plugins/v0_1_0/azure_ad",
+          "location": "./iambic/plugins/v0_1_0/azure_ad",
           "version": "v0.1.0"
         }
       ],
@@ -91,7 +96,9 @@
       "title": "Core",
       "description": "Core configuration options for iambic.",
       "default": {
-        "minimum_ulimit": 64000
+        "minimum_ulimit": 64000,
+        "exception_reporting": null,
+        "detection_messages": null
       },
       "allOf": [
         {
@@ -215,6 +222,50 @@
         "templates"
       ]
     },
+    "ExceptionReporting": {
+      "title": "ExceptionReporting",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "description": "Enable or disable exception reporting.",
+          "type": "boolean"
+        },
+        "include_variables": {
+          "title": "Include Variables",
+          "description": "Include local variables in the report.",
+          "default": false,
+          "type": "boolean"
+        },
+        "automatically_send_reports": {
+          "title": "Automatically Send Reports",
+          "description": "Automatically send reports without asking for user consent.",
+          "type": "boolean"
+        },
+        "email_address": {
+          "title": "Email Address",
+          "description": "Email address for correspondence about the exception, if you would like us to communicate with you.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "enabled"
+      ]
+    },
+    "DetectionMessages": {
+      "title": "DetectionMessages",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "description": "Enable or disable detection messages.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ]
+    },
     "CoreConfig": {
       "title": "CoreConfig",
       "type": "object",
@@ -223,6 +274,12 @@
           "title": "Minimum Ulimit",
           "default": 64000,
           "type": "integer"
+        },
+        "exception_reporting": {
+          "$ref": "#/definitions/ExceptionReporting"
+        },
+        "detection_messages": {
+          "$ref": "#/definitions/DetectionMessages"
         }
       }
     }

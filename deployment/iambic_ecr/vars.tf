@@ -5,6 +5,12 @@ variable "aws_region" {
   default = "us-west-2"
 }
 
+variable "profile_name" {
+  type = string
+  description = "aws profile for provider"
+  default = ""
+}
+
 variable "manage_aws_ecr_pull_through_cache" {
   type = bool
 

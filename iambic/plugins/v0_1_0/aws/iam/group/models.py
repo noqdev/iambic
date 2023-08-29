@@ -79,6 +79,9 @@ class GroupProperties(BaseModel):
 
 class AwsIamGroupTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_GROUP_TEMPLATE_TYPE
+    template_schema_url = (
+        "https://docs.iambic.org/reference/schemas/aws_iam_group_template"
+    )
     owner: Optional[str] = Field(None, description="Owner of the group")
     properties: GroupProperties = Field(
         description="Properties of the group",
@@ -99,7 +102,9 @@ class AwsIamGroupTemplate(AWSTemplate, AccessModel):
         return "aws-service-group" in self.properties.path
 
     async def _apply_to_account(  # noqa: C901
-        self, aws_account: AWSAccount
+        self,
+        aws_account: AWSAccount,
+        **kwargs,
     ) -> AccountChangeDetails:
         client = await aws_account.get_boto3_client("iam")
         account_group = self.apply_resource_dict(aws_account)

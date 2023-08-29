@@ -115,12 +115,16 @@ class PolicyTargetProperties(BaseModel):
             elif target_id.startswith("r-"):
                 key = "roots"
             else:
-                target_id = list(
+                known_accounts = list(
                     map(
                         lambda a: a.account_name,
                         filter(lambda a: a.account_id == target_id, config.accounts),
                     )
-                )[0]
+                )
+                if len(known_accounts) > 0:
+                    # if an account is suspend and not assumable, we will not be able
+                    # to look up from config.
+                    target_id = known_accounts[0]
 
             data[key].append(target_id)
 
@@ -241,6 +245,9 @@ class PolicyProperties(BaseModel):
 
 class AwsScpPolicyTemplate(AWSTemplate, AccessModel):
     template_type = AWS_SCP_POLICY_TEMPLATE
+    template_schema_url = (
+        "https://docs.iambic.org/reference/schemas/aws_scp_policy_template"
+    )
     organization_account_needed: bool = Field(
         True,
         description="This template needs an organization account to be applied",
@@ -265,7 +272,12 @@ class AwsScpPolicyTemplate(AWSTemplate, AccessModel):
         resource_dict["Arn"] = self.get_arn()
         return resource_dict
 
-    async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
+    async def _apply_to_account(
+        self,
+        aws_account: AWSAccount,
+        aws_config: Optional[AWSConfig] = None,
+        **kwargs,
+    ) -> AccountChangeDetails:
         if self.account_id != aws_account.account_id:
             return AccountChangeDetails(
                 account=str(aws_account),
@@ -358,6 +370,7 @@ class AwsScpPolicyTemplate(AWSTemplate, AccessModel):
                 current_policy,
                 log_params,
                 aws_account,
+                aws_config,
             ]
 
             tasks = [
@@ -404,7 +417,14 @@ class AwsScpPolicyTemplate(AWSTemplate, AccessModel):
             current_policy = await get_policy(client, account_policy.get("PolicyId"))
             current_policy = current_policy.dict()
 
-            args = [client, account_policy, current_policy, log_params, aws_account]
+            args = [
+                client,
+                account_policy,
+                current_policy,
+                log_params,
+                aws_account,
+                aws_config,
+            ]
 
             tasks = [
                 apply_update_policy_tags(*args),

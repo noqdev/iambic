@@ -26,9 +26,31 @@
       "default": false,
       "type": "boolean"
     },
+    "expires_at_default": {
+      "title": "Expiresatdefault",
+      "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "string",
+          "format": "date"
+        }
+      ]
+    },
     "template_type": {
       "title": "Templatetype",
       "default": "NOQ::GoogleWorkspace::Group",
+      "type": "string"
+    },
+    "template_schema_url": {
+      "title": "Templateschemaurl",
+      "default": "https://docs.iambic.org/reference/schemas/google_workspace_group_template",
       "type": "string"
     },
     "owner": {
@@ -56,7 +78,6 @@
   "required": [
     "properties"
   ],
-  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -137,6 +158,23 @@
           "default": false,
           "type": "boolean"
         },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
         "email": {
           "title": "Email",
           "description": "Email address. However, when the type is CUSTOMER, it represents all users in a domain",
@@ -185,8 +223,7 @@
             }
           ]
         }
-      },
-      "additionalProperties": false
+      }
     },
     "WhoCanInvite": {
       "title": "WhoCanInvite",

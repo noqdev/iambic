@@ -14,11 +14,11 @@ from . import get_templates_mixed, get_update_template
     [
         (
             get_templates_mixed(),
-            ActionSummaries(num_accounts=10, num_actions=1, num_templates=2),
+            ActionSummaries(num_accounts=10, num_create_actions=11, num_templates=2),
         ),
         (
             get_update_template(),
-            ActionSummaries(num_accounts=1, num_actions=1, num_templates=1),
+            ActionSummaries(num_accounts=1, num_create_actions=2, num_templates=1),
         ),
     ],
 )
@@ -28,7 +28,7 @@ def test_get_template_data(
 ):
     template_data = get_template_data(template_change_details)
     assert template_data.num_accounts == expected_output.num_accounts
-    assert template_data.num_actions == expected_output.num_actions
+    assert template_data.num_create_actions == expected_output.num_create_actions
     assert template_data.num_templates == expected_output.num_templates
 
 
@@ -37,11 +37,11 @@ def test_get_template_data(
     [
         (
             get_templates_mixed(),
-            ActionSummaries(num_accounts=10, num_actions=1, num_templates=2),
+            ActionSummaries(num_accounts=10, num_create_actions=1, num_templates=2),
         ),
         (
             get_update_template(),
-            ActionSummaries(num_accounts=10, num_actions=1, num_templates=1),
+            ActionSummaries(num_accounts=10, num_create_actions=1, num_templates=1),
         ),
     ],
 )

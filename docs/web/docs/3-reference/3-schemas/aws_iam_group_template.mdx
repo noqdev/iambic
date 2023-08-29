@@ -1,7 +1,11 @@
 # AwsIamGroupTemplate
 
-*A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.*
+See [Template Schema Validation](/reference/template_validation_ide) to learn how to validate templates automatically in your IDE.
+
+## Description
+
+A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
 
 ## Properties
 
@@ -19,7 +23,13 @@ configurations for other models used in IAMbic.*
     - *string*
     - *string*
 - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+- **`expires_at_default`**: A value that is set by IAMbic at run time and should not be set by the user.
+  - **Any of**
+    - *string*
+    - *string*
+    - *string*
 - **`template_type`** *(string)*: Default: `"NOQ::AWS::IAM::Group"`.
+- **`template_schema_url`** *(string)*: Default: `"https://docs.iambic.org/reference/schemas/aws_iam_group_template"`.
 - **`owner`** *(string)*: Owner of the group.
 - **`notes`** *(string)*
 - **`iambic_managed`**: Controls the directionality of Iambic changes. Default: `"undefined"`.
@@ -52,13 +62,18 @@ configurations for other models used in IAMbic.
 <a id="definitions/ManagedPolicyRef"></a>
 
 - **`ManagedPolicyRef`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic. Cannot contain additional properties.
+configurations for other models used in IAMbic.
   - **`expires_at`**: The date and time the resource will be/was set to deleted.
     - **Any of**
       - *string*
       - *string*
       - *string*
   - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+  - **`expires_at_default`**: A value that is set by IAMbic at run time and should not be set by the user.
+    - **Any of**
+      - *string*
+      - *string*
+      - *string*
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -98,13 +113,18 @@ configurations for other models used in IAMbic.
 <a id="definitions/PolicyStatement"></a>
 
 - **`PolicyStatement`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic. Cannot contain additional properties.
+configurations for other models used in IAMbic.
   - **`expires_at`**: The date and time the resource will be/was set to deleted.
     - **Any of**
       - *string*
       - *string*
       - *string*
   - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+  - **`expires_at_default`**: A value that is set by IAMbic at run time and should not be set by the user.
+    - **Any of**
+      - *string*
+      - *string*
+      - *string*
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -148,13 +168,18 @@ configurations for other models used in IAMbic. Cannot contain additional proper
 <a id="definitions/PolicyDocument"></a>
 
 - **`PolicyDocument`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic. Cannot contain additional properties.
+configurations for other models used in IAMbic.
   - **`expires_at`**: The date and time the resource will be/was set to deleted.
     - **Any of**
       - *string*
       - *string*
       - *string*
   - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+  - **`expires_at_default`**: A value that is set by IAMbic at run time and should not be set by the user.
+    - **Any of**
+      - *string*
+      - *string*
+      - *string*
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.

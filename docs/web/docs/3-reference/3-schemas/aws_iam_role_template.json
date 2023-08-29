@@ -66,9 +66,31 @@
       "default": false,
       "type": "boolean"
     },
+    "expires_at_default": {
+      "title": "Expiresatdefault",
+      "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "string",
+          "format": "date"
+        }
+      ]
+    },
     "template_type": {
       "title": "Templatetype",
       "default": "NOQ::AWS::IAM::Role",
+      "type": "string"
+    },
+    "template_schema_url": {
+      "title": "Templateschemaurl",
+      "default": "https://docs.iambic.org/reference/schemas/aws_iam_role_template",
       "type": "string"
     },
     "owner": {
@@ -116,7 +138,6 @@
     "identifier",
     "properties"
   ],
-  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -350,6 +371,23 @@
           "default": false,
           "type": "boolean"
         },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
         "policy_arn": {
           "title": "Permissions Boundary Arn",
           "pattern": "(^arn:([^:]*):([^:]*):([^:]*):(|\\*|[\\d]{12}|cloudfront|aws|{{var.account_id}}):(.+)$)|^\\*$",
@@ -362,8 +400,7 @@
       },
       "required": [
         "policy_arn"
-      ],
-      "additionalProperties": false
+      ]
     },
     "Principal": {
       "title": "Principal",
@@ -455,6 +492,23 @@
           "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
+        },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
         },
         "included_accounts": {
           "title": "Includedaccounts",
@@ -597,8 +651,7 @@
       },
       "required": [
         "effect"
-      ],
-      "additionalProperties": false
+      ]
     },
     "AssumeRolePolicyDocument": {
       "title": "AssumeRolePolicyDocument",
@@ -734,6 +787,23 @@
           "default": false,
           "type": "boolean"
         },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
         "key": {
           "title": "Key",
           "type": "string"
@@ -746,8 +816,7 @@
       "required": [
         "key",
         "value"
-      ],
-      "additionalProperties": false
+      ]
     },
     "ManagedPolicyRef": {
       "title": "ManagedPolicyRef",
@@ -776,6 +845,23 @@
           "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
+        },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
         },
         "included_accounts": {
           "title": "Includedaccounts",
@@ -829,8 +915,7 @@
       },
       "required": [
         "policy_arn"
-      ],
-      "additionalProperties": false
+      ]
     },
     "PolicyDocument": {
       "title": "PolicyDocument",
@@ -859,6 +944,23 @@
           "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
+        },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
         },
         "included_accounts": {
           "title": "Includedaccounts",
@@ -932,8 +1034,7 @@
       },
       "required": [
         "policy_name"
-      ],
-      "additionalProperties": false
+      ]
     },
     "RoleProperties": {
       "title": "RoleProperties",
@@ -1121,6 +1222,23 @@
           "default": false,
           "type": "boolean"
         },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
         "users": {
           "title": "Users",
           "description": "List of users who can assume into the role",
@@ -1139,8 +1257,7 @@
             "type": "string"
           }
         }
-      },
-      "additionalProperties": false
+      }
     }
   }
 }

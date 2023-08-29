@@ -31,7 +31,7 @@ from iambic.plugins.v0_1_0.aws.organizations.scp.models import (
     ServiceControlPolicyResourceFiles,
 )
 from iambic.plugins.v0_1_0.aws.organizations.scp.utils import get_policy, list_policies
-from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map
+from iambic.plugins.v0_1_0.aws.utils import get_aws_account_map, process_import_rules
 
 if TYPE_CHECKING:
     from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -294,6 +294,8 @@ async def upsert_templated_scp_policies(
     config,
     organization: AWSOrganization,
 ):
+    import_actions = set()
+
     async with aiofiles.open(policy.get("file_path"), mode="r") as f:
         content_dict = json.loads(await f.read())
         # policy = normalize_dict_keys(content_dict)  # type: ignore
@@ -314,6 +316,22 @@ async def upsert_templated_scp_policies(
         config,
         organization,
     )
+
+    import_actions.update(
+        await process_import_rules(
+            config,
+            AWS_SCP_POLICY_TEMPLATE,
+            policy.Name,
+            template_properties.get("tags", []),
+            template_properties,
+        )
+    )
+
+    for action in import_actions:
+        if action.value == "set_import_only":
+            template_params["iambic_managed"] = "import_only"
+        if action.value == "ignore":
+            return None
 
     return create_or_update_template(
         file_path,

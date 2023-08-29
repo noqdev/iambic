@@ -26,9 +26,31 @@
       "default": false,
       "type": "boolean"
     },
+    "expires_at_default": {
+      "title": "Expiresatdefault",
+      "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "string",
+          "format": "date"
+        }
+      ]
+    },
     "template_type": {
       "title": "Templatetype",
       "default": "NOQ::Okta::User",
+      "type": "string"
+    },
+    "template_schema_url": {
+      "title": "Templateschemaurl",
+      "default": "https://docs.iambic.org/reference/schemas/okta_user_template",
       "type": "string"
     },
     "owner": {
@@ -67,7 +89,6 @@
     "properties",
     "idp_name"
   ],
-  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",

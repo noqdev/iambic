@@ -14,6 +14,12 @@ CF_INVALID_TAGS_MSG = "Format has to be either blank or `key1=value1"
 
 
 async def resolve_config_template_path(repo_dir: str) -> pathlib.Path:
+    """
+    Given a directory, recursively find the config path.
+
+    This is slow because it needs to recurse into the directory.
+
+    """
     config_template_file_path = await gather_templates(repo_dir, "Core::Config")
     if len(config_template_file_path) == 0:
         raise RuntimeError(

@@ -6,13 +6,15 @@ The pages in this section will guide you through setting up and configuring IAMb
 
 Please begin with the following pages:
 
-1. [Prerequisites](/getting_started/prerequisites)
-2. [Installation and Configuration](/getting_started/install_and_configure)
-3. Configure a provider of your choice:
+1. [Getting started](/getting_started/configuring_iambic)
+2. Configure a provider of your choice:
 
 * [AWS](/getting_started/aws)
 * [Azure AD](/getting_started/azure_ad)
 * [Okta](/getting_started/okta)
 * [Google Workspace](/getting_started/google)
 
-Once you've completed the tutorials, proceed to the [GitHub](/getting_started/github) deployment guide. This guide will help you set up GitHub actions to handle periodic cloud resource imports, expiration of identities, permissions, and access rules, as well as establish a GitOps approval flow process.
+Once you've completed the tutorials, proceed to the [GitHub](/getting_started/configuring_iambic#setup-the-github-application) deployment guide.
+This guide will help you set up a GitHub Application, Lambda function, and AWS EventBridge rules to handle
+periodic cloud resource imports, expiration of identities, permissions, and access rules, as well as
+establish a GitOps approval flow process.

@@ -273,10 +273,12 @@ def test_plan_issue_comment_with_clean_mergeable_state_and_lambda_handler_crashe
     mock_github_client,
     issue_comment_git_plan_context,
     mock_resolve_config_template_path,
+    mock_load_config,
     mock_lint_git_changes,
     mock_run_git_plan,
     mock_repository,
 ):
+    assert mock_load_config
     mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
     mock_pull_request.mergeable_state = MERGEABLE_STATE_CLEAN
     mock_pull_request.head.sha = issue_comment_git_plan_context["sha"]
@@ -363,10 +365,12 @@ def test_issue_comment_with_git_plan(
     mock_github_client,
     issue_comment_git_plan_context,
     mock_resolve_config_template_path,
+    mock_load_config,
     mock_lint_git_changes,
     mock_run_git_plan,
     mock_repository,
 ):
+    assert mock_load_config
     mock_pull_request = mock_github_client.get_repo.return_value.get_pull.return_value
     mock_pull_request.mergeable_state = MERGEABLE_STATE_CLEAN
     mock_pull_request.head.sha = issue_comment_git_plan_context["sha"]
@@ -609,7 +613,7 @@ def mock_proposed_changes_filesystem():
 
     try:
         contents = """hello world"""
-        contents_path = f"{temp_templates_directory}/proposed_chagnes.yaml"
+        contents_path = f"{temp_templates_directory}/proposed_changes.yaml"
 
         with open(contents_path, "w") as f:
             f.write(contents)
@@ -649,41 +653,39 @@ def test_post_artifact_to_companion_repository(
         op_name,
         contents_path,
         markdown_summary,
+        default_base_name="proposed_changes.yaml",
+        write_summary=True,
     )
 
-    mock_calls = mock_template_repo.create_file.mock_calls
+    mock_calls = mock_template_repo.create_file.call_args_list
     assert mock_calls
 
     # verify first call to upload proposed_changes.yaml
     proposed_changes_yaml_call = mock_calls[0]
     # index 1 is where the arguments are, next index 0 is the blob_path
-    blob_path = proposed_changes_yaml_call[1][0]
+    blob_path, commit_message, blob_contents = proposed_changes_yaml_call[0]
     assert f"pr-{pull_number}" in blob_path
     assert f"{op_name}" in blob_path
     assert "proposed_changes.yaml" in blob_path
 
     # index 1 is where the arguments are, next index 1 is the commit_message
-    commit_message = proposed_changes_yaml_call[1][1]
     assert commit_message == f"{op_name}"
 
     # index 1 is where the arguments are, next index 2 is the blob_contents
-    blob_contents = proposed_changes_yaml_call[1][2]
     assert blob_contents == contents
 
     # verify second call to upload summary.md
     summary_md_call = mock_calls[1]
     # index 1 is where the arguments are, next index 0 is the blob_path
-    blob_path = summary_md_call[1][0]
+    blob_path, commit_message, blob_contents = summary_md_call[0]
     assert f"pr-{pull_number}" in blob_path
     assert f"{op_name}" in blob_path
     assert "summary.md" in blob_path
 
     # index 1 is where the arguments are, next index 1 is the commit_message
-    commit_message = summary_md_call[1][1]
     assert commit_message == f"{op_name}"
 
     # index 1 is where the arguments are, next index 2 is the blob_contents
-    blob_contents = summary_md_call[1][2]
     assert blob_contents == markdown_summary
 
     assert html_url

@@ -178,6 +178,24 @@ class PolicyStatement(AccessModel, ExpiryModel):
     def resource_id(self):
         return self.sid
 
+    @validator("condition")
+    def strip_metadata_commented_dict_for_condition(cls, v: dict):
+        # We have to lose comments because condition is stored as dict
+        # in AWS, and by the time it arrives, it always trump local version
+        # In addition, these extra fields become an issue when it is use
+        # for assume role policy document input
+        recursive_remove_key(v, "metadata_commented_dict")
+        return v
+
+
+def recursive_remove_key(input_dict, k):
+    if not isinstance(input_dict, dict):
+        return
+    if k in input_dict:
+        del input_dict[k]
+    for value in input_dict.values():
+        recursive_remove_key(value, k)
+
 
 class AssumeRolePolicyDocument(AccessModel):
     version: str = "2008-10-17"
@@ -306,6 +324,9 @@ class ManagedPolicyProperties(BaseModel):
 
 class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
     template_type = AWS_MANAGED_POLICY_TEMPLATE_TYPE
+    template_schema_url = (
+        "https://docs.iambic.org/reference/schemas/aws_iam_managed_policy_template"
+    )
     properties: ManagedPolicyProperties = Field(
         description="The properties of the managed policy",
     )
@@ -330,7 +351,11 @@ class AwsIamManagedPolicyTemplate(AWSTemplate, AccessModel):
 
         return response
 
-    async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
+    async def _apply_to_account(
+        self,
+        aws_account: AWSAccount,
+        **kwargs,
+    ) -> AccountChangeDetails:
         client = await aws_account.get_boto3_client("iam")
         account_policy = self.apply_resource_dict(aws_account)
         policy_name = account_policy["PolicyName"]

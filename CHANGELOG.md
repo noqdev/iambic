@@ -1,6 +1,164 @@
 
 # Change Log
 
+## 0.11.73 (Aug 23, 2023)
+
+DOCS:
+* Update README with IAMbic/TF Differences ; Video img [#605](https://github.com/noqdev/iambic/pull/605)
+* IAC Comparison Table [#598](https://github.com/noqdev/iambic/pull/598)
+* Update doc on how to turn on Cloudtrail logs integration [#597](https://github.com/noqdev/iambic/pull/597)
+* Fix doc links [#596](https://github.com/noqdev/iambic/pull/596)
+* Rewrite the getting started section. [#590](https://github.com/noqdev/iambic/pull/590)
+
+BUG FIXES:
+* Fixed #608 Implement import filtering protocol for SCP [#609](https://github.com/noqdev/iambic/pull/609)
+* Fixed #602 Propagate errors if invalid user or group assignment [#606](https://github.com/noqdev/iambic/pull/606)
+* Optimize GitHub PR plan time [#607](https://github.com/noqdev/iambic/pull/607)
+* Fix IdentityCenter access rules not being updated [#604](https://github.com/noqdev/iambic/pull/604)
+* Fixed EN-2401 Check parent directory truthy-ness before attempt to create it [#603](https://github.com/noqdev/iambic/pull/603)
+* Enhance error message during PrincipalID resolution [#599](https://github.com/noqdev/iambic/pull/599)
+* Fix error handling for detect not able to create gist [#595](https://github.com/noqdev/iambic/pull/595)
+
+DEV:
+* Fix flaky functional test on account assignment [#612](https://github.com/noqdev/iambic/pull/612)
+
+THANKS:
+* `hilyas` contributing better docs [#590](https://github.com/noqdev/iambic/pull/590)
+* `rodolphoescobar` reporting NOQ::AWS::Organizations::SCP Filter does not work [#608](https://github.com/noqdev/iambic/issues/608)
+* `dushyantbhardwaj9` reporting iambic does not throw warning/error for users/groups that do not exists in the Idp [#602](https://github.com/noqdev/iambic/issues/602)
+* `dushyantbhardwaj9` reporting import not updating existing IdentityCenter access rules in templates.
+
+## 0.11.59 (Aug 18, 2023)
+
+BUG FIXES:
+* Fix #593 PermissionSet InlinePolicy to support single statement syntax [#594](https://github.com/noqdev/iambic/pull/594)
+
+THANKS:
+`rodolphoescobar` reporting Permission Set InlinePolicy issue [#593](https://github.com/noqdev/iambic/issues/593)
+
+## 0.11.58 (Aug 18, 2023)
+
+ENHANCEMENTS:
+* Cloudtrail logs as git notes on 'detect' commit [#522](https://github.com/noqdev/iambic/pull/522)
+
+BUG FIXES:
+* Use alternative implementation of list_users and list_groups [#591](https://github.com/noqdev/iambic/pull/591)
+
+THANKS:
+* `dushyantbhardwaj9` for contributing the alternate implementation of list_users and list_groups to workaround some AD + IdentityCenter issues [#557](https://github.com/noqdev/iambic/issues/557)
+
+## 0.11.56 (Aug 17, 2023)
+
+DOCS:
+* Update JSON Schema and Schema markdown [#586](https://github.com/noqdev/iambic/pull/586)
+
+BUG FIXES:
+* EN-2348: add guards when schema generator fails [#582](https://github.com/noqdev/iambic/pull/582)
+* Fix #587 when describe_user and describe_group fail to lookup PrincipalID [#588](https://github.com/noqdev/iambic/pull/588)
+
+ENHANCEMENTS:
+* Allow disabling variable substitution [#589](https://github.com/noqdev/iambic/pull/589)
+
+THANKS:
+* `rodolphoescobar` reporting ResourceNotFoundException in import resources [#587](https://github.com/noqdev/iambic/issues/587)
+
+## 0.11.52 (Aug 16, 2023)
+
+DOCS:
+* Simplify installation instructions [#567](https://github.com/noqdev/iambic/pull/567)
+
+ENHANCEMENTS:
+* EventBridge Schedule to invoke detect, expire, enforce, and import periodic tasks [#567](https://github.com/noqdev/iambic/pull/567)
+
+BUG FIXES:
+* Fix #581 Relax Target to stay as account id if we cannot look up its account name [#583](https://github.com/noqdev/iambic/pull/583)
+* Fix #555 Duplicate menu item [#584](https://github.com/noqdev/iambic/pull/584)
+
+DEV EXPERIENCE:
+* Fix pre-commit complaints [#580](https://github.com/noqdev/iambic/pull/580)
+
+THANKS:
+* `rodolphoescobar` reporting SCP import issue [#581](https://github.com/noqdev/iambic/issues/581)
+
+## 0.11.48 (Aug 16, 2023)
+
+BUG FIXES:
+* Workaround for #557 Defer GUID resolution [#558](https://github.com/noqdev/iambic/pull/558)
+* Fix EN-2380 clear known cf stacksets state if user enter into add org flow [#573](https://github.com/noqdev/iambic/pull/573)
+* Fix for exception raised when iambic plan command is run on empty template file [#578](https://github.com/noqdev/iambic/pull/578)
+* Fix for encoding error when writing proposed_changes.txt [#576](https://github.com/noqdev/iambic/pull/576)
+
+THANKS:
+* `dushyantb` reporting [#557](https://github.com/noqdev/iambic/issues/557) and testing [#558](https://github.com/noqdev/iambic/pull/558)
+* ` 0xAJX` reporting [#577](https://github.com/noqdev/iambic/issues/577) and contributed the fix [#578](https://github.com/noqdev/iambic/pull/578)
+* ` 0xAJX` reporting [#575](https://github.com/noqdev/iambic/issues/575) and contributed the fix [#576](https://github.com/noqdev/iambic/pull/576)
+
+## 0.11.43 (Aug 15, 2023)
+
+BUG FIXES:
+* EN-2381 Fixed identity center handling of suspended account [#568](https://github.com/noqdev/iambic/pull/568)
+* Added a check to skip code if OS is Windows fixes #570 [#571](https://github.com/noqdev/iambic/pull/571)
+* EN-2379 Turn on CF Stacksets for Organizations when possible [#569](https://github.com/noqdev/iambic/pull/569)
+
+THANKS:
+* `0xAJX` for reporting [#570](https://github.com/noqdev/iambic/issues/570) and the fix [#571](https://github.com/noqdev/iambic/pull/571)
+
+## 0.11.39 (Aug 11, 2023)
+
+BUG FIXES:
+* Fix template generation details [#566](https://github.com/noqdev/iambic/pull/566)
+
+## 0.11.38 (Aug 11, 2023)
+
+DOCS:
+* Fix EN-2239 Instruction to set GitHub App icon [#563](https://github.com/noqdev/iambic/pull/563)
+* Optimize readme for clarity [#564](https://github.com/noqdev/iambic/pull/564)
+
+BUG FIXES:
+* Fix EN-2377 Use list instead of set for deterministic iteration order [#565](https://github.com/noqdev/iambic/pull/564)
+
+## 0.11.35 (Aug 10, 2023)
+
+BUG FIXES:
+* Docs and script to update deployed lambda function [#552](https://github.com/noqdev/iambic/pull/552)
+* Enhance GitHub App local secrets handling [#559](https://github.com/noqdev/iambic/pull/559)
+* Fix condition in policy statement [#560](https://github.com/noqdev/iambic/pull/560)
+* Ignore extra fields because of forward compatibility reasons [#561](https://github.com/noqdev/iambic/pull/561)
+
+THANKS:
+* `datfinesoul` for giving feedback on need to have docs or automation to update the IAMbic GitHub integration
+
+## 0.11.33 (Aug 9, 2023)
+
+BUG FIXES:
+* EN-2373: change regions [#556](https://github.com/noqdev/iambic/pull/556)
+
+THANKS:
+* `dushyantb` for reporting issues when IAMbic is used in unsupported AWS regions
+
+## 0.11.32 (Aug 8, 2023)
+
+ENHANCEMENTS:
+* Address part of #490. Name the hyperlink with more details [#549](https://github.com/noqdev/iambic/pull/549)
+* Added a template_schema_url to all IAMbic templates. [#534](https://github.com/noqdev/iambic/pull/534)
+* Addresses some of #490 Plan output improvement [#550](https://github.com/noqdev/iambic/pull/550)
+
+BUG FIXES:
+* EN-2345 Runs lint before plan [#547](https://github.com/noqdev/iambic/pull/547)
+* EN-2343: Show message when credentials are not provided  [#539](https://github.com/noqdev/iambic/pull/539)
+* Fix #489 Handle change_summary differently during rendering [#548](https://github.com/noqdev/iambic/pull/548)
+* Fix #507 git apply exceptions is not properly reported in comments [#554](https://github.com/noqdev/iambic/pull/554)
+
+DEV EXPERIENCE:
+* Track *.png and *.jpg using Git LFS [#551](https://github.com/noqdev/iambic/pull/551)
+
+
+THANKS:
+* `datfinesoul` for giving feedback on auto formatting and relative time -> absolute timestamp commits made by automation
+* `datfinesoul` on reporting plan output is incorrect [#489](https://github.com/noqdev/iambic/issues/489)
+* `datfinesoul` on giving feedback on the need of ease of use to lookup schema reference in templates
+* `mike.p` on community slack for reporting the issue when the PR contains invalid AWS principal during git apply cycle.
+
 ## 0.11.23 (Aug 4, 2023)
 
 DOCS:

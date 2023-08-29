@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 from enum import Enum
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 import boto3
 import botocore
@@ -32,6 +32,10 @@ from iambic.core.utils import (
     evaluate_on_provider,
     get_provider_value,
     sort_dict,
+)
+from iambic.plugins.v0_1_0.aws.identity_center.permission_set.active_directory_utils import (
+    alternate_list_groups,
+    alternate_list_users,
 )
 from iambic.plugins.v0_1_0.aws.utils import (
     RegionName,
@@ -186,7 +190,7 @@ class BaseAWSAccountAndOrgModel(PydanticBaseModel):
 
     class Config:
         fields = {"boto3_session_map": {"exclude": True}}
-        extra = Extra.forbid
+        extra = Extra.ignore
 
     @property
     def region_name(self):
@@ -307,13 +311,10 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
         description="The role arn to assume into when making calls to the account",
         exclude=True,
     )
-    organization: Optional[AWSOrganization] = Field(
+
+    organization: Optional[AWSOrganization if TYPE_CHECKING else Any] = Field(
         None, description="The AWS Organization this account belongs to"
-    )
-    aws_config: Optional[AWSConfig] = Field(
-        None,
-        description="when an account is an organization account, it needs the AWS Config settings",
-    )
+    )  # workaround for generate_docs
 
     class Config:
         fields = {"hub_session_info": {"exclude": True}}
@@ -439,7 +440,7 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
                     for permission_set in permission_set_details
                 }
 
-            users_and_groups = await asyncio.gather(
+            tmp_users_and_groups = await asyncio.gather(
                 *[
                     legacy_paginated_search(
                         identity_store_client.list_users,
@@ -453,8 +454,54 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
                         retain_key=True,
                         IdentityStoreId=self.identity_center_details.identity_store_id,
                     ),
-                ]
+                ],
+                return_exceptions=True,
             )
+            users_and_groups = []
+            exceptions_seen = []
+            for x in tmp_users_and_groups:
+                if isinstance(x, Exception):
+                    exceptions_seen.append(x)
+                else:
+                    users_and_groups.append(x)
+            if exceptions_seen:
+                log.error(
+                    "seen exceptions during user_and_group resolution, defer resolution to later"
+                )
+                for x in exceptions_seen:
+                    log.error(x)
+
+            if not users_and_groups:
+                mgmt_spoke_role_session = await self.get_boto3_session(region)
+                tmp_users_and_groups = await asyncio.gather(
+                    *[
+                        alternate_list_users(
+                            mgmt_spoke_role_session,
+                            self.identity_center_details.identity_store_id,
+                            region,
+                        ),
+                        alternate_list_groups(
+                            mgmt_spoke_role_session,
+                            self.identity_center_details.identity_store_id,
+                            region,
+                        ),
+                    ],
+                    return_exceptions=True,
+                )
+                users_and_groups = []
+                exceptions_seen = []
+                for x in tmp_users_and_groups:
+                    if isinstance(x, Exception):
+                        exceptions_seen.append(x)
+                    else:
+                        users_and_groups.append(x)
+                if exceptions_seen:
+                    log.error(
+                        "seen exceptions during user_and_group resolution, defer resolution to later"
+                    )
+                    for x in exceptions_seen:
+                        log.error(x)
+
             for user_or_group in users_and_groups:
                 if "Users" in user_or_group:
                     self.identity_center_details.user_map = {
@@ -474,7 +521,6 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
         when the account is the organization account
         """
         self.organization = organization
-        self.aws_config = config
 
     def dict(
         self,
@@ -556,7 +602,7 @@ class AWSAccount(ProviderChild, BaseAWSAccountAndOrgModel):
     @property
     def organization_account(self) -> bool:
         """if current account is an organization account"""
-        return bool(self.organization and self.aws_config)
+        return bool(self.organization)
 
     def __str__(self):
         return f"{self.account_name} - ({self.account_id})"
@@ -812,7 +858,11 @@ class AWSOrganization(BaseAWSAccountAndOrgModel):
 class AWSTemplate(BaseTemplate, ExpiryModel):
     identifier: str
 
-    async def _apply_to_account(self, aws_account: AWSAccount) -> AccountChangeDetails:
+    async def _apply_to_account(
+        self,
+        aws_account: AWSAccount,
+        **kwargs,
+    ) -> AccountChangeDetails:
         raise NotImplementedError
 
     async def apply(self, config: AWSConfig) -> TemplateChangeDetails:
@@ -830,7 +880,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
         for account in config.accounts:
             if evaluate_on_provider(self, account):
                 relevant_accounts.append(account)
-                tasks.append(self._apply_to_account(account))
+                tasks.append(self._apply_to_account(account, aws_config=config))
 
         if not relevant_accounts:
             if ctx.execute:

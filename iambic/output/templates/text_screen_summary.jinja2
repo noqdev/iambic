@@ -2,12 +2,32 @@
 
 {{ "Change Detection" | rich_format("italic blue") }}
 
-* {{ iambic.num_actions | rich_format("blue") }} {{ "distinct actions." | rich_format("blue") }}
+{% if iambic.num_create_actions > 0 -%}
+* {{ iambic.num_create_actions | rich_format("blue") }} {{ "Create actions." | rich_format("blue") }}
+{% endif -%}
+{% if iambic.num_update_actions > 0 -%}
+* {{ iambic.num_update_actions | rich_format("blue") }} {{ "Update actions." | rich_format("blue") }}
+{% endif -%}
+{% if iambic.num_delete_actions > 0 -%}
+* {{ iambic.num_delete_actions | rich_format("blue") }} {{ "Delete actions." | rich_format("blue") }}
+{% endif -%}
+{% if iambic.num_attach_actions > 0 -%}
+* {{ iambic.num_attach_actions | rich_format("blue") }} {{ "Attach actions." | rich_format("blue") }}
+{% endif -%}
+{% if iambic.num_detach_actions > 0 -%}
+* {{ iambic.num_detach_actions | rich_format("blue") }} {{ "Detach actions." | rich_format("blue") }}
+{% endif -%}
+{% if iambic.num_unknown_actions > 0 -%}
+* {{ iambic.num_unknown_actions | rich_format("blue") }} {{ "Unknown actions." | rich_format("blue") }}
+{% endif -%}
 * {{ iambic.num_templates | rich_format("blue") }} {{ "templates with changes." | rich_format("blue") }}
 * {{ iambic.num_accounts | rich_format("blue") }} {{ "accounts affected." | rich_format("blue") }}
 
+{% if iambic.num_exceptions > 0 -%}
 {{ "Exceptions" | rich_format("italic blue") }}
 * {{ iambic.num_exceptions | rich_format("blue") }} {{ "exceptions were recorded." | rich_format("blue") }}
+{% endif -%}
+
 {% if iambic.num_templates > 0 -%}
 {{ "IAMbic Change Details" | rich_format("bold blue") }}
 {% for action_summary in iambic.action_summaries -%}

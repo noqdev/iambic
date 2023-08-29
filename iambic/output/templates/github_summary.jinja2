@@ -1,10 +1,30 @@
 # IAMbic Summary
 ## Change Detection
-* {{ iambic.num_actions }} distinct actions.
+{% if iambic.num_create_actions > 0 -%}
+* {{ iambic.num_create_actions }} Create actions were recorded.
+{% endif -%}
+{% if iambic.num_update_actions > 0 -%}
+* {{ iambic.num_update_actions }} Update actions were recorded.
+{% endif -%}
+{% if iambic.num_delete_actions > 0 -%}
+* {{ iambic.num_delete_actions }} Delete actions were recorded.
+{% endif -%}
+{% if iambic.num_attach_actions > 0 -%}
+* {{ iambic.num_attach_actions }} Attach actions were recorded.
+{% endif -%}
+{% if iambic.num_detach_actions > 0 -%}
+* {{ iambic.num_detach_actions }} Detach actions were recorded.
+{% endif -%}
+{% if iambic.num_unknown_actions > 0 -%}
+* {{ iambic.num_unknown_actions }} Unknown actions were recorded.
+{% endif -%}
 * {{ iambic.num_templates }} templates with changes.
 * {{ iambic.num_accounts }} accounts affected.
+
+{% if iambic.num_exceptions > 0 -%}
 ## Exceptions
 * {{ iambic.num_exceptions }} exceptions were recorded.
+{% endif -%}
 
 {% if iambic.num_templates > 0 -%}
 
@@ -100,6 +120,11 @@
                                 {% if change.change.diff_plus_minus -%}
                                 <tr>
                                     <td colspan="100%">{{ change.change.diff_plus_minus }}</td>
+                                </tr>
+                                {% endif -%}
+                                {% if change.change.exceptions_seen -%}
+                                <tr>
+                                    <td colspan="100%">{{ change.change.exceptions_seen }}</td>
                                 </tr>
                                 {% endif -%}
                             </tbody>

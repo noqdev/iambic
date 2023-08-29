@@ -1,0 +1,788 @@
+{
+  "title": "AwsScpPolicyTemplate",
+  "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+  "type": "object",
+  "properties": {
+    "included_accounts": {
+      "title": "Includedaccounts",
+      "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+      "default": [
+        "*"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "excluded_accounts": {
+      "title": "Excludedaccounts",
+      "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "included_orgs": {
+      "title": "Includedorgs",
+      "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+      "default": [
+        "*"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "excluded_orgs": {
+      "title": "Excludedorgs",
+      "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "expires_at": {
+      "title": "Expiresat",
+      "description": "The date and time the resource will be/was set to deleted.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "string",
+          "format": "date"
+        }
+      ]
+    },
+    "deleted": {
+      "title": "Deleted",
+      "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
+      "default": false,
+      "type": "boolean"
+    },
+    "template_type": {
+      "title": "Templatetype",
+      "default": "NOQ::AWS::Organizations::SCP",
+      "type": "string"
+    },
+    "owner": {
+      "title": "Owner",
+      "type": "string"
+    },
+    "iambic_managed": {
+      "description": "Controls the directionality of Iambic changes",
+      "default": "undefined",
+      "allOf": [
+        {
+          "$ref": "#/definitions/IambicManaged"
+        }
+      ]
+    },
+    "identifier": {
+      "title": "Identifier",
+      "type": "string"
+    },
+    "organization_account_needed": {
+      "title": "Organizationaccountneeded",
+      "description": "This template needs an organization account to be applied",
+      "default": true,
+      "type": "boolean"
+    },
+    "properties": {
+      "title": "Properties",
+      "description": "The properties of the scp policy",
+      "allOf": [
+        {
+          "$ref": "#/definitions/PolicyProperties"
+        }
+      ]
+    },
+    "account_id": {
+      "title": "Accountid",
+      "type": "string"
+    },
+    "org_id": {
+      "title": "Orgid",
+      "type": "string"
+    },
+    "ARN_TEMPLATE": {
+      "title": "Arntemplate",
+      "default": "arn:aws:organizations::{account_id}:policy/{organization_unit}/service_control_policy/{policy_id}",
+      "type": "string"
+    }
+  },
+  "required": [
+    "identifier",
+    "properties",
+    "account_id",
+    "org_id"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "IambicManaged": {
+      "title": "IambicManaged",
+      "description": "An enumeration.",
+      "enum": [
+        "undefined",
+        "read_and_write",
+        "import_only",
+        "enforced",
+        "disabled"
+      ]
+    },
+    "Path": {
+      "title": "Path",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "included_accounts": {
+          "title": "Includedaccounts",
+          "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_accounts": {
+          "title": "Excludedaccounts",
+          "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "included_orgs": {
+          "title": "Includedorgs",
+          "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_orgs": {
+          "title": "Excludedorgs",
+          "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Description": {
+      "title": "Description",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "included_accounts": {
+          "title": "Includedaccounts",
+          "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_accounts": {
+          "title": "Excludedaccounts",
+          "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "included_orgs": {
+          "title": "Includedorgs",
+          "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_orgs": {
+          "title": "Excludedorgs",
+          "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "description": {
+          "title": "Description",
+          "default": "",
+          "type": "string"
+        }
+      }
+    },
+    "OrganizationsPolicyType": {
+      "title": "OrganizationsPolicyType",
+      "description": "AWS Organizations supports the following policy types. You specify the policy type when you create a policy.\n\nPossible values:\n    - TAG_POLICY\n    - BACKUP_POLICY\n    - AISERVICES_OPT_OUT_POLICY\n\nRef:\n    - https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/organizations/client/list_policies.html",
+      "enum": [
+        "SERVICE_CONTROL_POLICY",
+        "TAG_POLICY",
+        "BACKUP_POLICY",
+        "AISERVICES_OPT_OUT_POLICY"
+      ],
+      "type": "string"
+    },
+    "Principal": {
+      "title": "Principal",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "aws": {
+          "title": "Aws",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "service": {
+          "title": "Service",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "canonical_user": {
+          "title": "Canonicaluser",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "federated": {
+          "title": "Federated",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "PolicyStatement": {
+      "title": "PolicyStatement",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "expires_at": {
+          "title": "Expiresat",
+          "description": "The date and time the resource will be/was set to deleted.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
+        "deleted": {
+          "title": "Deleted",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
+          "default": false,
+          "type": "boolean"
+        },
+        "included_accounts": {
+          "title": "Includedaccounts",
+          "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_accounts": {
+          "title": "Excludedaccounts",
+          "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "included_orgs": {
+          "title": "Includedorgs",
+          "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_orgs": {
+          "title": "Excludedorgs",
+          "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "effect": {
+          "title": "Effect",
+          "description": "Allow | Deny",
+          "type": "string"
+        },
+        "principal": {
+          "title": "Principal",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Principal"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "not_principal": {
+          "title": "Notprincipal",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Principal"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "action": {
+          "title": "Action",
+          "description": "A single regex or list of regexes. Values are the actions that can be performed on the resources in the policy statement",
+          "example": "dynamodb:list*",
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "not_action": {
+          "title": "Notaction",
+          "description": "An advanced policy element that explicitly matches everything except the specified list of actions.DON'T use this with effect: allow in the same statement OR policy",
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "resource": {
+          "title": "Resource",
+          "description": "A single regex or list of regexes. Values specified are the resources the statement applies to",
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "not_resource": {
+          "title": "Notresource",
+          "description": "An advanced policy element that explicitly matches every resource except those specified.DON'T use this with effect: allow and action: '*'",
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "condition": {
+          "title": "Condition",
+          "description": "An optional set of conditions to determine of the policy applies to a resource.",
+          "type": "object"
+        },
+        "sid": {
+          "title": "Sid",
+          "description": "The Policy Statement ID.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "effect"
+      ],
+      "additionalProperties": false
+    },
+    "PolicyDocument": {
+      "title": "PolicyDocument",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "expires_at": {
+          "title": "Expiresat",
+          "description": "The date and time the resource will be/was set to deleted.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
+        "deleted": {
+          "title": "Deleted",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
+          "default": false,
+          "type": "boolean"
+        },
+        "included_accounts": {
+          "title": "Includedaccounts",
+          "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_accounts": {
+          "title": "Excludedaccounts",
+          "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "included_orgs": {
+          "title": "Includedorgs",
+          "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_orgs": {
+          "title": "Excludedorgs",
+          "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "version": {
+          "title": "Version",
+          "default": "2012-10-17",
+          "type": "string"
+        },
+        "statement": {
+          "title": "Statement",
+          "description": "List of policy statements",
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/PolicyStatement"
+              }
+            },
+            {
+              "$ref": "#/definitions/PolicyStatement"
+            }
+          ]
+        }
+      },
+      "required": [
+        "statement"
+      ],
+      "additionalProperties": false
+    },
+    "PolicyTargetProperties": {
+      "title": "PolicyTargetProperties",
+      "description": "Note:\n- Root - A string that begins with \u201cr-\u201d followed by from 4 to 32 lowercase letters or digits.\n- Account - A string that consists of exactly 12 digits.\n- Organizational unit (OU) - A string that begins with \u201cou-\u201d followed by from 4 to 32 lowercase letters or digits (the ID of the root\nthat the OU is in). This string is followed by a second \u201c-\u201d dash and from 8 to 32 additional lowercase letters or digits.",
+      "type": "object",
+      "properties": {
+        "organizational_units": {
+          "title": "Organizationalunits",
+          "description": "List of OUs ids",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "accounts": {
+          "title": "Accounts",
+          "description": "List of accounts (names or ids)",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "roots": {
+          "title": "Roots",
+          "description": "List of root ids",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Tag": {
+      "title": "Tag",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "included_accounts": {
+          "title": "Includedaccounts",
+          "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_accounts": {
+          "title": "Excludedaccounts",
+          "description": "A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "included_orgs": {
+          "title": "Includedorgs",
+          "description": "A list of AWS organization ids this statement applies to. Org ids can be represented as a regex and string",
+          "default": [
+            "*"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_orgs": {
+          "title": "Excludedorgs",
+          "description": "A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "expires_at": {
+          "title": "Expiresat",
+          "description": "The date and time the resource will be/was set to deleted.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
+        "deleted": {
+          "title": "Deleted",
+          "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
+          "default": false,
+          "type": "boolean"
+        },
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "PolicyProperties": {
+      "title": "PolicyProperties",
+      "description": "A base model class that provides additional helper methods and\nconfigurations for other models used in IAMbic.",
+      "type": "object",
+      "properties": {
+        "policy_id": {
+          "title": "Policyid",
+          "description": "The ID of the policy, it is optional when creating a new policy",
+          "required": false,
+          "type": "string"
+        },
+        "policy_name": {
+          "title": "Policyname",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "default": "/",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Path"
+              }
+            }
+          ]
+        },
+        "description": {
+          "title": "Description",
+          "description": "Description of the role",
+          "default": "",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Description"
+              }
+            }
+          ]
+        },
+        "type": {
+          "default": "SERVICE_CONTROL_POLICY",
+          "allOf": [
+            {
+              "$ref": "#/definitions/OrganizationsPolicyType"
+            }
+          ]
+        },
+        "aws_managed": {
+          "title": "Awsmanaged",
+          "default": false,
+          "type": "boolean"
+        },
+        "policy_document": {
+          "title": "Policydocument",
+          "description": "Policy document, Unsupported elements: Principal, NotPrincipal, NotResource",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PolicyDocument"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/PolicyDocument"
+              }
+            }
+          ]
+        },
+        "targets": {
+          "$ref": "#/definitions/PolicyTargetProperties"
+        },
+        "tags": {
+          "title": "Tags",
+          "description": "List of tags attached to the role",
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Tag"
+          }
+        }
+      },
+      "required": [
+        "policy_name",
+        "policy_document"
+      ]
+    }
+  }
+}

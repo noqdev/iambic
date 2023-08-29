@@ -6,7 +6,7 @@ import uuid
 
 from git import Repo
 
-from iambic.config.dynamic_config import load_config
+from iambic.config.dynamic_config import Config, load_config
 from iambic.core.context import ctx
 from iambic.core.git import (
     create_templates_for_deleted_files,
@@ -26,6 +26,8 @@ async def apply_git_changes(
     allow_dirty: bool = False,
     from_sha: str = None,
     to_sha: str = None,
+    config: Config = None,
+    skip_flag_expired_resources_phase: bool = False,  # I want to speed up plan during git plan
 ) -> list[TemplateChangeDetails]:
     """Retrieves files added/updated/or removed when comparing the current branch to master
 
@@ -44,7 +46,8 @@ async def apply_git_changes(
     :return:
     """
 
-    config = await load_config(config_path)
+    if config is None:
+        config = await load_config(config_path)
     file_changes = await retrieve_git_changes(
         repo_dir,
         config.template_map,
@@ -79,14 +82,17 @@ async def apply_git_changes(
     )
 
     # You can only flag expired resources on new/modified-templates
-    await flag_expired_resources(
-        [
-            template.file_path
-            for template in itertools.chain(new_templates, modified_templates_doubles)
-            if os.path.exists(template.file_path)
-        ],
-        config.template_map,
-    )
+    if not skip_flag_expired_resources_phase:
+        await flag_expired_resources(
+            [
+                template.file_path
+                for template in itertools.chain(
+                    new_templates, modified_templates_doubles
+                )
+                if os.path.exists(template.file_path)
+            ],
+            config.template_map,
+        )
 
     template_changes = await config.run_apply(
         exe_message,
@@ -112,6 +118,7 @@ async def lint_git_changes(
     allow_dirty: bool = False,
     from_sha: str = None,
     to_sha: str = None,
+    config: Config = None,
 ) -> list[TemplateChangeDetails]:
     """Retrieves files added/updated/or removed when comparing the current branch to master
 
@@ -130,7 +137,8 @@ async def lint_git_changes(
     :return:
     """
 
-    config = await load_config(config_path)
+    if config is None:
+        config = await load_config(config_path)
     file_changes = await retrieve_git_changes(
         repo_dir,
         config.template_map,

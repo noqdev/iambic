@@ -185,3 +185,65 @@ resource "aws_lambda_permission" "apigw_lambda" {
   # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
   source_arn = "arn:aws:execute-api:${var.aws_region}:${local.account_id}:${aws_api_gateway_rest_api.iambic[0].id}/*/*"
 }
+
+resource "aws_lambda_permission" "allow_cloudwatch" {
+  count         = 4
+  statement_id  = "AllowExecutionFromCloudWatch${count.index}"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.iambic_github_app.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = element([
+    aws_cloudwatch_event_rule.import.arn,
+    aws_cloudwatch_event_rule.expire.arn,
+    aws_cloudwatch_event_rule.enforce.arn,
+    aws_cloudwatch_event_rule.detect.arn
+  ], count.index)
+}
+
+resource "aws_cloudwatch_event_rule" "import" {
+  name                = "schedule-import"
+  schedule_expression = var.import_schedule
+}
+
+resource "aws_cloudwatch_event_rule" "expire" {
+  name                = "schedule-expire"
+  schedule_expression = var.expire_schedule
+}
+
+resource "aws_cloudwatch_event_rule" "enforce" {
+  name                = "schedule-enforce"
+  schedule_expression = var.enforce_schedule
+}
+
+resource "aws_cloudwatch_event_rule" "detect" {
+  name                = "schedule-detect"
+  schedule_expression = var.detect_schedule
+}
+
+resource "aws_cloudwatch_event_target" "import" {
+  rule      = aws_cloudwatch_event_rule.import.name
+  target_id = "LambdaImportTarget"
+  arn       = aws_lambda_function.iambic_github_app.arn
+  input     = jsonencode({"command" : "import", "source": "EventBridgeCron"})
+}
+
+resource "aws_cloudwatch_event_target" "expire" {
+  rule      = aws_cloudwatch_event_rule.expire.name
+  target_id = "LambdaExpireTarget"
+  arn       = aws_lambda_function.iambic_github_app.arn
+  input     = jsonencode({"command" : "expire", "source": "EventBridgeCron"})
+}
+
+resource "aws_cloudwatch_event_target" "enforce" {
+  rule      = aws_cloudwatch_event_rule.enforce.name
+  target_id = "LambdaEnforceTarget"
+  arn       = aws_lambda_function.iambic_github_app.arn
+  input     = jsonencode({"command" : "enforce", "source": "EventBridgeCron"})
+}
+
+resource "aws_cloudwatch_event_target" "detect" {
+  rule      = aws_cloudwatch_event_rule.detect.name
+  target_id = "LambdaDetectTarget"
+  arn       = aws_lambda_function.iambic_github_app.arn
+  input     = jsonencode({"command" : "detect", "source": "EventBridgeCron"})
+}

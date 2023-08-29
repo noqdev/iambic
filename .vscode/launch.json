@@ -170,6 +170,8 @@
             "envFile": "${workspaceFolder}/.env",
             "args": [
                 "detect",
+                "-m",
+                "/tmp/message_details_output.json",
             ],
             "justMyCode": true
         },

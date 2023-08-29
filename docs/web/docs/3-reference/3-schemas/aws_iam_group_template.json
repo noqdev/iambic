@@ -66,9 +66,31 @@
       "default": false,
       "type": "boolean"
     },
+    "expires_at_default": {
+      "title": "Expiresatdefault",
+      "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "string",
+          "format": "date"
+        }
+      ]
+    },
     "template_type": {
       "title": "Templatetype",
       "default": "NOQ::AWS::IAM::Group",
+      "type": "string"
+    },
+    "template_schema_url": {
+      "title": "Templateschemaurl",
+      "default": "https://docs.iambic.org/reference/schemas/aws_iam_group_template",
       "type": "string"
     },
     "owner": {
@@ -107,7 +129,6 @@
     "identifier",
     "properties"
   ],
-  "additionalProperties": false,
   "definitions": {
     "IambicManaged": {
       "title": "IambicManaged",
@@ -195,6 +216,23 @@
           "default": false,
           "type": "boolean"
         },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
+        },
         "included_accounts": {
           "title": "Includedaccounts",
           "description": "A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string",
@@ -247,8 +285,7 @@
       },
       "required": [
         "policy_arn"
-      ],
-      "additionalProperties": false
+      ]
     },
     "Principal": {
       "title": "Principal",
@@ -340,6 +377,23 @@
           "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
+        },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
         },
         "included_accounts": {
           "title": "Includedaccounts",
@@ -482,8 +536,7 @@
       },
       "required": [
         "effect"
-      ],
-      "additionalProperties": false
+      ]
     },
     "PolicyDocument": {
       "title": "PolicyDocument",
@@ -512,6 +565,23 @@
           "description": "Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran.",
           "default": false,
           "type": "boolean"
+        },
+        "expires_at_default": {
+          "title": "Expiresatdefault",
+          "description": "A value that is set by IAMbic at run time and should not be set by the user.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            }
+          ]
         },
         "included_accounts": {
           "title": "Includedaccounts",
@@ -585,8 +655,7 @@
       },
       "required": [
         "policy_name"
-      ],
-      "additionalProperties": false
+      ]
     },
     "GroupProperties": {
       "title": "GroupProperties",

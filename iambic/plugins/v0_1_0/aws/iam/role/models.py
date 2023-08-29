@@ -168,6 +168,9 @@ class RoleProperties(BaseModel):
 
 class AwsIamRoleTemplate(AWSTemplate, AccessModel):
     template_type = AWS_IAM_ROLE_TEMPLATE_TYPE
+    template_schema_url = (
+        "https://docs.iambic.org/reference/schemas/aws_iam_role_template"
+    )
     owner: Optional[str] = Field(None, description="Owner of the role")
     properties: RoleProperties = Field(
         description="Properties of the role",
@@ -207,7 +210,9 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
         return "aws-service-role" in self.properties.path
 
     async def _apply_to_account(  # noqa: C901
-        self, aws_account: AWSAccount
+        self,
+        aws_account: AWSAccount,
+        **kwargs,
     ) -> AccountChangeDetails:
         client = await aws_account.get_boto3_client("iam")
         account_role = self.apply_resource_dict(aws_account)
@@ -391,28 +396,31 @@ class AwsIamRoleTemplate(AWSTemplate, AccessModel):
                 ]["PolicyArn"]
 
             apply_awaitable = boto_crud_call(client.create_role, **account_role)
-            account_change_details.extend_changes(
-                await plugin_apply_wrapper(apply_awaitable, proposed_changes)
+            create_role_result = await plugin_apply_wrapper(
+                apply_awaitable, proposed_changes
             )
+            account_change_details.extend_changes(create_role_result)
 
-        tasks.extend(
-            [
-                apply_role_managed_policies(
-                    role_name,
-                    client,
-                    managed_policies,
-                    existing_managed_policies,
-                    log_params,
-                ),
-                apply_role_inline_policies(
-                    role_name,
-                    client,
-                    inline_policies,
-                    existing_inline_policies,
-                    log_params,
-                ),
-            ]
-        )
+        if not account_change_details.exceptions_seen:
+            # we can only proceed if we don't see other exceptions (like create exceptions).
+            tasks.extend(
+                [
+                    apply_role_managed_policies(
+                        role_name,
+                        client,
+                        managed_policies,
+                        existing_managed_policies,
+                        log_params,
+                    ),
+                    apply_role_inline_policies(
+                        role_name,
+                        client,
+                        inline_policies,
+                        existing_inline_policies,
+                        log_params,
+                    ),
+                ]
+            )
 
         changes_made = await asyncio.gather(*tasks)
         if any(changes_made):
