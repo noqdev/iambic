@@ -1,7 +1,11 @@
 # AwsScpPolicyTemplate
 
-*A base model class that provides additional helper methods and
-configurations for other models used in IAMbic.*
+See [Template Schema Validation](/reference/template_validation_ide) to learn how to validate templates automatically in your IDE.
+
+## Description
+
+A base model class that provides additional helper methods and
+configurations for other models used in IAMbic.
 
 ## Properties
 
@@ -16,11 +20,48 @@ configurations for other models used in IAMbic.*
 - **`expires_at`**: The date and time the resource will be/was set to deleted.
   - **Any of**
     - *string*
-    - *string*
-    - *string*
+    - *string* (date-time)
+    - *string* (date)
+
+  Examples:
+  ```yaml
+  in 3 days
+  ...
+  ```
+
+  ```yaml
+  '2023-09-01'
+  ```
+
+  ```yaml
+  '2023-08-31T12:00:00'
+  ```
+
 - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+- **`expires_at_default`**: A value that is set by IAMbic at run time and should not be set by the user.
+  - **Any of**
+    - *string*
+    - *string* (date-time)
+    - *string* (date)
+
+  Examples:
+  ```yaml
+  in 3 days
+  ...
+  ```
+
+  ```yaml
+  '2023-09-01'
+  ```
+
+  ```yaml
+  '2023-08-31T12:00:00'
+  ```
+
 - **`template_type`** *(string)*: Default: `"NOQ::AWS::Organizations::SCP"`.
+- **`template_schema_url`** *(string)*: Default: `"https://docs.iambic.org/reference/schemas/aws_scp_policy_template"`.
 - **`owner`** *(string)*
+- **`notes`** *(string)*
 - **`iambic_managed`**: Controls the directionality of Iambic changes. Default: `"undefined"`.
   - **All of**
     - : Refer to *[#/definitions/IambicManaged](#definitions/IambicManaged)*.
@@ -102,13 +143,48 @@ configurations for other models used in IAMbic.
 <a id="definitions/PolicyStatement"></a>
 
 - **`PolicyStatement`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic. Cannot contain additional properties.
+configurations for other models used in IAMbic.
   - **`expires_at`**: The date and time the resource will be/was set to deleted.
     - **Any of**
       - *string*
-      - *string*
-      - *string*
+      - *string* (date-time)
+      - *string* (date)
+
+    Examples:
+    ```yaml
+    in 3 days
+    ...
+    ```
+
+    ```yaml
+    '2023-09-01'
+    ```
+
+    ```yaml
+    '2023-08-31T12:00:00'
+    ```
+
   - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+  - **`expires_at_default`**: A value that is set by IAMbic at run time and should not be set by the user.
+    - **Any of**
+      - *string*
+      - *string* (date-time)
+      - *string* (date)
+
+    Examples:
+    ```yaml
+    in 3 days
+    ...
+    ```
+
+    ```yaml
+    '2023-09-01'
+    ```
+
+    ```yaml
+    '2023-08-31T12:00:00'
+    ```
+
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -117,7 +193,7 @@ configurations for other models used in IAMbic. Cannot contain additional proper
     - **Items** *(string)*
   - **`excluded_orgs`** *(array)*: A list of AWS organization ids this statement explicitly does not apply to. Org ids can be represented as a regex and string. Default: `[]`.
     - **Items** *(string)*
-  - **`effect`** *(string)*: Allow | Deny.
+  - **`effect`** *(string, required)*: Allow | Deny.
   - **`principal`**
     - **Any of**
       - : Refer to *[#/definitions/Principal](#definitions/Principal)*.
@@ -152,13 +228,48 @@ configurations for other models used in IAMbic. Cannot contain additional proper
 <a id="definitions/PolicyDocument"></a>
 
 - **`PolicyDocument`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic. Cannot contain additional properties.
+configurations for other models used in IAMbic.
   - **`expires_at`**: The date and time the resource will be/was set to deleted.
     - **Any of**
       - *string*
-      - *string*
-      - *string*
+      - *string* (date-time)
+      - *string* (date)
+
+    Examples:
+    ```yaml
+    in 3 days
+    ...
+    ```
+
+    ```yaml
+    '2023-09-01'
+    ```
+
+    ```yaml
+    '2023-08-31T12:00:00'
+    ```
+
   - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
+  - **`expires_at_default`**: A value that is set by IAMbic at run time and should not be set by the user.
+    - **Any of**
+      - *string*
+      - *string* (date-time)
+      - *string* (date)
+
+    Examples:
+    ```yaml
+    in 3 days
+    ...
+    ```
+
+    ```yaml
+    '2023-09-01'
+    ```
+
+    ```yaml
+    '2023-08-31T12:00:00'
+    ```
+
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -191,7 +302,7 @@ that the OU is in). This string is followed by a second “-” dash and from 8 
 <a id="definitions/Tag"></a>
 
 - **`Tag`** *(object)*: A base model class that provides additional helper methods and
-configurations for other models used in IAMbic. Cannot contain additional properties.
+configurations for other models used in IAMbic.
   - **`included_accounts`** *(array)*: A list of account ids and/or account names this statement applies to. Account ids/names can be represented as a regex and string. Default: `["*"]`.
     - **Items** *(string)*
   - **`excluded_accounts`** *(array)*: A list of account ids and/or account names this statement explicitly does not apply to. Account ids/names can be represented as a regex and string. Default: `[]`.
@@ -203,18 +314,53 @@ configurations for other models used in IAMbic. Cannot contain additional proper
   - **`expires_at`**: The date and time the resource will be/was set to deleted.
     - **Any of**
       - *string*
-      - *string*
-      - *string*
+      - *string* (date-time)
+      - *string* (date)
+
+    Examples:
+    ```yaml
+    in 3 days
+    ...
+    ```
+
+    ```yaml
+    '2023-09-01'
+    ```
+
+    ```yaml
+    '2023-08-31T12:00:00'
+    ```
+
   - **`deleted`** *(boolean)*: Denotes whether the resource has been removed from AWS.Upon being set to true, the resource will be deleted the next time iambic is ran. Default: `false`.
-  - **`key`** *(string)*
-  - **`value`** *(string)*
+  - **`expires_at_default`**: A value that is set by IAMbic at run time and should not be set by the user.
+    - **Any of**
+      - *string*
+      - *string* (date-time)
+      - *string* (date)
+
+    Examples:
+    ```yaml
+    in 3 days
+    ...
+    ```
+
+    ```yaml
+    '2023-09-01'
+    ```
+
+    ```yaml
+    '2023-08-31T12:00:00'
+    ```
+
+  - **`key`** *(string, required)*
+  - **`value`** *(string, required)*
 
 <a id="definitions/PolicyProperties"></a>
 
 - **`PolicyProperties`** *(object)*: A base model class that provides additional helper methods and
 configurations for other models used in IAMbic.
   - **`policy_id`** *(string)*: The ID of the policy, it is optional when creating a new policy.
-  - **`policy_name`** *(string)*
+  - **`policy_name`** *(string, required)*
   - **`path`**: Default: `"/"`.
     - **Any of**
       - *string*
