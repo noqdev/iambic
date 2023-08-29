@@ -606,10 +606,17 @@
         "statement": {
           "title": "Statement",
           "description": "List of policy statements",
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/PolicyStatement"
-          }
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/PolicyStatement"
+              }
+            },
+            {
+              "$ref": "#/definitions/PolicyStatement"
+            }
+          ]
         }
       }
     },
