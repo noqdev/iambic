@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 if platform.system() == "Windows":
     if os.environ.get("GIT_PYTHON_GIT_EXECUTABLE", None) is None:
         raise RuntimeError(
-            "Windows runtime must have GIT_PYTHON_GIT_EXECUTABLE set in environment variable"
+            "Windows runtime must have GIT_PYTHON_GIT_EXECUTABLE set in environment variable. See https://github.com/noqdev/iambic/security/dependabot/28"
         )
 
 
