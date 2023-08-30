@@ -135,8 +135,11 @@ async def load(config: AWSConfig) -> AWSConfig:
                 if account.account_id != hub_account.account_id:
                     account.hub_session_info = hub_session_info
 
-    # Set up the dynamic account variables
+    # Set up the dynamic account attributes
     for idx, account in enumerate(config.accounts):
+        config.accounts[
+            idx
+        ].enable_iam_user_credentials = config.enable_iam_user_credentials
         config.accounts[idx].variables.extend(
             [
                 Variable(key="account_id", value=account.account_id),
