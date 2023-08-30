@@ -40,7 +40,7 @@ def get_aws_templates():
     ]
 
 
-class ImportAction(Enum):
+class ImportAction(str, Enum):
     ignore = "ignore"
     set_import_only = "set_import_only"
 
@@ -91,8 +91,27 @@ class AWSConfig(ConfigMixin, BaseModel):
             "If true, it will restrict IAMbic capability in AWS"
         ),
     )
-    import_rules: list[ImportRule] = Field(
-        [],
+    import_rules: Optional[list[ImportRule]] = Field(
+        [
+            ImportRule(
+                match_paths=[
+                    # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/service-role.html
+                    "/service-role/*",
+                    # https://docs.aws.amazon.com/IAM/latest/UserGuide/using-service-linked-roles.html
+                    "/aws-service-role/*",
+                    # https://docs.aws.amazon.com/singlesignon/latest/userguide/using-service-linked-roles.html
+                    "/aws-reserved/*",
+                ],
+                action=ImportAction.set_import_only,
+            ),
+            ImportRule(
+                match_names=[
+                    # https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_access.html#orgs_manage_accounts_access-cross-account-role
+                    "OrganizationAccountAccessRole",
+                ],
+                action=ImportAction.set_import_only,
+            ),
+        ],
         description=("A list of rules to determine which resources to import from AWS"),
     )
 
