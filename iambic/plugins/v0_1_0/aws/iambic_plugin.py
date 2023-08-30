@@ -40,7 +40,7 @@ def get_aws_templates():
     ]
 
 
-class ImportAction(Enum):
+class ImportAction(str, Enum):
     ignore = "ignore"
     set_import_only = "set_import_only"
 
@@ -102,14 +102,14 @@ class AWSConfig(ConfigMixin, BaseModel):
                     # https://docs.aws.amazon.com/singlesignon/latest/userguide/using-service-linked-roles.html
                     "/aws-reserved/*",
                 ],
-                action="set_import_only",
+                action=ImportAction.set_import_only,
             ),
             ImportRule(
                 match_names=[
                     # https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_access.html#orgs_manage_accounts_access-cross-account-role
                     "OrganizationAccountAccessRole",
                 ],
-                action="set_import_only",
+                action=ImportAction.set_import_only,
             ),
         ],
         description=("A list of rules to determine which resources to import from AWS"),
