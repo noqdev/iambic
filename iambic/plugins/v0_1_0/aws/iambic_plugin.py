@@ -91,8 +91,27 @@ class AWSConfig(ConfigMixin, BaseModel):
             "If true, it will restrict IAMbic capability in AWS"
         ),
     )
-    import_rules: list[ImportRule] = Field(
-        [],
+    import_rules: Optional[list[ImportRule]] = Field(
+        [
+            ImportRule(
+                match_paths=[
+                    # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/service-role.html
+                    "/service-role/*",
+                    # https://docs.aws.amazon.com/IAM/latest/UserGuide/using-service-linked-roles.html
+                    "/aws-service-role/*",
+                    # https://docs.aws.amazon.com/singlesignon/latest/userguide/using-service-linked-roles.html
+                    "/aws-reserved/*",
+                ],
+                action="set_import_only",
+            ),
+            ImportRule(
+                match_names=[
+                    # https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_access.html#orgs_manage_accounts_access-cross-account-role
+                    "OrganizationAccountAccessRole",
+                ],
+                action="set_import_only",
+            ),
+        ],
         description=("A list of rules to determine which resources to import from AWS"),
     )
 
