@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import platform
 import re
 from io import StringIO
 from typing import TYPE_CHECKING, Optional, Type
@@ -17,6 +18,15 @@ from iambic.core.utils import NOQ_TEMPLATE_REGEX, file_regex_search, yaml
 
 if TYPE_CHECKING:
     from iambic.config.dynamic_config import Config
+
+
+# https://github.com/noqdev/iambic/security/dependabot/28
+# Make this problem prominent in the documentation and advise users to never run GitPython from an untrusted repo, or set the GIT_PYTHON_GIT_EXECUTABLE env var to an absolute path.
+if platform.system() == "Windows":
+    if os.environ.get("GIT_PYTHON_GIT_EXECUTABLE", None) is None:
+        raise RuntimeError(
+            "Windows runtime must have GIT_PYTHON_GIT_EXECUTABLE set in environment variable. See https://github.com/noqdev/iambic/security/dependabot/28"
+        )
 
 
 class GitDiff(PydanticBaseModel):
