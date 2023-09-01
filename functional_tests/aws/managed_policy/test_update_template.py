@@ -31,11 +31,8 @@ class ManagedPolicyUpdateTestCase(IsolatedAsyncioTestCase):
         template_change_details = asyncio.run(
             cls.template.apply(IAMBIC_TEST_DETAILS.config.aws)
         )
-        cls.assertEqual(
-            len(template_change_details.exceptions_seen),
-            0,
-            json.dumps(template_change_details.dict()),
-        )
+        if len(template_change_details.exceptions_seen) > 0:
+            raise RuntimeError(json.dumps(template_change_details.dict()))
 
     @classmethod
     def tearDownClass(cls):
