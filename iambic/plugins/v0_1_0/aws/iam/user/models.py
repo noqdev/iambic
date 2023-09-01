@@ -105,6 +105,14 @@ class Credentials(AccessModel):
         description="A list of the users access keys."
     )
 
+    @validator("access_keys")
+    def sort_access_keys(cls, v: Optional[list[AccessKey]]):
+        # access key is by nature unique, so use it for sorting
+        if v is None:
+            return v
+        sorted_v = sorted(v, key=lambda access_key: access_key.id)
+        return sorted_v
+
     @property
     def resource_type(self):
         return "aws:iam:user:credentials"
@@ -157,6 +165,24 @@ class UserProperties(BaseModel):
             return f"{getattr(obj, attribute_name)}!{obj.access_model_sort_weight()}"
 
         return _sort_func
+
+    @classmethod
+    def sort_by_access_model(cls, m):
+        return m.access_model_sort_weight()
+
+    @validator("credentials")
+    def sort_credentials(cls, v: Optional[Union[Credentials, list[Credentials]]]):
+        # credentials typically have 2 categories
+        # 1 is no access key enabled, the other is access key
+        # those with access key are unique, so it will only have
+        # one included account. so a naive sort is just by the
+        # access model sort weight
+        if v is None:
+            return v
+        elif isinstance(v, Credentials):
+            return v
+        sorted_v = sorted(v, key=cls.sort_by_access_model)
+        return sorted_v
 
     @validator("tags")
     def sort_tags(cls, v: list[Tag]):

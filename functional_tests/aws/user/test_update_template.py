@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import random
-import string
+import secrets
 import uuid
 from unittest import IsolatedAsyncioTestCase
 
@@ -12,6 +11,7 @@ from functional_tests.aws.user.utils import generate_user_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core import noq_json as json
 from iambic.core.iambic_enum import Command
+from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import (
     get_existing_template_map,
@@ -328,12 +328,7 @@ class UpdateUserCredentialTestCase(IsolatedAsyncioTestCase):
         self.template = AwsIamUserTemplate.load(self.template.file_path)
 
     async def set_user_password(self):
-        user_password = (
-            "".join(
-                random.choices(string.ascii_uppercase + string.ascii_lowercase, k=15)
-            )
-            + "$3.50"
-        )
+        user_password = secrets.token_urlsafe(nbytes=32)
 
         async def _update_or_create_user_password(aws_account: AWSAccount):
             client = await aws_account.get_boto3_client("iam")
@@ -343,10 +338,26 @@ class UpdateUserCredentialTestCase(IsolatedAsyncioTestCase):
                 PasswordResetRequired=True,
             )
             try:
-                await boto_crud_call(client.update_login_profile, **boto_kwargs)
+                await boto_crud_call(
+                    client.update_login_profile,
+                    retryable_errors=["EntityTemporarilyUnmodifiableException"],
+                    **boto_kwargs,
+                )
             except:  # noqa: E722
-                await boto_crud_call(client.create_login_profile, **boto_kwargs)
+                try:
+                    await boto_crud_call(client.create_login_profile, **boto_kwargs)
+                except:  # noqa: E722
+                    # to make sure boto_kwargs do not get accidentally print out because
+                    # it contains password materials.
+                    log.error(
+                        "something update_login_profile and create_login_profile crash"
+                    )
+                    raise RuntimeError(
+                        "something update_login_profile and create_login_profile crash"
+                    )
 
+        # Really gross but need to avoid EntityTemporarilyUnmodifiable error
+        await asyncio.sleep(15)
         await asyncio.gather(
             *[
                 _update_or_create_user_password(aws_account)

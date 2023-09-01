@@ -7,6 +7,7 @@ from functional_tests.aws.managed_policy.utils import (
 )
 from functional_tests.aws.role.utils import get_modifiable_role
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+from iambic.core import noq_json as json
 from iambic.core.utils import aio_wrapper
 from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.iam.policy.utils import (
@@ -85,6 +86,11 @@ class CreateManagedPolicyTestCase(IsolatedAsyncioTestCase):
         self.template.excluded_accounts = []
         changes = await self.template.apply(IAMBIC_TEST_DETAILS.config.aws)
         screen_render_resource_changes([changes])
+        self.assertEqual(
+            len(changes.exceptions_seen),
+            0,
+            f"Exceptions detected: {json.dumps(changes.dict())}",
+        )
 
         role = await get_modifiable_role(iam_client)
         role_name = role["RoleName"]
