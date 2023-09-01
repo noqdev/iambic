@@ -69,7 +69,10 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
         self.template.properties.description = "{0}_bad_input".format(
             self.template.properties.description
         )  # good input
-        self.template.properties.tags = [Tag(key="*", value="")]  # bad input
+        self.template.properties.tags = [
+            Tag(key="a", value=""),
+            Tag(key="a", value=""),
+        ]  # bad input because you cannot have repeating tag
         try:
             template_change_details = await self.template.apply(
                 IAMBIC_TEST_DETAILS.config.aws

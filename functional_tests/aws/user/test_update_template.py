@@ -60,7 +60,10 @@ class UpdateUserTestCase(IsolatedAsyncioTestCase):
     # tag None string value is not acceptable
     async def test_update_tag_with_bad_input(self):
         self.template.properties.path = "/engineering/"  # good input
-        self.template.properties.tags = [Tag(key="*", value="")]  # bad input
+        self.template.properties.tags = [
+            Tag(key="a", value=""),
+            Tag(key="a", value=""),
+        ]  # bad input because you cannot have repeating tag
         template_change_details = await self.template.apply(
             IAMBIC_TEST_DETAILS.config.aws
         )

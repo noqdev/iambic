@@ -7,9 +7,10 @@ from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 import boto3
 import botocore
+import regex
 from aws_error_utils.aws_error_utils import errors
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Extra, Field, constr, validator
+from pydantic import Extra, Field, ValidationError, constr, validator
 from ruamel.yaml import YAML, yaml_object
 
 from iambic.core.context import ctx
@@ -156,9 +157,16 @@ class AccessModel(AccessModelMixin, BaseModel):
         self.excluded_orgs = value
 
 
+# From https://docs.aws.amazon.com/IAM/latest/APIReference/API_Tag.html
+# have to regex instead of re due to re still does not support unicode properties
+# AWS docs publish the unicode properties pattern
+TAG_KEY_REGEX = regex.compile(r"[\p{L}\p{Z}\p{N}_.:/=+\-@]+")
+TAG_VALUE_REGEX = regex.compile(r"[\p{L}\p{Z}\p{N}_.:/=+\-@]*")
+
+
 class Tag(ExpiryModel, AccessModel):
-    key: str
-    value: str
+    key: str = Field(..., min_length=1, max_length=128)
+    value: str = Field(..., min_length=0, max_length=256)
 
     @property
     def resource_type(self):
@@ -167,6 +175,22 @@ class Tag(ExpiryModel, AccessModel):
     @property
     def resource_id(self):
         return f"{self.key}:{self.value}"
+
+    @validator("key")
+    def validate_tag_key(cls, v):
+        m = TAG_KEY_REGEX.search(v)
+        if m and m.group() == v:
+            return v
+        else:
+            raise ValidationError(f"{v} does not match {TAG_KEY_REGEX}")
+
+    @validator("value")
+    def validate_tag_value(cls, v):
+        m = TAG_VALUE_REGEX.search(v)
+        if m and m.group() == v:
+            return v
+        else:
+            raise ValidationError(f"{v} does not match {TAG_VALUE_REGEX}")
 
 
 class BaseAWSAccountAndOrgModel(PydanticBaseModel):

@@ -37,7 +37,10 @@ class ManagedPolicyUpdateTestCase(IsolatedAsyncioTestCase):
 
     # tag None string value is not acceptable
     async def test_update_tag_with_bad_input(self):
-        self.template.properties.tags = [Tag(key="*", value="")]  # bad input
+        self.template.properties.tags = [
+            Tag(key="a", value=""),
+            Tag(key="a", value=""),
+        ]  # bad input because no repeating tag
         template_change_details = await self.template.apply(
             IAMBIC_TEST_DETAILS.config.aws,
         )

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pytest
+from pydantic import ValidationError
+
 from iambic.core.template_generation import merge_model
 from iambic.plugins.v0_1_0.aws.iam.user.models import Group, UserProperties
 
@@ -64,6 +67,21 @@ def test_user_properties_sorting():
     )
     assert properties.groups[0].group_name == "bar"
     assert properties.groups[1].group_name == "baz"
+
+
+def test_user_properties_tags_too_many_tags():
+    tags_1 = [
+        {"key": "apple", "value": "red"},
+    ] * 51
+    with pytest.raises(ValidationError):
+        assert UserProperties(user_name="foo", tags=tags_1)
+
+
+def test_user_properties_tags_max_tags():
+    tags_1 = [
+        {"key": "apple", "value": "red"},
+    ] * 50
+    assert UserProperties(user_name="foo", tags=tags_1)
 
 
 def test_user_path_validation():

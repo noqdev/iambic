@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import json
 
+import pytest
+from pydantic import ValidationError
+
 from iambic.core.template_generation import merge_model
 from iambic.plugins.v0_1_0.aws.iam.policy.models import (
     ManagedPolicyDocument,
@@ -161,6 +164,23 @@ def test_policy_path_validation():
     )  # double check the list is reversed because validation doesn't happen after creation
     properties_1.validate_model_afterward()
     assert properties_1.path == path_1
+
+
+def test_policy_properties_tags_too_many_tags():
+    tags_1 = [
+        {"key": "apple", "value": "red"},
+    ] * 51
+    with pytest.raises(ValidationError):
+        assert ManagedPolicyProperties(
+            policy_name="foo", tags=tags_1, policy_document={}
+        )
+
+
+def test_policy_properties_tags_max_tags():
+    tags_1 = [
+        {"key": "apple", "value": "red"},
+    ] * 50
+    assert ManagedPolicyProperties(policy_name="foo", tags=tags_1, policy_document={})
 
 
 def test_description_validation():
