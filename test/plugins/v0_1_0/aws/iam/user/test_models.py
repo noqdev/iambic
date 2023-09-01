@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from iambic.core.template_generation import merge_model
-from iambic.plugins.v0_1_0.aws.iam.user.models import Group, UserProperties
+from iambic.plugins.v0_1_0.aws.iam.user.models import Credentials, Group, UserProperties
 
 
 def test_merge_group(aws_accounts):
@@ -50,6 +50,72 @@ def test_merge_user_properties(aws_accounts):
         == existing_properties.groups[0].expires_at
     )
     assert merged_properties.groups[1].group_name == "baz"
+
+
+def test_access_keys_sorting_with_none():
+    access_keys = None
+    credentials = Credentials(
+        access_keys=access_keys,
+    )
+    # because 123 is before ABC
+    assert credentials.access_keys is None
+
+
+def test_access_keys_sorting():
+    access_keys = [
+        {
+            "id": "ABC",
+            "enabled": True,
+            "last_used": "Never",
+        },
+        {
+            "id": "123",
+            "enabled": True,
+            "last_used": "Never",
+        },
+    ]
+    credentials = Credentials(
+        access_keys=access_keys,
+    )
+    # because 123 is before ABC
+    assert credentials.access_keys[0].id == "123"
+    assert credentials.access_keys[1].id == "ABC"
+
+
+def test_credentials_sorting():
+    credentials = [
+        {"included_accounts": ["account_b"]},
+        {"included_accounts": ["account_a"]},
+    ]
+    properties = UserProperties(
+        user_name="foo",
+        credentials=credentials,
+    )
+
+    # because account_a is before account_b
+    assert properties.credentials[0].included_accounts[0] == "account_a"
+    assert properties.credentials[1].included_accounts[0] == "account_b"
+
+
+def test_credentials_sorting_with_single_credential():
+    credential = {"included_accounts": ["account_a"]}
+    properties = UserProperties(
+        user_name="foo",
+        credentials=credential,
+    )
+
+    # because account_a is before account_b
+    assert properties.credentials.included_accounts[0] == "account_a"
+
+
+def test_credentials_sorting_with_no_credential():
+    properties = UserProperties(
+        user_name="foo",
+        credentials=None,
+    )
+
+    # because account_a is before account_b
+    assert properties.credentials is None
 
 
 def test_user_properties_sorting():

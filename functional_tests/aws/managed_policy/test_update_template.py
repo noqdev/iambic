@@ -7,6 +7,7 @@ from functional_tests.aws.managed_policy.utils import (
     generate_managed_policy_template_from_base,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core import noq_json as json
 from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.models import Tag
@@ -20,8 +21,14 @@ class ManagedPolicyUpdateTestCase(IsolatedAsyncioTestCase):
         self.all_account_ids = [
             account.account_id for account in IAMBIC_TEST_DETAILS.config.aws.accounts
         ]
-        # only test the first two accounts for speed
-        self.template.included_accounts = self.all_account_ids[0:2]
+        # Only include the template in half the accounts
+        # Make the accounts explicit so it's easier to validate account scoped tests
+        self.template.included_accounts = self.all_account_ids[:2]
+        template_change_details = await self.template.apply(
+            IAMBIC_TEST_DETAILS.config.aws
+        )
+        if len(template_change_details.exceptions_seen) > 0:
+            raise RuntimeError(json.dumps(template_change_details.dict(), indent=2))
 
     async def asyncTearDown(self):
         if os.path.exists(self.template.file_path):
@@ -42,5 +49,8 @@ class ManagedPolicyUpdateTestCase(IsolatedAsyncioTestCase):
         self.assertGreater(
             len(template_change_details.exceptions_seen),
             0,
-            json.dumps(template_change_details.dict()),
+            json.dumps(
+                template_change_details.dict(),
+                indent=2,
+            ),
         )

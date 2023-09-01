@@ -482,7 +482,7 @@ async def apply_user_credentials(
     password_currently_enabled = current_credentials["Password"]["Enabled"]
     template_access_key_map = {
         access_key["Id"]: access_key
-        for access_key in template_credentials["AccessKeys"]
+        for access_key in template_credentials.get("AccessKeys", [])
     }
     current_access_key_map = {
         access_key["Id"]: access_key for access_key in current_credentials["AccessKeys"]
