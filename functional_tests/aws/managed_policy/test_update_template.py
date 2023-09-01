@@ -25,9 +25,7 @@ class ManagedPolicyUpdateTestCase(IsolatedAsyncioTestCase):
         ]
         # Only include the template in half the accounts
         # Make the accounts explicit so it's easier to validate account scoped tests
-        cls.template.included_accounts = cls.all_account_ids[
-            : len(cls.all_account_ids) // 2
-        ]
+        cls.template.included_accounts = cls.all_account_ids[:2]
         template_change_details = asyncio.run(
             cls.template.apply(IAMBIC_TEST_DETAILS.config.aws)
         )
