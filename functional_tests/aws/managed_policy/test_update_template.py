@@ -28,7 +28,14 @@ class ManagedPolicyUpdateTestCase(IsolatedAsyncioTestCase):
         cls.template.included_accounts = cls.all_account_ids[
             : len(cls.all_account_ids) // 2
         ]
-        asyncio.run(cls.template.apply(IAMBIC_TEST_DETAILS.config.aws))
+        template_change_details = asyncio.run(
+            cls.template.apply(IAMBIC_TEST_DETAILS.config.aws)
+        )
+        cls.assertEqual(
+            len(template_change_details.exceptions_seen),
+            0,
+            json.dumps(template_change_details.dict()),
+        )
 
     @classmethod
     def tearDownClass(cls):
