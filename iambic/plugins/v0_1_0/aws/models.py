@@ -166,8 +166,8 @@ TAG_VALUE_REGEX = regex.compile(r"[\p{L}\p{Z}\p{N}_.:/=+\-@]*")
 
 
 class Tag(ExpiryModel, AccessModel):
-    key: str = Field(min_length=1, max_length=128)
-    value: str = Field(min_length=0, max_length=256)
+    key: str
+    value: str
 
     @property
     def resource_type(self):
@@ -182,7 +182,7 @@ class Tag(ExpiryModel, AccessModel):
         strip_out_vars = strip_out_variables(v)
         strip_out_vars_len = len(strip_out_vars)
 
-        if strip_out_vars_len == 0:
+        if strip_out_vars != v and strip_out_vars_len == 0:
             # if stripping out variables, we have no data
             # there is no much we can validate until plan time
             return v
