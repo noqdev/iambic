@@ -30,7 +30,15 @@ import dateparser
 from deepdiff.model import PrettyOrderedSet
 from git import Repo
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Extra, Field, root_validator, schema, validate_model, validator
+from pydantic import (
+    Extra,
+    Field,
+    ValidationError,
+    root_validator,
+    schema,
+    validate_model,
+    validator,
+)
 from pydantic.fields import ModelField
 
 from iambic.core import noq_json as json
@@ -304,7 +312,15 @@ class BaseModel(IambicPydanticBaseModel):
     def apply_resource_dict(self, provider_child: Type[ProviderChild]) -> dict:
         response = self._apply_resource_dict(provider_child)
         data = get_rendered_template_str_value(json.dumps(response), provider_child)
-        return json.loads(data)
+        python_data = json.loads(data)
+        try:
+            # at this point, we may have violate validation. so we need to validate again
+            # only the properties because this method only has context of the properties resource
+            self.properties.__class__(**python_data)
+        except ValidationError:
+            log.exception("post variable substitution lead to ValidationError")
+            raise
+        return python_data
 
     async def remove_expired_resources(self):
         # Look at current model and recurse through submodules to see if it is a subclass of ExpiryModel
