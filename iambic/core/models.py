@@ -6,6 +6,7 @@ import glob
 import inspect
 import itertools
 import os
+import re
 import typing
 from enum import Enum
 from hashlib import md5
@@ -71,6 +72,15 @@ def field_schema(field: ModelField, **kwargs: Any) -> Any:
 
 original_field_schema = schema.field_schema
 schema.field_schema = field_schema
+
+
+# use to represent IAMbic var regex
+VARIABLE_REGEX = re.compile(r"\{\{var\.[\w_]+\}}")
+
+
+def strip_out_variables(s: str) -> str:
+    """use this to strip out variable before typical validation"""
+    return VARIABLE_REGEX.sub("", s)
 
 
 class IambicPydanticBaseModel(PydanticBaseModel):

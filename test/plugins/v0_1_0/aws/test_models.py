@@ -46,3 +46,7 @@ def test_invalid_tag_with_value_too_long():
 
 def test_valid_tag_with_max_value_length():
     assert Tag(key="a", value="a" * 256)
+
+
+def test_variable_on_tag_key():
+    assert Tag(key="{{var.account_name}}", value="")
