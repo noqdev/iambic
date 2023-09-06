@@ -278,6 +278,8 @@ class ManagedPolicyProperties(BaseModel):
     tags: Optional[List[Tag]] = Field(
         [],
         description="List of tags attached to the role",
+        # https://docs.aws.amazon.com/IAM/latest/APIReference/API_TagPolicy.html
+        max_items=50,
     )
 
     @property

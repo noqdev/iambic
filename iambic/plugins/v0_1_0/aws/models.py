@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 import boto3
 import botocore
+import regex
 from aws_error_utils.aws_error_utils import errors
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Extra, Field, constr, validator
@@ -26,6 +27,7 @@ from iambic.core.models import (
     ProviderChild,
     TemplateChangeDetails,
     Variable,
+    strip_out_variables,
 )
 from iambic.core.utils import (
     NoqSemaphore,
@@ -156,6 +158,13 @@ class AccessModel(AccessModelMixin, BaseModel):
         self.excluded_orgs = value
 
 
+# From https://docs.aws.amazon.com/IAM/latest/APIReference/API_Tag.html
+# have to regex instead of re due to re still does not support unicode properties
+# AWS docs publish the unicode properties pattern
+TAG_KEY_REGEX = regex.compile(r"[\p{L}\p{Z}\p{N}_.:/=+\-@]+")
+TAG_VALUE_REGEX = regex.compile(r"[\p{L}\p{Z}\p{N}_.:/=+\-@]*")
+
+
 class Tag(ExpiryModel, AccessModel):
     key: str
     value: str
@@ -167,6 +176,56 @@ class Tag(ExpiryModel, AccessModel):
     @property
     def resource_id(self):
         return f"{self.key}:{self.value}"
+
+    @validator("key")
+    def validate_tag_key(cls, v):
+        strip_out_vars = strip_out_variables(v)
+        strip_out_vars_len = len(strip_out_vars)
+
+        if strip_out_vars != v and strip_out_vars_len == 0:
+            # if stripping out variables, we have no data
+            # there is no much we can validate until plan time
+            return v
+
+        # can only check for min there is no variables
+        if strip_out_vars == v and strip_out_vars_len < 1:
+            raise ValueError(f"{v} must at least be 1 character")
+
+        if strip_out_vars_len > 128:
+            # we cannot use the pydantic max_length
+            # because that does not deal with IAMbic variables
+            raise ValueError(f"{v} would exceed 128 chars")
+
+        m = TAG_KEY_REGEX.search(strip_out_vars)
+        if m and m.group() == strip_out_vars:
+            # make sure to maintain the variables
+            # for plan time validation
+            return v
+        else:
+            raise ValueError(f"{v} does not match {TAG_KEY_REGEX}")
+
+    @validator("value")
+    def validate_tag_value(cls, v):
+        strip_out_vars = strip_out_variables(v)
+        strip_out_vars_len = len(strip_out_vars)
+
+        if strip_out_vars_len == 0:
+            # if stripping out variables, we have no data
+            # there is no much we can validate until plan time
+            return v
+
+        if strip_out_vars_len > 256:
+            # we cannot use the pydantic max_length
+            # because that does not deal with IAMbic variables
+            raise ValueError(f"{v} would exceed 256 chars")
+
+        m = TAG_VALUE_REGEX.search(strip_out_vars)
+        if m and m.group() == strip_out_vars:
+            # make sure to maintain the variables
+            # for plan time validation
+            return v
+        else:
+            raise ValueError(f"{v} does not match {TAG_VALUE_REGEX}")
 
 
 class BaseAWSAccountAndOrgModel(PydanticBaseModel):

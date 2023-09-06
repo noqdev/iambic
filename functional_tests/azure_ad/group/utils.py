@@ -19,14 +19,14 @@ from iambic.plugins.v0_1_0.azure_ad.group.template_generation import (
 def generate_group_template() -> AzureActiveDirectoryGroupTemplate:
     group_dir = os.path.join(
         IAMBIC_TEST_DETAILS.template_dir_path,
-        "resources/azure_ad/group/noq_dev",
+        "resources/azure_ad/group/iambic",
     )
     os.makedirs(group_dir, exist_ok=True)
     identifier = str(random.randint(0, 10000))
     file_path = os.path.join(group_dir, f"iambic_functional_test_{identifier}.yaml")
     group_template = f"""
 template_type: NOQ::AzureAD::Group
-idp_name: noq_dev
+idp_name: iambic
 properties:
   name: Fn Test Group {identifier}
   description: This is the group for running functional tests

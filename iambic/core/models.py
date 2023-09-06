@@ -6,6 +6,7 @@ import glob
 import inspect
 import itertools
 import os
+import re
 import typing
 from enum import Enum
 from hashlib import md5
@@ -71,6 +72,15 @@ def field_schema(field: ModelField, **kwargs: Any) -> Any:
 
 original_field_schema = schema.field_schema
 schema.field_schema = field_schema
+
+
+# use to represent IAMbic var regex
+VARIABLE_REGEX = re.compile(r"\{\{var\.[\w_]+\}}")
+
+
+def strip_out_variables(s: str) -> str:
+    """use this to strip out variable before typical validation"""
+    return VARIABLE_REGEX.sub("", s)
 
 
 class IambicPydanticBaseModel(PydanticBaseModel):
@@ -294,6 +304,13 @@ class BaseModel(IambicPydanticBaseModel):
     def apply_resource_dict(self, provider_child: Type[ProviderChild]) -> dict:
         response = self._apply_resource_dict(provider_child)
         data = get_rendered_template_str_value(json.dumps(response), provider_child)
+        # TODO data has not been re-validated after variable substitution.
+        # Unfortunately, _apply_resource_dict is not totally reversible back into a
+        # pydantic model for validation. Next phase of improvement should consider
+        # how to validate the post variable substitute and feed it to validation.
+        # for example, if a tag value is simply {{var.account_name}} and the account_name
+        # contains invalid character, plan time validation is not possible because
+        # it is no longer reversible.
         return json.loads(data)
 
     async def remove_expired_resources(self):
