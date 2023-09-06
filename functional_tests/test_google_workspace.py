@@ -5,6 +5,8 @@ import os
 import time
 import uuid
 
+import pytest
+
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.models import ProposedChangeType
 from iambic.core.parser import load_templates
@@ -15,6 +17,9 @@ from iambic.plugins.v0_1_0.google_workspace.group.models import (
 )
 
 
+@pytest.mark.skip(
+    reason="We no longer has an available google workspace testing account"
+)
 def test_google():
     random_uuid = uuid.uuid4()
     iambic_functional_test_group_yaml = f"""template_type: NOQ::GoogleWorkspace::Group
