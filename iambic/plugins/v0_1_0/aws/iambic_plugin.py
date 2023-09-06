@@ -40,7 +40,7 @@ def get_aws_templates():
     ]
 
 
-class ImportAction(Enum):
+class ImportAction(str, Enum):
     ignore = "ignore"
     set_import_only = "set_import_only"
 
@@ -76,6 +76,14 @@ class AWSConfig(ConfigMixin, BaseModel):
     accounts: list[AWSAccount] = Field(
         [], description="A list of AWS Accounts to be managed by iambic"
     )
+    enable_iam_user_credentials: Optional[bool] = Field(
+        default=True,
+        description="If true, IAM User templates will include "
+        "summary info of the user password and access keys. "
+        "It will also allow iambic to delete a user passwords and disable access keys. "
+        "Enabling IAM user access keys from iambic is not currently supported until "
+        "a secure way to store generated credentials is implemented.",
+    )
     min_accounts_required_for_wildcard_included_accounts: int = Field(
         3,
         description=(
@@ -91,8 +99,27 @@ class AWSConfig(ConfigMixin, BaseModel):
             "If true, it will restrict IAMbic capability in AWS"
         ),
     )
-    import_rules: list[ImportRule] = Field(
-        [],
+    import_rules: Optional[list[ImportRule]] = Field(
+        [
+            ImportRule(
+                match_paths=[
+                    # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/service-role.html
+                    "/service-role/*",
+                    # https://docs.aws.amazon.com/IAM/latest/UserGuide/using-service-linked-roles.html
+                    "/aws-service-role/*",
+                    # https://docs.aws.amazon.com/singlesignon/latest/userguide/using-service-linked-roles.html
+                    "/aws-reserved/*",
+                ],
+                action=ImportAction.set_import_only,
+            ),
+            ImportRule(
+                match_names=[
+                    # https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_access.html#orgs_manage_accounts_access-cross-account-role
+                    "OrganizationAccountAccessRole",
+                ],
+                action=ImportAction.set_import_only,
+            ),
+        ],
         description=("A list of rules to determine which resources to import from AWS"),
     )
 

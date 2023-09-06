@@ -20,6 +20,7 @@ from iambic.core.utils import plugin_apply_wrapper, remove_expired_resources
 from iambic.plugins.v0_1_0.aws.iam.models import Path, PermissionBoundary
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.user.utils import (
+    apply_user_credentials,
     apply_user_groups,
     apply_user_inline_policies,
     apply_user_managed_policies,
@@ -57,13 +58,81 @@ class Group(ExpiryModel, AccessModel):
         return self.group_name
 
 
+class UserPassword(BaseModel):
+    enabled: bool = Field(
+        description="Whether the password is enabled. "
+        "If false, the field cannot be set to true through IAMbic.",
+    )
+    last_used: str = Field(
+        description="A read-only human readable value that indicates when the password was last used.",
+    )
+
+    @property
+    def resource_type(self):
+        return "aws:iam:user:credentials:password"
+
+    @property
+    def resource_id(self):
+        return "password"
+
+
+class AccessKey(BaseModel):
+    id: str = Field(
+        description="The AccessKeyId.",
+    )
+    enabled: bool = Field(
+        description="Whether the first access key is enabled. "
+        "If false, the field cannot be set to true through IAMbic.",
+    )
+    last_used: str = Field(
+        description="A read-only human readable value that indicates when the access key was last used.",
+    )
+
+    @property
+    def resource_type(self):
+        return "aws:iam:user:credentials:access_key"
+
+    @property
+    def resource_id(self):
+        return self.id
+
+
+class Credentials(AccessModel):
+    password: Optional[UserPassword] = Field(
+        description="Information about the user's password.",
+    )
+    access_keys: Optional[list[AccessKey]] = Field(
+        description="A list of the users access keys."
+    )
+
+    @validator("access_keys")
+    def sort_access_keys(cls, v: Optional[list[AccessKey]]):
+        # access key is by nature unique, so use it for sorting
+        if v is None:
+            return v
+        sorted_v = sorted(v, key=lambda access_key: access_key.id)
+        return sorted_v
+
+    @property
+    def resource_type(self):
+        return "aws:iam:user:credentials"
+
+    @property
+    def resource_id(self):
+        return "credentials"
+
+
 class UserProperties(BaseModel):
     user_name: str = Field(
         description="Name of the user",
     )
+    credentials: Optional[Union[Credentials, list[Credentials]]] = Field(
+        None,
+        description="A summary of which credentials have been enabled for the user",
+    )
     path: Optional[Union[str, list[Path]]] = "/"
     permissions_boundary: Optional[
-        Union[None, PermissionBoundary, list[PermissionBoundary]]
+        Union[PermissionBoundary, list[PermissionBoundary]]
     ] = None
     tags: Optional[list[Tag]] = Field(
         [],
@@ -96,6 +165,24 @@ class UserProperties(BaseModel):
             return f"{getattr(obj, attribute_name)}!{obj.access_model_sort_weight()}"
 
         return _sort_func
+
+    @classmethod
+    def sort_by_access_model(cls, m):
+        return m.access_model_sort_weight()
+
+    @validator("credentials")
+    def sort_credentials(cls, v: Optional[Union[Credentials, list[Credentials]]]):
+        # credentials typically have 2 categories
+        # 1 is no access key enabled, the other is access key
+        # those with access key are unique, so it will only have
+        # one included account. so a naive sort is just by the
+        # access model sort weight
+        if v is None:
+            return v
+        elif isinstance(v, Credentials):
+            return v
+        sorted_v = sorted(v, key=cls.sort_by_access_model)
+        return sorted_v
 
     @validator("tags")
     def sort_tags(cls, v: list[Tag]):
@@ -182,7 +269,13 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
         )
         deleted = self.get_attribute_val_for_account(aws_account, "deleted", False)
         current_user = await get_user(
-            user_name, client, include_policies=bool(not deleted)
+            user_name,
+            client,
+            bool(not deleted),
+            bool(
+                not deleted
+                and getattr(aws_account, "enable_iam_user_credentials", False)
+            ),
         )
         if current_user:
             account_change_details.current_value = {**current_user}  # Create a new dict
@@ -225,6 +318,7 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
         inline_policies = account_user.pop("InlinePolicies", [])
         managed_policies = account_user.pop("ManagedPolicies", [])
         groups = account_user.pop("Groups", [])
+        credentials = account_user.pop("Credentials", {})
         existing_inline_policies = current_user.pop("InlinePolicies", [])
         existing_managed_policies = current_user.pop("ManagedPolicies", [])
         existing_groups = current_user.pop("Groups", [])
@@ -245,6 +339,12 @@ class AwsIamUserTemplate(AWSTemplate, AccessModel):
                         client,
                         account_user.get("PermissionsBoundary", {}),
                         current_user.get("PermissionsBoundary", {}),
+                        log_params,
+                    ),
+                    apply_user_credentials(
+                        user_name,
+                        client,
+                        credentials,
                         log_params,
                     ),
                 ]
