@@ -151,7 +151,7 @@ async def generate_user_resource_file_for_all_accounts(
 ) -> list:
     async def get_user_for_account(aws_account: AWSAccount):
         iam_client = await aws_account.get_boto3_client("iam")
-        return {aws_account.account_id: await get_user(user_name, iam_client)}
+        return {aws_account.account_id: await get_user(user_name, iam_client, as_dict=True)}
 
     account_resource_dir_map = {
         aws_account.account_id: get_response_dir(exe_message, aws_account)

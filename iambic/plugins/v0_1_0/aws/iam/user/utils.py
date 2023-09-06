@@ -88,7 +88,7 @@ async def get_user_managed_policies(user_name: str, iam_client) -> list[dict[str
     return [{"PolicyArn": policy["PolicyArn"]} for policy in policies]
 
 
-async def get_user(user_name: str, iam_client, include_policies: bool = True) -> dict:
+async def get_user(user_name: str, iam_client, include_policies: bool = True, as_dict=False) -> dict:
     try:
         current_user = (await boto_crud_call(iam_client.get_user, UserName=user_name))[
             "User"
@@ -101,7 +101,7 @@ async def get_user(user_name: str, iam_client, include_policies: bool = True) ->
                 user_name, iam_client, as_dict=False
             )
             current_user["Groups"] = await get_user_groups(
-                user_name, iam_client, as_dict=False
+                user_name, iam_client, as_dict=as_dict
             )
     except iam_client.exceptions.NoSuchEntityException:
         current_user = {}
