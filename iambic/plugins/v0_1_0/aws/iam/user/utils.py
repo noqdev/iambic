@@ -250,6 +250,7 @@ async def get_user(
     iam_client,
     include_policies: bool,
     include_credentials: bool,
+    as_dict: bool = False,
 ) -> dict:
     try:
         current_user = (await boto_crud_call(iam_client.get_user, UserName=user_name))[
@@ -263,7 +264,7 @@ async def get_user(
                 user_name, iam_client, as_dict=False
             )
             current_user["Groups"] = await get_user_groups(
-                user_name, iam_client, as_dict=False
+                user_name, iam_client, as_dict=as_dict
             )
         if include_credentials:
             current_user["Credentials"] = await get_user_credentials(

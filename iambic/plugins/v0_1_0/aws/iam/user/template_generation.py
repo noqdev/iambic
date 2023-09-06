@@ -159,6 +159,7 @@ async def generate_user_resource_file_for_all_accounts(
                 iam_client,
                 True,
                 getattr(aws_account, "enable_iam_user_credentials", False),
+                as_dict=True,
             )
         }
 
