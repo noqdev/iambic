@@ -67,7 +67,8 @@ def format_validation_error(err, ruamel_dict):
                     lines.append(f"Missing Field: `{canonical_key}`")
             if error["type"].startswith("type_error"):
                 line_num = resolve_location(error["loc"], ruamel_dict)
-                canonical_key = str.lower(".".join(error["loc"]))
+                part_loc_list = [str(x) for x in error["loc"]]
+                canonical_key = str.lower(".".join(part_loc_list))
                 lines.append(f"line {line_num+1}: `{canonical_key}` has type issue")
         return "\n".join(lines)
     except Exception:

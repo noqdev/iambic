@@ -137,6 +137,8 @@ class UserProperties(BaseModel):
     tags: Optional[list[Tag]] = Field(
         [],
         description="List of tags attached to the user",
+        # https://docs.aws.amazon.com/IAM/latest/APIReference/API_TagUser.html
+        max_items=50,
     )
     groups: Optional[list[Group]] = Field(
         [],

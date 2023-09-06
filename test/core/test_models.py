@@ -14,7 +14,7 @@ from git.diff import Diff
 import iambic.plugins.v0_1_0.example
 from iambic.config.dynamic_config import load_config
 from iambic.core.iambic_enum import IambicManaged
-from iambic.core.models import BaseTemplate, ExpiryModel
+from iambic.core.models import BaseTemplate, ExpiryModel, strip_out_variables
 from iambic.core.parser import load_templates
 from iambic.core.template_generation import merge_model
 
@@ -249,3 +249,21 @@ async def test_get_body(templates_repo: tuple[str, str]):
     assert template_lines[0] == "# comment line 1"
     assert template_lines[1] == "template_type: NOQ::Example::LocalFile"
     assert template_lines[2] == "template_schema_url: test_url"
+
+
+def test_var_regex():
+    example = "{{var.account_name}}"
+    result = strip_out_variables(example)
+    assert result == ""
+
+
+def test_var_regex_multiple_vars():
+    example = "{{var.account_name}} foo {{var.account_name}}"
+    result = strip_out_variables(example)
+    assert result == " foo "
+
+
+def test_var_regex_multiple_vars_no_underscore():
+    example = "{{var.hello}} foo {{var.var}}"
+    result = strip_out_variables(example)
+    assert result == " foo "

@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 import pytest
+from pydantic import ValidationError
 
 from iambic.core.template_generation import merge_model
 from iambic.core.utils import IAMBIC_ERR_MSG
@@ -651,6 +652,21 @@ def test_merge_role_with_multiple_access_removals(aws_accounts: list[AWSAccount]
                 sorted(inline_policy.statement[0].action)
                 == sorted(dev_statement[0]["action"])
             )
+
+
+def test_role_properties_tags_too_many_tags():
+    tags_1 = [
+        {"key": "apple", "value": "red"},
+    ] * 51
+    with pytest.raises(ValidationError):
+        assert RoleProperties(role_name="foo", tags=tags_1)
+
+
+def test_role_properties_tags_max_tags():
+    tags_1 = [
+        {"key": "apple", "value": "red"},
+    ] * 50
+    assert RoleProperties(role_name="foo", tags=tags_1)
 
 
 def test_role_properties_tags():
