@@ -10,15 +10,16 @@ from iambic.plugins.v0_1_0.azure_ad.user.models import AzureActiveDirectoryUserT
 def generate_user_template() -> AzureActiveDirectoryUserTemplate:
     user_dir = os.path.join(
         IAMBIC_TEST_DETAILS.template_dir_path,
-        "resources/azure_ad/user/noq_dev",
+        "resources/azure_ad/user/iambic",
     )
     os.makedirs(user_dir, exist_ok=True)
     identifier = str(random.randint(0, 10000))
     file_path = os.path.join(user_dir, f"iambic_functional_test_{identifier}.yaml")
-    username = f"iambic_functional_test_user_{identifier}@noq.dev"
+    # Note: iambicorg.onmicrosoft.com suffix is due to the azure ad setup
+    username = f"iambic_functional_test_user_{identifier}@iambicorg.onmicrosoft.com"
     user_template = f"""
 template_type: NOQ::AzureAD::User
-idp_name: noq_dev
+idp_name: iambic
 properties:
   display_name: Functional Test User {identifier}
   given_name: Fnc Test {identifier}
