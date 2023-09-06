@@ -30,15 +30,7 @@ import dateparser
 from deepdiff.model import PrettyOrderedSet
 from git import Repo
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import (
-    Extra,
-    Field,
-    ValidationError,
-    root_validator,
-    schema,
-    validate_model,
-    validator,
-)
+from pydantic import Extra, Field, root_validator, schema, validate_model, validator
 from pydantic.fields import ModelField
 
 from iambic.core import noq_json as json
@@ -312,15 +304,14 @@ class BaseModel(IambicPydanticBaseModel):
     def apply_resource_dict(self, provider_child: Type[ProviderChild]) -> dict:
         response = self._apply_resource_dict(provider_child)
         data = get_rendered_template_str_value(json.dumps(response), provider_child)
-        python_data = json.loads(data)
-        try:
-            # at this point, we may have violate validation. so we need to validate again
-            # only the properties because this method only has context of the properties resource
-            self.properties.__class__(**python_data)
-        except ValidationError:
-            log.exception("post variable substitution lead to ValidationError")
-            raise
-        return python_data
+        # TODO data has not been re-validated after variable substitution.
+        # Unfortunately, _apply_resource_dict is not totally reversible back into a
+        # pydantic model for validation. Next phase of improvement should consider
+        # how to validate the post variable substitute and feed it to validation.
+        # for example, if a tag value is simply {{var.account_name}} and the account_name
+        # contains invalid character, plan time validation is not possible because
+        # it is no longer reversible.
+        return json.loads(data)
 
     async def remove_expired_resources(self):
         # Look at current model and recurse through submodules to see if it is a subclass of ExpiryModel
