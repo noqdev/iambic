@@ -250,7 +250,7 @@ async def get_user(
     iam_client,
     include_policies: bool,
     include_credentials: bool,
-    as_dict: bool = False
+    as_dict: bool = False,
 ) -> dict:
     try:
         current_user = (await boto_crud_call(iam_client.get_user, UserName=user_name))[
