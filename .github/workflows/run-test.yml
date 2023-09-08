@@ -39,6 +39,19 @@ jobs:
           files: cov_unit_tests.xml
           flags: unit_tests
           token: ${{secrets.CODECOV_TOKEN}}
+      - name: prepare all license
+        run: |
+          . env/bin/activate && pip freeze > requirements-all-license-check.txt
+      - name: Check python
+        id: license_check_report
+        uses: pilosus/action-pip-license-checker@v2
+        with:
+          requirements: 'requirements-all-license-check.txt'
+          fail: 'Copyleft'
+          exclude: '(?i)^(pylint|aio[-_]*).*'
+      - name: Print report
+        if: ${{ always() }}
+        run: echo "${{ steps.license_check_report.outputs.report }}"
       - name: Configure AWS Credentials
         if: ${{ github.event.pull_request.head.repo.full_name == 'noqdev/iambic' }}
         uses: aws-actions/configure-aws-credentials@v1
@@ -64,16 +77,3 @@ jobs:
           files: cov_functional_tests_config_discovery.xml
           flags: functional_tests_config_discovery
           token: ${{secrets.CODECOV_TOKEN}}
-      - name: prepare all license
-        run: |
-          . env/bin/activate && pip freeze > requirements-all-license-check.txt
-      - name: Check python
-        id: license_check_report
-        uses: pilosus/action-pip-license-checker@v2
-        with:
-          requirements: 'requirements-all-license-check.txt'
-          fail: 'Copyleft'
-          exclude: '(?i)^(pylint|aio[-_]*).*'
-      - name: Print report
-        if: ${{ always() }}
-        run: echo "${{ steps.license_check_report.outputs.report }}"
