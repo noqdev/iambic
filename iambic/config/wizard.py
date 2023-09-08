@@ -269,7 +269,8 @@ def set_google_subject(default_domain: str = None, default_service: str = None) 
     return {
         "domain": set_required_text_value("What is the Google Domain?", default_domain),
         "service_account": set_required_text_value(
-            "What is the Google Service Account?", default_service
+            "What is the Google Service Account? \n(It should be in full email address format like \nyour-service-account-name@your-project-id.iam.gserviceaccount.com) ",
+            default_service,
         ),
     }
 
