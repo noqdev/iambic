@@ -47,7 +47,8 @@ jobs:
         uses: pilosus/action-pip-license-checker@v2
         with:
           requirements: 'requirements-all-license-check.txt'
-          fail: 'Copyleft'
+          fail: 'StrongCopyleft,NetworkCopyleft'
+          fails-only: true
           exclude: '(?i)^(pylint|aio[-_]*).*'
       - name: Print report
         if: ${{ always() }}
