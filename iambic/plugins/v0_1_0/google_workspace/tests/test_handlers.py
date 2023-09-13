@@ -68,7 +68,13 @@ async def test_import_google_resources():
     ) as mock_collect_project_groups, unittest.mock.patch(
         "iambic.plugins.v0_1_0.google_workspace.handlers.generate_group_templates",
         new_callable=AsyncMock,
-    ) as mock_generate_group_templates:
+    ) as mock_generate_group_templates, unittest.mock.patch(
+        "iambic.plugins.v0_1_0.google_workspace.handlers.collect_project_users",
+        new_callable=AsyncMock,
+    ) as mock_collect_project_users, unittest.mock.patch(
+        "iambic.plugins.v0_1_0.google_workspace.handlers.generate_user_templates",
+        new_callable=AsyncMock,
+    ) as mock_generate_user_templates:
         # Call the import_google_resources function
         await import_google_resources(
             exe_message, config, base_output_dir, messages, remote_worker
@@ -77,5 +83,9 @@ async def test_import_google_resources():
         # Assert that the mocked functions were called with the expected arguments
         mock_collect_project_groups.assert_called()
         mock_generate_group_templates.assert_called_with(
+            exe_message, config, base_output_dir
+        )
+        mock_collect_project_users.assert_called()
+        mock_generate_user_templates.assert_called_with(
             exe_message, config, base_output_dir
         )
