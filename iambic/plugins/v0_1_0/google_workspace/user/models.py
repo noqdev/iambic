@@ -45,6 +45,30 @@ class WorkspaceUser(BaseModel, ExpiryModel):
         description="Holds the given and family names of the user, and the read-only fullName value. The maximum number of characters in the givenName and in the familyName values is 60. In addition, name values support unicode/UTF-8 characters, and can contain spaces, letters (a-z), numbers (0-9), dashes (-), forward slashes (/), and periods (.). For more information about character usage rules, see the administration help center. Maximum allowed data size for this field is 1KB.",
     )
 
+    is_enrolled_in_two_step_verification: Optional[bool] = Field(
+        alias="isEnrolledIn2Sv",
+        description="Output only. Is enrolled in 2-step verification (Read-only)",
+    )
+
+    is_enforced_in_two_step_verification: Optional[bool] = Field(
+        alias="isEnforcedIn2Sv",
+        description="Output only. Is enrolled in 2-step verification (Read-only)",
+    )
+
+    is_admin: Optional[bool] = Field(
+        alias="isAdmin",
+        description="Output only. Indicates a user with super admininistrator privileges. The isAdmin property can only be edited in the Make a user an administrator operation ( makeAdmin method). If edited in the user insert or update methods, the edit is ignored by the API service.",
+    )
+
+    is_delegated_admin: Optional[bool] = Field(
+        alias="isDelegatedAdmin",
+        description="Output only. Indicates if the user is a delegated administrator. Delegated administrators are supported by the API but cannot create or undelete users, or make users administrators. These requests are ignored by the API service. Roles and privileges for administrators are assigned using the Admin console.",
+    )
+
+    suspended: Optional[bool] = Field(
+        description="Indicates if user is suspended.",
+    )
+
     domain: str = Field(
         description="this is not direct from user object from google response, but since user maps to a domain, we need to keep track of this information",
     )
@@ -95,11 +119,15 @@ async def get_user_template(
     # members = await get_group_members(service, group)
 
     file_name = f"{user['primaryEmail'].split('@')[0]}.yaml"
+
+    user_properties = dict(
+        domain=domain,
+        name=user["name"],
+        primary_email=user["primaryEmail"],
+    )
+    user_properties.update(**user)
+
     return GoogleWorkspaceUserTemplate(
         file_path=f"resources/google/users/{domain}/{file_name}",
-        properties=dict(
-            domain=domain,
-            name=user["name"],
-            primary_email=user["primaryEmail"],
-        ),
+        properties=user_properties,
     )
