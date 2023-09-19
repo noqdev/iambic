@@ -123,9 +123,13 @@ def get_google_templates():
     from iambic.plugins.v0_1_0.google_workspace.group.models import (
         GoogleWorkspaceGroupTemplate,
     )
+    from iambic.plugins.v0_1_0.google_workspace.user.models import (
+        GoogleWorkspaceUserTemplate,
+    )
 
     return [
         GoogleWorkspaceGroupTemplate,
+        GoogleWorkspaceUserTemplate,
     ]
 
 
