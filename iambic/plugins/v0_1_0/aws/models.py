@@ -924,7 +924,7 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
     ) -> AccountChangeDetails:
         raise NotImplementedError
 
-    async def apply(self, config: AWSConfig) -> TemplateChangeDetails:
+    async def apply(self, config: AWSConfig) -> TemplateChangeDetails:  # noqa: C901
         tasks = []
         template_changes = TemplateChangeDetails(
             resource_id=self.resource_id,
@@ -935,6 +935,15 @@ class AWSTemplate(BaseTemplate, ExpiryModel):
             resource_type=self.resource_type, resource_id=self.resource_id
         )
         relevant_accounts = []
+
+        # issue #641, to help users to catch that resource is explictly marked
+        # as IMPORT_ONLY. so its easy to understand where is no change from
+        # plan or apply
+        if self.iambic_managed == IambicManaged.IMPORT_ONLY:
+            log_str = "Resource is marked as import only."
+            log.info(log_str, **log_params)
+            template_changes.proposed_changes = []
+            return template_changes
 
         for account in config.accounts:
             if evaluate_on_provider(self, account):
