@@ -150,6 +150,7 @@ async def list_all_apps(okta_organization: OktaOrganization) -> List[App]:
         log.error("Error encountered when listing apps", error=str(err))
         raise Exception("Error encountered when listing apps")
     while resp.has_next():
+        # pagination handling
         async with GlobalRetryController(
             fn_identifier="okta.list_applications"
         ) as retry_controller:
@@ -157,7 +158,7 @@ async def list_all_apps(okta_organization: OktaOrganization) -> List[App]:
         if err:
             log.error("Error encountered when listing apps", error=str(err))
             raise Exception("Error encountered when listing apps")
-        raw_apps.append(next_apps)
+        raw_apps.extend(next_apps)
 
     if not raw_apps:
         return []

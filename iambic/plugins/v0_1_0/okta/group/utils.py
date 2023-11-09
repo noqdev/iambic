@@ -51,6 +51,7 @@ async def list_all_users(okta_organization: OktaOrganization) -> List[User]:
             raise Exception(f"Error listing users: {str(err)}")
 
     while resp.has_next():
+        # pagination handling
         async with GlobalRetryController(
             fn_identifier="okta.list_users"
         ) as retry_controller:
@@ -58,7 +59,7 @@ async def list_all_users(okta_organization: OktaOrganization) -> List[User]:
         if err:
             log.error("Error encountered when listing users", error=str(err))
             raise Exception(f"Error listing users: {str(err)}")
-        users.append(next_users)
+        users.extend(next_users)
 
     if not users:
         return []
@@ -158,6 +159,7 @@ async def list_all_groups(okta_organization: OktaOrganization) -> List[Group]:
             raise Exception(f"Error listing groups: {str(err)}")
 
     while resp.has_next():
+        # pagination handling
         async with GlobalRetryController(
             fn_identifier="okta.list_groups"
         ) as retry_controller:
@@ -165,7 +167,7 @@ async def list_all_groups(okta_organization: OktaOrganization) -> List[Group]:
         if err:
             log.error("Error encountered when listing groups", error=str(err))
             raise Exception(f"Error listing groups: {str(err)}")
-        groups.append(next_groups)
+        groups.extend(next_groups)
 
     if not groups:
         log.info(
