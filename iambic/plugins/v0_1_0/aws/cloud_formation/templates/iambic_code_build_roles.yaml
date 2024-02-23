@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This creates AWS Roles required by the IAMbic git integration to run Lambda using a container image
+Parameters:
+  IambicCodeBuildRoleName:
+    Type: String
+    Default: "iambic_lambda_code_build"
+  IambicECRRepoName:
+    Type: String
+    Default: "iambic-ecr-public/iambic/iambic"
+Resources:
+  IambicCodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Description: Execution role for IAMbic code build
+      MaxSessionDuration: 3600
+      Policies:
+        - PolicyName: code-build
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: "Logging"
+                Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "*"
+              - Sid: "ECRGetAuthToken"
+                Effect: Allow
+                Action:
+                  - "ecr:GetAuthorizationToken"
+                Resource: "*"
+              - Sid: "ECRPull"
+                Effect: Allow
+                Action:
+                  - "ecr:BatchCheckLayerAvailability"
+                  - "ecr:BatchImportUpstreamImage"
+                  - "ecr:BatchGetImage"
+                  - "ecr:GetDownloadUrlForLayer"
+                Resource:
+                  - !Sub "arn:*:ecr:*:*:repository/${IambicECRRepoName}"
+      RoleName: !Ref IambicCodeBuildRoleName
