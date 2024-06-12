@@ -1106,6 +1106,16 @@ class ConfigurationWizard:
                 # need bootstrapping
                 self.boto3_session = boto3.Session(region_name=self.aws_default_region)
                 self.autodetected_org_settings = {}
+                try:
+                    org_client = self.boto3_session.client("organizations")
+                    self.autodetected_org_settings = org_client.describe_organization()[
+                        "Organization"
+                    ]
+                except Exception:
+                    # we are wrapping inside a try-except block because the user
+                    # may not have organization setup yet, so we don't want to
+                    # crash in that case.
+                    pass
 
             default_caller_identity = self.boto3_session.client(
                 "sts", region_name=self.aws_default_region
@@ -1351,17 +1361,25 @@ class ConfigurationWizard:
                 return True
             else:
                 # Currently only 1 org per config is supported.
-                click.echo(
-                    "\nIf you would like to use AWS Organizations, the IAMbic hub account you configured must be the same "
-                    "AWS account as your AWS Organization."
+                log.error(
+                    "If you would like to use AWS Organizations, the IAMbic hub account you"
+                    "\nconfigured must be the same AWS account as your AWS Organization."
+                    "\nPlease follow AWS guide to setup an AWS organization first. If you already have an organization setup,"
+                    "\nmake sure you are using the organization management account before running IAMbic setup"
                 )
-                return questionary.confirm("Is this the case?").unsafe_ask()
+                raise ValueError("Not AWS Organization management account")
 
-        if maybe_prompt():
-            if self.config.aws and self.config.aws.organizations:
-                self.configuration_wizard_aws_organizations_edit()
+        try:
+            if maybe_prompt():
+                if self.config.aws and self.config.aws.organizations:
+                    self.configuration_wizard_aws_organizations_edit()
+                else:
+                    self.configuration_wizard_aws_organizations_add()
+        except ValueError as e:
+            if e.args[0] == "Not AWS Organization management account":
+                return
             else:
-                self.configuration_wizard_aws_organizations_add()
+                raise
 
     def configuration_wizard_aws(self):
         self.setup_aws_configuration()
