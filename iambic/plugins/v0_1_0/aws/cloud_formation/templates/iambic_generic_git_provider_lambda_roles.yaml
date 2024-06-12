@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This creates AWS Roles required by the IAMbic generic git provider integration
+Parameters:
+  IambicHubRoleArn:
+    Type: String
+  IambicWebhookLambdaExecutionRoleName:
+    Type: String
+    Default: "iambic_generic_git_provider_lambda_execution"
+Resources:
+  IambicWebhookLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Description: Execution role for IAMbic Lambda Webhook
+      MaxSessionDuration: 3600
+      Policies:
+        - PolicyName: Lambda
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: "Logging"
+                Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "*"
+              - Sid: "SecretReading"
+                Effect: Allow
+                Action:
+                  - "secretsmanager:GetSecretValue"
+                Resource:
+                  - "arn:aws:secretsmanager:*:*:secret:iambic/generic-git-provider-secrets-*"
+              - Sid: "AssumeRole"
+                Effect: Allow
+                Action:
+                  - "sts:AssumeRole"
+                Resource:
+                  - !Ref IambicHubRoleArn
+      RoleName: !Ref IambicWebhookLambdaExecutionRoleName

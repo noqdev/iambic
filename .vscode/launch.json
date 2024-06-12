@@ -200,6 +200,17 @@
             "justMyCode": true
         },
         {
+            "name": "Iambic: Simulate Generic Git Provider",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/dev_tools/simulate_generic_git_in_aws_lambda/simulate_generic_git.py",
+            "args": [
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "envFile": "${workspaceFolder}/.env",
+        },
+        {
             "name": "Iambic: Simulate Lambda GitHub Webhook",
             "type": "python",
             "request": "launch",

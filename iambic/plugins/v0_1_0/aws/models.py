@@ -59,6 +59,7 @@ IAMBIC_HUB_ROLE_NAME = os.getenv("IAMBIC_HUB_ROLE_NAME", "IambicHubRole")
 IAMBIC_SPOKE_ROLE_NAME = os.getenv("IAMBIC_SPOKE_ROLE_NAME", "IambicSpokeRole")
 IAMBIC_CHANGE_DETECTION_SUFFIX = os.getenv("IAMBIC_CHANGE_DETECTION_SUFFIX", "")
 IAMBIC_GITHUB_APP_SUFFIX = os.getenv("IAMBIC_GITHUB_APP_SUFFIX", "")
+IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX = os.getenv("IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX", "")
 
 
 def get_hub_role_arn(account_id: str, role_name=None) -> str:
