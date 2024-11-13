@@ -516,9 +516,9 @@ class AwsIdentityCenterPermissionSetTemplate(
             account_change_details.current_value = {
                 k: v for k, v in current_permission_set.items() if k not in exclude_keys
             }  # Create a new dict
-            account_change_details.current_value[
-                "AccountAssignments"
-            ] = current_account_assignments
+            account_change_details.current_value["AccountAssignments"] = (
+                current_account_assignments
+            )
 
             if ctx.command == Command.CONFIG_DISCOVERY:
                 # Don't overwrite a resource during config discovery
@@ -844,9 +844,11 @@ class AwsIdentityCenterPermissionSetTemplate(
                     ProposedChange(
                         change_type=ProposedChangeType.UNKNOWN,
                         exceptions_seen=[str(account_change)],
-                        account=relevant_accounts_str[0]
-                        if len(relevant_accounts_str) > 0
-                        else None,  # this is a hack but i don't know of another way
+                        account=(
+                            relevant_accounts_str[0]
+                            if len(relevant_accounts_str) > 0
+                            else None
+                        ),  # this is a hack but i don't know of another way
                         resource_id=self.resource_id,  # this is the closet we can get
                         resource_type=self.resource_type,  # this is the closet we can get
                     )

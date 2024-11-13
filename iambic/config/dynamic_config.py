@@ -281,9 +281,9 @@ class Config(ConfigMixin, BaseTemplate):
         template_provider_map = {}
         for plugin in self.plugin_instances:
             for template in plugin.templates:
-                template_provider_map[
-                    template.__fields__["template_type"].default
-                ] = plugin.config_name
+                template_provider_map[template.__fields__["template_type"].default] = (
+                    plugin.config_name
+                )
 
         # Create a map of the templates to apply to the template's plugin
         plugin_templates = defaultdict(list)

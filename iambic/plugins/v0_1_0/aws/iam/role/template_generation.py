@@ -409,13 +409,13 @@ async def create_templated_role(  # noqa: C901
         role_template_properties["max_session_duration"] = max_session_duration
 
     if assume_role_policy_document_resources:
-        role_template_properties[
-            "assume_role_policy_document"
-        ] = await group_dict_attribute(
-            aws_account_map,
-            num_of_accounts,
-            assume_role_policy_document_resources,
-            prefer_templatized=prefer_templatized,
+        role_template_properties["assume_role_policy_document"] = (
+            await group_dict_attribute(
+                aws_account_map,
+                num_of_accounts,
+                assume_role_policy_document_resources,
+                prefer_templatized=prefer_templatized,
+            )
         )
 
     if permissions_boundary_resources:

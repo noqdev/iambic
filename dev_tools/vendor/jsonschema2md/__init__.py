@@ -1,6 +1,5 @@
 """Convert JSON Schema to Markdown documentation."""
 
-
 from __future__ import annotations
 
 __author__ = "Stéphane Brunner"

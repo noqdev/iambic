@@ -1011,9 +1011,9 @@ async def delete_permission_set(
             ]
         )
     if customer_managed_policy_references:
-        log_params[
-            "customer_managed_policy_references"
-        ] = customer_managed_policy_references
+        log_params["customer_managed_policy_references"] = (
+            customer_managed_policy_references
+        )
         tasks.extend(
             [
                 boto_crud_call(

@@ -117,9 +117,9 @@ def handle_iambic_command(
     github_token: str = context["iambic"]["GH_OVERRIDE_TOKEN"]
     command: str = context["iambic"]["IAMBIC_CLOUD_IMPORT_CMD"]
     github_client = github.Github(github_token)
-    f: Callable[
-        [github.Github, dict[str, Any]], None
-    ] = IAMBIC_CLOUD_IMPORT_DISPATCH_MAP.get(command)
+    f: Callable[[github.Github, dict[str, Any]], None] = (
+        IAMBIC_CLOUD_IMPORT_DISPATCH_MAP.get(command)
+    )
     if f:
         f(github_client, context)
     else:
@@ -727,9 +727,9 @@ def github_app_workflow_wrapper(workflow_func: Callable, ux_op_name: str) -> Cal
                 # It's questionable if we still need to depend on the lambda interface
                 # because lambda interface was created to dynamic populate template config
                 # but templates config is now already stored in the templates repo itself.
-                getattr(
-                    iambic_app, "lambda"
-                ).app.PLAN_OUTPUT_PATH = proposed_changes_path
+                getattr(iambic_app, "lambda").app.PLAN_OUTPUT_PATH = (
+                    proposed_changes_path
+                )
 
             template_changes = workflow_func(
                 repo_url,

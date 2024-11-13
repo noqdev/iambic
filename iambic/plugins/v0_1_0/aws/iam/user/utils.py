@@ -119,9 +119,9 @@ async def get_credential_report(aws_account: AWSAccount) -> dict:
                 user_summaries[row["user"]][key] = {
                     "enabled": is_active,
                 }
-                user_summaries[row["user"]][key][
-                    "last_rotated"
-                ] = parse_report_date_str(row[f"{key}_last_rotated"])
+                user_summaries[row["user"]][key]["last_rotated"] = (
+                    parse_report_date_str(row[f"{key}_last_rotated"])
+                )
 
     return user_summaries
 

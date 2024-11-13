@@ -68,7 +68,7 @@ def output_proposed_changes(
 @click.group()
 @click.version_option(package_name="iambic-core")
 def cli():
-    ...
+    pass
 
 
 @cli.command(short_help="Remove local expired resources")

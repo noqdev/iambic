@@ -254,9 +254,11 @@ class BaseModel(IambicPydanticBaseModel):
             return field.__fields__[split_key[-1]].default
         elif as_boto_dict:
             return [
-                match._apply_resource_dict(provider_child)
-                if hasattr(match, "_apply_resource_dict")
-                else match
+                (
+                    match._apply_resource_dict(provider_child)
+                    if hasattr(match, "_apply_resource_dict")
+                    else match
+                )
                 for match in matching_definitions
             ]
         else:
