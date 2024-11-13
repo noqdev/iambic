@@ -27,7 +27,7 @@ exclude = ["build_util/*"]
 include = ["iambic/output/templates/*"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.11"
 boto3 = "^1.26.95"
 click = "^8.1.3"
 "ruamel.yaml" = "^0.17.21"
@@ -75,7 +75,7 @@ pycryptodome = "^3.17"
 pytest = "^7.2.2"
 pytest-asyncio = "^0.21.0"
 pytest-cov = "^4.0.0"
-pytest-mock = "^3.10.0"
+pytest-mock = "^3.14.0"
 pytest-xdist = "^3.2.1"
 pytest-rerunfailures = "^11.1.2"
 types-mock = "^5.0.0.5"

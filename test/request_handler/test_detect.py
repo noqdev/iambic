@@ -37,7 +37,7 @@ TEST_PAYLOAD = {
         "eventName": "TagRole",
         "awsRegion": "us-east-1",
         "sourceIPAddress": "1.2.3.4",
-        "userAgent": "Boto3/1.26.36 Python/3.10.6 Linux/4.14.301-224.520.amzn2.x86_64 exec-env/AWS_ECS_FARGATE Botocore/1.29.36",
+        "userAgent": "Boto3/1.26.36 Python/3.11.10 Linux/4.14.301-224.520.amzn2.x86_64 exec-env/AWS_ECS_FARGATE Botocore/1.29.36",
         "requestParameters": {
             "roleName": "test_detect_role",
             "tags": [

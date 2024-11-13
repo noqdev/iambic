@@ -20,7 +20,7 @@ skip_gitignore = true
 line_length = 88
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 "ruamel.yaml" = "^0.17.21"
 asgiref = "^3.5.2"
 structlog = "^22.1.0"
@@ -45,7 +45,7 @@ PyGithub = "^1.57"
 pydantic-factories = "^1.12.0"
 asyncache = "^0.3.1"
 dateparser = "^1.1.4"
-pytest-mock = "^3.10.0"
+pytest-mock = "^3.14.0"
 types-dateparser = "^1.1.4.5"
 
 [tool.poetry.group.dev.dependencies]
