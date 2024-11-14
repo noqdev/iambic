@@ -17,7 +17,7 @@ def mock_cloudformation_client():
 
 @pytest.mark.asyncio
 async def test_create_stack_set_raise_exception(mock_cloudformation_client, mocker):
-    client = boto3.client("cloudformation")
+    client = boto3.client("cloudformation", region_name="us-east-1")
     mock = mocker.patch(
         "iambic.plugins.v0_1_0.aws.cloud_formation.utils.boto_crud_call"
     )
