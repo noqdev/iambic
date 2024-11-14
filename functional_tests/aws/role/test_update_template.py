@@ -4,9 +4,9 @@ import asyncio
 from unittest import IsolatedAsyncioTestCase
 
 import dateparser
+
 from functional_tests.aws.role.utils import generate_role_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
 from iambic.output.text import screen_render_resource_changes
 from iambic.plugins.v0_1_0.aws.iam.policy.models import ManagedPolicyRef, PolicyDocument
 from iambic.plugins.v0_1_0.aws.iam.role.models import (
@@ -254,11 +254,11 @@ class UpdateRoleTestCase(IsolatedAsyncioTestCase):
         self.assertEqual(len(template_changes.proposed_changes), 2)
 
         # Set expiration
-        self.template.properties.inline_policies[1].statement[
-            0
-        ].expires_at = dateparser.parse(
-            "yesterday",
-            settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True},
+        self.template.properties.inline_policies[1].statement[0].expires_at = (
+            dateparser.parse(
+                "yesterday",
+                settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True},
+            )
         )
         self.template.write()
         await flag_expired_resources(

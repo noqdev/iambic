@@ -6,8 +6,8 @@ import time
 import uuid
 
 import pytest
-from functional_tests.conftest import IAMBIC_TEST_DETAILS
 
+from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.models import ProposedChangeType
 from iambic.core.parser import load_templates
 from iambic.main import run_apply

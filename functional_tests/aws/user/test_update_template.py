@@ -6,9 +6,9 @@ import uuid
 from unittest import IsolatedAsyncioTestCase
 
 import dateparser
+
 from functional_tests.aws.user.utils import generate_user_template_from_base
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-
 from iambic.core import noq_json as json
 from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
@@ -199,11 +199,11 @@ class UpdateUserTestCase(IsolatedAsyncioTestCase):
         self.assertEqual(len(template_changes.proposed_changes), 2)
 
         # Set expiration
-        self.template.properties.inline_policies[1].statement[
-            0
-        ].expires_at = dateparser.parse(
-            "yesterday",
-            settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True},
+        self.template.properties.inline_policies[1].statement[0].expires_at = (
+            dateparser.parse(
+                "yesterday",
+                settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True},
+            )
         )
         self.template.write()
 

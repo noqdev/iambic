@@ -4,8 +4,8 @@ import os
 
 import jsonschema2md2
 import pytest
-from docs.generate_schema import create_model_schemas
 
+from docs.generate_schema import create_model_schemas
 from iambic.config.dynamic_config import Config, ExtendsConfig
 from iambic.core.models import Variable
 from iambic.plugins.v0_1_0.aws.iam.group.models import AwsIamGroupTemplate
