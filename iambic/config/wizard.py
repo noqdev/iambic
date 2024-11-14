@@ -1727,9 +1727,9 @@ class ConfigurationWizard:
                 org_to_edit.api_token = set_okta_api_token(org_to_edit.api_token)
 
             confirm_command_exe("Okta Organization", Operation.UPDATED)
-            self.config.okta.organizations[org_name_to_config_elem_map[org_name]] = (
-                org_to_edit
-            )
+            self.config.okta.organizations[
+                org_name_to_config_elem_map[org_name]
+            ] = org_to_edit
 
             asyncio.run(self.run_import_okta_resources())
             self.upsert_secret()

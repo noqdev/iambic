@@ -16,7 +16,7 @@ from test.plugins.v0_1_0.aws.organizations.scp.test_utils import (
 
 import boto3
 import pytest
-from moto import mock_aws, mock_aws
+from moto import mock_aws
 from moto.organizations.models import FakePolicy
 
 import iambic

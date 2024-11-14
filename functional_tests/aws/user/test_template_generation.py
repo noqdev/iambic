@@ -8,6 +8,7 @@ from functional_tests.aws.user.utils import (
     user_full_import,
 )
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.plugins.v0_1_0.aws.event_bridge.models import UserMessageDetails
 from iambic.plugins.v0_1_0.aws.iam.user.models import AwsIamUserTemplate
 

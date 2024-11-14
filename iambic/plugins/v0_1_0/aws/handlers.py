@@ -98,12 +98,12 @@ async def load(config: AWSConfig) -> AWSConfig:
                 if (
                     account_elem := config_account_idx_map.get(account.account_id)
                 ) is not None:
-                    config.accounts[account_elem].hub_session_info = (
-                        account.hub_session_info
-                    )
-                    config.accounts[account_elem].identity_center_details = (
-                        account.identity_center_details
-                    )
+                    config.accounts[
+                        account_elem
+                    ].hub_session_info = account.hub_session_info
+                    config.accounts[
+                        account_elem
+                    ].identity_center_details = account.identity_center_details
 
                     # if the account is an organization account, set the organization details
                     if org.org_account_id == account.account_id:
@@ -137,9 +137,9 @@ async def load(config: AWSConfig) -> AWSConfig:
 
     # Set up the dynamic account attributes
     for idx, account in enumerate(config.accounts):
-        config.accounts[idx].enable_iam_user_credentials = (
-            config.enable_iam_user_credentials
-        )
+        config.accounts[
+            idx
+        ].enable_iam_user_credentials = config.enable_iam_user_credentials
         config.accounts[idx].variables.extend(
             [
                 Variable(key="account_id", value=account.account_id),

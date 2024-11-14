@@ -7,6 +7,7 @@ import uuid
 from functional_tests.azure_ad.base_test_case import BaseMS365TestCase
 from functional_tests.azure_ad.group.utils import generate_group_template
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
 from iambic.core.parser import load_templates

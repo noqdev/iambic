@@ -250,9 +250,9 @@ async def base_group_str_attribute(
                 # Take priority over raw output
                 resource_val = [rv for rv in resource_vals if "{{" not in rv][0]
 
-            provider_child_resource["resources"][elem][provider_child_key_id] = (
-                provider_child_resource[provider_child_key_id]
-            )
+            provider_child_resource["resources"][elem][
+                provider_child_key_id
+            ] = provider_child_resource[provider_child_key_id]
             grouped_resource_map[resource_val] = [
                 provider_child_resource["resources"][elem]
             ]

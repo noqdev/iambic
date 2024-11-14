@@ -4,6 +4,7 @@ import random
 import uuid
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core.iambic_enum import Command
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage

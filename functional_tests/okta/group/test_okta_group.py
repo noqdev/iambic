@@ -4,6 +4,7 @@ import datetime
 import os
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.parser import load_templates
 from iambic.main import run_apply
@@ -65,9 +66,9 @@ properties:
         )
     group_template.iambic_managed = IambicManaged.IMPORT_ONLY
     orig_username = group_template.properties.members[0].username
-    group_template.properties.members[0].username = (
-        "this_user_should_not_exist@example.com"
-    )
+    group_template.properties.members[
+        0
+    ].username = "this_user_should_not_exist@example.com"
     group_template.write()
     run_apply(IAMBIC_TEST_DETAILS.config, [test_group_fp])
     if os.path.isfile(proposed_changes_path):

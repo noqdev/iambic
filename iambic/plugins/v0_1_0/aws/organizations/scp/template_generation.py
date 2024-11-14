@@ -156,22 +156,22 @@ async def collect_aws_scp_policies(
             generate_scp_resource_files, 25
         )
 
-        scp_policies: list[ServiceControlPolicyResourceFiles] = (
-            await generate_scp_resource_files_semaphore.process(
-                [
-                    {
-                        "exe_message": exe_message,
-                        "aws_account": aws_account_map[exe_message.provider_id],
-                        "filtered_policies": set(
-                            [
-                                dm.policy_id
-                                for dm in detect_messages
-                                if not dm.delete and dm.policy_id not in delete_policies
-                            ]
-                        ),
-                    }
-                ]
-            )
+        scp_policies: list[
+            ServiceControlPolicyResourceFiles
+        ] = await generate_scp_resource_files_semaphore.process(
+            [
+                {
+                    "exe_message": exe_message,
+                    "aws_account": aws_account_map[exe_message.provider_id],
+                    "filtered_policies": set(
+                        [
+                            dm.policy_id
+                            for dm in detect_messages
+                            if not dm.delete and dm.policy_id not in delete_policies
+                        ]
+                    ),
+                }
+            ]
         )
 
     else:
@@ -179,15 +179,15 @@ async def collect_aws_scp_policies(
             generate_scp_resource_files, 25
         )
 
-        scp_policies: list[ServiceControlPolicyResourceFiles] = (
-            await generate_scp_resource_files_semaphore.process(
-                [
-                    {
-                        "exe_message": exe_message,
-                        "aws_account": aws_account_map[exe_message.provider_id],  # type: ignore
-                    }
-                ]
-            )
+        scp_policies: list[
+            ServiceControlPolicyResourceFiles
+        ] = await generate_scp_resource_files_semaphore.process(
+            [
+                {
+                    "exe_message": exe_message,
+                    "aws_account": aws_account_map[exe_message.provider_id],  # type: ignore
+                }
+            ]
         )
 
     log.info(

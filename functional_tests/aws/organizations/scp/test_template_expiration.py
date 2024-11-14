@@ -6,6 +6,7 @@ from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.aws.organizations.scp.utils import generate_policy_template
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core.models import ProposedChangeType
 from iambic.core.utils import remove_expired_resources
 from iambic.plugins.v0_1_0.aws.organizations.scp.models import AwsScpPolicyTemplate

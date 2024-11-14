@@ -4,6 +4,7 @@ from unittest import IsolatedAsyncioTestCase
 
 from functional_tests.azure_ad.user.utils import generate_user_template
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.plugins.v0_1_0.azure_ad.user.utils import get_user
 
 

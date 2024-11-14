@@ -250,9 +250,9 @@ async def create_templated_managed_policy(  # noqa: C901
     for managed_policy_ref in managed_policy_refs:
         async with aiofiles.open(managed_policy_ref["file_path"], mode="r") as f:
             content_dict = json.loads(await f.read())
-            account_id_to_mp_map[managed_policy_ref["account_id"]] = (
-                normalize_dict_keys(content_dict)
-            )
+            account_id_to_mp_map[
+                managed_policy_ref["account_id"]
+            ] = normalize_dict_keys(content_dict)
 
     # calculate preference based on existing template
     prefer_templatized = calculate_import_preference(
@@ -522,9 +522,9 @@ async def generate_aws_managed_policy_templates(
                 "resource_val"
             ] = policy_name
 
-        account_managed_policies[account_mp_elem]["resources"] = (
-            account_managed_policies[account_mp_elem].pop("managed_policies", [])
-        )
+        account_managed_policies[account_mp_elem][
+            "resources"
+        ] = account_managed_policies[account_mp_elem].pop("managed_policies", [])
 
     grouped_managed_policy_map = await base_group_str_attribute(
         aws_account_map, account_managed_policies

@@ -4,6 +4,7 @@ import random
 import uuid
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
+
 from iambic.core.iambic_enum import Command
 from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import get_existing_template_map

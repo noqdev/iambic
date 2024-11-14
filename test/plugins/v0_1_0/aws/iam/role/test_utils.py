@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from unittest import IsolatedAsyncioTestCase
 import json
 from typing import Any, Dict
+from unittest import IsolatedAsyncioTestCase
 
 import boto3
 import pytest

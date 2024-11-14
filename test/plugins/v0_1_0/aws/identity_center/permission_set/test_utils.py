@@ -7,7 +7,6 @@ from unittest import mock
 from unittest.mock import AsyncMock, MagicMock
 
 import boto3
-import botocore
 import pytest
 from moto import mock_aws
 
@@ -24,7 +23,6 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
     apply_permission_set_tags,
     create_account_assignment,
     delete_account_assignment,
-    delete_permission_set,
     enrich_permission_set_details,
     generate_permission_set_map,
     get_permission_set_details,

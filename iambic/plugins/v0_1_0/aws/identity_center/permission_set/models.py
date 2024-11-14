@@ -516,9 +516,9 @@ class AwsIdentityCenterPermissionSetTemplate(
             account_change_details.current_value = {
                 k: v for k, v in current_permission_set.items() if k not in exclude_keys
             }  # Create a new dict
-            account_change_details.current_value["AccountAssignments"] = (
-                current_account_assignments
-            )
+            account_change_details.current_value[
+                "AccountAssignments"
+            ] = current_account_assignments
 
             if ctx.command == Command.CONFIG_DISCOVERY:
                 # Don't overwrite a resource during config discovery
