@@ -4,7 +4,7 @@ import json
 
 import boto3
 import pytest
-from moto import mock_iam
+from moto import mock_aws
 
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.aws.iam.policy.utils import (
@@ -50,7 +50,7 @@ EXAMPLE_POLICY_ARN = "arn:aws:iam::123456789012:policy/example_managed_policy_na
 
 @pytest.fixture
 def mock_iam_client():
-    with mock_iam():
+    with mock_aws():
         iam_client = boto3.client("iam")
         _ = iam_client.create_policy(
             PolicyName=EXAMPLE_MANAGED_POLICY_NAME,

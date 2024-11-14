@@ -11,7 +11,7 @@ from test.plugins.v0_1_0.aws.iam.group.test_utils import (  # noqa: F401 # inten
 
 import boto3
 import pytest
-from moto import mock_sts
+from moto import mock_aws
 
 import iambic
 from iambic.core.iambic_enum import Command
@@ -73,7 +73,7 @@ def mock_aws_account():
 
 @pytest.fixture
 def mock_sts_client():
-    with mock_sts():
+    with mock_aws():
         sts_client = boto3.client("sts")
         yield sts_client
 

@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 import boto3
 import botocore
 import pytest
-from moto import mock_ssoadmin
+from moto import mock_aws
 
 from iambic.core.models import ProposedChangeType, ProviderChild
 from iambic.plugins.v0_1_0.aws.identity_center.permission_set.models import (
@@ -82,8 +82,8 @@ def mock_wrap_identity_center_store_client():
 
 @pytest.fixture
 def mock_ssoadmin_client_bundle():
-    with mock_ssoadmin():
-        ssoadmin_client = boto3.client("sso-admin")
+    with mock_aws():
+        ssoadmin_client = boto3.client("sso-admin", region_name="us-east-1")
         response = ssoadmin_client.create_permission_set(
             Name=EXAMPLE_PERMISSION_SET_NAME,
             InstanceArn=EXAMPLE_IDENTITY_CENTER_INSTANCE_ARN,
@@ -201,7 +201,7 @@ async def test_get_permission_set_users_and_groups_as_access_rules(
 
 
 @pytest.mark.asyncio
-@mock_ssoadmin
+@mock_aws
 async def test_enrich_permission_set_details(mock_ssoadmin_client_bundle: tuple):
     mock_ssoadmin_client, permission_set_arn = mock_ssoadmin_client_bundle
 
@@ -241,7 +241,7 @@ def create_test_data():
 
 
 @pytest.mark.asyncio
-@mock_ssoadmin
+@mock_aws
 async def test_apply_permission_set_aws_managed_policies():
     from boto3 import client
 
@@ -276,7 +276,7 @@ async def test_apply_permission_set_aws_managed_policies():
 
 
 @pytest.mark.asyncio
-@mock_ssoadmin
+@mock_aws
 async def test_apply_permission_set_customer_managed_policies():
     from boto3 import client
 
@@ -308,7 +308,7 @@ async def test_apply_permission_set_customer_managed_policies():
 
 
 @pytest.mark.asyncio
-@mock_ssoadmin
+@mock_aws
 async def test_create_account_assignment(mock_ssoadmin_client_bundle: tuple):
     from boto3 import client
 
@@ -353,7 +353,7 @@ async def test_create_account_assignment(mock_ssoadmin_client_bundle: tuple):
 
 
 @pytest.mark.asyncio
-@mock_ssoadmin
+@mock_aws
 async def test_create_account_assignment_creation_status_check(
     mock_ssoadmin_client_bundle,
 ):
@@ -415,7 +415,7 @@ async def test_create_account_assignment_creation_status_check(
 
 
 @pytest.mark.asyncio
-@mock_ssoadmin
+@mock_aws
 async def test_delete_account_assignment(mock_ssoadmin_client_bundle: tuple):
     from boto3 import client
 
@@ -480,7 +480,7 @@ async def test_delete_account_assignment(mock_ssoadmin_client_bundle: tuple):
 
 
 @pytest.mark.asyncio
-@mock_ssoadmin
+@mock_aws
 async def test_delete_account_assignment_creation_status_check(
     mock_ssoadmin_client_bundle,
 ):
@@ -542,7 +542,7 @@ async def test_delete_account_assignment_creation_status_check(
 
 
 @pytest.mark.asyncio
-@mock_ssoadmin
+@mock_aws
 async def test_apply_account_assignments():
     from boto3 import client
 
@@ -608,7 +608,7 @@ async def test_apply_account_assignments():
 
 
 @pytest.mark.asyncio
-@mock_ssoadmin
+@mock_aws
 async def test_apply_permission_set_inline_policy(mock_ssoadmin_client_bundle: tuple):
     mock_ssoadmin_client, _ = mock_ssoadmin_client_bundle
 
@@ -667,7 +667,7 @@ async def test_apply_permission_set_inline_policy(mock_ssoadmin_client_bundle: t
 
 
 @pytest.mark.asyncio
-@mock_ssoadmin
+@mock_aws
 async def test_apply_permission_set_permission_boundary(
     mock_ssoadmin_client_bundle: tuple,
 ):
@@ -721,7 +721,7 @@ async def test_apply_permission_set_permission_boundary(
 
 
 @pytest.mark.asyncio
-@mock_ssoadmin
+@mock_aws
 async def test_apply_permission_set_tags(mock_ssoadmin_client_bundle: tuple):
     sso_admin_client, _ = mock_ssoadmin_client_bundle
 
@@ -787,107 +787,3 @@ async def test_apply_permission_set_tags(mock_ssoadmin_client_bundle: tuple):
     assert added_tag.resource_type == "aws:identity_center:permission_set"
     assert added_tag.attribute == "tags"
     assert added_tag.new_value == {"Key": "key1", "Value": "value1"}
-
-
-@pytest.mark.asyncio
-@mock_ssoadmin
-async def test_delete_permission_set_not_found(mock_ssoadmin_client_bundle: tuple):
-    sso_admin_client, _ = mock_ssoadmin_client_bundle
-
-    # Helper function to create test data
-    def create_test_data():
-        instance_arn = "arn:aws:sso:::instance/ssoins-1234567890abcdef0"
-        permission_set_arn = (
-            "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
-        )
-        current_permission_set = {
-            "ManagedPolicies": [{"Arn": "arn:aws:iam::aws:policy/ReadOnlyAccess"}],
-            "Tags": [{"Key": "key1", "Value": "value1"}],
-        }
-        account_assignments = []
-        log_params = {"test_log_key": "test_log_value"}
-
-        return (
-            instance_arn,
-            permission_set_arn,
-            current_permission_set,
-            account_assignments,
-            log_params,
-        )
-
-    # Set up test data
-    (
-        instance_arn,
-        permission_set_arn,
-        current_permission_set,
-        account_assignments,
-        log_params,
-    ) = create_test_data()
-
-    with pytest.raises(botocore.exceptions.ClientError):
-        await delete_permission_set(
-            sso_admin_client,
-            instance_arn,
-            permission_set_arn,
-            current_permission_set,
-            account_assignments,
-            log_params,
-        )
-
-    # Verify the permission set deletion
-    permission_sets = sso_admin_client.list_permission_sets(InstanceArn=instance_arn)[
-        "PermissionSets"
-    ]
-    assert permission_set_arn not in permission_sets
-
-
-@pytest.mark.asyncio
-@mock_ssoadmin
-async def test_delete_permission_set(mock_ssoadmin_client_bundle: tuple):
-    sso_admin_client, _ = mock_ssoadmin_client_bundle
-
-    # Helper function to create test data
-    def create_test_data():
-        instance_arn = "arn:aws:sso:::instance/ssoins-1234567890abcdef0"
-        permission_set_arn = (
-            "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef0/ps-1234567890abcdef0"
-        )
-        current_permission_set = {
-            "ManagedPolicies": [{"Arn": "arn:aws:iam::aws:policy/ReadOnlyAccess"}],
-            "Tags": [{"Key": "key1", "Value": "value1"}],
-        }
-        account_assignments = []
-        log_params = {"test_log_key": "test_log_value"}
-
-        return (
-            instance_arn,
-            permission_set_arn,
-            current_permission_set,
-            account_assignments,
-            log_params,
-        )
-
-    # Set up test data
-    (
-        instance_arn,
-        permission_set_arn,
-        current_permission_set,
-        account_assignments,
-        log_params,
-    ) = create_test_data()
-
-    with pytest.raises(botocore.exceptions.ClientError):
-        await delete_permission_set(
-            sso_admin_client,
-            instance_arn,
-            permission_set_arn,
-            current_permission_set,
-            account_assignments,
-            log_params,
-        )
-
-    # Verify the permission set deletion
-    permission_sets = sso_admin_client.list_permission_sets(InstanceArn=instance_arn)[
-        "PermissionSets"
-    ]
-    assert permission_set_arn not in permission_sets

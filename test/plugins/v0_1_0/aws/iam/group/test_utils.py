@@ -4,7 +4,7 @@ import json
 
 import boto3
 import pytest
-from moto import mock_iam
+from moto import mock_aws
 
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.aws.iam.group.utils import (
@@ -39,19 +39,20 @@ EXAMPLE_MANAGED_POLICY_ARN = "arn:aws:iam::aws:policy/job-function/ViewOnlyAcces
 
 @pytest.fixture
 def mock_iam_client():
-    with mock_iam():
+    with mock_aws():
         iam_client = boto3.client("iam")
-        _ = iam_client.create_group(
-            GroupName=EXAMPLE_GROUPNAME,
-        )
-        _ = iam_client.put_group_policy(
-            GroupName=EXAMPLE_GROUPNAME,
-            PolicyName=EXAMPLE_INLINE_POLICY_NAME,
-            PolicyDocument=EXAMPLE_INLINE_POLICY_DOCUMENT,
-        )
-        _ = iam_client.attach_group_policy(
-            GroupName=EXAMPLE_GROUPNAME, PolicyArn=EXAMPLE_MANAGED_POLICY_ARN
-        )
+        if not iam_client.list_groups().get("Groups"):
+            _ = iam_client.create_group(
+                GroupName=EXAMPLE_GROUPNAME,
+            )
+            _ = iam_client.put_group_policy(
+                GroupName=EXAMPLE_GROUPNAME,
+                PolicyName=EXAMPLE_INLINE_POLICY_NAME,
+                PolicyDocument=EXAMPLE_INLINE_POLICY_DOCUMENT,
+            )
+            _ = iam_client.attach_group_policy(
+                GroupName=EXAMPLE_GROUPNAME, PolicyArn=EXAMPLE_MANAGED_POLICY_ARN
+            )
         yield iam_client
 
 

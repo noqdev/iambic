@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 import boto3
 import pytest
-from moto import mock_iam
+from moto import mock_aws
 
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.aws.iam.user.utils import (
@@ -82,25 +82,26 @@ async def test_list_users(iam_client):
 
 @pytest.fixture
 def mock_iam_client():
-    with mock_iam():
+    with mock_aws():
         iam_client = boto3.client("iam")
-        _ = iam_client.create_user(
-            UserName=EXAMPLE_USERNAME,
-            Tags=[
-                {
-                    "Key": EXAMPLE_TAG_KEY,
-                    "Value": EXAMPLE_TAG_VALUE,
-                }
-            ],
-        )
-        _ = iam_client.put_user_policy(
-            UserName=EXAMPLE_USERNAME,
-            PolicyName=EXAMPLE_INLINE_POLICY_NAME,
-            PolicyDocument=EXAMPLE_INLINE_POLICY_DOCUMENT,
-        )
-        _ = iam_client.attach_user_policy(
-            UserName=EXAMPLE_USERNAME, PolicyArn=EXAMPLE_MANAGED_POLICY_ARN
-        )
+        if not iam_client.list_users().get("Users"):
+            _ = iam_client.create_user(
+                UserName=EXAMPLE_USERNAME,
+                Tags=[
+                    {
+                        "Key": EXAMPLE_TAG_KEY,
+                        "Value": EXAMPLE_TAG_VALUE,
+                    }
+                ],
+            )
+            _ = iam_client.put_user_policy(
+                UserName=EXAMPLE_USERNAME,
+                PolicyName=EXAMPLE_INLINE_POLICY_NAME,
+                PolicyDocument=EXAMPLE_INLINE_POLICY_DOCUMENT,
+            )
+            _ = iam_client.attach_user_policy(
+                UserName=EXAMPLE_USERNAME, PolicyArn=EXAMPLE_MANAGED_POLICY_ARN
+            )
         yield iam_client
 
 

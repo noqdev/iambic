@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import boto3
 import pytest
-from moto import mock_ssoadmin
+from moto import mock_aws
 from pydantic import ValidationError
 
 from iambic.core.context import ctx
@@ -51,7 +51,7 @@ def setup_ctx():
 
 @pytest.fixture
 def mock_ssoadmin_client_bundle():
-    with mock_ssoadmin():
+    with mock_aws():
         ssoadmin_client = boto3.client("sso-admin")
         response = ssoadmin_client.create_permission_set(
             Name=EXAMPLE_PERMISSION_SET_NAME,
@@ -709,7 +709,7 @@ async def test_apply_to_account_with_current_permission_set(permission_set_conte
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_ctx")
-@mock_ssoadmin
+@mock_aws
 async def test_apply():
     class TestAwsIdentityCenterPermissionSetTemplate(
         AwsIdentityCenterPermissionSetTemplate
@@ -785,7 +785,7 @@ async def test_apply():
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_ctx")
-@mock_ssoadmin
+@mock_aws
 async def test_apply_with_exception():
     class TestAwsIdentityCenterPermissionSetTemplate(
         AwsIdentityCenterPermissionSetTemplate

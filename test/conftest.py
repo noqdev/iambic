@@ -6,7 +6,7 @@ import os
 import boto3
 import pytest
 import yaml
-from moto import mock_s3, mock_secretsmanager
+from moto import mock_aws
 
 from iambic.config.dynamic_config import (
     CURRENT_IAMBIC_VERSION,
@@ -181,19 +181,19 @@ def test_config_path_one_extends(tmp_path):
     return extends_config_file_path
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture()
 def s3(prevent_aws_real_mutants):
     """Mocked S3 Fixture."""
-    with mock_s3():
+    with mock_aws():
         yield boto3.client(
             "s3",
             region_name="us-west-2",
         )
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture()
 def secrets_setup(prevent_aws_real_mutants):
-    with mock_secretsmanager():
+    with mock_aws():
         secretmgr = boto3.client("secretsmanager", region_name="us-west-2")
         secretmgr.create_secret(
             Name="arn:aws:secretsmanager:us-west-2:123456789012:secret:iambic-config-secrets-9fae9066-5599-473f-b364-63fa0240b6f7",

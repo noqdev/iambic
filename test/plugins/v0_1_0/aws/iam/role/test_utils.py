@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from unittest import IsolatedAsyncioTestCase
 import json
 from typing import Any, Dict
 
 import boto3
 import pytest
-from moto import mock_iam
+from botocore.exceptions import ClientError
+from moto import mock_aws
 
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.aws.iam.role.utils import (
@@ -101,8 +103,39 @@ async def test_list_roles(iam_client):
 
 @pytest.fixture
 def mock_iam_client():
-    with mock_iam():
+    with mock_aws():
         iam_client = boto3.client("iam")
+        try:
+            _ = iam_client.create_role(
+                RoleName=EXAMPLE_ROLE_NAME,
+                AssumeRolePolicyDocument=EXAMPLE_ASSUME_ROLE_DOCUMENT,
+                Tags=[
+                    {
+                        "Key": EXAMPLE_TAG_KEY,
+                        "Value": EXAMPLE_TAG_VALUE,
+                    }
+                ],
+            )
+            _ = iam_client.put_role_policy(
+                RoleName=EXAMPLE_ROLE_NAME,
+                PolicyName=EXAMPLE_INLINE_POLICY_NAME,
+                PolicyDocument=EXAMPLE_INLINE_POLICY_DOCUMENT,
+            )
+            _ = iam_client.attach_role_policy(
+                RoleName=EXAMPLE_ROLE_NAME, PolicyArn=EXAMPLE_MANAGED_POLICY_ARN
+            )
+        except ClientError:
+            pass
+
+        yield iam_client
+
+
+class IamRoleTest(IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.mock_aws = mock_aws()
+        self.mock_aws.start()
+        iam_client = boto3.client("iam")
+
         _ = iam_client.create_role(
             RoleName=EXAMPLE_ROLE_NAME,
             AssumeRolePolicyDocument=EXAMPLE_ASSUME_ROLE_DOCUMENT,
@@ -121,25 +154,24 @@ def mock_iam_client():
         _ = iam_client.attach_role_policy(
             RoleName=EXAMPLE_ROLE_NAME, PolicyArn=EXAMPLE_MANAGED_POLICY_ARN
         )
-        yield iam_client
 
+    def tearDown(self):
+        self.mock_aws.stop()
 
-@pytest.mark.asyncio
-async def test_get_role_inline_policy_names(mock_iam_client):
-    names = await get_role_inline_policy_names(EXAMPLE_ROLE_NAME, mock_iam_client)
-    assert names == [EXAMPLE_INLINE_POLICY_NAME]
+    async def test_get_role_inline_policy_names(self):
+        iam_client = boto3.client("iam")
+        names = await get_role_inline_policy_names(EXAMPLE_ROLE_NAME, iam_client)
+        assert names == [EXAMPLE_INLINE_POLICY_NAME]
 
+    async def test_get_role_instance_profiles(self):
+        iam_client = boto3.client("iam")
+        profiles = await get_role_instance_profiles(EXAMPLE_ROLE_NAME, iam_client)
+        assert profiles == []
 
-@pytest.mark.asyncio
-async def test_get_role_instance_profiles(mock_iam_client):
-    profiles = await get_role_instance_profiles(EXAMPLE_ROLE_NAME, mock_iam_client)
-    assert profiles == []
-
-
-@pytest.mark.asyncio
-async def test_list_role_tags(mock_iam_client):
-    tags = await list_role_tags(EXAMPLE_ROLE_NAME, mock_iam_client)
-    assert tags == [{"Key": EXAMPLE_TAG_KEY, "Value": EXAMPLE_TAG_VALUE}]
+    async def test_list_role_tags(self):
+        iam_client = boto3.client("iam")
+        tags = await list_role_tags(EXAMPLE_ROLE_NAME, iam_client)
+        assert tags == [{"Key": EXAMPLE_TAG_KEY, "Value": EXAMPLE_TAG_VALUE}]
 
 
 @pytest.mark.asyncio
@@ -168,6 +200,7 @@ async def test_get_role_managed_policies(mock_iam_client):
     managed_policies = await get_role_managed_policies(
         EXAMPLE_ROLE_NAME, mock_iam_client
     )
+    print(managed_policies)
     assert managed_policies[0]["PolicyArn"] == EXAMPLE_MANAGED_POLICY_ARN
 
 
