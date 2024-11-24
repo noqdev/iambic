@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 import random
 import uuid
 
@@ -22,7 +24,15 @@ from iambic.plugins.v0_1_0.aws.organizations.scp.template_generation import (
     get_template_dir,
 )
 
-EXAMPLE_POLICY_DOCUMENT = '{"Version":"2012-10-17","Statement":{"Effect":"Allow","Action":"lex:*","Resource":"*"}}'
+EXAMPLE_POLICY_DOCUMENT = json.dumps(
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {"Effect": "Allow", "Action": "lex:*", "Resource": "*"},
+            {"Effect": "Allow", "Action": "*", "Resource": "*"}
+        ]
+    }
+)
 
 
 async def generate_policy_template(
@@ -37,6 +47,7 @@ async def generate_policy_template(
     """
 
     policy_dir = get_template_dir(repo_dir)
+    os.makedirs(policy_dir, exist_ok=True)  # Confirm directory exists
 
     policy_name = f"iambic_test_{random.randint(0, 10000)}"
     policy_description = "This was created by a functional test."
@@ -68,6 +79,7 @@ async def generate_scp_policy_template_from_base(
     create_policy: bool = False,
 ) -> AwsScpPolicyTemplate:
     policy_dir = get_template_dir(repo_dir)
+    os.makedirs(policy_dir, exist_ok=True)  # Confirm directory exists
 
     if not create_policy:
         scp_policies = await gather_templates(repo_dir, AWS_SCP_POLICY_TEMPLATE)

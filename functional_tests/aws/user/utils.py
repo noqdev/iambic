@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import random
 import uuid
 
@@ -20,6 +21,8 @@ async def generate_user_template_from_base(
     repo_dir: str,
 ) -> AwsIamUserTemplate:
     user_dir = get_template_dir(repo_dir)
+    os.makedirs(user_dir, exist_ok=True)  # Confirm directory exists
+
     identifier = f"iambic_test_{random.randint(0, 10000)}"
     file_path = f"{user_dir}/{identifier}.yaml"
     user_template = f"""

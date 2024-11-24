@@ -21,9 +21,9 @@ from iambic.plugins.v0_1_0.aws.identity_center.permission_set.utils import (
     get_permission_set_users_and_groups_as_access_rules,
 )
 
-EXAMPLE_GROUP = "iambic_test_group"  # this already exist in target cloud resource
+EXAMPLE_GROUP = "iambic_test_group"  # This IDC group must exist in the target cloud resource
 EXAMPLE_USER = (
-    "iambic_test_user@iambic.org"  # this already exist in target cloud resource
+    "iambic_test_user@iambic.org"  # This IDC user must exist in the target cloud resource
 )
 
 
