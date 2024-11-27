@@ -29,8 +29,8 @@ EXAMPLE_POLICY_DOCUMENT = json.dumps(
         "Version": "2012-10-17",
         "Statement": [
             {"Effect": "Allow", "Action": "lex:*", "Resource": "*"},
-            {"Effect": "Allow", "Action": "*", "Resource": "*"}
-        ]
+            {"Effect": "Allow", "Action": "*", "Resource": "*"},
+        ],
     }
 )
 

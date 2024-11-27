@@ -3,12 +3,15 @@ from __future__ import annotations
 import datetime
 import os
 
+import pytest
+
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.parser import load_templates
 from iambic.main import run_apply
 
 
+@pytest.mark.skip(reason="No enterprise Okta account currently available for testing")
 def test_okta_group():
     iambic_functional_test_group_yaml = """template_type: NOQ::Okta::Group
 idp_name: development

@@ -66,7 +66,9 @@ def rich_tree_exception(exceptions: ExceptionSummary):
                 change_tree.add(str(change.change.resource_type))
                 change_tree.add(str(change.change.change_type.value))
                 if change.change.diff:
-                    change_tree.add("* " + "\n* ".join(str(change.change.diff_plus_minus)))
+                    change_tree.add(
+                        "* " + "\n* ".join(str(change.change.diff_plus_minus))
+                    )
     console = Console(file=StringIO(), force_terminal=True)
     console.print(exception_tree)
     output = console.file.getvalue()

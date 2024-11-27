@@ -4,6 +4,8 @@ import asyncio
 import datetime
 import uuid
 
+import pytest
+
 from functional_tests.azure_ad.base_test_case import BaseMS365TestCase
 from functional_tests.azure_ad.group.utils import generate_group_template
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
@@ -16,6 +18,7 @@ from iambic.plugins.v0_1_0.azure_ad.group.utils import get_group
 from iambic.request_handler.expire_resources import flag_expired_resources
 
 
+@pytest.mark.skip(reason="No EntraId account currently available for testing")
 class UpdateMS365GroupTestCase(BaseMS365TestCase):
     @classmethod
     def setUpClass(cls):
@@ -145,6 +148,7 @@ class UpdateMS365GroupTestCase(BaseMS365TestCase):
         self.assertNotIn(expired_member, group_members)
 
 
+@pytest.mark.skip(reason="No EntraId account currently available for testing")
 class UpdateSecurityGroupTestCase(BaseMS365TestCase):
     @classmethod
     def setUpClass(cls):

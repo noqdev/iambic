@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from unittest import IsolatedAsyncioTestCase
 
+import pytest
+
 from functional_tests.azure_ad.user.utils import generate_user_template
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.plugins.v0_1_0.azure_ad.user.utils import get_user
 
 
+@pytest.mark.skip(reason="No EntraId account currently available for testing")
 class CreateUserTestCase(IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.template = generate_user_template()

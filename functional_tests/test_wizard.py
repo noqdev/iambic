@@ -4,10 +4,13 @@ import os
 import random
 import tempfile
 import time
+from pathlib import Path
 
 import boto3
 import pexpect
 import pytest
+
+from functional_tests.conftest import WIZARD_TEST_ROLE_ARN
 
 KEY_UP = "\x1b[A"
 KEY_DOWN = "\x1b[B"
@@ -19,16 +22,8 @@ def iam_spoke_role():
     # we will then assume into IambicFunctionalTestWizardRole
     # to simulate bootstrapping Iambic
     sts_client = boto3.client("sts")
-    response = sts_client.get_caller_identity()
-    iambic_spoke_role_arn = response["Arn"]
-    iambic_spoke_role_arn = iambic_spoke_role_arn[0 : iambic_spoke_role_arn.rindex("/")]
-    iambic_spoke_role_arn = iambic_spoke_role_arn.replace("assumed-role", "role")
-    iambic_spoke_role_arn = iambic_spoke_role_arn.replace(
-        "IambicHubRole", "IambicFunctionalTestWizardRole"
-    )
-
     response = sts_client.assume_role(
-        RoleArn=iambic_spoke_role_arn, RoleSessionName="functional_test"
+        RoleArn=WIZARD_TEST_ROLE_ARN, RoleSessionName="functional_test"
     )
     assert "Credentials" in response
     yield response
@@ -45,12 +40,21 @@ def temp_templates_directory():
     os.chdir(old_cwd)
 
 
+@pytest.fixture
+def iambic_log_directory() -> Path:
+    log_path = Path("~/.iambic/logs")
+    os.makedirs(log_path, exist_ok=True)
+    return log_path
+
+
 # TODO, we have to add test that targets a newly spin up account without any
 # CF stacksets enable in the organization, preferly even an organizationless account.
 
 
-def test_setup_single_account(iam_spoke_role, temp_templates_directory) -> None:
-    log_file = f"{temp_templates_directory}/test_setup_single_aws_account.txt"
+def test_setup_single_account(
+    iam_spoke_role, temp_templates_directory, iambic_log_directory: Path
+) -> None:
+    log_file = iambic_log_directory.joinpath("test_setup_single_aws_account.log")
     print(f"ui test log file is in {log_file}")
     spawn_env = create_env(iam_spoke_role)
     with open(log_file, "wb") as fout:
@@ -83,7 +87,7 @@ def test_setup_single_account(iam_spoke_role, temp_templates_directory) -> None:
         tui.expect("Role ARN")
         tui.sendline("")  # use default
         tui.expect("Add Tags")
-        tui.sendline("\n")  # use default
+        tui.sendline("")  # use default
         tui.expect("Proceed")
         tui.sendline("")  # use default
         tui.expect("What would you like to", timeout=120)
@@ -102,8 +106,10 @@ def create_env(iam_spoke_role):
     return spawn_env
 
 
-def test_setup_org_account(iam_spoke_role, temp_templates_directory) -> None:
-    log_file = f"{temp_templates_directory}/test_setup_org_account.txt"
+def test_setup_org_account(
+    iam_spoke_role, temp_templates_directory, iambic_log_directory: Path
+) -> None:
+    log_file = iambic_log_directory.joinpath("test_setup_single_aws_account.log")
     print(f"ui test log file is in {log_file}")
     spawn_env = create_env(iam_spoke_role)
     with open(log_file, "wb") as fout:
@@ -147,7 +153,7 @@ def test_setup_org_account(iam_spoke_role, temp_templates_directory) -> None:
 
 
 def test_setup_org_account_with_stack_creation(
-    iam_spoke_role, temp_templates_directory
+    iam_spoke_role, temp_templates_directory, iambic_log_directory: Path
 ) -> None:
     random_int = random.randint(0, 10000)
     unique_suffix = f"FuncTest{random_int}"
@@ -156,7 +162,7 @@ def test_setup_org_account_with_stack_creation(
     iambic_control_plane_region = "us-east-1"
 
     # stackset creation is slow. this test is known to be slow
-    log_file = f"{temp_templates_directory}/test_setup_org_account.txt"
+    log_file = iambic_log_directory.joinpath("test_setup_single_aws_account.log")
     print(f"ui test log file is in {log_file}")
     spawn_env = create_env(iam_spoke_role)
 
@@ -250,5 +256,5 @@ def test_setup_org_account_with_stack_creation(
         RetainStacks=False,
     )
     # takes time to delete
-    time.sleep(10)
-    _ = cf_client.delete_stack_set(StackSetName=iambic_spoke_role_name)
+    time.sleep(30)
+    cf_client.delete_stack_set(StackSetName=iambic_spoke_role_name)
