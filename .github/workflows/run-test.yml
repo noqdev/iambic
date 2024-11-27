@@ -57,7 +57,7 @@ jobs:
         if: ${{ github.event.pull_request.head.repo.full_name == 'noqdev/iambic' }}
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: arn:aws:iam::580605962305:role/IambicHubRole
+          role-to-assume: arn:aws:iam::253490791458:role/iambic_gh_workflow
           aws-region: us-east-1
       - name: run-functional-test
         if: ${{ github.event.pull_request.head.repo.full_name == 'noqdev/iambic' }}

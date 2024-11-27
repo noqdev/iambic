@@ -18,31 +18,20 @@ from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
 from iambic.plugins.v0_1_0.aws.models import AWSAccount
 
-if not os.environ.get("GITHUB_ACTIONS", None):
-    # We will select a particular AWS_PROFILE to run on developer local machine
-    # Github action runner will use temporary creds in the environment
-    # If you are public developer, this probably won't work for you since
-    # functional test requires particular cloud resources for testing.
-    os.environ["AWS_PROFILE"] = "iambic_test_org_account/IambicHubRole"
-
 os.environ["TESTING"] = "true"
 FUNCTIONAL_TEST_TEMPLATE_DIR = os.getenv("FUNCTIONAL_TEST_TEMPLATE_DIR", None)
+WIZARD_TEST_ROLE_ARN = "arn:aws:iam::147997125692:role/IambicFunctionalTestWizardRole"
 
 all_config = """
 template_type: NOQ::Core::Config
 version: '1'
 
-extends:
-  - key: AWS_SECRETS_MANAGER
-    value: arn:aws:secretsmanager:us-west-2:442632209887:secret:dev/iambic_itest_secrets_v2-Ctmonc
-    assume_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
-
 aws:
   organizations:
-    - org_id: 'o-8t0mt0ybdd'
-      hub_role_arn: 'arn:aws:iam::580605962305:role/IambicHubRole'
+    - org_id: 'o-3uuink469z'
+      hub_role_arn: 'arn:aws:iam::253490791458:role/IambicHubRole'
       org_name: 'iambic_test_org_account'
-      org_account_id: '580605962305'
+      org_account_id: '253490791458'
       identity_center:
         region: 'us-east-1'
       account_rules:
@@ -54,31 +43,26 @@ aws:
         enabled: true
         iambic_managed: read_and_write
   accounts:
-    - account_id: '192455039954'
-      account_name: iambic_test_spoke_account_2
+    - account_id: '253490791458'
+      account_name: TestOrgAccount
       iambic_managed: read_and_write
-      org_id: o-8t0mt0ybdd
-      spoke_role_arn: arn:aws:iam::192455039954:role/IambicSpokeRole
-    - account_id: '333972133479'
-      account_name: iambic_test_spoke_account_3
+      org_id: o-3uuink469z
+      spoke_role_arn: arn:aws:iam::253490791458:role/IambicSpokeRole
+    - account_id: '495599759573'
+      account_name: 'Log Archive'
       iambic_managed: read_and_write
-      org_id: o-8t0mt0ybdd
-      spoke_role_arn: arn:aws:iam::333972133479:role/IambicSpokeRole
-    - account_id: '580605962305'
-      account_name: iambic_test_org_account
+      org_id: o-3uuink469z
+      spoke_role_arn: arn:aws:iam::495599759573:role/IambicSpokeRole
+    - account_id: '565393050684'
+      account_name: Audit
       iambic_managed: read_and_write
-      org_id: o-8t0mt0ybdd
-      spoke_role_arn: arn:aws:iam::580605962305:role/IambicSpokeRole
-    - account_id: '442632209887'
-      account_name: iambic_test_spoke_account_1
+      org_id: o-3uuink469z
+      spoke_role_arn: arn:aws:iam::565393050684:role/IambicSpokeRole
+    - account_id: '703671898692'
+      account_name: test_spoke_account_1
       iambic_managed: read_and_write
-      org_id: o-8t0mt0ybdd
-      spoke_role_arn: arn:aws:iam::442632209887:role/IambicSpokeRole
-    - account_id: '804624193200'
-      account_name: iambic_test_org_dev
-      iambic_managed: read_and_write
-      org_id: o-8t0mt0ybdd
-      spoke_role_arn: arn:aws:iam::804624193200:role/IambicSpokeRole
+      org_id: o-3uuink469z
+      spoke_role_arn: arn:aws:iam::703671898692:role/IambicSpokeRole
 """
 
 

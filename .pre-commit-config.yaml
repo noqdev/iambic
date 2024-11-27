@@ -20,14 +20,14 @@ repos:
   hooks:
   - id: black
     name: black
-    stages: [commit]
+    stages: [pre-commit]
     language: system
     entry: poetry run black
     types: [python]
 
   - id: flake8
     name: flake8
-    stages: [commit]
+    stages: [pre-commit]
     language: system
     entry: poetry run flake8
     types: [python]
