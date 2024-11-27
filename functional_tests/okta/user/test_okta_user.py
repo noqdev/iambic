@@ -5,12 +5,15 @@ import os
 import random
 import time
 
+import pytest
+
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
 from iambic.core.iambic_enum import IambicManaged
 from iambic.core.parser import load_templates
 from iambic.main import run_apply
 
 
+@pytest.mark.skip(reason="No enterprise Okta account currently available for testing")
 def test_okta_user():
     temp_templates_directory = IAMBIC_TEST_DETAILS.template_dir_path
     username = f"iambic_functional_test_user_{random.randint(0, 1000000)}"

@@ -344,7 +344,7 @@ def sort_dict(original, prioritize=None):
 
 
 def flatten_comment_data(data):
-    if type(data) == list:
+    if isinstance(data, list):
         return "".join([comment_token.value for comment_token in data])
     elif data:
         return data.value

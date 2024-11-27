@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import os
 import random
 import uuid
 
 from functional_tests.conftest import IAMBIC_TEST_DETAILS
-from iambic.core.iambic_enum import Command
+from iambic.core.iambic_enum import Command, IambicManaged
 from iambic.core.logger import log
 from iambic.core.models import ExecutionMessage
 from iambic.core.template_generation import get_existing_template_map
@@ -28,6 +29,8 @@ async def generate_managed_policy_template_from_base(
         repo_dir, AWS_MANAGED_POLICY_TEMPLATE_TYPE
     )
     managed_policy_dir = get_template_dir(repo_dir)
+    os.makedirs(managed_policy_dir, exist_ok=True)  # Confirm directory exists
+
     managed_policy_template = AwsIamManagedPolicyTemplate.load(
         random.choice(managed_policies)
     )
@@ -37,6 +40,7 @@ async def generate_managed_policy_template_from_base(
     )
 
     managed_policy_template.identifier = f"iambic_test_{random.randint(0, 10000)}"
+    managed_policy_template.iambic_managed = IambicManaged.READ_AND_WRITE
     managed_policy_template.file_path = (
         f"{managed_policy_dir}/{managed_policy_template.identifier}.yaml"
     )

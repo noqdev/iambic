@@ -5,6 +5,7 @@ import importlib
 import itertools
 import os
 import subprocess
+import sys
 import traceback
 from collections import defaultdict
 from enum import Enum
@@ -102,9 +103,15 @@ def load_plugins(
                     if file == "iambic_plugin.py":
                         module_name, _ = os.path.splitext(file)
                         module_path = os.path.join(root, file)
-                        module = importlib.machinery.SourceFileLoader(
+                        spec = importlib.util.spec_from_file_location(
                             module_name, module_path
-                        ).load_module()
+                        )
+                        module = importlib.util.module_from_spec(spec)
+                        sys.modules[module_name] = (
+                            module  # Pydantic forward refs breaks without this
+                        )
+                        spec.loader.exec_module(module)
+
                         if iambic_plugin := getattr(module, "IAMBIC_PLUGIN"):
                             plugins.append(iambic_plugin)
                         else:
@@ -281,9 +288,9 @@ class Config(ConfigMixin, BaseTemplate):
         template_provider_map = {}
         for plugin in self.plugin_instances:
             for template in plugin.templates:
-                template_provider_map[
-                    template.__fields__["template_type"].default
-                ] = plugin.config_name
+                template_provider_map[template.__fields__["template_type"].default] = (
+                    plugin.config_name
+                )
 
         # Create a map of the templates to apply to the template's plugin
         plugin_templates = defaultdict(list)

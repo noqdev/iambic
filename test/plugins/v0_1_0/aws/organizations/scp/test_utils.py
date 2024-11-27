@@ -5,7 +5,7 @@ import json
 import boto3
 import pytest
 from botocore.exceptions import ClientError
-from moto import mock_organizations
+from moto import mock_aws
 from moto.organizations.models import FakePolicy
 
 import iambic.plugins.v0_1_0.aws.organizations.scp.utils as utils
@@ -67,7 +67,7 @@ EXAMPLE_ORGANIZATIONAL_UNIT_NAME = "Organizational Unit Name"
 
 @pytest.fixture
 def mock_organizations_client(monkeypatch):
-    with mock_organizations():
+    with mock_aws():
         client = boto3.client("organizations")
         organization = client.create_organization(FeatureSet="ALL")["Organization"]
         account = client.create_account(

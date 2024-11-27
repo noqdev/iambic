@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import random
 import uuid
 
@@ -63,6 +64,8 @@ async def generate_permission_set_template_from_base(
         repo_dir, AWS_IDENTITY_CENTER_PERMISSION_SET_TEMPLATE_TYPE
     )
     permission_set_dir = get_template_dir(repo_dir)
+    os.makedirs(permission_set_dir, exist_ok=True)  # Confirm directory exists
+
     permission_set_template = AwsIdentityCenterPermissionSetTemplate.load(
         random.choice(permission_sets)
     )
@@ -92,6 +95,8 @@ async def generate_permission_set_template(
     noise: str = "",
 ) -> AwsIdentityCenterPermissionSetTemplate:
     permission_set_dir = get_template_dir(repo_dir)
+    os.makedirs(permission_set_dir, exist_ok=True)  # Confirm directory exists
+
     identifier = f"iambic_test_{noise}{random.randint(0, 10000)}"
     file_path = f"{permission_set_dir}/{identifier}.yaml"
     properties = PermissionSetProperties(

@@ -5,7 +5,8 @@ from typing import Any, Dict
 
 import boto3
 import pytest
-from moto import mock_iam
+from botocore.exceptions import ClientError
+from moto import mock_aws
 
 from iambic.core.models import ProposedChangeType
 from iambic.plugins.v0_1_0.aws.iam.role.utils import (
@@ -101,26 +102,30 @@ async def test_list_roles(iam_client):
 
 @pytest.fixture
 def mock_iam_client():
-    with mock_iam():
+    with mock_aws():
         iam_client = boto3.client("iam")
-        _ = iam_client.create_role(
-            RoleName=EXAMPLE_ROLE_NAME,
-            AssumeRolePolicyDocument=EXAMPLE_ASSUME_ROLE_DOCUMENT,
-            Tags=[
-                {
-                    "Key": EXAMPLE_TAG_KEY,
-                    "Value": EXAMPLE_TAG_VALUE,
-                }
-            ],
-        )
-        _ = iam_client.put_role_policy(
-            RoleName=EXAMPLE_ROLE_NAME,
-            PolicyName=EXAMPLE_INLINE_POLICY_NAME,
-            PolicyDocument=EXAMPLE_INLINE_POLICY_DOCUMENT,
-        )
-        _ = iam_client.attach_role_policy(
-            RoleName=EXAMPLE_ROLE_NAME, PolicyArn=EXAMPLE_MANAGED_POLICY_ARN
-        )
+        try:
+            _ = iam_client.create_role(
+                RoleName=EXAMPLE_ROLE_NAME,
+                AssumeRolePolicyDocument=EXAMPLE_ASSUME_ROLE_DOCUMENT,
+                Tags=[
+                    {
+                        "Key": EXAMPLE_TAG_KEY,
+                        "Value": EXAMPLE_TAG_VALUE,
+                    }
+                ],
+            )
+            _ = iam_client.put_role_policy(
+                RoleName=EXAMPLE_ROLE_NAME,
+                PolicyName=EXAMPLE_INLINE_POLICY_NAME,
+                PolicyDocument=EXAMPLE_INLINE_POLICY_DOCUMENT,
+            )
+            _ = iam_client.attach_role_policy(
+                RoleName=EXAMPLE_ROLE_NAME, PolicyArn=EXAMPLE_MANAGED_POLICY_ARN
+            )
+        except ClientError:
+            pass
+
         yield iam_client
 
 

@@ -17,7 +17,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import boto3
 import pytest
-from moto import mock_ssoadmin
+from moto import mock_aws
 
 import iambic
 from iambic.core.context import ctx
@@ -89,7 +89,7 @@ def setup_ctx():
 
 @pytest.fixture
 def mock_ssoadmin_client_bundle():
-    with mock_ssoadmin():
+    with mock_aws():
         ssoadmin_client = boto3.client("sso-admin")
         response = ssoadmin_client.create_permission_set(
             Name=EXAMPLE_PERMISSION_SET_NAME,
@@ -345,7 +345,7 @@ async def test_create_templated_permission_set(
 
 # Test function
 @pytest.mark.asyncio
-@mock_ssoadmin
+@mock_aws
 async def test_collect_aws_permission_sets(
     exe_message, config, identity_center_template_map, detect_messages
 ):

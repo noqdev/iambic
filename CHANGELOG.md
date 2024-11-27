@@ -1,6 +1,18 @@
 
 # Change Log
 
+## 0.x.x (? ?, 2024)
+
+NOTES:
+* Until further notice, the following providers are not being maintained. They aren't being abandoned but there are too few development resources to update all of them right now.
+  * Azure AD (EntraID)
+  * Google Workspace
+  * Okta
+
+DEV:
+* Bumped to python to 3.11
+
+
 ## 0.11.73 (Aug 23, 2023)
 
 DOCS:

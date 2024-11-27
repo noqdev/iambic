@@ -11,7 +11,7 @@ from iambic.vendor.lambda_multiprocessing import AsyncResult, Pool, TimeoutError
 
 # add an overhead for duration when asserting the duration of child processes
 # if other processes are hogging CPU, make this bigger
-delta = 0.1
+delta = 0.2
 
 
 # some simple functions to run inside the child process

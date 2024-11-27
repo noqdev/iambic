@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import boto3
 from botocore.exceptions import ClientError
 from botocore.stub import Stubber
-from moto import mock_s3
+from moto import mock_aws
 
 from iambic.core.iambic_enum import IambicManaged
 from iambic.plugins.v0_1_0.aws.iambic_plugin import AWSConfig
@@ -26,7 +26,7 @@ class TestAWSUtils(IsolatedAsyncioTestCase):
     # Test the boto3_retry function with retries
     async def test_boto3_retry_with_error(self):
         # Create a mock S3 bucket
-        with mock_s3():
+        with mock_aws():
             s3_client = boto3.client("s3", region_name="us-east-1")
             s3_client.create_bucket(Bucket="test-bucket")
 
@@ -59,7 +59,7 @@ class TestAWSUtils(IsolatedAsyncioTestCase):
     # Test the boto3_retry function without retries
     async def test_boto3_retry_without_retries(self):
         # Create a mock S3 bucket
-        with mock_s3():
+        with mock_aws():
             s3 = boto3.client("s3", region_name="us-east-1")
             s3.create_bucket(Bucket="test-bucket")
 
@@ -73,7 +73,7 @@ class TestAWSUtils(IsolatedAsyncioTestCase):
 
     async def test_boto3_retry_with_throttling(self):
         # Create a mock S3 bucket
-        with mock_s3():
+        with mock_aws():
             s3_client = boto3.client("s3", region_name="us-east-1")
             s3_client.create_bucket(Bucket="test-bucket")
 

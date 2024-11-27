@@ -161,9 +161,9 @@ async def create_templated_permission_set(  # noqa: C901
     for permission_set_ref in permission_set_refs:
         async with aiofiles.open(permission_set_ref["file_path"], mode="r") as f:
             content_dict = json.loads(await f.read())
-            account_id_to_permissionn_set_map[
-                permission_set_ref["account_id"]
-            ] = normalize_dict_keys(content_dict)
+            account_id_to_permissionn_set_map[permission_set_ref["account_id"]] = (
+                normalize_dict_keys(content_dict)
+            )
 
     # calculate preference based on existing template
     prefer_templatized = calculate_import_preference(
@@ -351,14 +351,14 @@ async def create_templated_permission_set(  # noqa: C901
         )
 
     if customer_managed_policy_ref_resources:
-        template_properties[
-            "customer_managed_policy_references"
-        ] = await group_dict_attribute(
-            aws_account_map,
-            num_of_accounts,
-            customer_managed_policy_ref_resources,
-            False,
-            prefer_templatized=prefer_templatized,
+        template_properties["customer_managed_policy_references"] = (
+            await group_dict_attribute(
+                aws_account_map,
+                num_of_accounts,
+                customer_managed_policy_ref_resources,
+                False,
+                prefer_templatized=prefer_templatized,
+            )
         )
 
     if tag_resources:

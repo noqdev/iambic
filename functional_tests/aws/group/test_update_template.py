@@ -138,10 +138,11 @@ class UpdateGroupTestCase(IsolatedAsyncioTestCase):
         self.assertEqual(len(template_changes.proposed_changes), 2)
 
         # Set expiration
-        self.template.properties.inline_policies[1].statement[
-            0
-        ].expires_at = dateparser.parse(
-            "yesterday", settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True}
+        self.template.properties.inline_policies[1].statement[0].expires_at = (
+            dateparser.parse(
+                "yesterday",
+                settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True},
+            )
         )
         self.template.write()
         await flag_expired_resources(

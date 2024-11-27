@@ -4,20 +4,20 @@ import boto3
 import pytest
 from aws_error_utils.aws_error_utils import make_aws_error
 from botocore.exceptions import ClientError
-from moto import mock_cloudformation
+from moto import mock_aws
 
 from iambic.plugins.v0_1_0.aws.cloud_formation.utils import create_stack_set, log
 
 
 @pytest.fixture
 def mock_cloudformation_client():
-    with mock_cloudformation():
+    with mock_aws():
         yield
 
 
 @pytest.mark.asyncio
 async def test_create_stack_set_raise_exception(mock_cloudformation_client, mocker):
-    client = boto3.client("cloudformation")
+    client = boto3.client("cloudformation", region_name="us-east-1")
     mock = mocker.patch(
         "iambic.plugins.v0_1_0.aws.cloud_formation.utils.boto_crud_call"
     )

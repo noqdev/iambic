@@ -1,6 +1,6 @@
 # See https://pre-commit.com/ for usage and config
 default_language_version:
-    python: python3.10
+    python: python3.11
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v4.1.0
@@ -20,14 +20,14 @@ repos:
   hooks:
   - id: black
     name: black
-    stages: [commit]
+    stages: [pre-commit]
     language: system
     entry: poetry run black
     types: [python]
 
   - id: flake8
     name: flake8
-    stages: [commit]
+    stages: [pre-commit]
     language: system
     entry: poetry run flake8
     types: [python]

@@ -16,7 +16,7 @@ from test.plugins.v0_1_0.aws.organizations.scp.test_utils import (
 
 import boto3
 import pytest
-from moto import mock_organizations, mock_sts
+from moto import mock_aws
 from moto.organizations.models import FakePolicy
 
 import iambic
@@ -107,7 +107,7 @@ def mock_aws_config(mock_aws_account, mock_aws_organization):
 
 @pytest.fixture
 def mock_organizations_client():
-    with mock_organizations(), mock_sts():
+    with mock_aws(), mock_aws():
         client = boto3.client("organizations")
         org = client.create_organization(FeatureSet="ALL")["Organization"]
         root = client.list_roots()["Roots"][0]

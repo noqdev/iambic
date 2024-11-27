@@ -20,11 +20,11 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python 3.9
+      - name: Set up Python 3.11
         uses: actions/setup-python@v4
         with:
           # Semantic version range syntax or exact version of a Python version
-          python-version: '3.9'
+          python-version: '3.11'
           # Optional - x64 or x86 architecture, defaults to x64
           architecture: 'x64'
       - name: run-test
@@ -57,7 +57,7 @@ jobs:
         if: ${{ github.event.pull_request.head.repo.full_name == 'noqdev/iambic' }}
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: arn:aws:iam::580605962305:role/IambicHubRole
+          role-to-assume: arn:aws:iam::253490791458:role/iambic_gh_workflow
           aws-region: us-east-1
       - name: run-functional-test
         if: ${{ github.event.pull_request.head.repo.full_name == 'noqdev/iambic' }}
