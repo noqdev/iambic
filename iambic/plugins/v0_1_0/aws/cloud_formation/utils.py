@@ -10,6 +10,7 @@ from aws_error_utils.aws_error_utils import ClientError, get_aws_error_info
 from iambic.core.logger import log
 from iambic.plugins.v0_1_0.aws.models import (
     IAMBIC_CHANGE_DETECTION_SUFFIX,
+    IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX,
     IAMBIC_GITHUB_APP_SUFFIX,
     IAMBIC_HUB_ROLE_NAME,
     IAMBIC_SPOKE_ROLE_NAME,
@@ -28,6 +29,24 @@ def get_rule_forwarding_template_body() -> str:
 
 def get_central_rule_template_body() -> str:
     template = f"{TEMPLATE_DIR}/IdentityRuleDestination.yml"
+    with open(template, "r") as f:
+        return f.read()
+
+
+def get_generic_git_provider_lambda_roles_template_body() -> str:
+    template = f"{TEMPLATE_DIR}/iambic_generic_git_provider_lambda_roles.yaml"
+    with open(template, "r") as f:
+        return f.read()
+
+
+def get_code_build_roles_template_body() -> str:
+    template = f"{TEMPLATE_DIR}/iambic_code_build_roles.yaml"
+    with open(template, "r") as f:
+        return f.read()
+
+
+def get_generic_git_provider_lambda_template_body() -> str:
+    template = f"{TEMPLATE_DIR}/iambic_generic_git_provider_lambda.yaml"
     with open(template, "r") as f:
         return f.read()
 
@@ -282,6 +301,68 @@ async def create_stack_set(
             return not bool(failed_instances)
 
 
+async def create_generic_git_provider_lambda_roles_stack(
+    cf_client,
+    hub_account_id: str,
+    hub_role_name: str,
+    role_arn: str = None,
+    tags: Optional[dict] = None,
+) -> bool:
+    additional_kwargs: dict[str, Any] = {"RoleARN": role_arn} if role_arn else {}
+
+    if tags:
+        additional_kwargs["Tags"] = tags
+
+    stack_created = await create_stack(
+        cf_client,
+        stack_name=f"IAMbicGenericGitLambdaRole{IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX}",
+        template_body=get_generic_git_provider_lambda_roles_template_body(),
+        parameters=[
+            {
+                "ParameterKey": "IambicHubRoleArn",
+                "ParameterValue": get_hub_role_arn(
+                    hub_account_id, role_name=hub_role_name
+                ),
+            },
+            {
+                "ParameterKey": "IambicWebhookLambdaExecutionRoleName",
+                "ParameterValue": f"iambic_generic_git_provider_lambda_execution{IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX}",
+            },
+        ],
+        Capabilities=["CAPABILITY_NAMED_IAM"],
+        **additional_kwargs,
+    )
+
+    return stack_created
+
+
+async def create_code_build_roles_stack(
+    cf_client,
+    role_arn: str = None,
+    tags: Optional[dict] = None,
+) -> bool:
+    additional_kwargs: dict[str, Any] = {"RoleARN": role_arn} if role_arn else {}
+
+    if tags:
+        additional_kwargs["Tags"] = tags
+
+    stack_created = await create_stack(
+        cf_client,
+        stack_name=f"IAMbicCodeBuildRoles{IAMBIC_GITHUB_APP_SUFFIX}",
+        template_body=get_code_build_roles_template_body(),
+        parameters=[
+            {
+                "ParameterKey": "IambicCodeBuildRoleName",
+                "ParameterValue": f"iambic_code_build{IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX}",
+            },
+        ],
+        Capabilities=["CAPABILITY_NAMED_IAM"],
+        **additional_kwargs,
+    )
+
+    return stack_created
+
+
 async def create_github_app_roles_stack(
     cf_client,
     hub_account_id: str,
@@ -324,6 +405,7 @@ async def create_github_app_roles_stack(
 async def create_github_app_ecr_pull_through_cache_stack(
     cf_client,
     role_arn: str = None,
+    stack_name: str = None,
     tags: Optional[dict] = None,
 ) -> bool:
     additional_kwargs: dict[str, Any] = {"RoleARN": role_arn} if role_arn else {}
@@ -331,9 +413,12 @@ async def create_github_app_ecr_pull_through_cache_stack(
     if tags:
         additional_kwargs["Tags"] = tags
 
+    if stack_name is None:
+        stack_name = f"IAMbicGitHubAppECRPullThroughCache{IAMBIC_GITHUB_APP_SUFFIX}"
+
     stack_created = await create_stack(
         cf_client,
-        stack_name=f"IAMbicGitHubAppECRPullThroughCache{IAMBIC_GITHUB_APP_SUFFIX}",
+        stack_name=stack_name,
         template_body=get_github_app_ecr_pull_through_template_body(),
         parameters=[],
         **additional_kwargs,
@@ -345,6 +430,7 @@ async def create_github_app_ecr_pull_through_cache_stack(
 async def create_github_app_ecr_repo_stack(
     cf_client,
     role_arn: str = None,
+    stack_name: str = None,
     tags: Optional[dict] = None,
 ) -> bool:
     additional_kwargs: dict[str, Any] = {"RoleARN": role_arn} if role_arn else {}
@@ -352,9 +438,12 @@ async def create_github_app_ecr_repo_stack(
     if tags:
         additional_kwargs["Tags"] = tags
 
+    if stack_name is None:
+        stack_name = f"IAMbicGitHubAppECRRepo{IAMBIC_GITHUB_APP_SUFFIX}"
+
     stack_created = await create_stack(
         cf_client,
-        stack_name=f"IAMbicGitHubAppECRRepo{IAMBIC_GITHUB_APP_SUFFIX}",
+        stack_name=stack_name,
         template_body=get_github_app_ecr_repo_template_body(),
         parameters=[],
         **additional_kwargs,
@@ -367,6 +456,9 @@ async def create_github_app_code_build_stack(
     cf_client,
     target_account_id: str,
     role_arn: str = None,
+    code_build_name: str = None,
+    code_build_role_arn: str = None,
+    stack_name: str = None,
     tags: Optional[dict] = None,
 ) -> bool:
     additional_kwargs: dict[str, Any] = {"RoleARN": role_arn} if role_arn else {}
@@ -374,14 +466,67 @@ async def create_github_app_code_build_stack(
     if tags:
         additional_kwargs["Tags"] = tags
 
+    if code_build_role_arn is None:
+        code_build_role_arn = f"arn:aws:iam::{target_account_id}:role/iambic_code_build{IAMBIC_GITHUB_APP_SUFFIX}"
+
+    if stack_name is None:
+        stack_name = f"IAMbicGitHubAppCodeBuild{IAMBIC_GITHUB_APP_SUFFIX}"
+
+    if code_build_name is None:
+        code_build_name = ("iambic_code_build",)
+
     stack_created = await create_stack(
         cf_client,
-        stack_name=f"IAMbicGitHubAppCodeBuild{IAMBIC_GITHUB_APP_SUFFIX}",
+        stack_name=stack_name,
         template_body=get_github_app_code_build_template_body(),
         parameters=[
             {
                 "ParameterKey": "CodeBuildServiceRoleArn",
-                "ParameterValue": f"arn:aws:iam::{target_account_id}:role/iambic_code_build{IAMBIC_GITHUB_APP_SUFFIX}",
+                "ParameterValue": code_build_role_arn,
+            },
+            {
+                "ParameterKey": "IambicCodeBuildName",
+                "ParameterValue": code_build_name,
+            },
+        ],
+        **additional_kwargs,
+    )
+
+    return stack_created
+
+
+async def create_generic_git_provider_lambda_stack(
+    cf_client,
+    target_account_id: str,
+    generic_git_provider_secret_arn: str,
+    role_arn: str = None,
+    tags: Optional[dict] = None,
+) -> bool:
+    region = cf_client.meta.region_name
+    additional_kwargs: dict[str, Any] = {"RoleARN": role_arn} if role_arn else {}
+    assert target_account_id
+    if tags:
+        additional_kwargs["Tags"] = tags
+    stack_created = await create_stack(
+        cf_client,
+        stack_name=f"IAMbicGenericGitProviderLambda{IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX}",
+        template_body=get_generic_git_provider_lambda_template_body(),
+        parameters=[
+            {
+                "ParameterKey": "ImageUri",
+                "ParameterValue": f"{target_account_id}.dkr.ecr.{region}.amazonaws.com/iambic-ecr-public/iambic/iambic:latest",
+            },
+            {
+                "ParameterKey": "LambdaExecutionRoleArn",
+                "ParameterValue": f"arn:aws:iam::{target_account_id}:role/iambic_generic_git_provider_lambda_execution{IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX}",
+            },
+            {
+                "ParameterKey": "LambdaFunctionName",
+                "ParameterValue": f"iambic_generic_git_provider_webhook{IAMBIC_GENERIC_GIT_PROVIDER_SUFFIX}",
+            },
+            {
+                "ParameterKey": "GenericGitProviderSecretArn",
+                "ParameterValue": generic_git_provider_secret_arn,
             },
         ],
         **additional_kwargs,
